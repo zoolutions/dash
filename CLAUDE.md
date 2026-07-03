@@ -80,9 +80,27 @@ Features (loadbalancing, …) live on their own branches and merge into `dash` �
 - Integration: real deploys against Docker-in-Docker VMs; pulls `ghcr.io/mhenrixon/kamal-proxy:$MINIMUM_VERSION` — the tag must be published or the suite fails.
 - CI: rubocop + actionlint/zizmor + Ruby 3.2–4.0 matrix, on `main` and `dash` pushes.
 
+## Slash Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/lfg` | Full autonomous workflow: branch off `main` → understand → plan → TDD → verify → PR into `dash` |
+| `/plan` | Read-only planning → GitHub issue or `docs/plans/` markdown (execute with `/lfg`) |
+| `/architect` | Coordinate multi-layer work across the Thor CLI → Commander → Commands → Configuration cake |
+| `/tdd` | Enforce RED → GREEN → REFACTOR with Minitest + Mocha |
+| `/security` | Audit SSH command construction, secret handling, shell escaping, error-page paths |
+| `/perf` | Baseline vs `main` in a worktree — command construction only (kamal has no bench suite) |
+| `/review-pr` | Review a PR for pattern + fork-constraint compliance |
+| `/github-review-pr` | Full PR pass: fix CI failures, then process review comments |
+| `/github-review-failures` | Diagnose + fix CI failures until green |
+| `/github-review-comments` | Process unresolved PR review comments |
+
+Commands pin a model tier via frontmatter aliases (`sonnet` implementation, `opus` orchestration/security/review, `fable` read-only planning) so they track the latest model per tier.
+
 ## More Documentation
 
 - `ROADMAP.md` — evidence-linked improvement roadmap (releases R1-R5, cross-repo sequencing)
-- `.claude/rules/upstream-sync.md` — sync runbook, conflict playbook, release procedure
+- `.claude/rules/` — coding-style, git-workflow, testing, agents, performance, upstream-sync
+- `.claude/commands/` — the slash commands above
 - Proxy fork: `../kamal-proxy/CLAUDE.md` — cross-repo release ordering
 - Upstream docs: https://kamal-deploy.org
