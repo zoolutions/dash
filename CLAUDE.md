@@ -59,7 +59,7 @@ Layer 0: SSHKit                    (remote execution)
 | File | Change |
 |---|---|
 | `dash.gemspec`, `bin/dash`, `bin/release-dash` | fork-owned new files |
-| `Gemfile` | `gemspec name: "dash"` (bare `gemspec` errors with two gemspecs) |
+| `Gemfile`, `gemfiles/rails_edge.gemfile` | `gemspec name: "dash"` (bare `gemspec` errors with two gemspecs) |
 | `lib/kamal/configuration/proxy/run.rb` | `MINIMUM_VERSION` = fork tag; default repository `ghcr.io/mhenrixon/kamal-proxy` |
 | `lib/kamal/configuration/proxy/boot.rb` | `repository_name` = `ghcr.io/mhenrixon` (legacy boot path) |
 | `lib/kamal/configuration/docs/proxy.yml` | documented default |
