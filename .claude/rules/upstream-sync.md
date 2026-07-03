@@ -31,6 +31,7 @@ git checkout dash && git merge feat/loadbalancing && <tests> && git push
 | `test/integration/docker/deployer/setup.sh` | keep the ghcr image; its tag must equal `MINIMUM_VERSION` |
 | `dash.gemspec` | never conflicts (fork-owned) — but run `diff kamal.gemspec dash.gemspec` after every sync and mirror upstream dependency changes by hand |
 | `.github/workflows/ci.yml` | keep the `dash` entry under push branches |
+| new upstream multi-host integration fixtures | add `loadbalancer: false` under `proxy:` — the fork auto-activates the loadbalancer for any primary role with >1 host, which the dind harness cannot support (vm hostnames don't resolve inside the inner docker network) |
 
 ## Release procedure
 
