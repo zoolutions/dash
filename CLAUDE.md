@@ -82,6 +82,7 @@ Features (loadbalancing, …) live on their own branches and merge into `dash` �
 
 ## More Documentation
 
+- `ROADMAP.md` — evidence-linked improvement roadmap (releases R1-R5, cross-repo sequencing)
 - `.claude/rules/upstream-sync.md` — sync runbook, conflict playbook, release procedure
 - Proxy fork: `../kamal-proxy/CLAUDE.md` — cross-repo release ordering
 - Upstream docs: https://kamal-deploy.org
