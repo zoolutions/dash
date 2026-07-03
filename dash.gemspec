@@ -10,6 +10,7 @@ Gem::Specification.new do |spec|
   spec.license     = "MIT"
   spec.files = Dir["lib/**/*", "MIT-LICENSE", "README.md"]
   spec.executables = %w[ kamal dash ]
+  spec.required_ruby_version = ">= 3.2"
 
   spec.add_dependency "activesupport", ">= 7.0"
   spec.add_dependency "sshkit", ">= 1.23.0", "< 2.0"
