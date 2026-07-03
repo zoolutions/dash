@@ -164,7 +164,7 @@ proxy:
     registry: registry:4443        # Container registry for the kamal-proxy image
                                    # (defaults to Docker Hub)
     repository: myrepo/kamal-proxy # Container repository for the kamal-proxy image
-                                   # (defaults to `basecamp/kamal-proxy`)
+                                   # (defaults to `ghcr.io/mhenrixon/kamal-proxy`)
     version: v0.8.0                # Version tag of the kamal-proxy image to use
     options:                       # Additional options to pass to `docker run`
       label:

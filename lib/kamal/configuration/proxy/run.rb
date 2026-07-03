@@ -1,5 +1,5 @@
 class Kamal::Configuration::Proxy::Run
-  MINIMUM_VERSION = "v0.9.2"
+  MINIMUM_VERSION = "v0.9.2.1"
   DEFAULT_HTTP_PORT = 80
   DEFAULT_HTTPS_PORT = 443
   DEFAULT_LOG_MAX_SIZE = "10m"
@@ -62,7 +62,7 @@ class Kamal::Configuration::Proxy::Run
   end
 
   def repository
-    run_config.fetch("repository", "basecamp/kamal-proxy")
+    run_config.fetch("repository", "ghcr.io/mhenrixon/kamal-proxy")
   end
 
   def image
