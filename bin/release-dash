@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+# Release the fork gem "dash" to rubygems.org.
+#
+# Versions are four-segment: <upstream-version>.<fork-counter>, e.g. 2.12.0.1.
+# Git tags are dash-v<version> - upstream owns the v<version> namespace.
+#
+# Ordering rule: the proxy image tag named by
+# Kamal::Configuration::Proxy::Run::MINIMUM_VERSION must already exist at
+# ghcr.io/mhenrixon/kamal-proxy before releasing the gem.
+
+set -euo pipefail
+
+VERSION=$1
+
+if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
+  echo "Error: version must be four-segment, e.g. 2.12.0.1"
+  exit 1
+fi
+
+printf "module Kamal\n  VERSION = \"$VERSION\"\nend\n" > ./lib/kamal/version.rb
+bundle
+git add Gemfile.lock lib/kamal/version.rb
+git commit -m "Bump dash version for $VERSION"
+git push origin dash
+git tag "dash-v$VERSION"
+git push origin tag "dash-v$VERSION"
+gem build dash.gemspec
+gem push "dash-$VERSION.gem" --host https://rubygems.org
+rm "dash-$VERSION.gem"
