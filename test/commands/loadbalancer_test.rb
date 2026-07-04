@@ -14,21 +14,21 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
 
   test "run" do
     assert_equal \
-      "echo basecamp/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer --publish 80:80 --publish 443:443 --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
+      "echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer --publish 80:80 --publish 443:443 --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
       new_command.run.join(" ")
   end
 
   test "run honors proxy.run.publish false and options" do
     @config[:proxy]["run"] = { "publish" => false, "options" => { "label" => [ "traefik.enable=true" ] } }
     assert_equal \
-      "echo basecamp/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer --log-opt max-size=10m --label \"traefik.enable=true\" --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
+      "echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer --log-opt max-size=10m --label \"traefik.enable=true\" --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
       new_command.run.join(" ")
   end
 
   test "run honors custom publish ports" do
     @config[:proxy]["run"] = { "http_port" => 8080, "https_port" => 8443 }
     assert_equal \
-      "echo basecamp/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer --publish 8080:80 --publish 8443:443 --log-opt max-size=10m --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
+      "echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer --publish 8080:80 --publish 8443:443 --log-opt max-size=10m --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
       new_command.run.join(" ")
   end
 
@@ -46,7 +46,7 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
 
   test "start_or_run" do
     assert_equal \
-      "docker container start load-balancer || echo basecamp/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer --publish 80:80 --publish 443:443 --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
+      "docker container start load-balancer || echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer --publish 80:80 --publish 443:443 --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
       new_command.start_or_run.join(" ")
   end
 
