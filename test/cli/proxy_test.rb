@@ -489,7 +489,7 @@ class CliProxyTest < CliTestCase
 
     run_command("loadbalancer", "deploy", fixture: :with_loadbalancer).tap do |output|
       assert_match "Deploying to loadbalancer on lb.example.com with targets: 1.1.1.1, 1.1.1.2", output
-      assert_match "docker exec load-balancer kamal-proxy deploy app --target=1.1.1.1:80,1.1.1.2:80 --host=app.example.com --tls", output
+      assert_match "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --deploy-timeout=\"6s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\" --tls", output
     end
   end
 
