@@ -2,7 +2,7 @@
 description: "Use when a PR needs full review — resolves merge conflicts with the base first, then fixes CI failures, then addresses unresolved review comments. Conflicts first so CI diagnoses the post-merge reality; failures before comments because comment fixes trigger new CI runs that obscure the original failures."
 model: opus
 argument-hint: "PR number (e.g., 156 or #156)"
-allowed-tools: Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr checkout:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh api:*), Bash(gh run view:*), Bash(git log:*), Bash(git blame:*), Bash(git diff:*), Bash(git status:*), Bash(git switch:*), Bash(git fetch:*), Bash(git merge:*), Bash(git merge-tree:*), Bash(git rev-parse:*), Bash(git push:*), Bash(git commit:*), Bash(git add:*), Bash(bundle exec:*), Bash(bundle install:*), Bash(bin/test:*), Read, Write, Edit, Glob, Grep, Agent
+allowed-tools: Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr checkout:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh api:*), Bash(gh run view:*), Bash(git log:*), Bash(git blame:*), Bash(git diff:*), Bash(git show:*), Bash(diff:*), Bash(git status:*), Bash(git switch:*), Bash(git fetch:*), Bash(git merge:*), Bash(git merge-tree:*), Bash(git rev-parse:*), Bash(git push:*), Bash(git commit:*), Bash(git add:*), Bash(bundle exec:*), Bash(bundle install:*), Bash(bin/test:*), Read, Write, Edit, Glob, Grep, Agent
 ---
 
 # Review GitHub PR (full pass): $ARGUMENTS
@@ -84,7 +84,8 @@ gh pr view <PR_NUMBER> --json mergeable,mergeStateStatus,baseRefName
    - **`Gemfile.lock`** (tracked at the repo root): take either side, then run `bundle install` and commit the settled result. Never hand-merge a lockfile. (CI deletes it before the test matrix, but the committed file must still be consistent.)
    - **Upstream-owned files** (`kamal.gemspec`, `bin/release`): these must stay byte-identical to upstream — resolve to what `origin/main` (the upstream mirror) has (`git show origin/main:kamal.gemspec`); never hand-merge fork content into them. If a dependency change is involved, mirror it into `dash.gemspec` by hand and check with `diff kamal.gemspec dash.gemspec`.
    - **`lib/kamal/configuration/proxy/run.rb`**: keep the `ghcr.io/mhenrixon` repository; a `MINIMUM_VERSION` conflict is a release-ordering question (proxy image first, gem second) — resolve per `.claude/rules/upstream-sync.md` and flag it in the report.
-   - **`test/cli/proxy_test.rb`, `test/commands/proxy_test.rb`, `test/integration/docker/deployer/setup.sh`**: keep the ghcr org and the `#{...MINIMUM_VERSION}` interpolation; adopt the other side's new assertions around them.
+   - **`test/cli/proxy_test.rb`, `test/commands/proxy_test.rb`**: keep the ghcr org and the `#{...MINIMUM_VERSION}` interpolation; adopt the other side's new assertions around them.
+   - **`test/integration/docker/deployer/setup.sh`**: a shell script — there is no Ruby interpolation here. Keep the ghcr image and set its literal tag equal to `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` (per the Conflict playbook in `.claude/rules/upstream-sync.md`).
    - **`.github/workflows/ci.yml`**: keep the `dash` entry under push branches.
    - **New multi-host integration fixtures**: any primary role with >1 host needs `loadbalancer: false` under `proxy:` (the dind harness can't resolve inner VM hostnames).
 5. Run the verification gates BEFORE pushing the merge — scoped to what the conflict touched, at minimum:
