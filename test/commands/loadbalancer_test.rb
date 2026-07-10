@@ -14,7 +14,21 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
 
   test "run" do
     assert_equal \
-      "echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --label org.opencontainers.image.title=kamal-loadbalancer --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
+      "echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer --publish 80:80 --publish 443:443 --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
+      new_command.run.join(" ")
+  end
+
+  test "run honors proxy.run.publish false and options" do
+    @config[:proxy]["run"] = { "publish" => false, "options" => { "label" => [ "traefik.enable=true" ] } }
+    assert_equal \
+      "echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer --log-opt max-size=10m --label \"traefik.enable=true\" --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
+      new_command.run.join(" ")
+  end
+
+  test "run honors custom publish ports" do
+    @config[:proxy]["run"] = { "http_port" => 8080, "https_port" => 8443 }
+    assert_equal \
+      "echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer --publish 8080:80 --publish 8443:443 --log-opt max-size=10m --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
       new_command.run.join(" ")
   end
 
@@ -32,27 +46,43 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
 
   test "start_or_run" do
     assert_equal \
-      "docker container start load-balancer || echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --label org.opencontainers.image.title=kamal-loadbalancer --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
+      "docker container start load-balancer || echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer --publish 80:80 --publish 443:443 --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
       new_command.start_or_run.join(" ")
   end
 
   test "deploy with targets" do
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=1.1.1.1:80,1.1.1.2:80 --host=app.example.com",
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\"",
       new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
   end
 
   test "deploy with targets and ssl" do
     @config[:proxy]["ssl"] = true
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=1.1.1.1:80,1.1.1.2:80 --host=app.example.com --tls",
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\" --tls",
       new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
   end
 
   test "deploy with multiple hosts" do
     @config[:proxy]["hosts"] = [ "app1.example.com", "app2.example.com" ]
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=1.1.1.1:80 --host=app1.example.com,app2.example.com",
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app1.example.com\" --host=\"app2.example.com\"",
+      new_command.deploy(targets: [ "1.1.1.1" ]).join(" ")
+  end
+
+  test "deploy uses app_port for targets" do
+    @config[:proxy]["app_port"] = 3000
+    assert_equal \
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:3000,1.1.1.2:3000\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\"",
+      new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
+  end
+
+  test "deploy propagates rich proxy options (healthcheck, response timeout, path prefix)" do
+    @config[:proxy]["healthcheck"] = { "interval" => 2, "timeout" => 5, "path" => "/healthz" }
+    @config[:proxy]["response_timeout"] = 10
+    @config[:proxy]["path_prefix"] = "/api"
+    assert_equal \
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --health-check-interval=\"2s\" --health-check-timeout=\"5s\" --health-check-path=\"/healthz\" --target-timeout=\"10s\" --buffer-requests --buffer-responses --path-prefix=\"/api\" --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\"",
       new_command.deploy(targets: [ "1.1.1.1" ]).join(" ")
   end
 

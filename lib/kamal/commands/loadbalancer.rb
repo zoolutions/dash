@@ -16,9 +16,8 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
         "--network", "kamal",
         "--detach",
         "--restart", "unless-stopped",
-        "--publish", "80:80",
-        "--publish", "443:443",
         "--label", label,
+        *run_args,
         *volume_mounts))
   end
 
@@ -35,16 +34,8 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
   end
 
   def deploy(targets: [])
-    target_args = targets.map { |t| "#{t}:80" }
-
-    hosts = loadbalancer_config.hosts
-
-    options = []
-    options << "--target=#{target_args.join(',')}"
-    options << "--host=#{hosts.join(',')}"
-    options << "--tls" if loadbalancer_config.ssl?
-
-    docker :exec, container_name, "kamal-proxy", "deploy", loadbalancer_config.config.service, *options
+    docker :exec, container_name, "kamal-proxy", "deploy", loadbalancer_config.config.service,
+      *loadbalancer_config.deploy_command_args(targets: targets)
   end
 
   def info
@@ -95,6 +86,17 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
   end
 
   private
+    # Publish/logging/docker options for the load balancer container. When the
+    # deploy YAML sets proxy.run, honour it (publish: false, custom ports,
+    # options); otherwise fall back to publishing the default 80/443.
+    def run_args
+      if (run = loadbalancer_config.run)
+        [ *run.publish_args, *run.logging_args, *run.options_args ]
+      else
+        [ "--publish", "80:80", "--publish", "443:443" ]
+      end
+    end
+
     def proxy_image
       [
         loadbalancer_config.config.proxy_boot.image_default,
