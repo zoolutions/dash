@@ -32,7 +32,7 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
 
       if run_config = config["run"]
         if run_config["bind_ips"].present?
-          ensure_valid_bind_ips(config["bind_ips"])
+          ensure_valid_bind_ips(run_config["bind_ips"])
         end
 
         if run_config["publish"] == false
