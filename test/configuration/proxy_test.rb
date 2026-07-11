@@ -38,6 +38,19 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     assert_not config.proxy.ssl?
   end
 
+  test "invalid bind_ips" do
+    [ "999.999.999.999", "localhost", "0.0.0.0/0" ].each do |ip|
+      @deploy[:proxy] = { "run" => { "bind_ips" => [ ip ] } }
+      exception = assert_raises(Kamal::ConfigurationError, "expected #{ip.inspect} to be rejected") { config.proxy }
+      assert_match "Invalid publish IP address: #{ip}", exception.message
+    end
+  end
+
+  test "valid bind_ips" do
+    @deploy[:proxy] = { "run" => { "bind_ips" => [ "0.0.0.0", "127.0.0.1", "::1", "2001:db8::1" ] } }
+    assert_equal [ "0.0.0.0", "127.0.0.1", "::1", "2001:db8::1" ], config.proxy.run.bind_ips
+  end
+
   test "false not allowed" do
     @deploy[:proxy] = false
     assert_raises(Kamal::ConfigurationError, "proxy: should be a hash") do
