@@ -404,6 +404,64 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  # Domains tests
+  test "domains refresh" do
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :exec, "kamal-proxy", "kamal-proxy", "domains", "refresh")
+      .returns("Refresh queued")
+      .at_least_once
+
+    run_command("domains", "refresh").tap do |output|
+      # Runs against every proxy host, not just the primary
+      assert_match "Proxy Host: 1.1.1.1", output
+      assert_match "Proxy Host: 1.1.1.2", output
+      assert_match "Refresh queued", output
+    end
+  end
+
+  test "domains stats" do
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :exec, "kamal-proxy", "kamal-proxy", "domains", "stats")
+      .returns("certs: 3 pending: 1")
+      .at_least_once
+
+    run_command("domains", "stats").tap do |output|
+      assert_match "certs: 3 pending: 1", output
+    end
+  end
+
+  test "domains list with loadbalancer" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :exec, "load-balancer", "kamal-proxy", "domains", "list")
+      .returns("customer1.example.com")
+
+    run_command("domains", "list", fixture: :with_loadbalancer).tap do |output|
+      assert_match "Loadbalancer Host: lb.example.com", output
+      assert_match "customer1.example.com", output
+    end
+  end
+
+  test "domains refresh with loadbalancer on proxy host uses proxy container name" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :exec, "kamal-proxy", "kamal-proxy", "domains", "refresh")
+      .returns("Refresh queued")
+
+    run_command("domains", "refresh", fixture: :with_loadbalancer_on_proxy_host).tap do |output|
+      assert_match "Loadbalancer Host: 1.1.1.1", output
+      assert_match "Refresh queued", output
+    end
+  end
+
+  test "domains with unknown subcommand" do
+    run_command("domains", "bogus").tap do |output|
+      assert_match "Unknown domains subcommand: bogus. Available: refresh, list, stats", output
+    end
+  end
+
   # Loadbalancer tests
   test "boot with loadbalancer" do
     Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)

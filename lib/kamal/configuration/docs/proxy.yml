@@ -77,6 +77,30 @@ proxy:
   # HTTPS traffic), you can disable this redirect by setting `ssl_redirect: false`:
   ssl_redirect: false
 
+  # Dynamic TLS domains
+  #
+  # kamal-proxy can learn TLS hostnames from your application at runtime
+  # instead of fixing them at deploy time. It polls `source` — a path
+  # (resolved against a healthy app target) or an absolute http(s) URL —
+  # for the domain list and manages Let's Encrypt certificates for it
+  # automatically. When `source` is set, `ssl: true` is allowed without
+  # `host`/`hosts`.
+  #
+  # `interval` is the poll interval in seconds (proxy default: 300).
+  #
+  # `batch_size` controls how many domains share a certificate: 1 (the
+  # proxy default) issues per-domain certs; 2-25 enables stable SAN batching.
+  #
+  # Authentication tokens for the poll endpoint and the refresh nudge are
+  # read by the proxy from the `KAMAL_PROXY_DOMAINS_TOKEN` and
+  # `KAMAL_PROXY_REFRESH_TOKEN` environment variables. Set them on the proxy
+  # container via `proxy.run.options.env` — never as deploy flags, which
+  # leak into process listings and audit logs.
+  tls_domains:
+    source: /api/v1/kamal/domains
+    interval: 300
+    batch_size: 1
+
   # Forward headers
   #
   # Whether to forward the `X-Forwarded-For` and `X-Forwarded-Proto` headers.

@@ -200,6 +200,12 @@ class CommandsProxyTest < ActiveSupport::TestCase
       new_command.run.join(" ")
   end
 
+  test "domains" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy domains refresh",
+      new_command.domains("refresh").join(" ")
+  end
+
   test "debug run config" do
     @config[:proxy] = { "run" => { "debug" => true } }
     assert_equal \
