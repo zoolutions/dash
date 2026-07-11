@@ -86,6 +86,20 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
       new_command.deploy(targets: [ "1.1.1.1" ]).join(" ")
   end
 
+  test "deploy propagates tls_domains flags" do
+    @config[:proxy]["ssl"] = true
+    @config[:proxy]["tls_domains"] = { "source" => "/api/v1/kamal/domains", "interval" => 300, "batch_size" => 5 }
+    assert_equal \
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\" --tls --tls-domains-source=\"/api/v1/kamal/domains\" --tls-domains-interval=\"300s\" --tls-domains-batch-size=\"5\"",
+      new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
+  end
+
+  test "domains" do
+    assert_equal \
+      "docker exec load-balancer kamal-proxy domains list",
+      new_command.domains("list").join(" ")
+  end
+
   test "info" do
     assert_equal \
       "docker ps --filter 'name=^load-balancer$'",

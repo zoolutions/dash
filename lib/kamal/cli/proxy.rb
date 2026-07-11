@@ -354,6 +354,26 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
     end
   end
 
+  desc "domains SUBCOMMAND", "Manage dynamic TLS domains (refresh, list, stats)"
+  def domains(subcommand)
+    case subcommand
+    when "refresh", "list", "stats"
+      # TLS terminates at the load balancer when load balancing, so the
+      # dynamic domain set lives there rather than on the per-host proxies.
+      if KAMAL.config.proxy.load_balancing?
+        on(KAMAL.config.proxy.effective_loadbalancer) do |host|
+          puts_by_host host, capture_with_info(*KAMAL.loadbalancer.domains(subcommand)), type: "Loadbalancer"
+        end
+      else
+        on(KAMAL.proxy_hosts) do |host|
+          puts_by_host host, capture_with_info(*KAMAL.proxy(host).domains(subcommand)), type: "Proxy"
+        end
+      end
+    else
+      puts "Unknown domains subcommand: #{subcommand}. Available: refresh, list, stats"
+    end
+  end
+
   desc "remove_container", "Remove proxy container from servers", hide: true
   def remove_container
     modify(lock: true) do

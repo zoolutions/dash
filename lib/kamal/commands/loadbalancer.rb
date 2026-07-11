@@ -38,6 +38,10 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
       *loadbalancer_config.deploy_command_args(targets: targets)
   end
 
+  def domains(subcommand)
+    docker :exec, container_name, "kamal-proxy", "domains", subcommand
+  end
+
   def info
     docker :ps, "--filter", "'name=^#{container_name}$'"
   end

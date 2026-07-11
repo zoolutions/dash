@@ -59,6 +59,10 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
     ).join(" "), host: host
   end
 
+  def domains(subcommand)
+    docker :exec, container_name, "kamal-proxy", "domains", subcommand
+  end
+
   def remove_container
     docker :container, :prune, "--force", "--filter", "label=org.opencontainers.image.title=kamal-proxy"
   end

@@ -112,11 +112,12 @@ class Kamal::Configuration::Proxy
       "log-request-header": proxy_config.dig("logging", "request_headers") || DEFAULT_LOG_REQUEST_HEADERS,
       "log-response-header": proxy_config.dig("logging", "response_headers"),
       "error-pages": error_pages
-    }.compact
+    }.merge(tls_domains_options).compact
 
     if load_balancing?
       opts.delete(:host)
       opts.delete(:tls)
+      tls_domains_options.each_key { |key| opts.delete(key) }
     end
 
     opts
@@ -142,6 +143,18 @@ class Kamal::Configuration::Proxy
   end
 
   private
+    # Flags for kamal-proxy's dynamic domain source (runtime TLS hostnames).
+    # TLS terminates wherever these flags land, so like host/tls they are
+    # stripped from the per-app deploy when load balancing and re-added by
+    # Kamal::Configuration::Loadbalancer#deploy_options.
+    def tls_domains_options
+      {
+        "tls-domains-source": proxy_config.dig("tls_domains", "source"),
+        "tls-domains-interval": seconds_duration(proxy_config.dig("tls_domains", "interval")),
+        "tls-domains-batch-size": proxy_config.dig("tls_domains", "batch_size")
+      }.compact
+    end
+
     def tls_path(directory, filename)
       File.join([ directory, role_name, filename ].compact) if custom_ssl_certificate?
     end

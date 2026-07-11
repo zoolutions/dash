@@ -13,10 +13,12 @@ class Kamal::Configuration::Loadbalancer < Kamal::Configuration::Proxy
   def deploy_options
     opts = super
 
-    # The parent strips host/tls when load balancing (the app-level proxy no
-    # longer owns them) — the load balancer is where they belong, so re-add.
+    # The parent strips host/tls/tls-domains when load balancing (the
+    # app-level proxy no longer owns TLS) — the load balancer is where they
+    # belong, so re-add.
     opts[:host] = hosts if hosts.present?
     opts[:tls] = true if ssl?
+    opts.merge!(tls_domains_options)
 
     opts
   end

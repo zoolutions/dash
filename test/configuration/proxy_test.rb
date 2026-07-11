@@ -170,6 +170,91 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     end
   end
 
+  test "tls_domains flags in deploy_options" do
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => "/api/v1/kamal/domains", "interval" => 300, "batch_size" => 5 } }
+    options = config.proxy.deploy_options
+    assert_equal "/api/v1/kamal/domains", options[:"tls-domains-source"]
+    assert_equal "300s", options[:"tls-domains-interval"]
+    assert_equal 5, options[:"tls-domains-batch-size"]
+  end
+
+  test "tls_domains flags absent when not configured" do
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com" }
+    options = config.proxy.deploy_options
+    assert_not options.key?(:"tls-domains-source")
+    assert_not options.key?(:"tls-domains-interval")
+    assert_not options.key?(:"tls-domains-batch-size")
+  end
+
+  test "tls_domains with source only" do
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => "https://app.example.com/domains" } }
+    options = config.proxy.deploy_options
+    assert_equal "https://app.example.com/domains", options[:"tls-domains-source"]
+    assert_not options.key?(:"tls-domains-interval")
+    assert_not options.key?(:"tls-domains-batch-size")
+  end
+
+  test "ssl with no host allowed when tls_domains source is set" do
+    @deploy[:proxy] = { "ssl" => true, "tls_domains" => { "source" => "/domains" } }
+    assert config.proxy.ssl?
+  end
+
+  test "deploy_options strips tls_domains flags when load balancing" do
+    @deploy[:proxy] = { "loadbalancer" => "lb.example.com", "ssl" => true, "hosts" => [ "app.example.com" ], "tls_domains" => { "source" => "/domains" } }
+    options = config.proxy.deploy_options
+    assert_not options.key?(:"tls-domains-source")
+    assert_not options.key?(:"tls-domains-interval")
+    assert_not options.key?(:"tls-domains-batch-size")
+  end
+
+  test "tls_domains without source" do
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "interval" => 300 } }
+    assert_raises(Kamal::ConfigurationError) { config.proxy }
+  end
+
+  test "tls_domains empty hash" do
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => {} }
+    assert_raises(Kamal::ConfigurationError) { config.proxy }
+  end
+
+  test "tls_domains source must be a path or http url" do
+    [ "example.com/domains", "ftp://example.com/domains", "domains" ].each do |source|
+      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => source } }
+      assert_raises(Kamal::ConfigurationError, "expected #{source.inspect} to be rejected") { config.proxy }
+    end
+  end
+
+  test "tls_domains source accepts http and https urls" do
+    [ "http://app.internal/domains", "https://app.example.com/api/v1/kamal/domains" ].each do |source|
+      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => source } }
+      assert_equal source, config.proxy.deploy_options[:"tls-domains-source"]
+    end
+  end
+
+  test "tls_domains interval must be a positive integer" do
+    [ 0, -300, "300", 1.5 ].each do |interval|
+      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => "/domains", "interval" => interval } }
+      assert_raises(Kamal::ConfigurationError, "expected interval #{interval.inspect} to be rejected") { config.proxy }
+    end
+  end
+
+  test "tls_domains batch_size must be between 1 and 25" do
+    [ 0, 26, "5", 1.5 ].each do |batch_size|
+      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => "/domains", "batch_size" => batch_size } }
+      assert_raises(Kamal::ConfigurationError, "expected batch_size #{batch_size} to be rejected") { config.proxy }
+    end
+
+    [ 1, 25 ].each do |batch_size|
+      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => "/domains", "batch_size" => batch_size } }
+      assert_equal batch_size, config.proxy.deploy_options[:"tls-domains-batch-size"]
+    end
+  end
+
+  test "tls_domains rejects unknown keys" do
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => "/domains", "sources" => "/other" } }
+    assert_raises(Kamal::ConfigurationError) { config.proxy }
+  end
+
   test "ssl with private key and no certificate" do
     with_test_secrets("secrets" => "KEY_PEM=private_key") do
       @deploy[:proxy] = {
