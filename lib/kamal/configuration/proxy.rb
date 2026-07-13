@@ -92,6 +92,7 @@ class Kamal::Configuration::Proxy
     opts = {
       host: hosts,
       tls: ssl? ? true : nil,
+      "tls-staging": proxy_config["ssl_staging"] ? true : nil,
       "tls-certificate-path": container_tls_cert,
       "tls-private-key-path": container_tls_key,
       "deploy-timeout": seconds_duration(config.deploy_timeout),
@@ -100,6 +101,9 @@ class Kamal::Configuration::Proxy
       "health-check-timeout": seconds_duration(proxy_config.dig("healthcheck", "timeout")),
       "health-check-path": proxy_config.dig("healthcheck", "path"),
       "target-timeout": seconds_duration(proxy_config["response_timeout"]),
+      "read-target": proxy_config["read_targets"].presence,
+      "read-target-websockets": proxy_config["read_target_websockets"] ? true : nil,
+      "writer-affinity-timeout": seconds_duration(proxy_config["writer_affinity_timeout"]),
       "buffer-requests": proxy_config.fetch("buffering", { "requests": true }).fetch("requests", true),
       "buffer-responses": proxy_config.fetch("buffering", { "responses": true }).fetch("responses", true),
       "buffer-memory": proxy_config.dig("buffering", "memory"),
