@@ -105,6 +105,55 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     end
   end
 
+  test "ssl_staging, read_targets and writer affinity flags in deploy_options" do
+    @deploy[:proxy] = {
+      "ssl" => true, "host" => "example.com",
+      "ssl_staging" => true,
+      "read_targets" => [ "192.168.0.2:3000", "192.168.0.3:3000" ],
+      "read_target_websockets" => true,
+      "writer_affinity_timeout" => 10
+    }
+    options = config.proxy.deploy_options
+    assert_equal true, options[:"tls-staging"]
+    assert_equal [ "192.168.0.2:3000", "192.168.0.3:3000" ], options[:"read-target"]
+    assert_equal true, options[:"read-target-websockets"]
+    assert_equal "10s", options[:"writer-affinity-timeout"]
+  end
+
+  test "ssl_staging, read_targets and writer affinity flags absent when not configured" do
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com" }
+    options = config.proxy.deploy_options
+    assert_not options.key?(:"tls-staging")
+    assert_not options.key?(:"read-target")
+    assert_not options.key?(:"read-target-websockets")
+    assert_not options.key?(:"writer-affinity-timeout")
+  end
+
+  test "ssl_staging and read_target_websockets false emit no flags" do
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_staging" => false, "read_target_websockets" => false }
+    options = config.proxy.deploy_options
+    assert_not options.key?(:"tls-staging")
+    assert_not options.key?(:"read-target-websockets")
+  end
+
+  test "read_targets in deploy command args" do
+    @deploy[:proxy] = { "host" => "example.com", "read_targets" => [ "192.168.0.2:3000" ] }
+    args = config.proxy.deploy_command_args(target: "abc123:80")
+    assert_includes args.join(" "), "--read-target=\"192.168.0.2:3000\""
+  end
+
+  test "invalid types for ssl_staging, read_targets and writer affinity keys" do
+    {
+      "ssl_staging" => "yes",
+      "read_targets" => "192.168.0.2:3000",
+      "read_target_websockets" => 1,
+      "writer_affinity_timeout" => "10"
+    }.each do |key, value|
+      @deploy[:proxy] = { "host" => "example.com", key => value }
+      assert_raises(Kamal::ConfigurationError, "expected #{key}=#{value.inspect} to be rejected") { config.proxy }
+    end
+  end
+
   private
     def config
       Kamal::Configuration.new(@deploy)

@@ -70,6 +70,16 @@ proxy:
   # HTTPS traffic), you can disable this redirect by setting `ssl_redirect: false`:
   ssl_redirect: false
 
+  # SSL staging
+  #
+  # When automatic SSL is enabled, use the Let's Encrypt staging environment
+  # for certificate provisioning, so you can test your SSL configuration
+  # without running into Let's Encrypt's production rate limits. Certificates
+  # issued by the staging environment are not trusted by browsers.
+  #
+  # Defaults to `false`:
+  ssl_staging: true
+
   # Forward headers
   #
   # Whether to forward the `X-Forwarded-For` and `X-Forwarded-Proto` headers.
@@ -107,6 +117,29 @@ proxy:
   # To instead forward the request with the original path (including the prefix),
   # specify --strip-path-prefix=false
   strip_path_prefix: false
+
+  # Read-only targets
+  #
+  # kamal-proxy can split traffic between the deployed (writer) targets and a
+  # set of read-only targets, e.g. app instances backed by database replicas.
+  # Read requests are routed to the read targets; write requests always go to
+  # the writers.
+  #
+  # Targets are host:port addresses reachable from the proxy.
+  read_targets:
+    - 192.168.0.2:3000
+    - 192.168.0.3:3000
+
+  # Whether to route WebSocket traffic to read targets, when available.
+  #
+  # Defaults to `false`:
+  read_target_websockets: true
+
+  # How long, in seconds, a client's reads stick to the writer after it makes
+  # a write, so clients always read their own writes.
+  #
+  # Defaults to 1 second:
+  writer_affinity_timeout: 10
 
   # Healthcheck
   #
