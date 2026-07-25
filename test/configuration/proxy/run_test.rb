@@ -82,6 +82,13 @@ class ConfigurationProxyRunTest < ActiveSupport::TestCase
     assert_not_equal Kamal::Configuration::Proxy::Run.digest("a"), Kamal::Configuration::Proxy::Run.digest("b")
   end
 
+  test "run command re-verifies restored targets" do
+    config = Kamal::Configuration.new(base_deploy)
+    run = Kamal::Configuration::Proxy::Run.new(config, run_config: {})
+
+    assert_equal "kamal-proxy run --recheck-targets-on-restore", run.run_command
+  end
+
   test "port_holder defaults to false with kamal network and published ports" do
     config = Kamal::Configuration.new(base_deploy)
     run = Kamal::Configuration::Proxy::Run.new(config, run_config: {})

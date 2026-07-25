@@ -13,8 +13,8 @@ class CliProxyTest < CliTestCase
     run_command("boot", fixture: :with_proxy_run_config).tap do |output|
       assert_match "docker login", output
       assert_match "mkdir -p .kamal/proxy/apps-config", output
-      assert_match_with_digest "docker container start kamal-proxy || docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9090 --cpus \"1.5\" registry:4443/ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --debug --metrics-port \"9090\" on 1.1.1.1", output
-      assert_match_with_digest "docker container start kamal-proxy || docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9190 ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --metrics-port \"9190\" on 1.1.1.3", output
+      assert_match_with_digest "docker container start kamal-proxy || docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9090 --cpus \"1.5\" registry:4443/ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --debug --metrics-port \"9090\" --recheck-targets-on-restore on 1.1.1.1", output
+      assert_match_with_digest "docker container start kamal-proxy || docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9190 ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --metrics-port \"9190\" --recheck-targets-on-restore on 1.1.1.3", output
     end
   end
 
@@ -58,7 +58,7 @@ class CliProxyTest < CliTestCase
 
     run_command("boot", fixture: :with_proxy_port_holder).tap do |output|
       assert_match "Handing off kamal-proxy on 1.1.1.1 to a new generation (zero downtime)...", output
-      assert_match_with_digest "docker run --name kamal-proxy-next --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --reuse-port on 1.1.1.1", output
+      assert_match_with_digest "docker run --name kamal-proxy-next --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port on 1.1.1.1", output
       assert_match "docker exec kamal-proxy kamal-proxy drain --drain-timeout=30s on 1.1.1.1", output
       assert_match "docker wait kamal-proxy on 1.1.1.1", output
       assert_match "docker container rm kamal-proxy on 1.1.1.1", output
@@ -79,7 +79,7 @@ class CliProxyTest < CliTestCase
       assert_match "docker container stop --time 40 kamal-proxy on 1.1.1.1", output
       assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-proxy on 1.1.1.1", output
       assert_match "docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold on 1.1.1.1", output
-      assert_match_with_digest "docker run --name kamal-proxy --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --reuse-port on 1.1.1.1", output
+      assert_match_with_digest "docker run --name kamal-proxy --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port on 1.1.1.1", output
     end
   end
 
