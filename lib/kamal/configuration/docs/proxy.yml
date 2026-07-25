@@ -40,6 +40,21 @@ proxy:
   # for multi-host primary roles.
   loadbalancer: lb.example.com
 
+  # Automatic proxy reboot on deploy
+  #
+  # When `kamal deploy` detects that the running kamal-proxy container was
+  # started with a different image, version or run options than the current
+  # configuration, it reboots the proxy automatically — one host at a time —
+  # before booting the app.
+  #
+  # Set to false to opt out. Kamal will then print a warning when drift is
+  # detected and leave the proxy untouched until you run `kamal proxy reboot`.
+  #
+  # Root-level `proxy` setting only; ignored inside role-specific proxy blocks.
+  #
+  # Defaults to true:
+  reboot_on_deploy: false
+
   # App port
   #
   # The port the application container is exposed on.

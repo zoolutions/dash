@@ -8,6 +8,15 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     }
   end
 
+  test "reboot_on_deploy defaults to true" do
+    assert config.proxy.reboot_on_deploy?
+  end
+
+  test "reboot_on_deploy can be disabled" do
+    @deploy[:proxy] = { "reboot_on_deploy" => false }
+    assert_not config.proxy.reboot_on_deploy?
+  end
+
   test "ssl with host" do
     @deploy[:proxy] = { "ssl" => true, "host" => "example.com" }
     assert_equal true, config.proxy.ssl?
