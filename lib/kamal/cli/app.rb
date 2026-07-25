@@ -277,6 +277,18 @@ class Kamal::Cli::App < Kamal::Cli::Base
     end
   end
 
+  desc "rollout <deploy|set|stop>", "Manage a canary rollout of a new version through kamal-proxy"
+  option :percent, type: :numeric, desc: "Percentage of traffic to send to the rollout target"
+  option :list, type: :array, desc: "Send requests whose kamal-rollout cookie matches these values to the rollout target"
+  def rollout(action)
+    case action
+    when "deploy" then start_rollout
+    when "set"    then set_rollout
+    when "stop"   then stop_rollout
+    else raise ArgumentError, "Unknown rollout action '#{action}', expected deploy, set or stop"
+    end
+  end
+
   desc "remove_container [VERSION]", "Remove app container with given version from servers", hide: true
   def remove_container(version)
     modify(lock: true) do
@@ -328,6 +340,47 @@ class Kamal::Cli::App < Kamal::Cli::Base
   end
 
   private
+    def start_rollout
+      modify(lock: true) do
+        say "Get most recent version available as an image...", :magenta unless options[:version]
+        using_version(version_or_latest) do |version|
+          say "Start rollout target with version #{version} alongside the live version...", :magenta
+
+          on(KAMAL.proxy_hosts) do
+            KAMAL.roles_on(host).each do |role|
+              Kamal::Cli::App::Assets.new(host, role, self).run if role.running_proxy?
+            end
+          end
+
+          on_roles(KAMAL.roles, hosts: KAMAL.proxy_hosts, parallel: KAMAL.config.boot.parallel_roles) do |host, role|
+            Kamal::Cli::App::RolloutBoot.new(host, role, self, version).run if role.running_proxy?
+          end
+        end
+      end
+    end
+
+    def set_rollout
+      percent, list = options[:percent], options[:list]
+
+      if percent.nil? && list.blank?
+        raise ArgumentError, "No traffic split provided. You must specify --percent or --list."
+      end
+
+      modify(lock: true) do
+        on_roles(KAMAL.roles, hosts: KAMAL.proxy_hosts) do |host, role|
+          execute *KAMAL.app(role: role, host: host).rollout_set(percent: percent, list: list) if role.running_proxy?
+        end
+      end
+    end
+
+    def stop_rollout
+      modify(lock: true) do
+        on_roles(KAMAL.roles, hosts: KAMAL.proxy_hosts) do |host, role|
+          execute *KAMAL.app(role: role, host: host).rollout_stop if role.running_proxy?
+        end
+      end
+    end
+
     def hosts_removing_all_roles
       KAMAL.app_hosts.select { |host| KAMAL.roles_on(host).map(&:name).sort == KAMAL.config.host_roles(host.to_s).map(&:name).sort }
     end

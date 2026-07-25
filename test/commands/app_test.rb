@@ -175,6 +175,59 @@ class CommandsAppTest < ActiveSupport::TestCase
       new_command.remove.join(" ")
   end
 
+  test "rollout_deploy" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy rollout deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\"",
+      new_command.rollout_deploy(target: "172.1.0.2").join(" ")
+  end
+
+  test "rollout_deploy only passes flags the proxy rollout accepts" do
+    @config[:proxy] = { "ssl" => true, "host" => "example.com", "response_timeout" => 10 }
+
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy rollout deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\"",
+      new_command.rollout_deploy(target: "172.1.0.2").join(" ")
+  end
+
+  test "rollout_deploy with custom timeouts" do
+    @config[:deploy_timeout] = 6
+    @config[:drain_timeout] = 12
+
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy rollout deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"6s\" --drain-timeout=\"12s\"",
+      new_command.rollout_deploy(target: "172.1.0.2").join(" ")
+  end
+
+  test "rollout_set with percent" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy rollout set app-web --percent=\"10\"",
+      new_command.rollout_set(percent: 10).join(" ")
+  end
+
+  test "rollout_set with percent zero" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy rollout set app-web --percent=\"0\"",
+      new_command.rollout_set(percent: 0).join(" ")
+  end
+
+  test "rollout_set with list" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy rollout set app-web --list=\"dhh\" --list=\"jorge\"",
+      new_command.rollout_set(list: [ "dhh", "jorge" ]).join(" ")
+  end
+
+  test "rollout_set with percent and list" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy rollout set app-web --percent=\"10\" --list=\"dhh\"",
+      new_command.rollout_set(percent: 10, list: [ "dhh" ]).join(" ")
+  end
+
+  test "rollout_stop" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy rollout stop app-web",
+      new_command.rollout_stop.join(" ")
+  end
+
   test "logs" do
     assert_equal \
       "sh -c 'docker ps --latest --quiet --filter label=service=app --filter label=destination= --filter label=role=web --filter status=running --filter status=restarting --filter ancestor=$(docker image ls --filter reference=dhh/app:latest --format '\\''{{.ID}}'\\'') ; docker ps --latest --quiet --filter label=service=app --filter label=destination= --filter label=role=web --filter status=running --filter status=restarting' | head -1 | xargs docker logs --timestamps 2>&1",

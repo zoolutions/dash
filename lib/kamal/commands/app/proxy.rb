@@ -9,6 +9,18 @@ module Kamal::Commands::App::Proxy
     proxy_exec :remove, role.container_prefix
   end
 
+  def rollout_deploy(target:)
+    proxy_exec :rollout, :deploy, role.container_prefix, *role.proxy.rollout_deploy_command_args(target: target)
+  end
+
+  def rollout_set(percent: nil, list: nil)
+    proxy_exec :rollout, :set, role.container_prefix, *role.proxy.rollout_set_command_args(percent: percent, list: list)
+  end
+
+  def rollout_stop
+    proxy_exec :rollout, :stop, role.container_prefix
+  end
+
   def live
     proxy_exec :resume, role.container_prefix
   end
