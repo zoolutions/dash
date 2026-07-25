@@ -2,7 +2,7 @@
 description: "Investigates the codebase, designs a solution, and produces a durable plan artifact — a GitHub issue on mhenrixon/kamal (or mhenrixon/kamal-proxy) or a plan markdown under docs/plans/. Read-only: never edits code. Use before handing work to an implementation session."
 model: fable
 argument-hint: "issue <feature or problem> | md <feature or problem> | <feature or problem>"
-allowed-tools: Bash(gh issue create:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh search:*), Bash(gh label list:*), Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(date:*), Read, Grep, Glob, Write, Agent
+allowed-tools: Bash(gh issue create:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh search:*), Bash(gh label list:*), Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(date:*), Read, Grep, Glob, Write, Agent, AskUserQuestion
 ---
 
 # Plan — design expensive, execute cheap
@@ -39,14 +39,29 @@ Protect this session's context: delegate mechanical exploration to cheaper subag
 5. Check `git log` for recent related work; the design should extend it, not fight it.
 6. If the change touches proxy defaults or version pinning, read `lib/kamal/configuration/proxy/run.rb` (`MINIMUM_VERSION`, repository default) and `lib/kamal/configuration/proxy/boot.rb` — these are fork-identity files with a documented conflict resolution in `.claude/rules/upstream-sync.md`.
 
-## Phase 2 — Design
+## Phase 2 — Surface the unknowns (blindspot pass + interview)
+
+Investigation tells you what the codebase says; this phase finds what the REQUEST doesn't say. Run it BEFORE designing — a wrong assumption caught here costs one question; caught in review it costs a rewrite.
+
+1. **Blindspot pass.** Write down the unknowns you are carrying into the design:
+   - decisions the request leaves open (`deploy.yml` key naming, CLI flag surface, defaults, upgrade story for existing configs)
+   - edge cases the codebase makes possible that the request never mentions (multi-host roles, loadbalancer active vs. off, proxy below `MINIMUM_VERSION`)
+   - anything with no precedent in this repo or in `ROADMAP.md` — flag it explicitly as unknown-unknown territory
+   - whether the change spans both repos (gem + proxy), which forces release ordering
+2. **Interview the user** with AskUserQuestion, one question at a time, prioritized by blast radius: architecture-changing answers first, then operator-facing surface (`deploy.yml` keys, CLI flags, output), then ergonomics. Rules:
+   - Skip anything the codebase, `CLAUDE.md`, `ROADMAP.md`, or an existing issue already answers.
+   - 2–5 questions is the sweet spot; zero is fine when the request is genuinely unambiguous — say so rather than inventing questions.
+   - Every question offers concrete options with a recommended default, never an open-ended essay prompt.
+3. **Record the answers** in the plan's Decision section as `Settled in interview:` bullets — constraints the executor must not re-litigate.
+
+## Phase 3 — Design
 
 - Develop 2-3 candidate approaches with real tradeoffs. Pick one and say why; record why the others lost.
 - The chosen design must respect project invariants: Thor CLI commands stay thin and delegate to `Kamal::Commands::*` builders; configuration parsing/validation stays in `Kamal::Configuration`; remote execution stays behind SSHKit; the loadbalancer auto-activates for any primary role with >1 web host (don't special-case around that without updating the validator); `Kamal::Utils.older_version?`/`Gem::Version` semantics govern proxy version comparisons — never suffix tags.
 - Decide the test strategy: minitest + mocha, unit tests under `test/**` (excluding `test/integration`), integration tests only when the change touches real deploy behavior (needs Docker + a published `ghcr.io/mhenrixon/kamal-proxy` image at `MINIMUM_VERSION`). Two builder tests are known-failing on Apple Silicon only — don't plan a fix for those unless that's the task.
 - If the change requires a new `MINIMUM_VERSION`, the plan must sequence proxy-repo work before gem-repo work (release ordering is a hard constraint — see `.claude/rules/upstream-sync.md` → Release procedure) and interpolate the version in test expectations rather than hardcoding it.
 
-## Phase 3 — Emit the plan artifact
+## Phase 4 — Emit the plan artifact
 
 Use this structure for the issue body or markdown file. Every section is load-bearing — an executor uses Context to avoid re-discovery, Steps to act, Gates to verify, Boundaries to stop.
 
@@ -60,7 +75,7 @@ Use this structure for the issue body or markdown file. Every section is load-be
 <Bullet list: `lib/kamal/path/to/file.rb` — why it matters to this change. Include the relevant CLI, commander, commands, and configuration layers. Self-contained: no references to "as discussed" or this session.>
 
 ## Decision
-<Chosen approach and rationale. Then: alternatives considered and why each was rejected.>
+<Chosen approach and rationale. Then: alternatives considered and why each was rejected. End with `Settled in interview:` bullets for every constraint the user confirmed in the interview phase — the executor must not re-litigate these.>
 
 ## Implementation steps
 <Ordered, small, each mapped to the appropriate architecture layer (CLI -> Commander -> Commands -> Configuration -> SSHKit). Name exact files to create or change. Note any that must land in ../kamal-proxy first.>
@@ -82,6 +97,6 @@ For GitHub issues: create with `gh issue create --repo mhenrixon/kamal --title "
 
 For markdown files: Write to `docs/plans/YYYY-MM-DD-<slug>.md`. Leave it uncommitted — committing is the user's call.
 
-## Phase 4 — Handoff
+## Phase 5 — Handoff
 
 Report back: link to the issue (or file path), the chosen approach in 2-3 sentences, and which repo(s) it touches. Stop there — do not start implementing.
