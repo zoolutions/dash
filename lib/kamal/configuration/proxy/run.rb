@@ -4,6 +4,10 @@ class Kamal::Configuration::Proxy::Run
   DEFAULT_HTTPS_PORT = 443
   DEFAULT_LOG_MAX_SIZE = "10m"
 
+  # Bump when the digest serialization changes, so every host converges with
+  # exactly one reboot after upgrading kamal.
+  DIGEST_SCHEMA_VERSION = "v1"
+
   attr_reader :config, :run_config
   delegate :argumentize, :optionize, to: Kamal::Utils
 
@@ -11,6 +15,16 @@ class Kamal::Configuration::Proxy::Run
     @config = config
     @run_config = run_config
     @context = context
+  end
+
+  def self.digest(*parts)
+    Digest::SHA256.hexdigest([ DIGEST_SCHEMA_VERSION, *parts ].join("\n"))
+  end
+
+  # Digest of the materialized run invocation, used to detect drift between
+  # the running proxy container and the current configuration.
+  def config_digest
+    self.class.digest(image, run_command, *docker_options_args)
   end
 
   def debug?

@@ -227,6 +227,63 @@ class CommandsProxyTest < ActiveSupport::TestCase
       new_command.run.join(" ")
   end
 
+  test "run with config digest label" do
+    @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
+    assert_equal \
+      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=abc123 --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run",
+      new_command.run(digest: "abc123").join(" ")
+  end
+
+  test "run with config digest label on legacy boot config path" do
+    assert_equal \
+      "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=abc123 --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config",
+      new_command.run(digest: "abc123").join(" ")
+  end
+
+  test "start_or_run passes digest through" do
+    @config[:proxy] = { "run" => {} }
+    assert_match \
+      "--label org.kamal.proxy-config-digest=abc123",
+      new_command.start_or_run(digest: "abc123").join(" ")
+  end
+
+  test "stop with timeout" do
+    assert_equal \
+      "docker container stop --time 40 kamal-proxy",
+      new_command.stop(timeout: 40).join(" ")
+  end
+
+  test "pull" do
+    @config[:proxy] = { "run" => { "version" => "v1.2.3" } }
+    assert_equal \
+      "docker pull ghcr.io/mhenrixon/kamal-proxy:v1.2.3",
+      new_command.pull.join(" ")
+  end
+
+  test "pull on legacy boot config path" do
+    assert_equal \
+      "docker pull $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\")",
+      new_command.pull.join(" ")
+  end
+
+  test "list" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy list",
+      new_command.list.join(" ")
+  end
+
+  test "config_digest" do
+    assert_equal \
+      "docker inspect kamal-proxy --format '{{ index .Config.Labels \"org.kamal.proxy-config-digest\" }}'",
+      new_command.config_digest.join(" ")
+  end
+
+  test "container_id" do
+    assert_equal \
+      "docker container ls --all --filter 'name=^kamal-proxy$' --quiet",
+      new_command.container_id.join(" ")
+  end
+
   private
     def new_command
       Kamal::Commands::Proxy.new(Kamal::Configuration.new(@config, version: "123"), host: "1.1.1.1")

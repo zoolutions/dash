@@ -2,12 +2,14 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
   delegate :argumentize, :optionize, to: Kamal::Utils
   attr_reader :proxy_run_config
 
+  CONFIG_DIGEST_LABEL = "org.kamal.proxy-config-digest"
+
   def initialize(config, host:)
     super(config)
     @proxy_run_config = config.proxy_run(host)
   end
 
-  def run
+  def run(digest: nil)
     if proxy_run_config
       docker \
         :run,
@@ -16,11 +18,12 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
         "--detach",
         "--restart", "unless-stopped",
         "--volume", "kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy",
+        *config_digest_label_args(digest),
         *proxy_run_config.docker_options_args,
         *proxy_run_config.image,
         *proxy_run_config.run_command
     else
-      pipe boot_config, xargs(docker_run)
+      pipe boot_config, xargs(docker_run(digest: digest))
     end
   end
 
@@ -28,12 +31,12 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
     docker :container, :start, container_name
   end
 
-  def stop(name: container_name)
-    docker :container, :stop, name
+  def stop(name: container_name, timeout: nil)
+    docker :container, :stop, *("--time #{timeout}" if timeout), name
   end
 
-  def start_or_run
-    combine start, run, by: "||"
+  def start_or_run(digest: nil)
+    combine start, run(digest: digest), by: "||"
   end
 
   def info
@@ -44,6 +47,26 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
     pipe \
       docker(:inspect, container_name, "--format '{{.Config.Image}}'"),
       [ :awk, "-F:", "'{print \$NF}'" ]
+  end
+
+  def config_digest
+    docker :inspect, container_name, "--format", "'{{ index .Config.Labels \"#{CONFIG_DIGEST_LABEL}\" }}'"
+  end
+
+  def container_id
+    container_id_for(container_name: container_name)
+  end
+
+  def pull
+    if proxy_run_config
+      docker :pull, proxy_run_config.image
+    else
+      docker :pull, "#{substitute(read_image)}:#{substitute(read_image_version)}"
+    end
+  end
+
+  def list
+    docker :exec, container_name, "kamal-proxy", :list
   end
 
   def logs(timestamps: true, since: nil, lines: nil, grep: nil, grep_options: nil)
@@ -141,7 +164,11 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
       combine [ :cat, file, "2>", "/dev/null" ], [ :echo, "\"#{default}\"" ], by: "||"
     end
 
-    def docker_run
+    def config_digest_label_args(digest)
+      [ "--label", "#{CONFIG_DIGEST_LABEL}=#{digest}" ] if digest
+    end
+
+    def docker_run(digest: nil)
       docker \
         :run,
         "--name", container_name,
@@ -149,6 +176,7 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
         "--detach",
         "--restart", "unless-stopped",
         "--volume", "kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy",
+        *config_digest_label_args(digest),
         *config.proxy_boot.apps_volume.docker_args
     end
 end
