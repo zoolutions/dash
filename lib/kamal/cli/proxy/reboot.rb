@@ -37,20 +37,76 @@ class Kamal::Cli::Proxy::Reboot
     end
 
     def replace_container
+      execute *proxy.ensure_proxy_directory
+      execute *proxy.ensure_apps_config_directory
+
+      if proxy.port_holder?
+        replace_generation
+      else
+        stop_and_replace
+      end
+    end
+
+    # Phase 1 replacement: stop the old container, start the new one. Brief gap.
+    def stop_and_replace
       info "Stopping and removing kamal-proxy on #{host}, if running..."
       execute *proxy.stop(timeout: KAMAL.config.drain_timeout + 10), raise_on_non_zero_exit: false
       execute *proxy.remove_container
-      execute *proxy.ensure_proxy_directory
-      execute *proxy.ensure_apps_config_directory
 
       execute *proxy.run(digest: drift.expected_digest)
     end
 
-    def wait_until_ready
+    # Zero-downtime replacement: overlap a new generation on the port-holder's
+    # namespace, then drain the old one out.
+    def replace_generation
+      if holder_running?
+        if generation_running?
+          handoff_generation
+        else
+          execute *proxy.remove_container
+          execute *proxy.run(digest: drift.expected_digest)
+        end
+      else
+        migrate_to_holder
+      end
+    end
+
+    def handoff_generation
+      info "Handing off kamal-proxy on #{host} to a new generation (zero downtime)..."
+      execute *proxy.remove_stopped_container(name: proxy.next_container_name), raise_on_non_zero_exit: false
+      execute *proxy.run(digest: drift.expected_digest, name: proxy.next_container_name)
+      wait_until_ready(name: proxy.next_container_name)
+
+      execute *proxy.drain(timeout: KAMAL.config.drain_timeout)
+      execute *proxy.wait_for_exit
+      execute *proxy.remove_stopped_container
+      execute *proxy.promote_next_container
+    end
+
+    # The old proxy still owns the published ports, so the holder cannot bind
+    # them until it is gone. One final replacement with a brief gap.
+    def migrate_to_holder
+      info "Migrating kamal-proxy on #{host} to the port-holder architecture (brief gap)..."
+      execute *proxy.stop(timeout: KAMAL.config.drain_timeout + 10), raise_on_non_zero_exit: false
+      execute *proxy.remove_container
+
+      execute *proxy.run_holder
+      execute *proxy.run(digest: drift.expected_digest)
+    end
+
+    def holder_running?
+      capture_with_info(*proxy.holder_container_id, raise_on_non_zero_exit: false).strip.present?
+    end
+
+    def generation_running?
+      capture_with_info(*proxy.container_id(only_running: true), raise_on_non_zero_exit: false).strip.present?
+    end
+
+    def wait_until_ready(name: nil)
       deadline = Time.now + READY_TIMEOUT
 
       begin
-        capture_with_info(*proxy.list, verbosity: :debug)
+        capture_with_info(*proxy.list(**{ name: name }.compact), verbosity: :debug)
       rescue SSHKit::Command::Failed
         raise Kamal::Cli::BootError, "kamal-proxy on #{host} did not become ready within #{READY_TIMEOUT} seconds" if Time.now >= deadline
         sleep 0.5

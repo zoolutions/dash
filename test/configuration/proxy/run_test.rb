@@ -82,6 +82,36 @@ class ConfigurationProxyRunTest < ActiveSupport::TestCase
     assert_not_equal Kamal::Configuration::Proxy::Run.digest("a"), Kamal::Configuration::Proxy::Run.digest("b")
   end
 
+  test "port_holder defaults to false with kamal network and published ports" do
+    config = Kamal::Configuration.new(base_deploy)
+    run = Kamal::Configuration::Proxy::Run.new(config, run_config: {})
+
+    assert_not run.port_holder?
+    assert_equal [ "--network", "kamal" ], run.network_args
+    assert_match "--publish 80:80", run.docker_options_args.join(" ")
+    assert_no_match(/--reuse-port/, run.run_command)
+  end
+
+  test "port_holder moves ports to the holder and joins its namespace" do
+    config = Kamal::Configuration.new(base_deploy)
+    run = Kamal::Configuration::Proxy::Run.new(config, run_config: { "port_holder" => true })
+
+    assert run.port_holder?
+    assert_equal "kamal-proxy-net", run.holder_container_name
+    assert_equal [ "--network", "container:kamal-proxy-net" ], run.network_args
+    assert_no_match(/--publish/, run.docker_options_args.join(" "))
+    assert_match "--publish 80:80 --publish 443:443", run.holder_docker_args.join(" ")
+    assert_match "--reuse-port", run.run_command
+  end
+
+  test "config_digest changes when port_holder flips" do
+    config = Kamal::Configuration.new(base_deploy)
+
+    assert_not_equal \
+      Kamal::Configuration::Proxy::Run.new(config, run_config: {}).config_digest,
+      Kamal::Configuration::Proxy::Run.new(config, run_config: { "port_holder" => true }).config_digest
+  end
+
   private
     def base_deploy
       {
