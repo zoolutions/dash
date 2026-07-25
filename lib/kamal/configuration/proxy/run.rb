@@ -1,5 +1,5 @@
 class Kamal::Configuration::Proxy::Run
-  MINIMUM_VERSION = "v0.9.2.1"
+  MINIMUM_VERSION = "v0.9.2.2"
   DEFAULT_HTTP_PORT = 80
   DEFAULT_HTTPS_PORT = 443
   DEFAULT_LOG_MAX_SIZE = "10m"
@@ -102,7 +102,11 @@ class Kamal::Configuration::Proxy::Run
   end
 
   def run_command_options
-    { debug: debug? || nil, "metrics-port": metrics_port }.compact
+    # recheck-targets-on-restore: after a reboot, re-verify restored targets
+    # with live health checks instead of trusting the saved state — a dead
+    # target demotes to 503 and self-heals rather than serving 502s forever.
+    # Available from MINIMUM_VERSION, so it is always safe to pass.
+    { debug: debug? || nil, "metrics-port": metrics_port, "recheck-targets-on-restore": true }.compact
   end
 
   def docker_options_args
