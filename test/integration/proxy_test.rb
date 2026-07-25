@@ -43,8 +43,10 @@ class ProxyTest < IntegrationTest
     kamal :proxy, :restart
     assert_proxy_running
 
+    # Since kamal-proxy v0.9.2.2 state is flushed on every shutdown, so any
+    # boot after the first restores it rather than reporting no previous state.
     logs = kamal :proxy, :logs, capture: true
-    assert_match /No previous state to restore/, logs
+    assert_match /Restored saved state/, logs
 
     kamal :proxy, :remove
     assert_proxy_not_running
