@@ -1,14 +1,16 @@
 class Kamal::Cli::App::Boot
-  attr_reader :host, :role, :version, :barrier, :sshkit
+  attr_reader :host, :role, :version, :barrier, :sshkit, :cli
   delegate :execute, :capture_with_info, :capture_with_pretty_json, :info, :error, :upload!, to: :sshkit
+  delegate :run_hook, to: :cli
   delegate :assets?, :running_proxy?, to: :role
 
-  def initialize(host, role, sshkit, version, barrier)
+  def initialize(host, role, sshkit, version, barrier, cli)
     @host = host
     @role = role
     @version = version
     @barrier = barrier
     @sshkit = sshkit
+    @cli = cli
   end
 
   def run
@@ -54,7 +56,10 @@ class Kamal::Cli::App::Boot
       if running_proxy?
         endpoint = capture_with_info(*app.container_id_for_version(version)).strip
         raise Kamal::Cli::BootError, "Failed to get endpoint for #{role} on #{host}, did the container boot?" if endpoint.empty?
+
+        run_hook "pre-proxy-deploy", hosts: host.to_s, role: role.name
         execute *app.deploy(target: endpoint)
+        run_hook "post-proxy-deploy", hosts: host.to_s, role: role.name
       else
         Kamal::Cli::Healthcheck::Poller.wait_for_healthy { capture_with_info(*app.status(version: version)) }
       end

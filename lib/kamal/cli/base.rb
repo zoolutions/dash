@@ -11,6 +11,10 @@ module Kamal::Cli
     class LockHeldError < StandardError; end
     class LockMissingError < StandardError; end
 
+    # Hooks set process-global state (the hook env and the SSHKit verbosity), so
+    # serialize them: some fire from inside SSHKit's per-host threads.
+    HOOK_MUTEX = Mutex.new
+
     def self.exit_on_failure?() true end
     def self.dynamic_command_class() Kamal::Cli::Alias::Command end
 
@@ -42,6 +46,43 @@ module Kamal::Cli
       end
 
       initialize_commander unless KAMAL.configured?
+    end
+
+    # Public so collaborators like Kamal::Cli::App::Boot can fire hooks, but not a Thor command.
+    no_commands do
+      def run_hook(hook, **extra_details)
+        if !options[:skip_hooks] && KAMAL.hook.hook_exists?(hook)
+          details = {
+            hosts: KAMAL.hosts.join(","),
+            roles: KAMAL.specific_roles&.join(","),
+            lock: KAMAL.holding_lock?.to_s,
+            command: command,
+            subcommand: subcommand
+          }.compact
+
+          hooks_output = KAMAL.config.hooks_output_for(hook)
+
+          # CLI flags override config: -q hides all, -v shows all
+          # Config setting :verbose forces output, :quiet forces silence
+          hook_verbosity = if KAMAL.verbosity == :info && hooks_output
+            VERBOSITY.fetch(hooks_output)
+          else
+            KAMAL.verbosity
+          end
+
+          HOOK_MUTEX.synchronize do
+            with_env KAMAL.hook.env(**details, **extra_details) do
+              KAMAL.with_verbosity(hook_verbosity) do
+                run_locally do
+                  execute *KAMAL.hook.run(hook)
+                end
+              end
+            rescue SSHKit::Command::Failed => e
+              raise HookError.new("Hook `#{hook}` failed:\n#{e.message}")
+            end
+          end
+        end
+      end
     end
 
     private
@@ -219,38 +260,6 @@ module Kamal::Cli
       rescue SSHKit::Runner::ExecuteError => e
         raise LockMissingError if e.message =~ /No such file or directory/
         raise
-      end
-
-      def run_hook(hook, **extra_details)
-        if !options[:skip_hooks] && KAMAL.hook.hook_exists?(hook)
-          details = {
-            hosts: KAMAL.hosts.join(","),
-            roles: KAMAL.specific_roles&.join(","),
-            lock: KAMAL.holding_lock?.to_s,
-            command: command,
-            subcommand: subcommand
-          }.compact
-
-          hooks_output = KAMAL.config.hooks_output_for(hook)
-
-          # CLI flags override config: -q hides all, -v shows all
-          # Config setting :verbose forces output, :quiet forces silence
-          hook_verbosity = if KAMAL.verbosity == :info && hooks_output
-            VERBOSITY.fetch(hooks_output)
-          else
-            KAMAL.verbosity
-          end
-
-          with_env KAMAL.hook.env(**details, **extra_details) do
-            KAMAL.with_verbosity(hook_verbosity) do
-              run_locally do
-                execute *KAMAL.hook.run(hook)
-              end
-            end
-          rescue SSHKit::Command::Failed => e
-            raise HookError.new("Hook `#{hook}` failed:\n#{e.message}")
-          end
-        end
       end
 
       def on(*args, &block)

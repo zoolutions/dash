@@ -8,7 +8,7 @@ class MainTest < IntegrationTest
 
     deploy_output = kamal :deploy, capture: true
     assert_app_is_up version: first_version
-    assert_hooks_ran "pre-connect", "pre-build", "pre-deploy", "pre-app-boot", "post-app-boot", "post-deploy"
+    assert_hooks_ran "pre-connect", "pre-build", "pre-deploy", "pre-app-boot", "pre-proxy-deploy", "post-proxy-deploy", "post-app-boot", "post-deploy"
     assert_hook_output deploy_output
     assert_match %r{Logs written to /tmp/kamal-deploy-logs/.*_deploy\.log}, deploy_output
     assert_match /Logs sent to http:\/\/otel_collector:4318/, deploy_output
@@ -26,7 +26,7 @@ class MainTest < IntegrationTest
 
     kamal :redeploy
     assert_app_is_up version: second_version
-    assert_hooks_ran "pre-connect", "pre-build", "pre-deploy", "pre-app-boot", "post-app-boot", "post-deploy"
+    assert_hooks_ran "pre-connect", "pre-build", "pre-deploy", "pre-app-boot", "pre-proxy-deploy", "post-proxy-deploy", "post-app-boot", "post-deploy"
     assert_deploy_log "*_redeploy.log",
       /Build and push app image/,
       /INFO .* Running docker/
@@ -35,7 +35,7 @@ class MainTest < IntegrationTest
     assert_asset_volume_read_only second_version
 
     kamal :rollback, first_version
-    assert_hooks_ran "pre-connect", "pre-deploy", "pre-app-boot", "post-app-boot", "post-deploy"
+    assert_hooks_ran "pre-connect", "pre-deploy", "pre-app-boot", "pre-proxy-deploy", "post-proxy-deploy", "post-app-boot", "post-deploy"
     assert_app_is_up version: first_version
     assert_deploy_log "*_rollback.log",
       /INFO .* Running docker/,

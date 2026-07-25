@@ -561,6 +561,69 @@ class CliAppTest < CliTestCase
     end
   end
 
+  test "boot runs proxy deploy hooks around the proxy deploy" do
+    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
+
+    run_command("boot", config: :with_proxy).tap do |output|
+      assert_hook_ran "pre-proxy-deploy", output
+      assert_hook_ran "post-proxy-deploy", output
+      assert_match /pre-proxy-deploy.*kamal-proxy deploy app-web.*post-proxy-deploy/m, output
+    end
+  end
+
+  test "boot passes the host and role to the proxy deploy hooks" do
+    Kamal::Cli::App.any_instance.stubs(:run_hook)
+    Kamal::Cli::App.any_instance.expects(:run_hook).with("pre-proxy-deploy", hosts: "1.1.1.1", role: "web")
+    Kamal::Cli::App.any_instance.expects(:run_hook).with("post-proxy-deploy", hosts: "1.1.1.1", role: "web")
+
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
+
+    run_command("boot", config: :with_proxy)
+  end
+
+  test "boot skips proxy deploy hooks for roles not running the proxy" do
+    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Kamal::Cli::Healthcheck::Poller.stubs(:wait_for_healthy)
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
+
+    run_command("boot", config: :with_proxy, host: "1.1.1.3").tap do |output|
+      assert_hook_ran "pre-app-boot", output
+      assert_no_match /hooks\/pre-proxy-deploy/, output
+      assert_no_match /hooks\/post-proxy-deploy/, output
+    end
+  end
+
+  test "boot skips proxy deploy hooks with --skip-hooks" do
+    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
+
+    run_command("boot", "--skip-hooks", config: :with_proxy).tap do |output|
+      assert_match /kamal-proxy deploy app-web/, output
+      assert_no_match /hooks\/pre-proxy-deploy/, output
+      assert_no_match /hooks\/post-proxy-deploy/, output
+    end
+  end
+
+  test "boot aborts when the pre-proxy-deploy hook fails" do
+    fail_hook("pre-proxy-deploy")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
+
+    stderred { run_command("boot", config: :with_proxy, allow_execute_error: true) }
+
+    assert @executions.none? { |args| args.join(" ").include?("kamal-proxy deploy") }
+    assert @executions.any? { |args| args.join(" ").include?("app-web-latest") && args.join(" ").include?("docker stop") }
+  end
+
+  test "start runs proxy deploy hooks around the proxy deploy" do
+    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("999") # old version
+
+    run_command("start").tap do |output|
+      assert_match /pre-proxy-deploy.*kamal-proxy deploy app-web.*post-proxy-deploy/m, output
+    end
+  end
+
   test "live" do
     run_command("live").tap do |output|
       assert_match "docker exec kamal-proxy kamal-proxy resume app-web on 1.1.1.1", output
