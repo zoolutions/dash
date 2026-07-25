@@ -87,6 +87,7 @@ class Kamal::Configuration
     ensure_unique_hosts_for_ssl_roles
     ensure_local_registry_remote_builder_has_ssh_url
     ensure_no_conflicting_proxy_runs
+    ensure_valid_loadbalancer
     ensure_valid_hooks_output!
   end
 
@@ -430,6 +431,16 @@ class Kamal::Configuration
 
     def proxy_runs(host)
       (host_roles(host) + host_accessories(host)).map(&:proxy).compact.map(&:run).compact
+    end
+
+    # `loadbalancer: true` resolves to the primary role's first host, so an
+    # accessories-only configuration has nothing to run it on.
+    def ensure_valid_loadbalancer
+      if proxy.loadbalancer == true && primary_role.nil?
+        raise Kamal::ConfigurationError, "proxy/loadbalancer: can't be enabled without servers"
+      end
+
+      true
     end
 
     def role_names

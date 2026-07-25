@@ -65,6 +65,42 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     assert_nil config.proxy.effective_loadbalancer
   end
 
+  test "effective_loadbalancer with loadbalancer true uses the primary role's first host" do
+    @deploy[:proxy] = { "loadbalancer" => true }
+    @deploy[:servers] = { "web" => [ "web1.example.com" ] }
+    assert_equal "web1.example.com", config.proxy.effective_loadbalancer
+    assert config.proxy.load_balancing?
+  end
+
+  test "effective_loadbalancer with loadbalancer false and multiple web hosts" do
+    @deploy[:proxy] = { "loadbalancer" => false }
+    @deploy[:servers] = { "web" => [ "web1.example.com", "web2.example.com" ] }
+    assert_equal false, config.proxy.effective_loadbalancer
+    assert_not config.proxy.load_balancing?
+  end
+
+  test "loadbalancer true without any servers" do
+    @deploy.delete(:servers)
+    @deploy[:accessories] = { "db" => { "image" => "mysql", "host" => "1.1.1.5" } }
+    @deploy[:proxy] = { "loadbalancer" => true }
+    exception = assert_raises(Kamal::ConfigurationError) { config }
+    assert_match "proxy/loadbalancer: can't be enabled without servers", exception.message
+  end
+
+  test "invalid loadbalancer values" do
+    [ 123, "", "  ", "lb1.example.com,lb2.example.com", "lb.example.com extra" ].each do |value|
+      @deploy[:proxy] = { "loadbalancer" => value }
+      exception = assert_raises(Kamal::ConfigurationError, "expected #{value.inspect} to be rejected") { config.proxy }
+      assert_match "proxy/loadbalancer: should be true, false, or a single host", exception.message
+    end
+  end
+
+  test "loadbalancer as a list of hosts" do
+    @deploy[:proxy] = { "loadbalancer" => [ "lb.example.com" ] }
+    exception = assert_raises(Kamal::ConfigurationError) { config.proxy }
+    assert_match "proxy/loadbalancer: should be a string", exception.message
+  end
+
   test "load_balancing? returns true when loadbalancer is present" do
     @deploy[:proxy] = { "loadbalancer" => "lb.example.com" }
     assert config.proxy.load_balancing?

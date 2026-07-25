@@ -40,8 +40,9 @@ class Kamal::Configuration::Proxy
 
   def effective_loadbalancer
     return false if loadbalancer == false
+    return primary_role_first_host if loadbalancer == true
     return loadbalancer if loadbalancer.present?
-    return config.primary_role.hosts.first if config.primary_role && Array(config.primary_role.hosts).size > 1
+    return primary_role_first_host if config.primary_role && Array(config.primary_role.hosts).size > 1
 
     nil
   end
@@ -147,6 +148,10 @@ class Kamal::Configuration::Proxy
   end
 
   private
+    def primary_role_first_host
+      config.primary_role&.hosts&.first
+    end
+
     # Flags for kamal-proxy's dynamic domain source (runtime TLS hostnames).
     # TLS terminates wherever these flags land, so like host/tls they are
     # stripped from the per-app deploy when load balancing and re-added by
