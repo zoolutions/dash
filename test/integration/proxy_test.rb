@@ -53,8 +53,6 @@ class ProxyTest < IntegrationTest
   test "deploy reboots a drifted proxy automatically" do
     @app = "app"
 
-    kamal :envify
-
     kamal :deploy
     assert_app_is_up
 
