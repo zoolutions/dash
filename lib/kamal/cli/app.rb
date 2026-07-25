@@ -18,13 +18,14 @@ class Kamal::Cli::App < Kamal::Cli::Base
 
         # Primary hosts and roles are returned first, so they can open the barrier
         barrier = Kamal::Cli::Healthcheck::Barrier.new
+        cli = self
 
         host_boot_groups.each do |hosts|
           host_list = Array(hosts).join(",")
           run_hook "pre-app-boot", hosts: host_list
 
           on_roles(KAMAL.roles, hosts: hosts, parallel: KAMAL.config.boot.parallel_roles) do |host, role|
-            Kamal::Cli::App::Boot.new(host, role, self, version, barrier).run
+            Kamal::Cli::App::Boot.new(host, role, self, version, barrier, cli).run
           end
 
           run_hook "post-app-boot", hosts: host_list
@@ -43,6 +44,8 @@ class Kamal::Cli::App < Kamal::Cli::Base
   desc "start", "Start existing app container on servers"
   def start
     modify(lock: true) do
+      cli = self
+
       on_roles(KAMAL.roles, hosts: KAMAL.app_hosts, parallel: KAMAL.config.boot.parallel_roles) do |host, role|
         app = KAMAL.app(role: role, host: host)
         execute *KAMAL.auditor.record("Started app version #{KAMAL.config.version}"), verbosity: :debug
@@ -53,7 +56,9 @@ class Kamal::Cli::App < Kamal::Cli::Base
           endpoint = capture_with_info(*app.container_id_for_version(version)).strip
           raise Kamal::Cli::BootError, "Failed to get endpoint for #{role} on #{host}, did the container boot?" if endpoint.empty?
 
+          cli.run_hook "pre-proxy-deploy", hosts: host.to_s, role: role.name
           execute *app.deploy(target: endpoint)
+          cli.run_hook "post-proxy-deploy", hosts: host.to_s, role: role.name
         end
       end
     end

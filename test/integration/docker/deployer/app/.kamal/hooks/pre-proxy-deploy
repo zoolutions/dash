@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "Routing traffic for ${KAMAL_ROLE} on ${KAMAL_HOSTS}..."
+mkdir -p /tmp/${TEST_ID} && touch /tmp/${TEST_ID}/pre-proxy-deploy
