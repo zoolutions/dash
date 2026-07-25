@@ -14,6 +14,10 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
         error "Specify one of 'host' or 'hosts', not both"
       end
 
+      if config.key?("loadbalancer")
+        validate_loadbalancer! config["loadbalancer"]
+      end
+
       if config["ssl"].is_a?(Hash)
         if config["ssl"]["certificate_pem"].present? && config["ssl"]["private_key_pem"].blank?
           error "Missing private_key_pem setting (required when certificate_pem is present)"
@@ -45,6 +49,20 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
   end
 
   private
+    # `true` picks the primary role's first host, `false` opts out of the
+    # auto-activation that kicks in for a multi-host primary role, and a string
+    # names the host to run the load balancer on — which may be a dedicated host
+    # outside `servers:`, so we only check its shape.
+    def validate_loadbalancer!(loadbalancer)
+      with_context("loadbalancer") do
+        return if loadbalancer == true || loadbalancer == false
+
+        unless loadbalancer.is_a?(String) && loadbalancer.present? && !loadbalancer.match?(/[\s,]/)
+          error "should be true, false, or a single host"
+        end
+      end
+    end
+
     def validate_tls_domains!(tls_domains)
       with_context("tls_domains") do
         source = tls_domains["source"]
