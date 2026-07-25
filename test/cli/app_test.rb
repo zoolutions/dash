@@ -642,7 +642,80 @@ class CliAppTest < CliTestCase
     end
   end
 
+  test "rollout deploy" do
+    Object.any_instance.stubs(:sleep)
+    stub_rollout_target_not_deployed
+
+    run_command("rollout", "deploy").tap do |output|
+      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname 1.1.1.1-[0-9a-f]{12} /, output
+      assert_match "docker exec kamal-proxy kamal-proxy rollout deploy app-web --target=\"12345678:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\"", output
+    end
+  end
+
+  test "rollout deploy leaves the live version running" do
+    Object.any_instance.stubs(:sleep)
+    stub_rollout_target_not_deployed
+
+    run_command("rollout", "deploy").tap do |output|
+      assert_no_match /kamal-proxy deploy app-web/, output
+      assert_no_match /xargs docker stop/, output
+    end
+  end
+
+  test "rollout deploy fails when the version is already deployed" do
+    Object.any_instance.stubs(:sleep)
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-web-latest$'", "--quiet", raise_on_non_zero_exit: false)
+      .returns("12345678")
+
+    run_command("rollout", "deploy", allow_execute_error: true).tap do |output|
+      assert_match /Version latest is already deployed/, output
+      assert_no_match /kamal-proxy rollout deploy/, output
+    end
+  end
+
+  test "rollout set with percent" do
+    run_command("rollout", "set", "--percent", "10").tap do |output|
+      assert_match "docker exec kamal-proxy kamal-proxy rollout set app-web --percent=\"10\" on 1.1.1.1", output
+    end
+  end
+
+  test "rollout set with list" do
+    run_command("rollout", "set", "--list", "dhh", "jorge").tap do |output|
+      assert_match "docker exec kamal-proxy kamal-proxy rollout set app-web --list=\"dhh\" --list=\"jorge\" on 1.1.1.1", output
+    end
+  end
+
+  test "rollout set with percent zero parks the rollout without tearing it down" do
+    run_command("rollout", "set", "--percent", "0").tap do |output|
+      assert_match "docker exec kamal-proxy kamal-proxy rollout set app-web --percent=\"0\" on 1.1.1.1", output
+    end
+  end
+
+  test "rollout set without percent or list" do
+    assert_raises(ArgumentError) { run_command("rollout", "set") }
+  end
+
+  test "rollout stop" do
+    run_command("rollout", "stop").tap do |output|
+      assert_match "docker exec kamal-proxy kamal-proxy rollout stop app-web on 1.1.1.1", output
+    end
+  end
+
+  test "rollout with an unknown action" do
+    assert_raises(ArgumentError) { run_command("rollout", "frobnicate") }
+  end
+
   private
+    def stub_rollout_target_not_deployed
+      SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+        .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-web-latest$'", "--quiet", raise_on_non_zero_exit: false)
+        .returns("")
+      SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+        .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-web-latest$'", "--quiet")
+        .returns("12345678")
+    end
+
     def run_command(*command, config: :with_accessories, host: "1.1.1.1", allow_execute_error: false)
       stdouted do
         Kamal::Cli::App.start([ *command, "-c", "test/fixtures/deploy_#{config}.yml", *([ "--hosts", host ] if host) ])
