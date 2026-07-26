@@ -106,6 +106,29 @@ class Kamal::Configuration::Proxy::Run
     "kamal-proxy"
   end
 
+  # Zero-downtime reboots: a minimal long-lived holder container owns the
+  # published ports, and proxy generations join its network namespace so two
+  # can overlap on the same ports during a handoff.
+  def port_holder?
+    run_config.fetch("port_holder", false)
+  end
+
+  def holder_container_name
+    "kamal-proxy-net"
+  end
+
+  def network_args
+    if port_holder?
+      [ "--network", "container:#{holder_container_name}" ]
+    else
+      [ "--network", "kamal" ]
+    end
+  end
+
+  def holder_docker_args
+    [ *publish_args, *logging_args ].compact
+  end
+
   def options_args
     if args = run_config["options"]
       optionize args
@@ -157,7 +180,7 @@ class Kamal::Configuration::Proxy::Run
   def docker_options_args
     [
       *apps_volume_args,
-      *publish_args,
+      *(publish_args unless port_holder?),
       *logging_args,
       *("--expose=#{metrics_port}" if metrics_port.present?),
       *secrets_args,
@@ -249,7 +272,9 @@ class Kamal::Configuration::Proxy::Run
         "trace-context": run_config["trace_context"],
         "min-tls": run_config["min_tls"]&.to_s,
         http3: run_config["http3"] ? true : nil,
-        "reuse-port": run_config["reuse_port"] ? true : nil,
+        # port_holder needs two generations bound to :80/:443 at once, so the
+        # holder topology forces the flag regardless of the standalone key.
+        "reuse-port": (run_config["reuse_port"] || port_holder?) ? true : nil,
         "ignore-restore-errors": run_config["ignore_restore_errors"] ? true : nil,
         "proxy-protocol": run_config["proxy_protocol"] ? true : nil,
         "proxy-protocol-allow-ip": run_config["proxy_protocol_allow_ips"].presence,

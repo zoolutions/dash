@@ -730,6 +730,13 @@ proxy:
                                    # Defaults to the minimum version this gem
                                    # requires - only pin it to roll forward early,
                                    # never below the default
+    port_holder: true              # Zero-downtime proxy reboots (default: false).
+                                   # Runs a minimal long-lived kamal-proxy-net container that
+                                   # owns the published ports; proxy generations join its
+                                   # network namespace and overlap during a reboot, so config
+                                   # and version changes apply without dropping requests.
+                                   # Adopting (or leaving) this mode takes one final
+                                   # reboot with a brief gap.
     # ACME / Let's Encrypt
     #
     # Certificate issuance for the whole proxy, including DNS-01 challenges.
@@ -914,20 +921,13 @@ proxy:
     # only the URL's *value* does not move the drift digest — run
     # `kamal proxy reboot` after rotating it.
     #
-    # The remaining three only matter with a shared store, and are seconds:
-    #
-    # `store_timeout` is how long the store may take to answer before the request
-    # goes to the app instead — a store that is slow or down then costs a cache,
-    # never a failed request. `lease_ttl` is how long one proxy's claim on a key
-    # outlives the proxy itself; `lease_wait` is how long a request waits for
-    # another proxy's in-flight fetch before fetching itself. Both take negative
-    # values to switch cross-node coalescing off.
+    # `store_timeout` only matters with a shared store, in seconds: how long
+    # the store may take to answer before the request goes to the app instead —
+    # a store that is slow or down then costs a cache, never a failed request.
     cache:
       store: redis://cache.example.com:6379/0
       store_timeout: 2
       memory_size: 134_217_728
-      lease_ttl: 30
-      lease_wait: 1
     options:                       # Additional options to pass to `docker run`
       label:
         - custom.label=kamal-proxy

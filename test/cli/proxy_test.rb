@@ -98,6 +98,56 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  test "boot with drifted port_holder proxy hands off with zero downtime" do
+    Object.any_instance.stubs(:sleep)
+    stub_proxy_drift
+    # Holder and old generation are running
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :container, :ls, "--filter", "'name=^kamal-proxy-net$'", "--quiet", raise_on_non_zero_exit: false)
+      .returns("holder123")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :container, :ls, "--filter", "'name=^kamal-proxy$'", "--quiet", raise_on_non_zero_exit: false)
+      .returns("abc123")
+
+    run_command("boot", fixture: :with_proxy_port_holder).tap do |output|
+      assert_match "Handing off kamal-proxy on 1.1.1.1 to a new generation (zero downtime)...", output
+      assert_match_with_digest "docker run --name kamal-proxy-next --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port on 1.1.1.1", output
+      assert_match "docker exec kamal-proxy kamal-proxy drain --drain-timeout=30s on 1.1.1.1", output
+      assert_match "docker wait kamal-proxy on 1.1.1.1", output
+      assert_match "docker container rm kamal-proxy on 1.1.1.1", output
+      assert_match "docker container rename kamal-proxy-next kamal-proxy on 1.1.1.1", output
+      assert_no_match(/docker container stop --time/, output)
+    end
+  end
+
+  test "boot with drifted port_holder proxy and no holder migrates with a brief gap" do
+    Object.any_instance.stubs(:sleep)
+    stub_proxy_drift
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :container, :ls, "--filter", "'name=^kamal-proxy-net$'", "--quiet", raise_on_non_zero_exit: false)
+      .returns("")
+
+    run_command("boot", fixture: :with_proxy_port_holder).tap do |output|
+      assert_match "Migrating kamal-proxy on 1.1.1.1 to the port-holder architecture (brief gap)...", output
+      assert_match "docker container stop --time 40 kamal-proxy on 1.1.1.1", output
+      assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-proxy on 1.1.1.1", output
+      assert_match "docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold on 1.1.1.1", output
+      assert_match_with_digest "docker run --name kamal-proxy --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port on 1.1.1.1", output
+    end
+  end
+
+  test "boot with port_holder ensures the holder before starting the proxy" do
+    stub_no_proxy_drift
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :inspect, "kamal-proxy", "--format '{{.Config.Image}}'", "|", :awk, "-F:", "'{print $NF}'")
+      .returns(Kamal::Configuration::Proxy::Run::MINIMUM_VERSION)
+
+    run_command("boot", fixture: :with_proxy_port_holder).tap do |output|
+      assert_match "docker container start kamal-proxy-net || docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold on 1.1.1.1", output
+      assert_match "docker container start kamal-proxy || docker run --name kamal-proxy --network container:kamal-proxy-net", output
+    end
+  end
+
   test "boot with matching digest does not reboot" do
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("")
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)

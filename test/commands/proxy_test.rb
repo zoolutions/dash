@@ -284,6 +284,71 @@ class CommandsProxyTest < ActiveSupport::TestCase
       new_command.container_id.join(" ")
   end
 
+  test "run with port_holder joins the holder namespace without publishing" do
+    @config[:proxy] = { "run" => { "port_holder" => true } }
+    assert_equal \
+      "docker run --name kamal-proxy --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port",
+      new_command.run.join(" ")
+  end
+
+  test "run with a custom container name" do
+    @config[:proxy] = { "run" => { "port_holder" => true } }
+    assert_match \
+      "docker run --name kamal-proxy-next --network container:kamal-proxy-net",
+      new_command.run(name: "kamal-proxy-next").join(" ")
+  end
+
+  test "run_holder" do
+    @config[:proxy] = { "run" => { "port_holder" => true } }
+    assert_equal \
+      "docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold",
+      new_command.run_holder.join(" ")
+  end
+
+  test "start_holder_or_run" do
+    @config[:proxy] = { "run" => { "port_holder" => true } }
+    assert_match \
+      "docker container start kamal-proxy-net || docker run --name kamal-proxy-net",
+      new_command.start_holder_or_run.join(" ")
+  end
+
+  test "holder_container_id" do
+    @config[:proxy] = { "run" => { "port_holder" => true } }
+    assert_equal \
+      "docker container ls --filter 'name=^kamal-proxy-net$' --quiet",
+      new_command.holder_container_id.join(" ")
+  end
+
+  test "drain" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy drain --drain-timeout=30s",
+      new_command.drain(timeout: 30).join(" ")
+  end
+
+  test "wait_for_exit" do
+    assert_equal \
+      "docker wait kamal-proxy",
+      new_command.wait_for_exit.join(" ")
+  end
+
+  test "remove_stopped_container" do
+    assert_equal \
+      "docker container rm kamal-proxy-next",
+      new_command.remove_stopped_container(name: "kamal-proxy-next").join(" ")
+  end
+
+  test "promote_next_container" do
+    assert_equal \
+      "docker container rename kamal-proxy-next kamal-proxy",
+      new_command.promote_next_container.join(" ")
+  end
+
+  test "list with a custom container name" do
+    assert_equal \
+      "docker exec kamal-proxy-next kamal-proxy list",
+      new_command.list(name: "kamal-proxy-next").join(" ")
+  end
+
   private
     def new_command
       Kamal::Commands::Proxy.new(Kamal::Configuration.new(@config, version: "123"), host: "1.1.1.1")
