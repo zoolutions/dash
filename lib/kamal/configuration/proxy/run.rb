@@ -87,6 +87,29 @@ class Kamal::Configuration::Proxy::Run
     "kamal-proxy"
   end
 
+  # Zero-downtime reboots: a minimal long-lived holder container owns the
+  # published ports, and proxy generations join its network namespace so two
+  # can overlap on the same ports during a handoff.
+  def port_holder?
+    run_config.fetch("port_holder", false)
+  end
+
+  def holder_container_name
+    "kamal-proxy-net"
+  end
+
+  def network_args
+    if port_holder?
+      [ "--network", "container:#{holder_container_name}" ]
+    else
+      [ "--network", "kamal" ]
+    end
+  end
+
+  def holder_docker_args
+    [ *publish_args, *logging_args ].compact
+  end
+
   def options_args
     if args = run_config["options"]
       optionize args
@@ -106,13 +129,13 @@ class Kamal::Configuration::Proxy::Run
     # with live health checks instead of trusting the saved state — a dead
     # target demotes to 503 and self-heals rather than serving 502s forever.
     # Available from MINIMUM_VERSION, so it is always safe to pass.
-    { debug: debug? || nil, "metrics-port": metrics_port, "recheck-targets-on-restore": true }.compact
+    { debug: debug? || nil, "metrics-port": metrics_port, "recheck-targets-on-restore": true, "reuse-port": port_holder? || nil }.compact
   end
 
   def docker_options_args
     [
       *apps_volume_args,
-      *publish_args,
+      *(publish_args unless port_holder?),
       *logging_args,
       *("--expose=#{metrics_port}" if metrics_port.present?),
       *options_args

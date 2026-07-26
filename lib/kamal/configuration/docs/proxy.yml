@@ -252,6 +252,14 @@ proxy:
     repository: myrepo/kamal-proxy # Container repository for the kamal-proxy image
                                    # (defaults to `ghcr.io/mhenrixon/kamal-proxy`)
     version: v0.8.0                # Version tag of the kamal-proxy image to use
+    port_holder: true              # Zero-downtime proxy reboots (default: false).
+                                   # Runs a minimal long-lived kamal-proxy-net container that
+                                   # owns the published ports; proxy generations join its
+                                   # network namespace and overlap during a reboot, so config
+                                   # and version changes apply without dropping requests.
+                                   # Requires a kamal-proxy version with the hold and drain
+                                   # commands. Adopting (or leaving) this mode takes one final
+                                   # reboot with a brief gap.
     options:                       # Additional options to pass to `docker run`
       label:
         - custom.label=kamal-proxy
