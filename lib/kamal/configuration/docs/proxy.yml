@@ -200,10 +200,16 @@ proxy:
   # the deploy timeout, with a 5-second timeout for each request.
   #
   # Once the app is up, the proxy will stop hitting the healthcheck endpoint.
+  #
+  # By default, the healthcheck is sent to the app port. Set `port` to check a
+  # different port on the container, and `host` to set the Host header sent with
+  # healthcheck requests.
   healthcheck:
     interval: 3
     path: /health
     timeout: 3
+    port: 3001
+    host: health.example.com
 
   # Buffering
   #
