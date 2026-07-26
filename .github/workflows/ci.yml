@@ -63,6 +63,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUNDLE_GEMFILE: ${{ github.workspace }}/${{ matrix.gemfile }}
+      # Every job resolves from scratch (Gemfile.lock is removed below), so one
+      # rubygems.org blip fails the whole job - give bundler extra retries.
+      BUNDLE_RETRY: "6"
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -102,4 +105,7 @@ jobs:
         if: always()
         run: |
           df -h
-          sudo du -sh /mnt/docker
+          # /mnt/docker only exists if the Docker configure step ran; without the
+          # guard this always() step adds a second, misleading failure whenever an
+          # earlier step (e.g. bundle install) is what actually failed.
+          if [ -d /mnt/docker ]; then sudo du -sh /mnt/docker; fi

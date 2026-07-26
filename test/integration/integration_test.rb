@@ -193,9 +193,21 @@ class IntegrationTest < ActiveSupport::TestCase
       retry
     end
 
+    # Base-image pulls go straight to Docker Hub from the host daemon, so a Hub
+    # blip fails the build for this test and every one after it ($IMAGES_BUILT
+    # never gets set). Retry with backoff to ride out transient Hub outages.
     def build_images_once
       return if $IMAGES_BUILT
-      docker_compose "build"
+      attempts = 0
+      begin
+        docker_compose "build"
+      rescue RuntimeError => e
+        attempts += 1
+        raise if attempts >= 3
+        puts "compose build failed (attempt #{attempts}/3), retrying in #{15 * attempts}s: #{e.message.lines.first&.strip}"
+        sleep 15 * attempts
+        retry
+      end
       $IMAGES_BUILT = true
     end
 
