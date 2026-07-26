@@ -14,16 +14,44 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
         proxy_hosts = proxy_hosts - [ KAMAL.config.proxy.effective_loadbalancer ]
       end
 
+      drifted_hosts = Concurrent::Array.new
+      stale_hosts = Concurrent::Array.new
+      auto_reboot = KAMAL.config.proxy.reboot_on_deploy?
+
       on(proxy_hosts) do |host|
         execute *KAMAL.registry.login
 
-        version = capture_with_info(*KAMAL.proxy(host).version).strip.presence
+        proxy = KAMAL.proxy(host)
+        drift = Kamal::Cli::Proxy::Drift.new(host, self)
 
-        if version && Kamal::Utils.older_version?(version, Kamal::Configuration::Proxy::Run::MINIMUM_VERSION)
-          raise "kamal-proxy version #{version} is too old, run `kamal proxy reboot` in order to update to at least #{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}"
+        if drift.drifted? && auto_reboot
+          # Leave the old proxy serving until its serial reboot slot below.
+          drifted_hosts << host.to_s
+        else
+          stale_hosts << host.to_s if drift.drifted?
+
+          version = capture_with_info(*proxy.version).strip.presence
+
+          if version && Kamal::Utils.older_version?(version, Kamal::Configuration::Proxy::Run::MINIMUM_VERSION)
+            raise "kamal-proxy version #{version} is too old, run `kamal proxy reboot` in order to update to at least #{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}"
+          end
+          execute *proxy.ensure_apps_config_directory
+          execute *proxy.start_or_run(digest: drift.expected_digest)
         end
-        execute *KAMAL.proxy(host).ensure_apps_config_directory
-        execute *KAMAL.proxy(host).start_or_run
+      end
+
+      if stale_hosts.any?
+        say "kamal-proxy on #{stale_hosts.sort.join(", ")} is running with a configuration that no longer matches the deploy config. " \
+            "Automatic reboot is disabled (proxy: reboot_on_deploy: false) - run `kamal proxy reboot` to apply the new configuration.", :yellow
+      end
+
+      drifted_hosts.sort.each do |host|
+        say "kamal-proxy configuration changed, rebooting on #{host}...", :magenta
+        run_hook "pre-proxy-reboot", hosts: host
+        on(host) do |h|
+          Kamal::Cli::Proxy::Reboot.new(h, self).run
+        end
+        run_hook "post-proxy-reboot", hosts: host
       end
 
       if KAMAL.config.proxy.load_balancing?
@@ -137,16 +165,8 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
           host_list = Array(hosts).join(",")
           run_hook "pre-proxy-reboot", hosts: host_list
           on(hosts) do |host|
-            proxy = KAMAL.proxy(host)
-            execute *KAMAL.auditor.record("Rebooted proxy"), verbosity: :debug
-            execute *KAMAL.registry.login
-
-            info "Stopping and removing kamal-proxy on #{host}, if running..."
-            execute *proxy.stop, raise_on_non_zero_exit: false
-            execute *proxy.remove_container
-            execute *proxy.ensure_apps_config_directory
-
-            execute *proxy.run
+            info "Rebooting kamal-proxy on #{host}..."
+            Kamal::Cli::Proxy::Reboot.new(host, self).run
           end
           run_hook "post-proxy-reboot", hosts: host_list
         end

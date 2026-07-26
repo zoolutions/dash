@@ -34,6 +34,11 @@ class Kamal::Configuration::Proxy
     proxy_config["loadbalancer"]
   end
 
+  # Root-level `proxy` setting only; ignored inside role-specific proxy blocks.
+  def reboot_on_deploy?
+    proxy_config.fetch("reboot_on_deploy", true)
+  end
+
   def load_balancing?
     effective_loadbalancer.present?
   end

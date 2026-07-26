@@ -56,6 +56,39 @@ class ConfigurationProxyRunTest < ActiveSupport::TestCase
     assert config
   end
 
+  test "config_digest is stable for identical configs" do
+    config = Kamal::Configuration.new(base_deploy)
+
+    run_a = Kamal::Configuration::Proxy::Run.new(config, run_config: { "log_max_size" => "50m" })
+    run_b = Kamal::Configuration::Proxy::Run.new(config, run_config: { "log_max_size" => "50m" })
+
+    assert_equal run_a.config_digest, run_b.config_digest
+  end
+
+  test "config_digest changes when version, ports or options change" do
+    config = Kamal::Configuration.new(base_deploy)
+    base = Kamal::Configuration::Proxy::Run.new(config, run_config: {})
+
+    assert_not_equal base.config_digest,
+      Kamal::Configuration::Proxy::Run.new(config, run_config: { "version" => "v9.9.9" }).config_digest
+    assert_not_equal base.config_digest,
+      Kamal::Configuration::Proxy::Run.new(config, run_config: { "http_port" => 8080 }).config_digest
+    assert_not_equal base.config_digest,
+      Kamal::Configuration::Proxy::Run.new(config, run_config: { "options" => { "cpus" => 2 } }).config_digest
+  end
+
+  test "digest is deterministic and input-sensitive" do
+    assert_equal Kamal::Configuration::Proxy::Run.digest("a", "b"), Kamal::Configuration::Proxy::Run.digest("a", "b")
+    assert_not_equal Kamal::Configuration::Proxy::Run.digest("a"), Kamal::Configuration::Proxy::Run.digest("b")
+  end
+
+  test "run command re-verifies restored targets" do
+    config = Kamal::Configuration.new(base_deploy)
+    run = Kamal::Configuration::Proxy::Run.new(config, run_config: {})
+
+    assert_equal "kamal-proxy run --recheck-targets-on-restore", run.run_command
+  end
+
   private
     def base_deploy
       {
