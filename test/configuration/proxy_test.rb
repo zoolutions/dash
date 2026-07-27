@@ -216,6 +216,34 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     end
   end
 
+  test "deploy options with custom healthcheck port and host" do
+    @deploy[:proxy] = { "healthcheck" => { "port" => 3001, "host" => "health.example.com" } }
+
+    options = config.proxy.deploy_options
+    assert_equal 3001, options[:"health-check-port"]
+    assert_equal "health.example.com", options[:"health-check-host"]
+  end
+
+  test "deploy options without healthcheck port and host" do
+    @deploy[:proxy] = { "healthcheck" => { "path" => "/health" } }
+
+    options = config.proxy.deploy_options
+    assert_not_includes options.keys, :"health-check-port"
+    assert_not_includes options.keys, :"health-check-host"
+  end
+
+  test "healthcheck port must be an integer" do
+    @deploy[:proxy] = { "healthcheck" => { "port" => "not-a-port" } }
+
+    assert_raises(Kamal::ConfigurationError) { config.proxy }
+  end
+
+  test "healthcheck rejects unknown keys" do
+    @deploy[:proxy] = { "healthcheck" => { "hosts" => [ "health.example.com" ] } }
+
+    assert_raises(Kamal::ConfigurationError) { config.proxy }
+  end
+
   test "ssl with certificate and no private key" do
     with_test_secrets("secrets" => "CERT_PEM=certificate") do
       @deploy[:proxy] = {

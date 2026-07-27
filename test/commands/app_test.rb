@@ -169,6 +169,22 @@ class CommandsAppTest < ActiveSupport::TestCase
       new_command.deploy(target: "172.1.0.2").join(" ")
   end
 
+  test "deploy with custom healthcheck" do
+    @config[:proxy] = { "healthcheck" => { "interval" => 1, "timeout" => 10, "path" => "/health", "port" => 3001, "host" => "health.example.com" } }
+
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --health-check-interval=\"1s\" --health-check-timeout=\"10s\" --health-check-path=\"/health\" --health-check-port=\"3001\" --health-check-host=\"health.example.com\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      new_command.deploy(target: "172.1.0.2").join(" ")
+  end
+
+  test "deploy with healthcheck port only" do
+    @config[:proxy] = { "healthcheck" => { "port" => 8080 } }
+
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --health-check-port=\"8080\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      new_command.deploy(target: "172.1.0.2").join(" ")
+  end
+
   test "remove" do
     assert_equal \
       "docker exec kamal-proxy kamal-proxy remove app-web",
