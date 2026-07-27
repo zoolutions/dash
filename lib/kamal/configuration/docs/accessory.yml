@@ -155,6 +155,32 @@ accessories:
 
     # Proxy
     #
-    # You can run your accessory behind the Kamal proxy. See kamal docs proxy for more information
+    # You can run your accessory behind the Kamal proxy for hostname-based
+    # routing and automatic SSL. The block accepts the same schema as the
+    # app-level `proxy:` (see `kamal docs proxy`), though root-only keys such as
+    # `loadbalancer` and `reboot_on_deploy` have no effect inside an accessory.
+    # Declaring a proxy here makes the accessory's hosts proxy hosts:
+    # `kamal proxy boot` (and `kamal deploy`) will run kamal-proxy on them
+    # automatically.
+    #
+    # Two caveats:
+    # - Accessory restarts are stop-then-start (no old/new container overlap),
+    #   so expect a brief interruption when restarting or rebooting.
+    # - With the loadbalancer active (explicit, or auto-activated by a
+    #   multi-host primary role), accessory hostname routing and SSL are not
+    #   wired through the loadbalancer - route accessory hostnames straight at
+    #   the accessory host's own proxy instead.
+    #
+    # For example:
+    #
+    #   proxy:
+    #     host: mysql-admin.example.com   # Route this hostname to the accessory
+    #     ssl: true                       # Terminate SSL with a Let's Encrypt cert
+    #     app_port: 8080                  # Container port the accessory listens on (default: 80)
+    #     healthcheck:
+    #       path: /health                 # Health check endpoint (default: /up)
+    #
+    # The `...` below is a placeholder: accessory proxy configuration accepts the
+    # full proxy schema and is validated against it when the accessory is loaded.
     proxy:
       ...

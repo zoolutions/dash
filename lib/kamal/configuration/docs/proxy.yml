@@ -253,11 +253,17 @@ proxy:
     publish: false                 # Publish ports to the host (default: true)
     bind_ips:                      # List of IPs to bind to when publishing ports
       - 0.0.0.0
-    registry: registry:4443        # Container registry for the kamal-proxy image
-                                   # (defaults to Docker Hub)
-    repository: myrepo/kamal-proxy # Container repository for the kamal-proxy image
-                                   # (defaults to `ghcr.io/mhenrixon/kamal-proxy`)
-    version: v0.8.0                # Version tag of the kamal-proxy image to use
+    registry: registry:4443        # Extra registry prefix for the kamal-proxy image
+                                   # (default: none). If you set this, also override
+                                   # `repository` to a host-less path (e.g.
+                                   # myfork/kamal-proxy) - the default repository
+                                   # below already embeds its ghcr.io host
+    repository: ghcr.io/mhenrixon/kamal-proxy # Container repository for the
+                                   # kamal-proxy image (this is the default)
+    version: v0.9.2.2              # Version tag of the kamal-proxy image to use.
+                                   # Defaults to the minimum version this gem
+                                   # requires - only pin it to roll forward early,
+                                   # never below the default
     options:                       # Additional options to pass to `docker run`
       label:
         - custom.label=kamal-proxy
