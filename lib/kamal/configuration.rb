@@ -90,6 +90,28 @@ class Kamal::Configuration
     ensure_valid_hooks_output!
   end
 
+  # Resolves every secret the deploy will need so a missing secret fails fast,
+  # before any registry login or SSH connection. Secret adapters run here
+  # instead of mid-deploy — same work, done earlier.
+  def validate_secrets!(include_accessories: false)
+    registry.username
+    registry.password
+    builder.secrets
+
+    roles.each do |role|
+      role.secrets_io(role.hosts.first) if role.hosts.any?
+
+      if role.running_proxy? && role.proxy.custom_ssl_certificate?
+        role.proxy.certificate_pem_content
+        role.proxy.private_key_pem_content
+      end
+    end
+
+    accessories.each(&:secrets_io) if include_accessories
+
+    true
+  end
+
   def version=(version)
     @declared_version = version
   end
