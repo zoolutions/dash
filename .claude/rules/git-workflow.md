@@ -50,6 +50,14 @@ Refs #123
 5. Request review
 6. Merge `main` → your feature branch → `dash`, in that order, whenever `main` moves — never rebase
 
+## PR and Issue Bodies
+
+Write PR/issue bodies in plain Markdown. **Do not escape backticks** with `\`` — GitHub renders `\`` literally as a backslash followed by a backtick, producing `` \`Kamal::Commander\` `` instead of the monospace `Kamal::Commander` the reader expects.
+
+The usual cause is writing the body inside a bash heredoc (`gh pr create --body "$(cat <<'EOF' ... EOF)"`) and reflexively escaping every backtick out of shell-quoting muscle memory. With `<<'EOF'` (single-quoted delimiter) the shell does NOT interpret anything inside the heredoc — backticks, dollars, and backslashes all pass through verbatim. Write them exactly as you want them rendered. If you find yourself typing `\`` inside a PR body, stop and remove the backslash.
+
+For long bodies or many code fences, prefer `--body-file <tmpfile>` — it skips shell interpretation entirely.
+
 ## Pre-Commit Checklist
 
 Run before EVERY commit:
