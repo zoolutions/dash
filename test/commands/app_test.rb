@@ -145,6 +145,14 @@ class CommandsAppTest < ActiveSupport::TestCase
       new_command.deploy(target: "172.1.0.2").join(" ")
   end
 
+  test "deploy with path timeouts" do
+    @config[:proxy] = { "path_timeouts" => { "/api/reports" => "5m", "/stream" => 0 } }
+
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --path-timeout=\"/api/reports=5m\" --path-timeout=\"/stream=0s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      new_command.deploy(target: "172.1.0.2").join(" ")
+  end
+
   test "deploy with SSL" do
     @config[:proxy] = { "ssl" => true, "host" => "example.com" }
 

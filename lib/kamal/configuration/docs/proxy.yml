@@ -85,6 +85,15 @@ proxy:
   # How long to wait for requests to complete before timing out, defaults to 30 seconds:
   response_timeout: 10
 
+  # Per-path timeouts
+  #
+  # Override the response timeout for requests under specific path prefixes.
+  # Values are Go duration strings ("90s", "5m") or plain seconds; 0 disables
+  # the timeout entirely, which suits streaming and SSE endpoints:
+  path_timeouts:
+    "/api/reports": "5m"
+    "/stream": 0
+
   # Path-based routing
   #
   # For applications that split their traffic to different services based on the request path,
