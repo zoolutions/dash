@@ -376,16 +376,14 @@ class CliMainTest < CliTestCase
     end
   end
 
-  test "deploy with missing secrets" do
-    invoke_options = base_invoke_options(config_file: "deploy_with_secrets.yml")
+  test "deploy with missing secrets fails before building" do
+    Kamal::Cli::Main.any_instance.expects(:invoke).never
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:prune:all", [], invoke_options)
+    error = assert_raises Kamal::ConfigurationError do
+      run_command("deploy", config_file: "deploy_with_secrets")
+    end
 
-    run_command("deploy", config_file: "deploy_with_secrets")
+    assert_match /PASSWORD/, error.message
   end
 
   test "redeploy" do
@@ -833,6 +831,41 @@ class CliMainTest < CliTestCase
       assert_match "Upgraded 1.1.1.3", output
       assert_match "Upgrading 1.1.1.4...", output
       assert_match "Upgraded 1.1.1.4", output
+    end
+  end
+
+  test "deploy prints the config banner and validates secrets before building" do
+    invoke_options = base_invoke_options
+
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:prune:all", [], invoke_options)
+
+    run_command("deploy").tap do |output|
+      assert_match /Deploying app \(version 999\)/, output
+      assert_match /web: 2 hosts \(1\.1\.1\.1, 1\.1\.1\.2\)/, output
+      assert_match /proxy: 1\.1\.1\.1, 1\.1\.1\.2/, output
+      assert_match /timeouts: deploy 30s/, output
+      assert_match /Validate configuration and secrets/, output
+
+      assert_operator output.index("Deploying app (version 999)"), :<, output.index("Validate configuration and secrets")
+      assert_operator output.index("Validate configuration and secrets"), :<, output.index("Build and push app image")
+    end
+  end
+
+  test "redeploy prints the config banner and validates secrets before building" do
+    invoke_options = base_invoke_options
+
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
+
+    run_command("redeploy").tap do |output|
+      assert_match /Deploying app \(version 999\)/, output
+      assert_match /Validate configuration and secrets/, output
+      assert_operator output.index("Validate configuration and secrets"), :<, output.index("Build and push app image")
     end
   end
 

@@ -23,6 +23,11 @@ class Kamal::Cli::Main < Kamal::Cli::Base
       runtime = print_runtime do
         invoke_options = deploy_options
 
+        print_config_banner
+
+        say "Validate configuration and secrets...", :magenta
+        KAMAL.config.validate_secrets!(include_accessories: boot_accessories)
+
         if options[:skip_push]
           say "Pull app image...", :magenta
           invoke "kamal:cli:build:pull", [], invoke_options
@@ -65,6 +70,11 @@ class Kamal::Cli::Main < Kamal::Cli::Base
     modify do
       runtime = print_runtime do
         invoke_options = deploy_options
+
+        print_config_banner
+
+        say "Validate configuration and secrets...", :magenta
+        KAMAL.config.validate_secrets!
 
         if options[:skip_push]
           say "Pull app image...", :magenta
@@ -332,5 +342,16 @@ class Kamal::Cli::Main < Kamal::Cli::Base
     def doctor_failure_message(doctor)
       failing = doctor.failures.map { |failure| "  #{failure.title} - #{failure}" }.join("\n")
       "Found #{doctor.failures.count} failing check(s):\n#{failing}"
+    end
+
+    def print_config_banner
+      config = KAMAL.config
+
+      say "Deploying #{config.service}#{" to #{config.destination}" if config.destination} (version #{config.abbreviated_version})", :magenta
+      config.roles.each do |role|
+        say "  #{role.name}: #{role.hosts.count} #{"host".pluralize(role.hosts.count)} (#{role.hosts.join(", ")})"
+      end
+      say "  proxy: #{config.proxy_hosts.join(", ")}" if config.proxy_hosts.any?
+      say "  timeouts: deploy #{config.deploy_timeout}s, drain #{config.drain_timeout}s, readiness delay #{config.readiness_delay}s"
     end
 end

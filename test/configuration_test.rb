@@ -463,4 +463,68 @@ class ConfigurationTest < ActiveSupport::TestCase
     end
     assert_match /Invalid hooks_output 'invalid' for hook 'pre-deploy'/, error.message
   end
+
+  test "validate_secrets! passes when all referenced secrets resolve" do
+    with_test_secrets("secrets" => "DB_PASSWORD=dbpass\nREGISTRY_PASSWORD=regpass\nGITHUB_TOKEN=token") do
+      config = Kamal::Configuration.new @deploy.merge(
+        registry: { "username" => "dhh", "password" => [ "REGISTRY_PASSWORD" ] },
+        builder: { "arch" => "amd64", "secrets" => [ "GITHUB_TOKEN" ] },
+        env: { "clear" => { "REDIS_URL" => "redis://x/y" }, "secret" => [ "DB_PASSWORD" ] })
+
+      assert_nothing_raised { config.validate_secrets! }
+    end
+  end
+
+  test "validate_secrets! raises for a missing env secret" do
+    with_test_secrets("secrets" => "REGISTRY_PASSWORD=regpass") do
+      config = Kamal::Configuration.new @deploy.merge(
+        env: { "secret" => [ "DB_PASSWORD" ] })
+
+      error = assert_raises(Kamal::ConfigurationError) { config.validate_secrets! }
+      assert_match /DB_PASSWORD/, error.message
+    end
+  end
+
+  test "validate_secrets! raises for a missing registry password secret" do
+    with_test_secrets("secrets" => "DB_PASSWORD=dbpass") do
+      config = Kamal::Configuration.new @deploy.merge(
+        registry: { "username" => "dhh", "password" => [ "REGISTRY_PASSWORD" ] })
+
+      error = assert_raises(Kamal::ConfigurationError) { config.validate_secrets! }
+      assert_match /REGISTRY_PASSWORD/, error.message
+    end
+  end
+
+  test "validate_secrets! raises for a missing builder secret" do
+    with_test_secrets("secrets" => "") do
+      config = Kamal::Configuration.new @deploy.merge(
+        builder: { "arch" => "amd64", "secrets" => [ "GITHUB_TOKEN" ] })
+
+      error = assert_raises(Kamal::ConfigurationError) { config.validate_secrets! }
+      assert_match /GITHUB_TOKEN/, error.message
+    end
+  end
+
+  test "validate_secrets! raises for a missing custom ssl certificate secret" do
+    with_test_secrets("secrets" => "") do
+      config = Kamal::Configuration.new @deploy.merge(
+        servers: [ "1.1.1.1" ],
+        proxy: { "host" => "app.example.com", "ssl" => { "certificate_pem" => "CERT_PEM", "private_key_pem" => "KEY_PEM" } })
+
+      error = assert_raises(Kamal::ConfigurationError) { config.validate_secrets! }
+      assert_match /CERT_PEM/, error.message
+    end
+  end
+
+  test "validate_secrets! checks accessory secrets only when requested" do
+    with_test_secrets("secrets" => "") do
+      config = Kamal::Configuration.new @deploy.merge(
+        accessories: { "mysql" => { "image" => "mysql:8", "host" => "1.1.1.3", "port" => "3306", "env" => { "secret" => [ "MYSQL_ROOT_PASSWORD" ] } } })
+
+      assert_nothing_raised { config.validate_secrets! }
+
+      error = assert_raises(Kamal::ConfigurationError) { config.validate_secrets!(include_accessories: true) }
+      assert_match /MYSQL_ROOT_PASSWORD/, error.message
+    end
+  end
 end
