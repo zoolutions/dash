@@ -180,6 +180,28 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     end
   end
 
+  # The docs YAML doubles as the validation schema and as `kamal docs proxy` output.
+  # Guard the documented run defaults against drifting from the code's actual
+  # defaults (a stale `version:` below MINIMUM_VERSION breaks `kamal proxy boot`
+  # for anyone who copies the example).
+  test "docs example run version matches the pinned minimum version" do
+    assert_equal Kamal::Configuration::Proxy::Run::MINIMUM_VERSION, proxy_docs_example.dig("run", "version")
+  end
+
+  test "docs example run repository matches the code default" do
+    default_repository = Kamal::Configuration::Proxy::Run.new(config, run_config: {}).repository
+    assert_equal default_repository, proxy_docs_example.dig("run", "repository")
+  end
+
+  # The accessory docs stub `proxy: ...` is load-bearing: the validator treats the
+  # example value "..." as "any hash — Proxy.new validates it against the real proxy
+  # schema". Filling it with literal keys would fork the proxy schema into a second,
+  # drift-prone copy that rejects valid accessory proxy configs.
+  test "accessory docs keep the proxy example as a stub" do
+    accessory_example = YAML.load(Kamal::Configuration::Accessory.validation_doc)
+    assert_equal "...", accessory_example.dig("accessories", "mysql", "proxy")
+  end
+
   test "ssl with certificate and private key from secrets" do
     with_test_secrets("secrets" => "CERT_PEM=certificate\nKEY_PEM=private_key") do
       @deploy[:proxy] = {
@@ -405,5 +427,9 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
   private
     def config
       Kamal::Configuration.new(@deploy)
+    end
+
+    def proxy_docs_example
+      YAML.load(Kamal::Configuration::Proxy.validation_doc)["proxy"]
     end
 end
