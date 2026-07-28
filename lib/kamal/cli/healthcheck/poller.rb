@@ -24,7 +24,10 @@ module Kamal::Cli::Healthcheck::Poller
     rescue Kamal::Cli::Healthcheck::Error => e
       time_left = timeout_at - Time.now
       if time_left > 0
-        sleep [ attempt, time_left ].min
+        sleep_for = [ attempt, time_left ].min
+        elapsed = KAMAL.config.deploy_timeout - time_left
+        info "Container not ready yet, retrying in #{sleep_for.ceil}s (#{elapsed.round}s elapsed, #{time_left.round}s left)"
+        sleep sleep_for
         attempt += 1
         retry
       else

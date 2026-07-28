@@ -58,6 +58,7 @@ class Kamal::Cli::App::Boot
         raise Kamal::Cli::BootError, "Failed to get endpoint for #{role} on #{host}, did the container boot?" if endpoint.empty?
 
         run_hook "pre-proxy-deploy", hosts: host.to_s, role: role.name
+        info "Deploying #{role} on #{host} via kamal-proxy (waiting up to #{KAMAL.config.deploy_timeout}s for it to become healthy)..."
         execute *app.deploy(target: endpoint)
         run_hook "post-proxy-deploy", hosts: host.to_s, role: role.name
       else
