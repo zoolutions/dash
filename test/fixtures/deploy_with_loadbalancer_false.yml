@@ -1,0 +1,12 @@
+service: app
+image: dhh/app
+servers:
+  - "1.1.1.1"
+  - "1.1.1.2"
+proxy:
+  loadbalancer: false
+registry:
+  username: user
+  password: pw
+builder:
+  arch: amd64

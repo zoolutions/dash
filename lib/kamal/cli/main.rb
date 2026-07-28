@@ -352,6 +352,10 @@ class Kamal::Cli::Main < Kamal::Cli::Base
         say "  #{role.name}: #{role.hosts.count} #{"host".pluralize(role.hosts.count)} (#{role.hosts.join(", ")})"
       end
       say "  proxy: #{config.proxy_hosts.join(", ")}" if config.proxy_hosts.any?
+      if config.proxy.load_balancing?
+        reason = " (auto-enabled: primary role #{config.primary_role.name} has #{config.primary_role.hosts.count} hosts)" unless config.proxy.loadbalancer.present?
+        say "  loadbalancer: #{config.proxy.effective_loadbalancer}#{reason}"
+      end
       say "  timeouts: deploy #{config.deploy_timeout}s, drain #{config.drain_timeout}s, readiness delay #{config.readiness_delay}s"
     end
 end

@@ -835,8 +835,10 @@ class CliMainTest < CliTestCase
   end
 
   test "deploy prints the config banner and validates secrets before building" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     invoke_options = base_invoke_options
 
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:loadbalancer", [ "deploy" ], invoke_options)
     Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
     Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
     Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
@@ -847,11 +849,23 @@ class CliMainTest < CliTestCase
       assert_match /Deploying app \(version 999\)/, output
       assert_match /web: 2 hosts \(1\.1\.1\.1, 1\.1\.1\.2\)/, output
       assert_match /proxy: 1\.1\.1\.1, 1\.1\.1\.2/, output
+      assert_match /loadbalancer: 1\.1\.1\.1 \(auto-enabled: primary role web has 2 hosts\)/, output
       assert_match /timeouts: deploy 30s/, output
       assert_match /Validate configuration and secrets/, output
 
       assert_operator output.index("Deploying app (version 999)"), :<, output.index("Validate configuration and secrets")
       assert_operator output.index("Validate configuration and secrets"), :<, output.index("Build and push app image")
+    end
+  end
+
+  test "deploy config banner shows no loadbalancer line when load balancing is disabled" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    Kamal::Cli::Main.any_instance.expects(:invoke).at_least_once
+
+    run_command("deploy", config_file: "deploy_with_loadbalancer_false").tap do |output|
+      assert_match /Deploying app \(version 999\)/, output
+      assert_no_match /loadbalancer:/, output
     end
   end
 
