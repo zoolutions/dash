@@ -12,6 +12,10 @@ class CommandsServerTest < ActiveSupport::TestCase
     assert_equal "mkdir -p .kamal", new_command.ensure_run_directory.join(" ")
   end
 
+  test "listeners on port" do
+    assert_equal "ss -ltnH sport = :80", new_command.listeners_on(80).join(" ")
+  end
+
   private
     def new_command(extra_config = {})
       Kamal::Commands::Server.new(Kamal::Configuration.new(@config.merge(extra_config)))

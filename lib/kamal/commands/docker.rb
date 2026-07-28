@@ -35,6 +35,11 @@ class Kamal::Commands::Docker < Kamal::Commands::Base
     [ "kill -HUP $PPID" ]
   end
 
+  # Checks that an image's manifest can be fetched from its registry. Fails if it's missing or we're unauthorized.
+  def manifest_available?(image)
+    docker :manifest, :inspect, image
+  end
+
   def create_network
     docker :network, :create, :kamal
   end

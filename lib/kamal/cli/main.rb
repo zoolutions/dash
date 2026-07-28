@@ -143,6 +143,23 @@ class Kamal::Cli::Main < Kamal::Cli::Base
     puts "No documentation found for #{section}"
   end
 
+  desc "doctor", "Diagnose deploy readiness of servers, registry, proxy, ports, DNS, and certificates"
+  def doctor
+    say "Running readiness checks...", :magenta
+    pre_connect_if_required
+
+    doctor = Kamal::Cli::Doctor.new
+    doctor.run
+
+    print_doctor_report doctor.results
+
+    if doctor.successful?
+      say doctor_summary(doctor), :green
+    else
+      raise Kamal::Cli::DoctorError, doctor_failure_message(doctor)
+    end
+  end
+
   desc "init", "Create config stub in config/deploy.yml and secrets stub in .kamal"
   option :bundle, type: :boolean, default: false, desc: "Add Kamal to the Gemfile and create a bin/kamal binstub"
   def init
@@ -285,5 +302,25 @@ class Kamal::Cli::Main < Kamal::Cli::Base
       base_options = options.without("skip_push")
       base_options = base_options.except("no_cache") unless base_options["no_cache"]
       { "version" => KAMAL.config.version }.merge(base_options)
+    end
+
+    def print_doctor_report(results)
+      results.group_by(&:title).each do |title, rows|
+        say title
+        rows.each { |row| say "  #{row}", Kamal::Cli::Doctor::STATUS_COLORS[row.status] }
+      end
+    end
+
+    def doctor_summary(doctor)
+      if doctor.warnings.any?
+        "Looks ready to deploy, with #{doctor.warnings.count} warning(s) to review"
+      else
+        "Everything looks ready to deploy"
+      end
+    end
+
+    def doctor_failure_message(doctor)
+      failing = doctor.failures.map { |failure| "  #{failure.title} - #{failure}" }.join("\n")
+      "Found #{doctor.failures.count} failing check(s):\n#{failing}"
     end
 end
