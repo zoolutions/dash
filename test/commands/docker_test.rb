@@ -39,4 +39,9 @@ class CommandsDockerTest < ActiveSupport::TestCase
   test "refresh_session" do
     assert_equal "kill -HUP $PPID", @docker.refresh_session.join(" ")
   end
+
+  test "manifest_available?" do
+    assert_equal "docker manifest inspect basecamp/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}",
+      @docker.manifest_available?("basecamp/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}").join(" ")
+  end
 end

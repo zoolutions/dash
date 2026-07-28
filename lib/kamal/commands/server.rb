@@ -12,4 +12,9 @@ class Kamal::Commands::Server < Kamal::Commands::Base
       [ :ls, config.apps_directory ],
       [ :wc, "-l" ]
   end
+
+  # Lists TCP listeners on the given port, one line per listener, no header.
+  def listeners_on(port)
+    [ :ss, "-ltnH", :sport, "=", ":#{port}" ]
+  end
 end
