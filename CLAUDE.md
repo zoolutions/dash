@@ -94,13 +94,25 @@ Features (loadbalancing, …) live on their own branches and merge into `dash` �
 | `/github-review-pr` | Full PR pass: fix CI failures, then process review comments |
 | `/github-review-failures` | Diagnose + fix CI failures until green |
 | `/github-review-comments` | Process unresolved PR review comments |
+| `/finish-prs` | Drive a set of open dash PRs to merge-ready, one at a time |
+| `/debug-flaky` | Root-cause an intermittent test failure — evidence → repro → stress-proofed fix; never skip/retry |
 
 Commands pin a model tier via frontmatter aliases (`sonnet` implementation, `opus` orchestration/security/review, `fable` read-only planning) so they track the latest model per tier.
+
+### Toolkit availability on feature branches
+
+This toolkit (CLAUDE.md, `.claude/`) is committed on `dash` only. Feature branches root off `main` (the pristine upstream mirror), so switching to one removes the toolkit from the working tree — slash commands stop loading. To work with the toolkit on a feature branch, materialize it without committing it:
+
+```bash
+git restore --source=dash --worktree -- .claude CLAUDE.md
+```
+
+The files appear as untracked — **never commit them on a `main`-rooted branch** (they would pollute an upstream-PR-able diff and conflict on merge into `dash`). Stage specific paths, not `git add -A`. Before opening an upstream PR, `git clean` them or leave them untracked.
 
 ## More Documentation
 
 - `ROADMAP.md` — evidence-linked improvement roadmap (releases R1-R5, cross-repo sequencing)
-- `.claude/rules/` — coding-style, git-workflow, testing, agents, performance, upstream-sync
+- `.claude/rules/` — coding-style, git-workflow, testing, agents, performance, striving-for-excellence, upstream-sync
 - `.claude/commands/` — the slash commands above
 - Proxy fork: `../kamal-proxy/CLAUDE.md` — cross-repo release ordering
 - Upstream docs: https://kamal-deploy.org
