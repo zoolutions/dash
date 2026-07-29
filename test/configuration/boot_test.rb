@@ -94,7 +94,7 @@ class ConfigurationBootTest < ActiveSupport::TestCase
     def config_with_boot(boot, accessory_hosts = [])
       deploy = {
         service: "app", image: "dhh/app", registry: { "username" => "dhh", "password" => "secret" }, builder: { "arch" => "amd64" },
-        servers: { "web" => [ "1.1.1.1", "1.1.1.2" ], "workers" => [ "1.1.1.3", "1.1.1.4" ] },
+        servers: { "web" => [ "1.1.1.1", "1.1.1.2" ], "workers" => { "hosts" => [ "1.1.1.3", "1.1.1.4" ], "healthcheck" => false } },
         boot: boot
       }.compact
 

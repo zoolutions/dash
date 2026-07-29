@@ -15,6 +15,10 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
         "workers" => {
           "hosts" => [ "1.1.1.3", "1.1.1.4" ],
           "cmd" => "bin/jobs",
+          # Readiness is not what most of these tests are about, and without the opt-out
+          # every Configuration.new here warns to stderr. Tests that do exercise the
+          # ungated path delete this key.
+          "healthcheck" => false,
           "env" => {
             "REDIS_URL" => "redis://a/b",
             "WEB_CONCURRENCY" => "4"
@@ -417,6 +421,8 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
   end
 
   test "readiness is not gated for a role without a proxy or a healthcheck" do
+    @deploy_with_roles[:servers]["workers"].delete("healthcheck")
+
     assert_not config_with_roles.role(:workers).readiness_gated?
   end
 

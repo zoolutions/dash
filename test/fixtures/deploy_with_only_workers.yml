@@ -2,6 +2,7 @@ service: app
 image: dhh/app
 servers:
   workers:
+    healthcheck: false
     proxy: false
     hosts:
       - 1.1.1.1
