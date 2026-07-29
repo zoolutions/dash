@@ -37,8 +37,9 @@ class Kamal::Configuration::Boot
   #
   # `wait` is always explicit: SSHKit::Runner::Sequential and ::Group both fall back to a
   # 2 second interval, where Kamal's own boot wait means "no sleep unless you asked for
-  # one". A limit of 1 goes through Sequential rather than Group, because Group also
-  # sleeps after the final host.
+  # one". A limit of 1 goes through Sequential rather than Group, which runs one host per
+  # slice without spawning a thread to do it. Neither trails a wait past the last group —
+  # Sequential pops its final host, and Kamal patches Group to match (sshkit_with_ext.rb).
   def runner_options_for(hosts)
     limit = limit_for(hosts)
     return {} unless limit

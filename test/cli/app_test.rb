@@ -43,7 +43,8 @@ class CliAppTest < CliTestCase
     # Strategy is used when booting the containers
     Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3" ]).with_block_given
     Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.4" ]).with_block_given
-    Object.any_instance.expects(:sleep).with(2).twice
+    # Two groups, so the wait paces the first against the second — and stops there.
+    Object.any_instance.expects(:sleep).with(2).once
 
     Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
@@ -51,6 +52,24 @@ class CliAppTest < CliTestCase
       assert_hook_ran "pre-app-boot", output, count: 2
       assert_hook_ran "post-app-boot", output, count: 2
     end
+  end
+
+  # `wait` paces one group against the next. After the last group there is nothing left
+  # to boot, so sleeping is pure deploy latency.
+  test "boot does not wait after the final host group" do
+    Kamal::Cli::App.any_instance.stubs(:on)
+
+    Object.any_instance.expects(:sleep).with(2).times(3)
+
+    run_command("boot", config: :with_boot_limit_one, host: nil)
+  end
+
+  test "boot does not wait at all when a single group covers every host" do
+    Kamal::Cli::App.any_instance.stubs(:on)
+
+    Object.any_instance.expects(:sleep).with(2).never
+
+    run_command("boot", config: :with_boot_wait_only, host: nil)
   end
 
   test "a percentage boot limit groups by app hosts, not accessory hosts" do

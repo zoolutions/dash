@@ -1,0 +1,19 @@
+service: app
+image: dhh/app
+servers:
+  web:
+    - "1.1.1.1"
+    - "1.1.1.2"
+builder:
+  arch: amd64
+
+registry:
+  username: user
+  password: pw
+
+proxy:
+  loadbalancer: false
+
+# `wait` with no `limit` is one group, so there is nothing to pace against.
+boot:
+  wait: 2

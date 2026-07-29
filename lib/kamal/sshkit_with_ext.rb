@@ -209,6 +209,26 @@ class SSHKit::Runner::Parallel
   prepend CompleteAll
 end
 
+class SSHKit::Runner::Group
+  # SSHKit sleeps after every slice, including the last, so a paced role pays one wait
+  # interval buying nothing — there is no next group for it to pace against. Kamal's boot
+  # wait means "hold off before starting the next group", which is what Sequential already
+  # does by popping its last host.
+  module NoTrailingWait
+    def execute
+      slices = hosts.each_slice(group_size).to_a
+
+      slices.each_with_index.flat_map do |group_hosts, index|
+        result = SSHKit::Runner::Parallel.new(group_hosts, &block).execute
+        sleep wait_interval if index < slices.size - 1
+        result
+      end
+    end
+  end
+
+  prepend NoTrailingWait
+end
+
 # Avoid net-ssh debug, until https://github.com/net-ssh/net-ssh/pull/953 is merged
 module NetSshForwardingNoPuts
   def puts(*)
