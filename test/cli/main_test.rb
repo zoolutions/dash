@@ -869,6 +869,24 @@ class CliMainTest < CliTestCase
     end
   end
 
+  test "deploy config banner names the readiness source per role" do
+    Kamal::Cli::Main.any_instance.expects(:invoke).at_least_once
+
+    run_command("deploy", config_file: "deploy_with_readiness_sources").tap do |output|
+      assert_match /web: 1 host \(1\.1\.1\.1\) — readiness: kamal-proxy health check \/healthz/, output
+      assert_match /workers: 1 host \(1\.1\.1\.3\) — readiness: NONE \(old container stops 7s after boot\)/, output
+      assert_match /pulse: 1 host \(1\.1\.1\.4\) — readiness: docker healthcheck \(options: health-cmd\)/, output
+    end
+  end
+
+  test "deploy config banner omits the proxy health check path when it is not configured" do
+    Kamal::Cli::Main.any_instance.expects(:invoke).at_least_once
+
+    run_command("deploy").tap do |output|
+      assert_match /web: 2 hosts \(1\.1\.1\.1, 1\.1\.1\.2\) — readiness: kamal-proxy health check$/, output
+    end
+  end
+
   test "redeploy prints the config banner and validates secrets before building" do
     invoke_options = base_invoke_options
 
