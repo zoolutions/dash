@@ -48,6 +48,10 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
             error "Cannot set http_port, https_port or bind_ips when publish is false"
           end
         end
+
+        if run_config["acme"].is_a?(Hash)
+          validate_acme! run_config["acme"]
+        end
       end
     end
   end
@@ -83,6 +87,27 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
 
         if (batch_size = tls_domains["batch_size"]) && (!batch_size.is_a?(Integer) || !batch_size.between?(1, 25))
           error "batch_size must be an integer between 1 and 25"
+        end
+      end
+    end
+
+    # kamal-proxy only logs a warning for a DNS provider it does not recognise
+    # and then carries on with no provider at all, so the symptom is a
+    # certificate that never issues rather than a failed boot. Catch it here,
+    # before any host is contacted.
+    def validate_acme!(acme)
+      with_context("run") do
+        with_context("acme") do
+          if acme["email"].blank?
+            error "Missing email setting (required when acme is set)"
+          end
+
+          provider = acme["dns_provider"]
+
+          if provider.present? && !Kamal::Configuration::Proxy::Acme::SUPPORTED_DNS_PROVIDERS.include?(provider.to_s.downcase)
+            error "unsupported dns_provider '#{provider}'. " \
+              "Supported providers: #{Kamal::Configuration::Proxy::Acme::DNS_PROVIDERS.join(", ")}"
+          end
         end
       end
     end

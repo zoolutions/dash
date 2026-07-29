@@ -71,3 +71,10 @@ proxy:
   run:
     debug: true
     metrics_port: 9090
+    acme:
+      email: admin@example.com
+      dns_provider: cloudflare
+      directory: https://acme-staging-v02.api.letsencrypt.org/directory
+      # true renders as a bare flag, false as --flag=false; cover both shapes.
+      prefer_wildcard: true
+      http_fallback: false

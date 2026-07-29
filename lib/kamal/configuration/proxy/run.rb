@@ -23,8 +23,19 @@ class Kamal::Configuration::Proxy::Run
 
   # Digest of the materialized run invocation, used to detect drift between
   # the running proxy container and the current configuration.
+  #
+  # The ACME credential names ride along because --env-file names a path, not the
+  # variables inside it: swapping one credential for another would otherwise leave
+  # the digest unmoved and the old proxy running. Their values deliberately stay
+  # out — the digest is published as a docker label, and hashing secret material
+  # into a world-readable label buys an offline guessing target for nothing.
+  # Rotating a credential's value still needs an explicit `kamal proxy reboot`.
   def config_digest
-    self.class.digest(image, run_command, *docker_options_args)
+    self.class.digest(image, run_command, *docker_options_args, *acme.credential_names)
+  end
+
+  def acme
+    @acme ||= Kamal::Configuration::Proxy::Acme.new(acme_config: run_config["acme"], secrets: config.secrets)
   end
 
   def debug?
@@ -94,7 +105,7 @@ class Kamal::Configuration::Proxy::Run
   end
 
   def run_command
-    [ "kamal-proxy", "run", *optionize(run_command_options) ].join(" ")
+    [ "kamal-proxy", "run", *optionize(run_command_options), *acme.run_command_args ].join(" ")
   end
 
   def metrics_port
@@ -115,8 +126,21 @@ class Kamal::Configuration::Proxy::Run
       *publish_args,
       *logging_args,
       *("--expose=#{metrics_port}" if metrics_port.present?),
+      *acme_secrets_args,
       *options_args
     ].compact
+  end
+
+  # Where the ACME DNS credentials land on the proxy host. Under the proxy's own
+  # directory rather than the app's env directory, because the container is
+  # host-scoped and shared by every app on the host - and so `kamal proxy remove`
+  # takes the credentials with it.
+  def secrets_path
+    File.join host_directory, "acme.env"
+  end
+
+  def secrets_io
+    acme.secrets_io
   end
 
   def host_directory
@@ -159,6 +183,10 @@ class Kamal::Configuration::Proxy::Run
   end
 
   private
+    def acme_secrets_args
+      argumentize "--env-file", secrets_path if acme.credentials?
+    end
+
     def format_bind_ip(ip)
       # Ensure IPv6 address inside square brackets - e.g. [::1]
       if ip =~ Resolv::IPv6::Regex && ip !~ /\A\[.*\]\z/

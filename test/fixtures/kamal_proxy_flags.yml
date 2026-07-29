@@ -4,6 +4,16 @@
 # fails while proxy_version here disagrees with MINIMUM_VERSION.
 proxy_version: v1.0.0.0
 generated_by: bin/sync-proxy-flags
+acme_dns_providers:
+- auto
+- cloudflare
+- digitalocean
+- gcloud
+- godaddy
+- hetzner
+- namecheap
+- route53
+- vultr
 flags:
   deploy:
   - add-request-header

@@ -50,7 +50,6 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
       81 => %w[ exclude-metrics-path ]
     },
     "run" => {
-      73 => %w[ acme-directory acme-dns-provider acme-email acme-http-fallback acme-prefer-wildcard ],
       75 => %w[ cache-store cache-store-timeout cache-memory-size cache-lease-ttl cache-lease-wait ],
       81 => %w[ docker-socket http3 idle-timeout ignore-restore-errors log-format metrics-allow-ip
                 min-tls proxy-protocol proxy-protocol-allow-ip read-header-timeout read-timeout
@@ -84,6 +83,26 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
 
   test "every kamal-proxy run flag is exposed in deploy.yml or waived" do
     assert_covered "run", emitted_run_flags
+  end
+
+  # Unlike a flag the gem cannot emit, a provider the gem does not know is not a
+  # missing feature — it is a rejected deploy. proxy/run/acme/dns_provider is
+  # validated against Acme::DNS_PROVIDERS, so a provider kamal-proxy grew and the
+  # gem did not fails config validation for an operator who is holding it right.
+  test "the gem's DNS provider allowlist matches what kamal-proxy advertises" do
+    assert_equal MANIFEST.fetch("acme_dns_providers").sort,
+      Kamal::Configuration::Proxy::Acme::DNS_PROVIDERS.sort, <<~MESSAGE
+        kamal-proxy #{MANIFEST["proxy_version"]} and Kamal::Configuration::Proxy::Acme::DNS_PROVIDERS
+        disagree about which DNS providers exist.
+
+        Refresh the manifest (bin/sync-proxy-flags), then bring DNS_PROVIDERS in
+        line with it. Providers the proxy gained are ones an operator can now
+        configure and the gem would reject; providers it lost are ones the gem
+        still accepts and the proxy will silently ignore.
+
+        Short aliases (cf, r53, ...) live in DNS_PROVIDER_ALIASES — kamal-proxy
+        accepts them but does not advertise them, so they are not checked here.
+      MESSAGE
   end
 
   test "no waiver names a flag kamal-proxy no longer accepts" do

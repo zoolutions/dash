@@ -43,6 +43,21 @@ def flags_for(invocation, subcommand)
   help.scan(/^\s+(?:-\w, )?--([a-z0-9-]+)/).flatten.uniq.sort - BUILTIN_FLAGS
 end
 
+# The DNS providers kamal-proxy will accept for --acme-dns-provider, read off the
+# parenthesised list in the flag's own usage text. The gem validates
+# proxy/run/acme/dns_provider against this, and rejecting a provider the proxy
+# supports blocks a deploy - so the list has to move with the image, not with
+# whoever last remembered to edit a constant.
+#
+# Whitespace is squashed first because Cobra wraps long usage strings.
+def dns_providers_for(invocation)
+  help = run!(*invocation, "run", "--help").gsub(/\s+/, " ")
+  advertised = help[/--acme-dns-provider\b[^(]*\(([^)]*)\)/, 1] or
+    abort "could not find the provider list in --acme-dns-provider's usage text"
+
+  advertised.split(",").map(&:strip).sort
+end
+
 version = MINIMUM_VERSION
 
 invocation =
@@ -58,6 +73,7 @@ invocation =
 manifest = {
   "proxy_version" => version,
   "generated_by" => "bin/sync-proxy-flags",
+  "acme_dns_providers" => dns_providers_for(invocation),
   "flags" => SUBCOMMANDS.to_h { |subcommand| [ subcommand, flags_for(invocation, subcommand) ] }
 }
 
@@ -70,4 +86,5 @@ File.write path, <<~HEADER + manifest.to_yaml.sub(/\A---\n/, "")
 HEADER
 
 SUBCOMMANDS.each { |sub| puts "#{sub}: #{manifest["flags"][sub].size} flags" }
+puts "acme dns providers: #{manifest["acme_dns_providers"].size}"
 puts "wrote #{path} for #{version}"

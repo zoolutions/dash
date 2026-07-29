@@ -105,9 +105,13 @@ class Kamal::Configuration
     roles.each do |role|
       role.secrets_io(role.hosts.first) if role.hosts.any?
 
-      if role.running_proxy? && role.proxy.custom_ssl_certificate?
-        role.proxy.certificate_pem_content
-        role.proxy.private_key_pem_content
+      if role.running_proxy?
+        role.proxy.run&.secrets_io
+
+        if role.proxy.custom_ssl_certificate?
+          role.proxy.certificate_pem_content
+          role.proxy.private_key_pem_content
+        end
       end
     end
 
