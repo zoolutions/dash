@@ -367,6 +367,8 @@ class Kamal::Cli::Main < Kamal::Cli::Base
       when :healthcheck
         healthcheck = role.healthcheck
         healthcheck.port ? "healthcheck #{healthcheck.path}:#{healthcheck.port}" : "healthcheck (custom cmd)"
+      when :healthcheck_exec
+        "healthcheck exec probe (#{role.healthcheck.exec})"
       when :docker_options
         "docker healthcheck (options: health-cmd)"
       else

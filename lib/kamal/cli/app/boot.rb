@@ -62,12 +62,25 @@ class Kamal::Cli::App::Boot
         execute *app.deploy(target: endpoint)
         run_hook "post-proxy-deploy", hosts: host.to_s, role: role.name
       else
-        Kamal::Cli::Healthcheck::Poller.wait_for_healthy(role: role) { capture_with_info(*app.status(version: version)) }
+        Kamal::Cli::Healthcheck::Poller.wait_for_healthy(role: role) { health_status }
       end
     rescue => e
       error "Failed to boot #{role} on #{host}"
       dump_diagnostics
       raise e
+    end
+
+    # An exec probe is docker-invisible — the container declares no healthcheck, so
+    # `docker inspect` would only ever report its state. Poll the probe instead.
+    def health_status
+      role.healthcheck&.exec? ? exec_probe_status : capture_with_info(*app.status(version: version))
+    end
+
+    def exec_probe_status
+      execute *app.health_probe(version: version)
+      "healthy"
+    rescue SSHKit::Command::Failed
+      "exec probe exited non-zero"
     end
 
     # Every failed boot gets the container log, and the health probe history when the

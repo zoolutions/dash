@@ -41,7 +41,7 @@ class ConfigurationRoleHealthcheckTest < ActiveSupport::TestCase
       healthcheck(path: "/readyz")
     end
 
-    assert_equal "servers/workers/healthcheck: port is required unless cmd is set", error.message
+    assert_equal "servers/workers/healthcheck: port is required unless cmd or exec is set", error.message
   end
 
   test "command may not contain a shell expansion" do
@@ -51,6 +51,35 @@ class ConfigurationRoleHealthcheckTest < ActiveSupport::TestCase
 
     assert_equal "servers/workers/healthcheck/cmd: cannot contain ${...}, it would expand on the deploy host, not in the container", error.message
   end
+
+  test "exec probes are polled from the deploy host, so they emit no docker flags" do
+    check = healthcheck(exec: "bin/ready-check")
+
+    assert check.exec?
+    assert_equal "bin/ready-check", check.exec
+    assert_equal [], check.args
+  end
+
+  test "a healthcheck without exec is not an exec probe" do
+    assert_not healthcheck(port: 7434).exec?
+  end
+
+  test "exec keeps ${...} because docker exec quotes it past the deploy host's shell" do
+    assert_equal "bin/ready-check ${PORT}", healthcheck(exec: "bin/ready-check ${PORT}").exec
+  end
+
+  test "exec cannot be combined with keys that only configure docker's healthcheck" do
+    { cmd: "pgrep -f bin/jobs", port: 7434, path: "/readyz", interval: 5, timeout: 3,
+      retries: 3, start_period: 60, start_interval: 1 }.each do |key, value|
+      error = assert_raises Kamal::ConfigurationError, "expected #{key} to conflict with exec" do
+        healthcheck(exec: "bin/ready-check", key => value)
+      end
+
+      assert_equal "servers/workers/healthcheck/exec: cannot be combined with #{key}, " \
+        "which only configures docker's own healthcheck — an exec probe is polled from the deploy host", error.message
+    end
+  end
+
 
   private
     def healthcheck(**healthcheck_config)

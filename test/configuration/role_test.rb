@@ -374,6 +374,21 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     assert_equal :healthcheck, config_with_roles.role(:workers).readiness_source
   end
 
+  test "readiness source is the exec probe when the healthcheck declares one" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "exec" => "bin/ready-check" }
+
+    assert_equal :healthcheck_exec, config_with_roles.role(:workers).readiness_source
+  end
+
+  test "an exec probe adds no docker healthcheck flags but still gates readiness" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "exec" => "bin/ready-check" }
+
+    role = config_with_roles.role(:workers)
+
+    assert_equal [], role.healthcheck_args
+    assert role.readiness_gated?
+  end
+
   test "healthcheck args are empty without a healthcheck" do
     assert_equal [], config_with_roles.role(:workers).healthcheck_args
   end
@@ -403,7 +418,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
       config_with_roles.role(:workers)
     end
 
-    assert_equal "servers/workers/healthcheck: port is required unless cmd is set", error.message
+    assert_equal "servers/workers/healthcheck: port is required unless cmd or exec is set", error.message
   end
 
   test "healthcheck rejects unknown keys" do
