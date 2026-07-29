@@ -151,6 +151,14 @@ class CliAppTest < CliTestCase
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-web-latest$'", "--quiet", "|", "xargs docker logs --timestamps 2>&1")
+      .returns("Web exited with status 1")
+
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-web-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", "'{{json .State.Health}}'")
+      .returns('{"Status":"unhealthy","FailingStreak":3}')
+
     SSHKit::Backend::Abstract.any_instance.stubs(:execute).returns("")
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
       .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-web-latest$'", "--quiet", "|", :xargs, :docker, :stop, raise_on_non_zero_exit: false)
@@ -163,6 +171,8 @@ class CliAppTest < CliTestCase
         assert_match "Waiting for the first healthy web container before booting workers on 1.1.1.4...", output
         assert_match "First web container is unhealthy, not booting workers on 1.1.1.3", output
         assert_match "First web container is unhealthy, not booting workers on 1.1.1.4", output
+        assert_match "Web exited with status 1", output
+        assert_match "FailingStreak", output
       end
     end
   ensure
@@ -205,6 +215,64 @@ class CliAppTest < CliTestCase
 
     run_command("boot", config: :with_roles, host: "1.1.1.3", allow_execute_error: true).tap do |output|
       assert_match "ERROR Failed to boot workers on 1.1.1.3", output
+    end
+  ensure
+    Thread.report_on_exception = true
+  end
+
+  test "boot failure on a non-primary role dumps container and health logs" do
+    Thread.report_on_exception = false
+
+    Object.any_instance.stubs(:sleep)
+
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
+
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", "'{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}'")
+      .returns("unhealthy") # workers health check
+
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", "xargs docker logs --timestamps 2>&1")
+      .returns("Worker exited with status 1").at_least_once
+
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", "'{{json .State.Health}}'")
+      .returns('{"Status":"unhealthy","FailingStreak":3}').at_least_once
+
+    run_command("boot", config: :with_roles, host: nil, allow_execute_error: true).tap do |output|
+      assert_match "ERROR Failed to boot workers on 1.1.1.3", output
+      assert_match "Worker exited with status 1", output
+      assert_match "FailingStreak", output
+      # The barrier belongs to web, so workers never reaches close_barrier
+      assert_no_match "not booting any other roles", output
+    end
+  ensure
+    Thread.report_on_exception = true
+  end
+
+  test "boot failure omits the health log when the container has no healthcheck" do
+    Thread.report_on_exception = false
+
+    Object.any_instance.stubs(:sleep)
+
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
+
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", "'{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}'")
+      .returns("stopped") # workers has no healthcheck, container just died
+
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", "xargs docker logs --timestamps 2>&1")
+      .returns("Worker exited with status 1")
+
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", "'{{json .State.Health}}'")
+      .returns("null")
+
+    run_command("boot", config: :with_roles, host: nil, allow_execute_error: true).tap do |output|
+      assert_match "ERROR Failed to boot workers on 1.1.1.3", output
+      assert_match "Worker exited with status 1", output
+      assert_no_match /ERROR null/, output
     end
   ensure
     Thread.report_on_exception = true

@@ -66,7 +66,19 @@ class Kamal::Cli::App::Boot
       end
     rescue => e
       error "Failed to boot #{role} on #{host}"
+      dump_diagnostics
       raise e
+    end
+
+    # Every failed boot gets the container log, and the health probe history when the
+    # container declares a healthcheck — non-primary roles have no kamal-proxy report to fall back on.
+    def dump_diagnostics
+      error capture_with_info(*app.logs(container_id: app.container_id_for_version(version)))
+
+      health_log = capture_with_info(*app.container_health_log(version: version)).strip
+      error health_log unless health_log.empty? || health_log == "null"
+    rescue SSHKit::Command::Failed
+      error "Could not fetch logs for #{version}"
     end
 
     def stop_new_version
@@ -97,12 +109,6 @@ class Kamal::Cli::App::Boot
     def close_barrier
       if barrier.close
         info "First #{KAMAL.primary_role} container is unhealthy on #{host}, not booting any other roles"
-        begin
-          error capture_with_info(*app.logs(container_id: app.container_id_for_version(version)))
-          error capture_with_info(*app.container_health_log(version: version))
-        rescue SSHKit::Command::Failed
-          error "Could not fetch logs for #{version}"
-        end
       end
     end
 
