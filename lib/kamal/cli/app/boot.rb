@@ -85,10 +85,21 @@ class Kamal::Cli::App::Boot
       execute *app.stop(version: version), raise_on_non_zero_exit: false
     end
 
-    def stop_old_version(version)
-      execute *app.stop(version: version), raise_on_non_zero_exit: false
+    def stop_old_version(old_version)
+      run_stop_hook "pre-app-stop", old_version
+      execute *app.stop(version: old_version), raise_on_non_zero_exit: false
+      run_stop_hook "post-app-stop", old_version
+
       execute *app.clean_up_assets if assets?
       execute *app.clean_up_error_pages if KAMAL.config.error_pages_path
+    end
+
+    # The new version is already live by the time the old one is stopped, so a failing
+    # drain hook must not fail the deploy — warn and stop the old container anyway.
+    def run_stop_hook(hook, old_version)
+      run_hook hook, hosts: host.to_s, role: role.name, version: old_version
+    rescue Kamal::Cli::HookError => e
+      error "#{e.message}\nContinuing anyway: #{version} is already live for #{role} on #{host}."
     end
 
     def release_barrier
