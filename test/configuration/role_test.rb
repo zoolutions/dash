@@ -356,6 +356,39 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     assert_equal %(servers/workers/options/restart: should be a string. Use "no" to disable restarts), error.message
   end
 
+  test "health option with braced expansion is rejected" do
+    @deploy_with_roles[:servers]["workers"]["options"] = { "health-cmd" => "curl -fsS http://127.0.0.1:${HEALTH_PORT}/readyz || exit 1" }
+
+    error = assert_raises Kamal::ConfigurationError do
+      Kamal::Configuration.new(@deploy_with_roles)
+    end
+
+    assert_equal "servers/workers/options/health-cmd: cannot contain ${...}, which the deploy host's shell expands at docker run time, not the container — a role env var resolves to empty. Use the bare $VAR form, which expands in the container, or a literal value", error.message
+  end
+
+  test "health option with bare expansion is allowed" do
+    @deploy_with_roles[:servers]["workers"]["options"] = { "health-cmd" => "curl -fsS http://127.0.0.1:$HEALTH_PORT/readyz || exit 1" }
+
+    assert_equal [ "--health-cmd", "\"curl -fsS http://127.0.0.1:\\$HEALTH_PORT/readyz || exit 1\"" ],
+      config_with_roles.role(:workers).option_args
+  end
+
+  test "non-health option with braced expansion is left alone" do
+    @deploy_with_roles[:servers]["workers"]["options"] = { "volume" => "${PWD}/data:/data" }
+
+    assert_equal [ "--volume", "\"${PWD}/data:/data\"" ], config_with_roles.role(:workers).option_args
+  end
+
+  test "health option with braced expansion is rejected in a list value" do
+    @deploy_with_roles[:servers]["workers"]["options"] = { "health-cmd" => [ "curl -fsS http://127.0.0.1:8080/readyz", "curl -fsS http://127.0.0.1:${HEALTH_PORT}/readyz" ] }
+
+    error = assert_raises Kamal::ConfigurationError do
+      Kamal::Configuration.new(@deploy_with_roles)
+    end
+
+    assert_match "servers/workers/options/health-cmd: cannot contain ${...}", error.message
+  end
+
   private
     def config
       Kamal::Configuration.new(@deploy)

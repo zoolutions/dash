@@ -235,6 +235,23 @@ class Kamal::Configuration::Validator
       if restart_policy = options&.find { |key, _| key.to_s == "restart" }
         validate_restart_policy!(restart_policy.last)
       end
+
+      validate_health_option_expansion!(options)
+    end
+
+    # Kamal::Utils::DOLLAR_SIGN_WITHOUT_SHELL_EXPANSION_REGEX escapes a bare `$` but exempts
+    # `${...}`, leaving it for the deploy host's shell to expand at docker run time. Role env
+    # never reaches that shell, so `${SOME_ENV}` in a health command silently becomes empty and
+    # the container sits `starting` until deploy_timeout. Reject it where it is most likely written.
+    def validate_health_option_expansion!(options)
+      options&.each do |key, value|
+        next unless key.to_s.start_with?("health-")
+        next unless Array(value).any? { |entry| entry.to_s.include?("${") }
+
+        with_context("options/#{key}") do
+          error "cannot contain ${...}, which the deploy host's shell expands at docker run time, not the container — a role env var resolves to empty. Use the bare $VAR form, which expands in the container, or a literal value"
+        end
+      end
     end
 
     def validate_restart_policy!(restart_policy)

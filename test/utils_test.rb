@@ -52,4 +52,12 @@ class UtilsTest < ActiveSupport::TestCase
     assert_equal "\"https://example.com/\\$2\"",
       Kamal::Utils.escape_shell_value("https://example.com/$2")
   end
+
+  test "escape_shell_value leaves ${...} to the deploy host shell but escapes the bare form" do
+    # ${...} survives escaping, so it is expanded by the deploy host's shell at docker run
+    # time and can never see a role env var. The bare form is escaped and expands in the
+    # container. Kamal::Configuration::Validator rejects the braced form in health options.
+    assert_equal "\"${HEALTH_PORT}\"", Kamal::Utils.escape_shell_value("${HEALTH_PORT}")
+    assert_equal "\"\\$HEALTH_PORT\"", Kamal::Utils.escape_shell_value("$HEALTH_PORT")
+  end
 end

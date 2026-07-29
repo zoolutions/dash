@@ -40,6 +40,12 @@ servers:
       - 172.1.0.4: experiment1
     cmd: "bin/jobs"
     stop_timeout: 30
+
+    # Option values are shell-escaped before reaching `docker run`, but `${...}` is
+    # deliberately left for the deploy host's shell to expand. Role `env` is never
+    # defined in that shell, so `${MY_VAR}` resolves to empty. Use the bare `$MY_VAR`
+    # form, which is escaped and expands inside the container. Kamal rejects `${...}`
+    # in `health-*` options, where the empty value would only surface as a deploy timeout.
     options:
       memory: 2g
       cpus: 4
