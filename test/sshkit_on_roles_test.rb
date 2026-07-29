@@ -64,8 +64,11 @@ class SshkitOnRolesTest < ActiveSupport::TestCase
     assert_operator booted.index("1.1.1.2"), :<, booted.index("1.1.1.4")
   end
 
-  # Only the two methods on_roles asks a role for.
+  # Only the two methods on_roles asks a role for. boot_runner_options is handed the hosts
+  # this run is pacing, so assert on_roles passes exactly the set it is about to run.
   def role_with(hosts, **runner_options)
-    stub(hosts: hosts, boot_runner_options: runner_options, to_s: hosts.first)
+    role = stub(hosts: hosts, to_s: hosts.first)
+    role.stubs(:boot_runner_options).with(hosts).returns(runner_options)
+    role
   end
 end

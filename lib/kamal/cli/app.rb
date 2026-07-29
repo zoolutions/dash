@@ -421,6 +421,9 @@ class Kamal::Cli::App < Kamal::Cli::Base
     end
 
     def host_boot_groups
-      KAMAL.config.boot.limit ? KAMAL.app_hosts.each_slice(KAMAL.config.boot.limit).to_a : [ KAMAL.app_hosts ]
+      hosts = KAMAL.app_hosts
+      limit = KAMAL.config.boot.limit_for(hosts)
+
+      limit ? hosts.each_slice(limit).to_a : [ hosts ]
     end
 end

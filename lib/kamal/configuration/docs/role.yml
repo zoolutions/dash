@@ -53,8 +53,9 @@ servers:
     # Set `boot` on the role instead and its hosts are paced on their own — a second
     # host in a worker role finally buys the redundancy it looks like it buys.
     #
-    # `limit` is a count or a percentage of *this role's* hosts; `limit: 1` boots them
-    # one at a time. `wait` is the pause between hosts or groups, and defaults to none.
+    # `limit` is a count, or a percentage of the hosts this run is booting for the role
+    # (so `--roles` / `--hosts` narrow the denominator too); `limit: 1` boots them one at
+    # a time. `wait` is the pause between hosts or groups, and defaults to none.
     #
     # A role using this key needs the role-first iteration of `boot/parallel_roles`.
     # Kamal turns it on for you when you have not set it; an explicit

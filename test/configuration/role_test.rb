@@ -500,13 +500,15 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     role = config_with_roles.role(:workers)
 
     assert_nil role.boot
-    assert_equal({}, role.boot_runner_options)
+    assert_equal({}, role.boot_runner_options(role.hosts))
   end
 
   test "the global boot limit never becomes per-role pacing" do
     @deploy_with_roles[:boot] = { "limit" => 2, "wait" => 10 }
 
-    assert_equal({}, Kamal::Configuration.new(@deploy_with_roles).role(:workers).boot_runner_options)
+    role = Kamal::Configuration.new(@deploy_with_roles).role(:workers)
+
+    assert_equal({}, role.boot_runner_options(role.hosts))
   end
 
   test "boot specialization paces the role's own hosts" do
@@ -514,15 +516,29 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
 
     role = Kamal::Configuration.new(@deploy_with_roles).role(:workers)
 
-    assert_equal 1, role.boot.limit
-    assert_equal({ in: :sequence, wait: 0 }, role.boot_runner_options)
+    assert_equal 1, role.boot.limit_for(role.hosts)
+    assert_equal({ in: :sequence, wait: 0 }, role.boot_runner_options(role.hosts))
   end
 
   test "boot percentage counts the role's hosts, not the whole deploy" do
     @deploy_with_roles[:servers]["web"] = [ "1.1.1.1", "1.1.1.2", "1.1.1.5", "1.1.1.6" ]
     @deploy_with_roles[:servers]["workers"]["boot"] = { "limit" => "50%" }
 
-    assert_equal 1, Kamal::Configuration.new(@deploy_with_roles).role(:workers).boot.limit
+    role = Kamal::Configuration.new(@deploy_with_roles).role(:workers)
+
+    assert_equal 1, role.boot.limit_for(role.hosts)
+  end
+
+  test "boot percentage counts the hosts this run actually paces, not the role's config" do
+    # --roles/--hosts narrow what on_roles passes to boot_runner_options; a percentage of
+    # four configured hosts must not be applied to the two the run is booting.
+    @deploy_with_roles[:servers]["workers"]["hosts"] = %w[ 1.1.1.3 1.1.1.4 1.1.1.5 1.1.1.6 ]
+    @deploy_with_roles[:servers]["workers"]["boot"] = { "limit" => "50%" }
+
+    role = Kamal::Configuration.new(@deploy_with_roles).role(:workers)
+
+    assert_equal({ in: :groups, limit: 2, wait: 0 }, role.boot_runner_options(role.hosts))
+    assert_equal({ in: :sequence, wait: 0 }, role.boot_runner_options(%w[ 1.1.1.3 1.1.1.4 ]))
   end
 
   test "boot is memoized, including the unspecialized nil" do

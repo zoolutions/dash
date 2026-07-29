@@ -12,6 +12,10 @@ boot:
 
   # The number or percentage of hosts to boot at a time, across all roles.
   # This can be an integer (e.g., 3) or a percentage string (e.g., 25%).
+  #
+  # A percentage counts the hosts this run is actually booting: app hosts only — accessories
+  # are not booted here — and narrowed by `--roles` / `--hosts`. So `25%` with `--roles web`
+  # is a quarter of web's hosts, not a quarter of the file.
   limit: 25%
 
   # The number of seconds to wait between booting each group of hosts.

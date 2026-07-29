@@ -93,12 +93,15 @@ class Kamal::Configuration::Role
     @boot =
       if (boot_config = specializations["boot"])
         Kamal::Configuration::Boot.new \
-          config: config, boot_config: boot_config, host_count: hosts.count, context: "servers/#{name}/boot"
+          config: config, boot_config: boot_config, context: "servers/#{name}/boot"
       end
   end
 
-  def boot_runner_options
-    boot&.runner_options || {}
+  # `hosts` is what on_roles is about to pace — `role.hosts & the run's hosts`, so
+  # --roles/--hosts have already narrowed it. A percentage limit has to count that, not
+  # the role's configured hosts.
+  def boot_runner_options(hosts)
+    boot&.runner_options_for(hosts) || {}
   end
 
   def proxy
