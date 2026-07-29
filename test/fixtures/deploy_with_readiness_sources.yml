@@ -14,6 +14,19 @@ servers:
     options:
       health-cmd: "curl -f http://localhost:7434/readyz || exit 1"
       health-interval: 5s
+  listener:
+    hosts:
+      - "1.1.1.5"
+    cmd: bin/listen
+    healthcheck:
+      port: 7434
+      path: /readyz
+  ticker:
+    hosts:
+      - "1.1.1.6"
+    cmd: bin/tick
+    healthcheck:
+      cmd: "pgrep -f bin/tick"
 registry:
   username: user
   password: pw

@@ -58,3 +58,34 @@ servers:
     env:
       ...
     asset_path: /public
+
+    # Healthcheck
+    #
+    # A role that does not run the proxy has no readiness gate of its own: the
+    # deploy only checks that the container is still running after
+    # `readiness_delay` seconds before stopping the old one. Declare a
+    # `healthcheck` and Kamal renders it into docker's own HEALTHCHECK flags, so
+    # the deploy waits for the container to report healthy instead.
+    #
+    # `port` is required unless you set `cmd`. The default HTTP check is
+    # `curl -f http://localhost:<port><path> || exit 1`, so the image needs curl.
+    #
+    # `cmd` runs inside the container via /bin/sh and can be anything that exits
+    # non-zero when unhealthy — no HTTP server and no published port needed. It
+    # may not contain `${...}`: that would expand on the deploy host, not in the
+    # container.
+    #
+    # Durations are seconds when given as a plain number, or any docker duration
+    # string ("90s", "1m30s"). `interval` defaults to 1 second so a deploy is not
+    # left waiting on docker's own 30 second default.
+    #
+    # A `healthcheck` cannot be combined with `health-*` keys under `options`.
+    healthcheck:
+      port: 7434
+      path: /readyz
+      cmd: "pgrep -f bin/jobs"
+      interval: 5
+      timeout: 3
+      retries: 3
+      start_period: 60
+      start_interval: 1

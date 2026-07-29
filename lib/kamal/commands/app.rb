@@ -30,6 +30,7 @@ class Kamal::Commands::App < Kamal::Commands::Base
       *role.asset_volume_args,
       *role.label_args,
       *role.option_args,
+      *role.healthcheck_args,
       config.absolute_image,
       role.cmd
   end
