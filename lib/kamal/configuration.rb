@@ -91,6 +91,7 @@ class Kamal::Configuration
     ensure_valid_hooks_output!
     ensure_unproxied_roles_are_readiness_gated
     ensure_role_boot_can_pace_its_hosts
+    ensure_boot_wait_paces_something
   end
 
   # Resolves every secret the deploy will need so a missing secret fails fast,
@@ -460,6 +461,23 @@ class Kamal::Configuration
 
       raise Kamal::ConfigurationError, "servers/#{paced.first.name}/boot cannot be combined with boot/parallel_roles: false, " \
         "which boots each host's roles in turn and so cannot pace one role's hosts. Remove one of them"
+    end
+
+    # `wait` only ever fills the gap between one group of hosts and the next, and without a
+    # `limit` there are no gaps — every host boots in one group. Before #47 that silently
+    # cost a deploy one `wait` interval; now it silently does nothing at all. Either way the
+    # operator asked for staggering and is not getting it, so say so.
+    def ensure_boot_wait_paces_something
+      offenders = [ [ "boot", boot ], *roles.filter_map { |role| [ "servers/#{role.name}/boot", role.boot ] if role.boot } ]
+        .select { |_context, boot_config| boot_config.wait.present? && !boot_config.limit? }
+
+      offenders.each do |context, boot_config|
+        warn "#{context}/wait is set to #{boot_config.wait} but #{context}/limit is not, so it does nothing. " \
+          "`wait` paces one group of hosts against the next, and without a limit every host boots in a single group. " \
+          "Set `#{context}/limit` to stagger the boot, or remove `#{context}/wait`."
+      end
+
+      true
     end
 
     def ensure_unique_hosts_for_ssl_roles
