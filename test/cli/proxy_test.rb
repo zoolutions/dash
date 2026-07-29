@@ -615,9 +615,11 @@ class CliProxyTest < CliTestCase
   test "remove_image with loadbalancer" do
     Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
+    # The load balancer runs the kamal-proxy image, so it is pruned by the
+    # kamal-proxy title label - on its own host as well as on a shared one.
     run_command("remove_image", fixture: :with_loadbalancer).tap do |output|
-      assert_match "docker image prune --all --force --filter label=org.opencontainers.image.title=kamal-proxy", output
-      assert_match "docker image prune --all --force --filter label=org.opencontainers.image.title=kamal-loadbalancer", output
+      assert_match "docker image prune --all --force --filter label=org.opencontainers.image.title=kamal-proxy on 1.1.1.1", output
+      assert_match "docker image prune --all --force --filter label=org.opencontainers.image.title=kamal-proxy on lb.example.com", output
     end
   end
 
@@ -657,9 +659,186 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  # --- Shared loadbalancer tier: two kamal apps, one load balancer host -------
+
+  test "loadbalancer deploy claims the service name for this app" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_registry
+
+    run_command("loadbalancer", "deploy", fixture: :with_loadbalancer).tap do |output|
+      assert_match "mkdir -p .kamal/loadbalancer/services", output
+      assert_match "docker exec load-balancer kamal-proxy deploy app", output
+    end
+  end
+
+  test "loadbalancer deploy is a no-op claim when this app already owns the service" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_registry(service_owner: loadbalancer_owner_token(:with_loadbalancer))
+
+    run_command("loadbalancer", "deploy", fixture: :with_loadbalancer).tap do |output|
+      assert_match "docker exec load-balancer kamal-proxy deploy app", output
+      assert_no_match(/is already registered on the load balancer/, output)
+    end
+  end
+
+  test "loadbalancer deploy errors when another app owns the service name" do
+    Thread.report_on_exception = false
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_registry(service_owner: "app other/app")
+
+    error = assert_raises(SSHKit::Runner::ExecuteError) do
+      run_command("loadbalancer", "deploy", fixture: :with_loadbalancer)
+    end
+
+    assert_match "Service 'app' is already registered on the load balancer at lb.example.com by other/app", error.message
+    assert_match "rename this app's service", error.message
+  ensure
+    Thread.report_on_exception = true
+  end
+
+  test "boot records this app's run configuration for the shared load balancer" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_registry
+
+    run_command("boot", fixture: :with_loadbalancer).tap do |output|
+      assert_match "Starting loadbalancer on lb.example.com", output
+    end
+  end
+
+  test "boot errors when another app booted the load balancer with a different proxy.run" do
+    Thread.report_on_exception = false
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_registry(run_config: "other-app other/app some-other-digest")
+
+    error = assert_raises(SSHKit::Runner::ExecuteError) do
+      run_command("boot", fixture: :with_loadbalancer)
+    end
+
+    assert_match "The load balancer on lb.example.com was booted by other/app with a different proxy/run configuration", error.message
+  ensure
+    Thread.report_on_exception = true
+  end
+
+  # Two apps agreeing on proxy/run is precisely the supported shared topology.
+  test "boot allows another app that booted the load balancer with the same proxy.run" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    digest = loadbalancer_config(:with_loadbalancer).run_config_digest
+    stub_loadbalancer_registry(run_config: "other-app other/app #{digest}")
+
+    run_command("boot", fixture: :with_loadbalancer).tap do |output|
+      assert_match "Starting loadbalancer on lb.example.com", output
+    end
+  end
+
+  # Same app, changed config: mirror the per-host proxy's stale-config message
+  # rather than erroring - `kamal proxy reboot` is the documented fix.
+  test "boot warns when this app's own load balancer run config is stale" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_registry(run_config: "#{loadbalancer_owner_token(:with_loadbalancer)} stale-digest")
+
+    run_command("boot", fixture: :with_loadbalancer).tap do |output|
+      assert_match "load balancer on lb.example.com is running with a configuration that no longer matches", output
+      assert_match "kamal proxy reboot", output
+    end
+  end
+
+  # kamal-proxy persists its service state in the kamal-loadbalancer-config
+  # named volume, so replacing the container keeps every app's routes.
+  test "reboot preserves other apps services registered on the shared load balancer" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_registry
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :exec, "load-balancer", "kamal-proxy", :list)
+      .returns("app\nother-app")
+
+    run_command("reboot", "-y", fixture: :with_loadbalancer).tap do |output|
+      # The container is replaced, but the state volume is re-mounted, never removed.
+      assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-loadbalancer", output
+      assert_match "--volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer", output
+      assert_no_match(/docker volume rm/, output)
+
+      # And the persisted service list is reported back after the restart.
+      assert_match "Services registered on the load balancer at lb.example.com after reboot", output
+      assert_match "other-app", output
+    end
+  end
+
+  test "remove refuses when other apps are installed on the loadbalancer host" do
+    Thread.report_on_exception = false
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_registry
+    # Only the dedicated load balancer host reports other apps.
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:ls, ".kamal/apps", "|", :wc, "-l")
+      .returns("1\n")
+
+    run_command("remove", fixture: :with_loadbalancer).tap do |output|
+      assert_match "Not removing the proxy, as other apps are installed, ignore this check with kamal proxy remove --force", output
+      assert_no_match(/docker image prune/, output)
+    end
+  ensure
+    Thread.report_on_exception = true
+  end
+
+  # `docker container prune` only collects stopped containers, so a load
+  # balancer that is never stopped is never removed either.
+  test "stop and start cover the loadbalancer host" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    run_command("stop", fixture: :with_loadbalancer).tap do |output|
+      assert_match "docker container stop load-balancer on lb.example.com", output
+    end
+
+    run_command("start", fixture: :with_loadbalancer).tap do |output|
+      assert_match "docker container start load-balancer on lb.example.com", output
+    end
+  end
+
+  test "remove stops the loadbalancer before pruning it" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_registry
+
+    run_command("remove", fixture: :with_loadbalancer).tap do |output|
+      assert_match "docker container stop load-balancer on lb.example.com", output
+      assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-loadbalancer", output
+    end
+  end
+
+  test "remove cleans up the loadbalancer directory" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_registry
+
+    run_command("remove", fixture: :with_loadbalancer).tap do |output|
+      assert_match "rm -r .kamal/loadbalancer", output
+    end
+  end
+
   private
     def run_command(*command, fixture: :with_proxy)
       stdouted { Kamal::Cli::Proxy.start([ *command, "-c", "test/fixtures/deploy_#{fixture}.yml" ]) }
+    end
+
+    def loadbalancer_config(fixture)
+      config = Kamal::Configuration.create_from(config_file: Pathname.new(File.expand_path("test/fixtures/deploy_#{fixture}.yml")))
+      Kamal::Configuration::Loadbalancer.new(config: config, proxy_config: config.proxy.proxy_config, secrets: config.secrets)
+    end
+
+    def loadbalancer_owner_token(fixture)
+      loadbalancer_config(fixture).owner_token
+    end
+
+    # The load balancer ownership registry lives in files on the LB host; by
+    # default report it as empty (nothing claimed yet).
+    def stub_loadbalancer_registry(service_owner: "", run_config: "")
+      lb = loadbalancer_config(:with_loadbalancer)
+
+      SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("")
+      SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+        .with(:cat, lb.service_owner_file, "2>", "/dev/null", "||", :echo, "\"\"", raise_on_non_zero_exit: false)
+        .returns(service_owner)
+      SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+        .with(:cat, lb.run_config_file, "2>", "/dev/null", "||", :echo, "\"\"", raise_on_non_zero_exit: false)
+        .returns(run_config)
     end
 
     # Allow the drift-detection captures without triggering a reboot.

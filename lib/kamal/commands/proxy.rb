@@ -160,10 +160,6 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
       config.proxy_boot.container_name
     end
 
-    def read_file(file, default: nil)
-      combine [ :cat, file, "2>", "/dev/null" ], [ :echo, "\"#{default}\"" ], by: "||"
-    end
-
     def config_digest_label_args(digest)
       [ "--label", "#{CONFIG_DIGEST_LABEL}=#{digest}" ] if digest
     end

@@ -34,6 +34,10 @@ module Kamal::Commands
       [ :rm, path ]
     end
 
+    def read_file(file, default: nil)
+      combine [ :cat, file, "2>", "/dev/null" ], [ :echo, "\"#{default}\"" ], by: "||"
+    end
+
     def ensure_docker_installed
       combine \
         ensure_local_docker_installed,
