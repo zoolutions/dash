@@ -13,9 +13,15 @@ class Kamal::Commands::Prune < Kamal::Commands::Base
       "while read image tag; do docker rmi $tag; done"
   end
 
-  def app_containers(retain:)
+  # Scoped to one role so a busy sibling role cannot push another role's newest
+  # container past the retain window. That matters beyond disk hygiene: a
+  # container kamal-proxy has put to sleep is `exited`, so it is a removal
+  # candidate, and once it is gone every wake 404s. With `retain >= 1` a role's
+  # newest container always survives, and the slept one is always the newest —
+  # sleeping happens to the current release.
+  def app_containers(retain:, role:)
     pipe \
-      docker(:ps, "-q", "-a", *service_filter, *stopped_containers_filters),
+      docker(:ps, "-q", "-a", *service_filter, *destination_filter, *role_filter(role), *stopped_containers_filters),
       "tail -n +#{retain + 1}",
       "while read container_id; do docker rm $container_id; done"
   end
@@ -34,5 +40,13 @@ class Kamal::Commands::Prune < Kamal::Commands::Base
 
     def service_filter
       [ "--filter", "label=service=#{config.service}" ]
+    end
+
+    def destination_filter
+      [ "--filter", "label=destination=#{config.destination}" ]
+    end
+
+    def role_filter(role)
+      [ "--filter", "label=role=#{role}" ]
     end
 end
