@@ -19,7 +19,7 @@ This is a fork, and its branch model changes what "sync the PR" means. Read `.cl
 | **Never rebase a published branch** | Every branch here has a PR, so it is published. Sync with **`git merge origin/dash`**, never `git rebase`. There is therefore **no force-push anywhere in this command** — merge commits push cleanly. |
 | Merging a PR lands on `dash`, not `main` | `main` doesn't move when a PR merges, so the *upstream* base is stable. What each merge invalidates is the others' relationship to `dash` — that's what the re-sync in Phase 2a absorbs. |
 | `git rerere` is enabled | Previously-seen conflicts auto-replay their recorded resolutions. Always `git diff --staged` before trusting a replay — a resolution recorded in a different context can be wrong. |
-| `feat/*` branches root off `main` to stay upstream-PR-able | Merging `dash` into such a branch pollutes its upstream diff. This is accepted (the squash-merge upstreaming path in `upstream-sync.md` hand-cleans the diff), but **note it in the final report** for any PR whose branch is on the upstreamable list. |
+| `feat/*` branches root off `dash` | Merging `dash` forward into them is the normal, expected operation — it costs nothing and needs no note in the report. Upstreaming later extracts the feature's own diff (`git diff dash...feat/<feature>`, see `upstream-sync.md`), which already excludes everything `dash` contributed. |
 
 **This command does NOT merge PRs itself** unless the user passed `automerge`. Default behavior: make each PR merge-ready, then pause and let the user merge; when a merge lands, re-sync the remaining PRs and continue.
 
@@ -164,7 +164,7 @@ When the queue is drained (all merged, or all merge-ready-and-handed-off, or blo
 Then:
 
 1. What the user must do next (merge the ready ones, decide on any `needs-user` items).
-2. Any PR whose branch is meant to be upstream-PR-able and now carries a `dash` merge commit — the upstreaming path (`git checkout -b pr/<feature> main && git merge --squash feat/<feature>`) hand-cleans that, but the user should know.
+2. Anything that complicates a later upstream extraction for a branch on the upstreamable list — e.g. unrelated fork-only changes committed onto the feature branch, which `git diff dash...feat/<feature>` would carry into the upstream PR.
 3. Whether upstream drift or a `MINIMUM_VERSION` release-ordering issue (Phase 4) is worth acting on.
 
 ---

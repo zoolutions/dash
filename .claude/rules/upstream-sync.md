@@ -1,6 +1,8 @@
 # Upstream Sync Rules
 
-Branch roles: `main` mirrors basecamp/kamal (fast-forward only, never commit). `dash` is the integration + release branch — fork identity plus merged features. Feature branches (`feat/*`) root off `main` and merge `main` forward — never rebase published branches. `git rerere` is enabled, so previously-seen conflicts auto-replay their resolutions.
+Branch roles: `main` mirrors basecamp/kamal (fast-forward only, never commit). `dash` is the integration + release branch — fork identity plus merged features. Feature branches (`feat/*`) always root off `dash` and merge `dash` forward — never off `main`, never rebase published branches. `git rerere` is enabled, so previously-seen conflicts auto-replay their resolutions.
+
+Upstream only ever reaches a feature branch through `dash`: `upstream/main` → `main` → `dash` → `feat/*`. A feature branch never merges `main` directly.
 
 ## Routine sync
 
@@ -14,8 +16,8 @@ bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each 
 bundle exec rubocop --parallel
 git push origin dash
 
-# per feature branch:
-git checkout feat/loadbalancing && git merge main && <tests> && git push
+# per feature branch — merge dash forward, never main:
+git checkout feat/loadbalancing && git merge dash && <tests> && git push
 git checkout dash && git merge feat/loadbalancing && <tests> && git push
 ```
 
@@ -52,12 +54,22 @@ Tag grammar: gem tags `dash-v<upstream>.<n>`, proxy image tags `v<upstream-base>
 
 ## Upstreaming a feature
 
+Feature branches root off `dash`, so they carry fork identity in their history. Do **not** `merge --squash` one onto `main` — that would drag all of `dash` into the PR. Extract the feature's own diff instead:
+
 ```bash
 git checkout -b pr/<feature> main
-git merge --squash feat/<feature>
+git diff dash...feat/<feature> | git apply -3      # the feature's changes only
+git status                                         # review before committing
+git commit -a -m "<upstream-facing message>"
 ```
 
-Hand-clean the diff before opening the PR against basecamp/kamal (e.g. drop the unrelated `lib/kamal/cli/build.rb` login change bundled in feat/loadbalancing).
+The three-dot `dash...feat/<feature>` diffs from `merge-base(dash, feat/<feature>)` to the branch tip. The merge-base is a commit on `dash`, so everything `dash` already had — fork identity, the `.claude/` toolkit, other merged features — falls out of the diff, and any `git merge dash` the branch did along the way is excluded too. What is left is exactly the feature.
+
+`git apply -3` may conflict where the feature touches a file that differs between `main` and `dash` (proxy defaults, `MINIMUM_VERSION`, test fixtures). Resolve toward upstream's shape — the PR must read as if written against `main`.
+
+Hand-clean the diff before opening the PR against basecamp/kamal (e.g. drop the unrelated `lib/kamal/cli/build.rb` login change bundled in feat/loadbalancing), and confirm no fork-owned file (`dash.gemspec`, `bin/release-dash`, `CLAUDE.md`, `.claude/`) is present.
+
+Rejected-by-basecamp features (see `ROADMAP.md`'s "safe moat" list) are never upstreamed — skip this entirely for them.
 
 ## Never
 

@@ -7,17 +7,19 @@ allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), 
 
 # LFG - Full Autonomous Workflow
 
-Execute a complete engineering workflow with verification at each phase. This is a fork: `main` mirrors basecamp/kamal and is never committed to directly. All work happens on a feature branch rooted off `main`, merged forward into `dash`. See `CLAUDE.md` and `.claude/rules/upstream-sync.md` for the branch model and release ordering — do not duplicate them here.
+Execute a complete engineering workflow with verification at each phase. This is a fork: `main` mirrors basecamp/kamal and is never committed to directly. All work happens on a feature branch rooted off `dash`, merged back into `dash`. See `CLAUDE.md` and `.claude/rules/upstream-sync.md` for the branch model and release ordering — do not duplicate them here.
 
 ## Phase 0: Branch Setup
 
-**BEFORE any other work, prepare the git branch — always root off `main`, never off `dash`:**
+**BEFORE any other work, prepare the git branch — always root off `dash`, never off `main`:**
 
 1. Check the current branch: `git branch --show-current`
-2. Switch to `main` and sync it: `git checkout main && git fetch upstream --tags --prune && git merge --ff-only upstream/main && git push origin main`
-3. Create feature branch off `main`: `git checkout -b feat/{brief-description}` (or `issue-{number}-{brief-description}` if working a GitHub issue)
+2. Switch to `dash` and sync it: `git checkout dash && git pull origin dash`
+3. Create feature branch off `dash`: `git checkout -b feat/{brief-description}` (or `issue-{number}-{brief-description}` if working a GitHub issue)
 
-Rooting off `main` keeps the branch upstream-PR-able later (see "Upstreaming a feature" in `upstream-sync.md`). The PR this workflow opens at the end targets `dash`, not `main`.
+Rooting off `dash` means the branch builds on the fork's real codebase — merged features, fork identity, and the `.claude/` toolkit are all present, so slash commands keep working and the branch merges back without replaying fork identity. The PR this workflow opens at the end targets `dash`, not `main`.
+
+Upstreaming later is still possible from a `dash`-rooted branch — the "Upstreaming a feature" recipe in `upstream-sync.md` extracts the feature's own diff with `git diff dash...feat/<feature>`. Do not root off `main` to pre-empt that.
 
 ---
 
@@ -286,7 +288,7 @@ The PR body MUST end with a `## Deviations & judgment calls` section copied from
 write "None — the plan held." This section is read FIRST in review — it is the
 audit trail for every decision the plan didn't make.
 
-If this feature is meant to be upstreamed later (rejected-by-basecamp features are NOT — see `ROADMAP.md`'s "safe moat" list), leave the branch rooted on `main` alone; the separate squash-merge-to-`pr/<feature>` flow in `.claude/rules/upstream-sync.md` handles that.
+If this feature is meant to be upstreamed later (rejected-by-basecamp features are NOT — see `ROADMAP.md`'s "safe moat" list), do nothing special here: the branch stays on `dash`, and the separate `pr/<feature>` extraction flow in `.claude/rules/upstream-sync.md` lifts the feature's own diff onto `main` when the time comes.
 
 ---
 
@@ -307,7 +309,7 @@ The tests prove the CODE is right; this phase keeps the USER's mental model righ
 - [ ] Unit test suite passes (full `bin/test` if proxy/deploy paths touched)
 - [ ] Backwards compatibility with existing `deploy.yml` maintained
 - [ ] No edits to upstream-owned files (`kamal.gemspec`, `bin/release`, `lib/kamal/version.rb`)
-- [ ] Branch rooted off `main`, PR opened against `dash`
+- [ ] Branch rooted off `dash`, PR opened against `dash`
 - [ ] PR body ends with `## Deviations & judgment calls` (from implementation-notes.md, since deleted)
 - [ ] Comprehension close-out delivered (decisions + three merge-gate questions)
 
