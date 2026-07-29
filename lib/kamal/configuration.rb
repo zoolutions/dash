@@ -89,6 +89,7 @@ class Kamal::Configuration
     ensure_no_conflicting_proxy_runs
     ensure_valid_loadbalancer
     ensure_valid_hooks_output!
+    ensure_unproxied_roles_are_readiness_gated
   end
 
   # Resolves every secret the deploy will need so a missing secret fails fast,
@@ -419,6 +420,21 @@ class Kamal::Configuration
 
     def ensure_one_host_for_ssl_roles
       roles.each(&:ensure_one_host_for_ssl)
+
+      true
+    end
+
+    # A role without a proxy and without a healthcheck has no readiness gate: the deploy
+    # accepts the container as ready once it is merely still running after readiness_delay,
+    # then stops the old one. Warn-only for now so existing configs keep deploying.
+    def ensure_unproxied_roles_are_readiness_gated
+      offenders = roles.reject { |role| role.hosts.empty? || role.running_proxy? || role.readiness_gated? }
+      return true if offenders.empty?
+
+      warn "Non-proxied role(s) #{offenders.map(&:name).join(", ")} have no healthcheck. " \
+        "Without one, Kamal accepts the container as ready #{readiness_delay}s after it merely starts " \
+        "and then stops the previous container — traffic can be dropped. Add a `healthcheck:` block, " \
+        "or opt out explicitly with `healthcheck: false`. This warning will become an error in a future release."
 
       true
     end

@@ -50,7 +50,7 @@ class Kamal::Configuration::Validator
               when "labels", "path_timeouts"
                 validate_hash_of! value, example_value.first[1].class
               else
-                validate_against_example! value, example_value
+                validate_against_example! value, example_value unless validate_key_override!(key, value)
               end
             else
               validate_type! value, example_value.class
@@ -178,6 +178,12 @@ class Kamal::Configuration::Validator
 
     def validate_type!(value, *types)
       type_error(*types) unless types.any? { |type| valid_type?(value, type) }
+    end
+
+    # Hook for subclasses that accept a shape the example cannot express. Return true
+    # when the key was fully validated here and the example should be skipped.
+    def validate_key_override!(key, value)
+      false
     end
 
     def error(message)

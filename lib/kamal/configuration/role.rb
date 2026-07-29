@@ -24,9 +24,10 @@ class Kamal::Configuration::Role
       logging_config: specializations.fetch("logging", {}),
       context: "servers/#{name}/logging"
 
-    if specializations.key?("healthcheck")
+    # `healthcheck: false` is an opt-out, not a healthcheck — it leaves @healthcheck nil.
+    if healthcheck_config = specializations["healthcheck"]
       @healthcheck = Kamal::Configuration::Role::Healthcheck.new \
-        healthcheck_config: specializations["healthcheck"],
+        healthcheck_config: healthcheck_config,
         context: "servers/#{name}/healthcheck"
     end
 
@@ -105,6 +106,13 @@ class Kamal::Configuration::Role
     else
       :none
     end
+  end
+
+  # Whether the operator has made a readiness decision for this role at all — declared a
+  # healthcheck, hand-rolled a health-cmd option, or accepted the gap with `healthcheck: false`.
+  # Distinct from readiness_source, which reports what actually gates the deploy.
+  def readiness_gated?
+    healthcheck.present? || health_cmd_option? || healthcheck_disabled?
   end
 
   def stop_args
@@ -260,6 +268,10 @@ class Kamal::Configuration::Role
 
     def health_cmd_option?
       docker_options.any? { |key, _| key.to_s == "health-cmd" }
+    end
+
+    def healthcheck_disabled?
+      specializations["healthcheck"] == false
     end
 
     def custom_labels

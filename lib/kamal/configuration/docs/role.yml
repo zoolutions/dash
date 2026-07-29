@@ -80,6 +80,11 @@ servers:
     # left waiting on docker's own 30 second default.
     #
     # A `healthcheck` cannot be combined with `health-*` keys under `options`.
+    #
+    # A non-proxied role with neither a `healthcheck` nor a `health-cmd` option
+    # warns on every deploy, because the readiness delay is the only thing standing
+    # between a container that starts and a container that serves. Write
+    # `healthcheck: false` to accept that gap explicitly and silence the warning.
     healthcheck:
       port: 7434
       path: /readyz
