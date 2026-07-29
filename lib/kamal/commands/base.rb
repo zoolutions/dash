@@ -2,7 +2,13 @@ module Kamal::Commands
   class Base
     delegate :sensitive, :argumentize, to: Kamal::Utils
 
-    DOCKER_HEALTH_STATUS_FORMAT = "'{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}'"
+    # Prefixed onto the docker state when the container declares no healthcheck at all, so
+    # "nothing is probing this container" stays distinguishable from "the probe passed" —
+    # both used to reach the poller as `running`. The state is kept after the prefix so a
+    # healthcheck-less container that died still reports why.
+    NO_HEALTHCHECK = "no-healthcheck"
+
+    DOCKER_HEALTH_STATUS_FORMAT = "'{{if .State.Health}}{{.State.Health.Status}}{{else}}#{NO_HEALTHCHECK}:{{.State.Status}}{{end}}'"
 
     attr_accessor :config
 

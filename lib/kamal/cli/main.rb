@@ -370,7 +370,7 @@ class Kamal::Cli::Main < Kamal::Cli::Base
       when :docker_options
         "docker healthcheck (options: health-cmd)"
       else
-        "NONE (old container stops #{KAMAL.config.readiness_delay}s after boot)"
+        "NONE (old container stops #{role.readiness_delay}s after boot)"
       end
     end
 end

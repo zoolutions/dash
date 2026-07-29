@@ -62,7 +62,7 @@ class Kamal::Cli::App::Boot
         execute *app.deploy(target: endpoint)
         run_hook "post-proxy-deploy", hosts: host.to_s, role: role.name
       else
-        Kamal::Cli::Healthcheck::Poller.wait_for_healthy { capture_with_info(*app.status(version: version)) }
+        Kamal::Cli::Healthcheck::Poller.wait_for_healthy(role: role) { capture_with_info(*app.status(version: version)) }
       end
     rescue => e
       error "Failed to boot #{role} on #{host}"
