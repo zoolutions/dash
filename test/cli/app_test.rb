@@ -62,13 +62,26 @@ class CliAppTest < CliTestCase
   end
 
   test "boot with parallel roles" do
-    # With parallel_roles: each role gets its own on() call
+    # With parallel_roles: each role gets its own on() call, unpaced
     Kamal::Cli::App.any_instance.expects(:on).with("1.1.1.1").with_block_given.twice
     Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3" ]).with_block_given.times(3)
-    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2" ]).with_block_given
-    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.3" ]).with_block_given
+    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2" ], {}).with_block_given
+    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.3" ], {}).with_block_given
 
     run_command("boot", config: :with_parallel_roles, host: nil)
+  end
+
+  test "boot paces only the role that declares its own boot limit" do
+    all_hosts = [ "1.1.1.1", "1.1.1.2", "1.1.1.3", "1.1.1.4" ]
+    Kamal::Cli::App.any_instance.expects(:on).with("1.1.1.1").with_block_given.twice
+    Kamal::Cli::App.any_instance.expects(:on).with(all_hosts).with_block_given.times(3)
+
+    # The role-level boot forces role-first iteration even though parallel_roles is unset,
+    # and only that role's hosts get a sequential runner — web still boots in parallel.
+    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2" ], {}).with_block_given
+    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.3", "1.1.1.4" ], { in: :sequence, wait: 0 }).with_block_given
+
+    run_command("boot", config: :with_role_boot, host: nil)
   end
 
   test "boot errors don't leave lock in place" do

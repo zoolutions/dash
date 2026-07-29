@@ -80,6 +80,27 @@ class Kamal::Configuration::Role
     @logging ||= config.logging.merge(specialized_logging)
   end
 
+  # nil unless the role paces its own hosts. Deliberately not falling back to the global
+  # boot: that limit is already spent slicing the cross-role host list in
+  # Cli::App#host_boot_groups, and handing it to the per-role runner as well would sleep
+  # `boot.wait` a second time inside every group.
+  #
+  # Built on first read rather than in the initializer — Servers.new constructs every Role
+  # before Kamal::Configuration#initialize has finished assigning its own collaborators.
+  def boot
+    return @boot if defined?(@boot)
+
+    @boot =
+      if (boot_config = specializations["boot"])
+        Kamal::Configuration::Boot.new \
+          config: config, boot_config: boot_config, host_count: hosts.count, context: "servers/#{name}/boot"
+      end
+  end
+
+  def boot_runner_options
+    boot&.runner_options || {}
+  end
+
   def proxy
     @proxy ||= specialized_proxy.merge(config.proxy) if running_proxy?
   end

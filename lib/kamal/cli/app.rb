@@ -24,7 +24,7 @@ class Kamal::Cli::App < Kamal::Cli::Base
           host_list = Array(hosts).join(",")
           run_hook "pre-app-boot", hosts: host_list
 
-          on_roles(KAMAL.roles, hosts: hosts, parallel: KAMAL.config.boot.parallel_roles) do |host, role|
+          on_roles(KAMAL.roles, hosts: hosts, parallel: KAMAL.config.parallel_roles?, rolling: true) do |host, role|
             Kamal::Cli::App::Boot.new(host, role, self, version, barrier, cli).run
           end
 
@@ -46,7 +46,7 @@ class Kamal::Cli::App < Kamal::Cli::Base
     modify(lock: true) do
       cli = self
 
-      on_roles(KAMAL.roles, hosts: KAMAL.app_hosts, parallel: KAMAL.config.boot.parallel_roles) do |host, role|
+      on_roles(KAMAL.roles, hosts: KAMAL.app_hosts, parallel: KAMAL.config.parallel_roles?, rolling: true) do |host, role|
         app = KAMAL.app(role: role, host: host)
         execute *KAMAL.auditor.record("Started app version #{KAMAL.config.version}"), verbosity: :debug
         execute *app.start, raise_on_non_zero_exit: false
@@ -67,7 +67,7 @@ class Kamal::Cli::App < Kamal::Cli::Base
   desc "stop", "Stop app container on servers"
   def stop
     modify(lock: true) do
-      on_roles(KAMAL.roles, hosts: KAMAL.app_hosts, parallel: KAMAL.config.boot.parallel_roles) do |host, role|
+      on_roles(KAMAL.roles, hosts: KAMAL.app_hosts, parallel: KAMAL.config.parallel_roles?) do |host, role|
         app = KAMAL.app(role: role, host: host)
         execute *KAMAL.auditor.record("Stopped app", role: role), verbosity: :debug
 
@@ -352,7 +352,7 @@ class Kamal::Cli::App < Kamal::Cli::Base
             end
           end
 
-          on_roles(KAMAL.roles, hosts: KAMAL.proxy_hosts, parallel: KAMAL.config.boot.parallel_roles) do |host, role|
+          on_roles(KAMAL.roles, hosts: KAMAL.proxy_hosts, parallel: KAMAL.config.parallel_roles?, rolling: true) do |host, role|
             Kamal::Cli::App::RolloutBoot.new(host, role, self, version).run if role.running_proxy?
           end
         end

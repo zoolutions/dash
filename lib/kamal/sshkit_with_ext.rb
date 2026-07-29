@@ -228,17 +228,22 @@ module SSHKitDslRoles
   #   parallel: When true, each role runs in its own thread with separate
   #             connections. When false, hosts run in parallel but roles on each
   #             host run sequentially (default: true)
+  #   rolling:  When true, each role's own `boot` config paces its hosts through
+  #             the SSHKit runner, so one role can boot serially while its
+  #             siblings still boot in parallel. Only for commands that start
+  #             containers — it would needlessly serialize read-only commands.
+  #             Requires parallel: there is no per-role runner otherwise.
   #
   # Example:
   #   on_roles(roles) do |host, role|
   #     # deploy role to host
   #   end
-  def on_roles(roles, hosts:, parallel: true, &block)
+  def on_roles(roles, hosts:, parallel: true, rolling: false, &block)
     if parallel
       threads = roles.filter_map do |role|
         if (role_hosts = role.hosts & hosts).any?
           Thread.new do
-            on(role_hosts) { |host| instance_exec(host, role, &block) }
+            on(role_hosts, rolling ? role.boot_runner_options : {}) { |host| instance_exec(host, role, &block) }
           rescue StandardError => e
             raise SSHKit::Runner::ExecuteError.new(e), "Exception while executing on #{role}: #{e.message}"
           end
