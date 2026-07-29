@@ -1,0 +1,73 @@
+# Every proxy option the gem can express, in one config.
+#
+# test/proxy_flag_coverage_test.rb generates the kamal-proxy commands from this
+# fixture and treats the flags that come out as the gem's real coverage. So a key
+# only counts as "mapped" if setting it here actually produces a flag — a config
+# accessor that exists but is never wired into deploy_options does not pass.
+#
+# When an R7 issue exposes a new flag, add its key here and delete the flag's
+# waiver from the test. If the flag does not appear, the wiring is wrong.
+service: app
+image: dhh/app
+servers:
+  web:
+    - "1.1.1.1"
+registry:
+  username: user
+  password: pw
+builder:
+  arch: amd64
+error_pages_path: public
+deploy_timeout: 6
+drain_timeout: 12
+proxy:
+  # Must stay off: load balancing deletes host/tls/basic-auth from deploy_options,
+  # which would understate coverage.
+  loadbalancer: false
+  app_port: 3000
+  hosts:
+    - example.com
+    - www.example.com
+  ssl:
+    certificate_pem: PROXY_CERT
+    private_key_pem: PROXY_KEY
+  ssl_staging: true
+  ssl_redirect: true
+  forward_headers: true
+  strip_path_prefix: true
+  path_prefixes:
+    - /api
+  response_timeout: 20
+  read_targets:
+    - "1.1.1.2"
+  read_target_websockets: true
+  writer_affinity_timeout: 30
+  path_timeouts:
+    /uploads: 300
+  healthcheck:
+    path: /up
+    interval: 2
+    timeout: 5
+    port: 4000
+    host: healthcheck.example.com
+  buffering:
+    requests: true
+    responses: true
+    memory: 2_000_000
+    max_request_body: 40_000_000
+    max_response_body: 20_000_000
+  basic_auth:
+    username: admin
+    password: secret
+  logging:
+    request_headers:
+      - Cache-Control
+    response_headers:
+      - X-Request-Id
+  tls_domains:
+    source: /api/v1/kamal/domains
+    interval: 300
+    batch_size: 5
+  run:
+    debug: true
+    metrics_port: 9090
