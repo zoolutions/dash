@@ -3,7 +3,7 @@ class Kamal::Configuration::Role
 
   delegate :argumentize, :optionize, to: Kamal::Utils
 
-  attr_reader :name, :config, :specialized_env, :specialized_logging, :specialized_proxy
+  attr_reader :name, :config, :specialized_env, :specialized_logging, :specialized_proxy, :healthcheck
 
   alias to_s name
 
@@ -23,6 +23,12 @@ class Kamal::Configuration::Role
     @specialized_logging = Kamal::Configuration::Logging.new \
       logging_config: specializations.fetch("logging", {}),
       context: "servers/#{name}/logging"
+
+    if specializations.key?("healthcheck")
+      @healthcheck = Kamal::Configuration::Role::Healthcheck.new \
+        healthcheck_config: specializations["healthcheck"],
+        context: "servers/#{name}/healthcheck"
+    end
 
     initialize_specialized_proxy
   end
@@ -63,6 +69,12 @@ class Kamal::Configuration::Role
     logging.args
   end
 
+  # Kept out of option_args on purpose: Commands::App::Execution splats those into
+  # one-shot `kamal app exec` containers, which must not inherit a service healthcheck.
+  def healthcheck_args
+    healthcheck&.args || []
+  end
+
   def logging
     @logging ||= config.logging.merge(specialized_logging)
   end
@@ -86,6 +98,8 @@ class Kamal::Configuration::Role
   def readiness_source
     if running_proxy?
       :proxy
+    elsif healthcheck
+      :healthcheck
     elsif health_cmd_option?
       :docker_options
     else

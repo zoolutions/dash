@@ -364,6 +364,9 @@ class Kamal::Cli::Main < Kamal::Cli::Base
       case role.readiness_source
       when :proxy
         [ "kamal-proxy health check", role.proxy.healthcheck_path ].compact.join(" ")
+      when :healthcheck
+        healthcheck = role.healthcheck
+        healthcheck.port ? "healthcheck #{healthcheck.path}:#{healthcheck.port}" : "healthcheck (custom cmd)"
       when :docker_options
         "docker healthcheck (options: health-cmd)"
       else

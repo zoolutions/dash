@@ -346,6 +346,54 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     assert_equal :none, config_with_roles.role(:workers).readiness_source
   end
 
+  test "readiness source is the healthcheck when the role declares one" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "port" => 7434 }
+
+    assert_equal :healthcheck, config_with_roles.role(:workers).readiness_source
+  end
+
+  test "healthcheck args are empty without a healthcheck" do
+    assert_equal [], config_with_roles.role(:workers).healthcheck_args
+  end
+
+  test "healthcheck args render the docker flags" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "port" => 7434, "path" => "/readyz" }
+
+    assert_equal [ "--health-cmd", "\"curl -f http://localhost:7434/readyz || exit 1\"", "--health-interval", "\"1s\"" ],
+      config_with_roles.role(:workers).healthcheck_args
+  end
+
+  test "healthcheck cannot coexist with health options" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "port" => 7434 }
+    @deploy_with_roles[:servers]["workers"]["options"] = { "health-cmd" => "pgrep -f bin/jobs" }
+
+    error = assert_raises Kamal::ConfigurationError do
+      config_with_roles.role(:workers)
+    end
+
+    assert_equal "servers/workers/healthcheck: cannot be combined with options/health-cmd, remove one of them", error.message
+  end
+
+  test "empty healthcheck is not silently ignored" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = {}
+
+    error = assert_raises Kamal::ConfigurationError do
+      config_with_roles.role(:workers)
+    end
+
+    assert_equal "servers/workers/healthcheck: port is required unless cmd is set", error.message
+  end
+
+  test "healthcheck rejects unknown keys" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "port" => 7434, "max_attempts" => 7 }
+
+    error = assert_raises Kamal::ConfigurationError do
+      config_with_roles.role(:workers)
+    end
+
+    assert_equal "servers/workers/healthcheck: unknown key: max_attempts", error.message
+  end
+
   test "invalid boolean restart policy" do
     @deploy_with_roles[:servers]["workers"]["options"] = { "restart" => false }
 

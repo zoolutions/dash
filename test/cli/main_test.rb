@@ -876,6 +876,8 @@ class CliMainTest < CliTestCase
       assert_match /web: 1 host \(1\.1\.1\.1\) — readiness: kamal-proxy health check \/healthz/, output
       assert_match /workers: 1 host \(1\.1\.1\.3\) — readiness: NONE \(old container stops 7s after boot\)/, output
       assert_match /pulse: 1 host \(1\.1\.1\.4\) — readiness: docker healthcheck \(options: health-cmd\)/, output
+      assert_match /listener: 1 host \(1\.1\.1\.5\) — readiness: healthcheck \/readyz:7434/, output
+      assert_match /ticker: 1 host \(1\.1\.1\.6\) — readiness: healthcheck \(custom cmd\)/, output
     end
   end
 

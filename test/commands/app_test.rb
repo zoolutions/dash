@@ -30,6 +30,20 @@ class CommandsAppTest < ActiveSupport::TestCase
       new_command.run(hostname: "myhost").join(" ")
   end
 
+  test "run with healthcheck" do
+    @config[:servers] = { "web" => [ "1.1.1.1" ], "jobs" => { "hosts" => [ "1.1.1.2" ], "cmd" => "bin/jobs", "healthcheck" => { "port" => 7434, "path" => "/readyz", "start_period" => 60 } } }
+
+    assert_equal \
+      "docker run --detach --restart unless-stopped --name app-jobs-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-jobs-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.2\" --env-file .kamal/apps/app/env/roles/jobs.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"jobs\" --label destination --health-cmd \"curl -f http://localhost:7434/readyz || exit 1\" --health-interval \"1s\" --health-start-period \"60s\" dhh/app:999 bin/jobs",
+      new_command(role: "jobs", host: "1.1.1.2").run.join(" ")
+  end
+
+  test "execute in new container carries no healthcheck" do
+    @config[:servers] = { "web" => [ "1.1.1.1" ], "jobs" => { "hosts" => [ "1.1.1.2" ], "cmd" => "bin/jobs", "healthcheck" => { "port" => 7434 } } }
+
+    assert_no_match %r{--health-}, new_command(role: "jobs", host: "1.1.1.2").execute_in_new_container("bin/rails", "db:setup", env: {}).join(" ")
+  end
+
   test "run with volumes" do
     @config[:volumes] = [ "/local/path:/container/path" ]
 
