@@ -260,14 +260,11 @@ class Kamal::Configuration::Accessory
       end
     end
 
+    # Ask each role for its own tagged hosts instead of re-parsing raw_config.servers here:
+    # a role may be written as a bare list or as a `hosts:` mapping, and Role already reads
+    # both. A second parser with a shape assumption dropped tagged hosts silently.
     def extract_hosts_from_config_with_tag(tag)
-      if (servers_with_roles = config.raw_config.servers).is_a?(Hash)
-        servers_with_roles.flat_map do |role, servers_in_role|
-          servers_in_role.filter_map do |host|
-            host.keys.first if host.is_a?(Hash) && host.values.first.include?(tag)
-          end
-        end
-      end
+      config.roles.flat_map { |role| role.hosts_with_tag(tag) }
     end
 
     def network

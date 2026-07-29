@@ -7,8 +7,11 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
       image: "dhh/app",
       registry: { "username" => "dhh", "password" => "secret" },
       servers: {
+        # Deliberately one role of each shape: `web` bare-list, `workers` in the
+        # `hosts:` mapping form a role is forced into the moment it needs a sibling
+        # setting. Tag lookup has to see both.
         "web" => [ { "1.1.1.1" => "writer" }, { "1.1.1.2" => "reader" } ],
-        "workers" => [ { "1.1.1.3" => "writer" }, "1.1.1.4" ]
+        "workers" => { "hosts" => [ { "1.1.1.3" => "writer" }, "1.1.1.4" ], "cmd" => "bin/jobs" }
       },
       builder: { "arch" => "amd64" },
       env: { "REDIS_URL" => "redis://x/y" },
@@ -117,6 +120,29 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
     assert_equal [ "1.1.1.1", "1.1.1.2" ], @config.accessory(:monitoring).hosts
     assert_equal [ "1.1.1.1", "1.1.1.3", "1.1.1.2" ], @config.accessory(:proxy).hosts
     assert_equal [ "1.1.1.1", "1.1.1.3" ], @config.accessory(:logger).hosts
+  end
+
+  # A role written in the `hosts:` mapping form — mandatory the moment it needs `cmd`,
+  # `env`, `options`, `healthcheck`, ... — used to match nothing, so a tagged accessory
+  # silently booted on a subset of the hosts the operator asked for.
+  test "tagged accessory picks up hosts of a role written in the hosts: mapping form" do
+    assert_equal [ "1.1.1.3" ], @config.role("workers").hosts_with_tag("writer")
+    assert_includes @config.accessory(:logger).hosts, "1.1.1.3"
+  end
+
+  test "tagged accessory picks up hosts of a top-level servers array" do
+    @deploy[:servers] = [ { "1.1.1.1" => "writer" }, { "1.1.1.2" => "reader" }, "1.1.1.3" ]
+    config = Kamal::Configuration.new(@deploy)
+
+    assert_equal [ "1.1.1.1" ], config.accessory(:logger).hosts
+    assert_equal [ "1.1.1.1", "1.1.1.2" ], config.accessory(:proxy).hosts
+  end
+
+  test "tags match whole tags, not substrings" do
+    @deploy[:accessories]["logger"]["tag"] = "write"
+    config = Kamal::Configuration.new(@deploy)
+
+    assert_equal [], config.accessory(:logger).hosts
   end
 
   test "missing host" do

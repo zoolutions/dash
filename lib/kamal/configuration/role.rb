@@ -46,6 +46,14 @@ class Kamal::Configuration::Role
     tagged_hosts.fetch(host).collect { |tag| config.env_tag(tag) }.compact
   end
 
+  # The role's own hosts carrying `tag` in deploy.yml. Accessory `tag:`/`tags:` resolution
+  # comes through here rather than re-walking raw_config.servers, so it inherits
+  # extract_hosts_from_config's handling of every legal role shape — bare list, `hosts:`
+  # mapping, and the top-level `servers:` array.
+  def hosts_with_tag(tag)
+    tagged_hosts.select { |_host, tags| tags.include?(tag) }.keys
+  end
+
   def cmd
     specializations["cmd"]
   end
