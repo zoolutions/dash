@@ -20,6 +20,10 @@ class Kamal::Configuration::Loadbalancer < Kamal::Configuration::Proxy
     opts[:tls] = true if ssl?
     opts.merge!(tls_domains_options)
 
+    # Basic auth is an edge concern for the same reason: the parent strips it
+    # when load balancing so only the load balancer challenges clients.
+    opts[:"basic-auth"] = basic_auth_credential if basic_auth_credential.present?
+
     opts
   end
 

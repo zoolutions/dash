@@ -34,6 +34,10 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
         validate_tls_domains! config["tls_domains"]
       end
 
+      if config["basic_auth"].is_a?(Hash)
+        validate_basic_auth! config["basic_auth"]
+      end
+
       if run_config = config["run"]
         if run_config["bind_ips"].present?
           ensure_valid_bind_ips(run_config["bind_ips"])
@@ -79,6 +83,26 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
 
         if (batch_size = tls_domains["batch_size"]) && (!batch_size.is_a?(Integer) || !batch_size.between?(1, 25))
           error "batch_size must be an integer between 1 and 25"
+        end
+      end
+    end
+
+    def validate_basic_auth!(basic_auth)
+      with_context("basic_auth") do
+        if basic_auth["username"].blank?
+          error "Missing username setting (required when basic_auth is set)"
+        elsif basic_auth["username"].to_s.include?(":")
+          # kamal-proxy cuts <username>:<password> at the first colon, so a
+          # colon in the username would silently truncate it.
+          error "Invalid username: cannot contain a colon"
+        end
+
+        if basic_auth["password"].present? && basic_auth["password_secret"].present?
+          error "Specify one of 'password' or 'password_secret', not both"
+        end
+
+        if basic_auth["password"].blank? && basic_auth["password_secret"].blank?
+          error "Missing password or password_secret setting (required when basic_auth is set)"
         end
       end
     end

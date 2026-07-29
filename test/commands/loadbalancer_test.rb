@@ -86,6 +86,20 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
       new_command.deploy(targets: [ "1.1.1.1" ]).join(" ")
   end
 
+  # The per-app proxies must NOT also get --basic-auth: kamal-proxy deletes the
+  # Authorization header once a service enforces it, so the load balancer would
+  # authenticate the client and then forward a credential-less request.
+  test "deploy propagates basic auth to the load balancer only" do
+    @config[:proxy]["basic_auth"] = { "username" => "admin", "password" => "s3cr3t" }
+
+    assert_equal \
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\" --basic-auth=\"admin:s3cr3t\"",
+      new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
+
+    config = Kamal::Configuration.new(@config, version: "123")
+    assert_not_includes config.proxy.deploy_options.keys, :"basic-auth"
+  end
+
   test "deploy propagates tls_domains flags" do
     @config[:proxy]["ssl"] = true
     @config[:proxy]["tls_domains"] = { "source" => "/api/v1/kamal/domains", "interval" => 300, "batch_size" => 5 }

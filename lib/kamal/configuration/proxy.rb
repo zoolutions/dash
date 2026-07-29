@@ -122,6 +122,7 @@ class Kamal::Configuration::Proxy
       "strip-path-prefix": proxy_config.dig("strip_path_prefix"),
       "forward-headers": proxy_config.dig("forward_headers"),
       "tls-redirect": proxy_config.dig("ssl_redirect"),
+      "basic-auth": basic_auth_credential,
       "log-request-header": proxy_config.dig("logging", "request_headers") || DEFAULT_LOG_REQUEST_HEADERS,
       "log-response-header": proxy_config.dig("logging", "response_headers"),
       "error-pages": error_pages
@@ -131,6 +132,11 @@ class Kamal::Configuration::Proxy
       opts.delete(:host)
       opts.delete(:tls)
       tls_domains_options.each_key { |key| opts.delete(key) }
+      # kamal-proxy deletes the Authorization header once a service enforces
+      # basic auth, so the load balancer would authenticate the client and then
+      # forward a credential-less request that this proxy would 401. Credentials
+      # belong at the edge only.
+      opts.delete(:"basic-auth")
     end
 
     opts
@@ -195,6 +201,31 @@ class Kamal::Configuration::Proxy
 
     def seconds_duration(value)
       value ? "#{value}s" : nil
+    end
+
+    # kamal-proxy takes the credential as <username>:<password> and cuts at the
+    # first colon, so a password may contain colons but a username may not (the
+    # validator enforces that). The password is read from .kamal/secrets when
+    # password_secret names it, so it need not live in deploy.yml.
+    def basic_auth_credential
+      basic_auth = proxy_config["basic_auth"]
+      return nil unless basic_auth.is_a?(Hash)
+
+      password =
+        if (secret_name = basic_auth["password_secret"]).present?
+          secrets[secret_name]
+        else
+          basic_auth["password"]
+        end
+
+      # The validator guarantees a password was configured, so a blank one here
+      # means the named secret resolved empty. Fail rather than drop the flag —
+      # silently deploying an unprotected service is the worse outcome.
+      if password.blank?
+        raise Kamal::ConfigurationError, "proxy/basic_auth: password_secret '#{secret_name}' is empty"
+      end
+
+      "#{basic_auth["username"]}:#{password}"
     end
 
     def path_timeout_args
