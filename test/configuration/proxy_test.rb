@@ -88,6 +88,36 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     assert_not config.proxy.load_balancing?
   end
 
+  test "effective_loadbalancer is nil when the multi-host primary role does not run the proxy" do
+    @deploy[:servers] = { "workers" => { "proxy" => false, "hosts" => [ "1.1.1.1", "1.1.1.2" ] } }
+    @deploy[:primary_role] = "workers"
+
+    assert_nil config.proxy.effective_loadbalancer
+    assert_not config.proxy.load_balancing?
+  end
+
+  test "explicit loadbalancer host still wins for a proxy-less primary role" do
+    @deploy[:servers] = { "workers" => { "proxy" => false, "hosts" => [ "1.1.1.1", "1.1.1.2" ] } }
+    @deploy[:primary_role] = "workers"
+    @deploy[:proxy] = { "loadbalancer" => "lb.example.com" }
+
+    assert_equal "lb.example.com", config.proxy.effective_loadbalancer
+  end
+
+  test "explicit loadbalancer true still wins for a proxy-less primary role" do
+    @deploy[:servers] = { "workers" => { "proxy" => false, "hosts" => [ "1.1.1.1", "1.1.1.2" ] } }
+    @deploy[:primary_role] = "workers"
+    @deploy[:proxy] = { "loadbalancer" => true }
+
+    assert_equal "1.1.1.1", config.proxy.effective_loadbalancer
+  end
+
+  test "effective_loadbalancer auto-enables for a multi-host primary role that runs the proxy" do
+    @deploy[:servers] = { "web" => [ "web1.example.com", "web2.example.com" ], "workers" => { "proxy" => false, "hosts" => [ "1.1.1.1", "1.1.1.2" ] } }
+
+    assert_equal "web1.example.com", config.proxy.effective_loadbalancer
+  end
+
   test "loadbalancer true without any servers" do
     @deploy.delete(:servers)
     @deploy[:accessories] = { "db" => { "image" => "mysql", "host" => "1.1.1.5" } }

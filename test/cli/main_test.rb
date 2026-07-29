@@ -858,6 +858,18 @@ class CliMainTest < CliTestCase
     end
   end
 
+  test "deploy does not load balance a multi-host primary role that does not run the proxy" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:loadbalancer", [ "deploy" ], anything).never
+    Kamal::Cli::Main.any_instance.expects(:invoke).at_least_once
+
+    run_command("deploy", config_file: "deploy_with_only_workers").tap do |output|
+      assert_match /workers: 2 hosts \(1\.1\.1\.1, 1\.1\.1\.2\)/, output
+      assert_no_match /loadbalancer:/, output
+    end
+  end
+
   test "deploy config banner shows no loadbalancer line when load balancing is disabled" do
     Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 

@@ -57,7 +57,7 @@ class Kamal::Configuration::Proxy
     return false if loadbalancer == false
     return primary_role_first_host if loadbalancer == true
     return loadbalancer if loadbalancer.present?
-    return primary_role_first_host if config.primary_role && Array(config.primary_role.hosts).size > 1
+    return primary_role_first_host if auto_load_balanced_primary_role?
 
     nil
   end
@@ -196,6 +196,17 @@ class Kamal::Configuration::Proxy
   private
     def primary_role_first_host
       config.primary_role&.hosts&.first
+    end
+
+    # Auto-activation needs a role the load balancer can actually front. The
+    # target list is built from roles where `running_proxy?` (see
+    # Kamal::Cli::Proxy#loadbalancer), so a proxy-less primary role would boot a
+    # load balancer with an empty --target. An explicit `loadbalancer:` setting
+    # skips this check — the operator asked for it.
+    def auto_load_balanced_primary_role?
+      primary_role = config.primary_role
+
+      primary_role.present? && primary_role.running_proxy? && Array(primary_role.hosts).size > 1
     end
 
     # Flags for kamal-proxy's dynamic domain source (runtime TLS hostnames).
