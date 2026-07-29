@@ -40,6 +40,37 @@ proxy:
   # for multi-host primary roles.
   loadbalancer: lb.example.com
 
+  # Sharing one loadbalancer between several kamal apps
+  #
+  # More than one kamal app may point `loadbalancer:` at the same host. Each app
+  # registers its own service on the shared kamal-proxy and keeps its own
+  # deploy.yml; the load balancer multiplexes them by hostname.
+  #
+  # The rules kamal enforces for that topology:
+  #
+  # * Service state survives a reboot. kamal-proxy persists its services in the
+  #   `kamal-loadbalancer-config` volume (or `kamal-proxy-config` when the
+  #   loadbalancer shares a proxy host), and `kamal proxy reboot` only replaces
+  #   the container. Rebooting from app A does not drop app B's routes — the
+  #   surviving service list is printed after the restart.
+  #
+  # * Service names must be unique across apps. The loadbalancer registers a
+  #   service under the bare `service:` name, so two apps — or two destinations
+  #   of one app — sharing a name would take over each other's routes. The first
+  #   app to deploy claims the name in `.kamal/loadbalancer/services/<service>`
+  #   on the loadbalancer host; a second app deploying the same name fails at
+  #   deploy time instead of silently winning.
+  #
+  # * Apps sharing a loadbalancer must agree on `proxy/run`. All of them boot the
+  #   same container, so the first app to boot records its run configuration in
+  #   `.kamal/loadbalancer/run_config`. Another app booting with a different
+  #   `proxy/run` fails; the same app changing its own gets the usual drift
+  #   warning and applies it on `kamal proxy reboot`.
+  #
+  # * `kamal proxy remove` refuses while other apps are installed on the
+  #   loadbalancer host, exactly as it does for a proxy host. Use `--force` to
+  #   override, which removes the shared loadbalancer for every app on it.
+
   # Automatic proxy reboot on deploy
   #
   # When `kamal deploy` detects that the running kamal-proxy container was

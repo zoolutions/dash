@@ -59,6 +59,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
           info "Starting loadbalancer on #{host}..."
           execute *KAMAL.registry.login
           execute *KAMAL.loadbalancer.ensure_apps_config_directory
+          Kamal::Cli::Proxy::LoadbalancerClaim.new(host, self).claim_run_config
           execute *KAMAL.loadbalancer.start_or_run
         end
       end
@@ -184,7 +185,13 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
             execute *KAMAL.loadbalancer.remove_container
             execute *KAMAL.loadbalancer.ensure_apps_config_directory
 
+            Kamal::Cli::Proxy::LoadbalancerClaim.new(host, self).claim_run_config(replace: true)
             execute *KAMAL.loadbalancer.run
+
+            # kamal-proxy keeps its service state in the config volume, which the
+            # replacement container re-mounts - every app's routes survive.
+            services = capture_with_info(*KAMAL.loadbalancer.list).strip
+            info "Services registered on the load balancer at #{host} after reboot:\n#{services}"
           end
 
           run_hook "post-loadbalancer-reboot", hosts: lb_host
@@ -241,6 +248,13 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
         execute *KAMAL.auditor.record("Started proxy"), verbosity: :debug
         execute *KAMAL.proxy(host).start
       end
+
+      if KAMAL.config.proxy.load_balancing?
+        on(KAMAL.config.proxy.effective_loadbalancer) do
+          execute *KAMAL.auditor.record("Started loadbalancer"), verbosity: :debug
+          execute *KAMAL.loadbalancer.start, raise_on_non_zero_exit: false
+        end
+      end
     end
   end
 
@@ -250,6 +264,16 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
       on(KAMAL.proxy_hosts) do |host|
         execute *KAMAL.auditor.record("Stopped proxy"), verbosity: :debug
         execute *KAMAL.proxy(host).stop, raise_on_non_zero_exit: false
+      end
+
+      # `docker container prune` only collects stopped containers, so leaving the
+      # loadbalancer running would also leave `kamal proxy remove` unable to
+      # remove it.
+      if KAMAL.config.proxy.load_balancing?
+        on(KAMAL.config.proxy.effective_loadbalancer) do
+          execute *KAMAL.auditor.record("Stopped loadbalancer"), verbosity: :debug
+          execute *KAMAL.loadbalancer.stop, raise_on_non_zero_exit: false
+        end
       end
     end
   end
@@ -363,6 +387,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
         end
 
         on(KAMAL.config.proxy.effective_loadbalancer) do |host|
+          Kamal::Cli::Proxy::LoadbalancerClaim.new(host, self).claim_service
           info "Deploying to loadbalancer on #{host} with targets: #{targets.join(', ')}"
           execute *KAMAL.loadbalancer.deploy(targets: targets)
         end
@@ -434,12 +459,29 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
       on(KAMAL.proxy_hosts) do
         execute *KAMAL.proxy(host).remove_proxy_directory, raise_on_non_zero_exit: false
       end
+
+      # Otherwise the ownership registry outlives the load balancer and a later
+      # boot would fail against an owner that no longer exists.
+      if KAMAL.config.proxy.load_balancing?
+        on(KAMAL.config.proxy.effective_loadbalancer) do
+          execute *KAMAL.loadbalancer.remove_directory, raise_on_non_zero_exit: false
+        end
+      end
     end
   end
 
   private
+    # A shared load balancer tier is the exact case this guard exists for, so it
+    # has to cover the load balancer host too - `remove_container` and
+    # `remove_image` both act on it.
+    def removal_hosts
+      hosts = KAMAL.proxy_hosts.to_a
+      hosts |= [ KAMAL.config.proxy.effective_loadbalancer ] if KAMAL.config.proxy.load_balancing?
+      hosts
+    end
+
     def removal_allowed?(force)
-      on(KAMAL.proxy_hosts) do |host|
+      on(removal_hosts) do |host|
         app_count = capture_with_info(*KAMAL.server.app_directory_count).chomp.to_i
         raise "The are other applications installed on #{host}" if app_count > 0
       end

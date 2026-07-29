@@ -17,6 +17,7 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
         "--detach",
         "--restart", "unless-stopped",
         "--label", label,
+        "--label", "#{Kamal::Commands::Proxy::CONFIG_DIGEST_LABEL}=#{loadbalancer_config.run_config_digest}",
         *run_args,
         *volume_mounts))
   end
@@ -42,6 +43,14 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
     docker :exec, container_name, "kamal-proxy", "domains", subcommand
   end
 
+  def list
+    docker :exec, container_name, "kamal-proxy", :list
+  end
+
+  def config_digest
+    docker :inspect, container_name, "--format", "'{{ index .Config.Labels \"#{Kamal::Commands::Proxy::CONFIG_DIGEST_LABEL}\" }}'"
+  end
+
   def info
     docker :ps, "--filter", "'name=^#{container_name}$'"
   end
@@ -65,12 +74,17 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
     ).join(" "), host: host
   end
 
+  # Prune by the label the container was actually created with - on a shared
+  # proxy host that is the kamal-proxy title, and pruning by the loadbalancer
+  # title would leave the container behind for `run` to collide with.
   def remove_container
-    docker :container, :prune, "--force", "--filter", "label=org.opencontainers.image.title=kamal-loadbalancer"
+    docker :container, :prune, "--force", "--filter", "label=#{label}"
   end
 
+  # Image label filters match labels baked into the image, and the load balancer
+  # runs the kamal-proxy image whichever host it sits on.
   def remove_image
-    docker :image, :prune, "--all", "--force", "--filter", "label=org.opencontainers.image.title=kamal-loadbalancer"
+    docker :image, :prune, "--all", "--force", "--filter", "label=org.opencontainers.image.title=kamal-proxy"
   end
 
   def ensure_directory
@@ -79,6 +93,18 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
 
   def ensure_apps_config_directory
     make_directory config.proxy_boot.apps_directory
+  end
+
+  def ensure_services_directory
+    make_directory loadbalancer_config.services_directory
+  end
+
+  def read_service_owner
+    read_file loadbalancer_config.service_owner_file
+  end
+
+  def read_run_config_record
+    read_file loadbalancer_config.run_config_file
   end
 
   def remove_directory
@@ -90,15 +116,8 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
   end
 
   private
-    # Publish/logging/docker options for the load balancer container. When the
-    # deploy YAML sets proxy.run, honour it (publish: false, custom ports,
-    # options); otherwise fall back to publishing the default 80/443.
     def run_args
-      if (run = loadbalancer_config.run)
-        [ *run.publish_args, *run.logging_args, *run.options_args ]
-      else
-        [ "--publish", "80:80", "--publish", "443:443" ]
-      end
+      loadbalancer_config.run_args
     end
 
     def proxy_image
