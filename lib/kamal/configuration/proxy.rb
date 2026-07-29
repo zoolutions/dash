@@ -8,11 +8,16 @@ class Kamal::Configuration::Proxy
   delegate :argumentize, :optionize, to: Kamal::Utils
 
   attr_reader :config, :proxy_config, :role_name, :run, :secrets
-  def initialize(config:, proxy_config:, role_name: nil, secrets:, context: "proxy")
+
+  # `load_balanced: false` marks a registration the fork's load balancer can
+  # never front - accessories, whose targets it does not collect. Such a proxy
+  # keeps its own host/TLS/basic-auth instead of deferring them to the edge.
+  def initialize(config:, proxy_config:, role_name: nil, secrets:, context: "proxy", load_balanced: true)
     @config = config
     @proxy_config = proxy_config
     @proxy_config = {} if @proxy_config.nil?
     @role_name = role_name
+    @load_balanced = load_balanced
     @secrets = secrets
     validate! @proxy_config, with: Kamal::Configuration::Validator::Proxy, context: context
     @run = Kamal::Configuration::Proxy::Run.new(config, run_config: @proxy_config["run"], context: "#{context}/run") if @proxy_config && @proxy_config["run"].present?
@@ -43,7 +48,12 @@ class Kamal::Configuration::Proxy
     effective_loadbalancer.present?
   end
 
+  def load_balanced?
+    @load_balanced
+  end
+
   def effective_loadbalancer
+    return nil unless load_balanced?
     return false if loadbalancer == false
     return primary_role_first_host if loadbalancer == true
     return loadbalancer if loadbalancer.present?
@@ -180,7 +190,7 @@ class Kamal::Configuration::Proxy
   end
 
   def merge(other)
-    self.class.new config: config, proxy_config: other.proxy_config.deep_merge(proxy_config), role_name: role_name, secrets: secrets
+    self.class.new config: config, proxy_config: other.proxy_config.deep_merge(proxy_config), role_name: role_name, secrets: secrets, load_balanced: load_balanced?
   end
 
   private

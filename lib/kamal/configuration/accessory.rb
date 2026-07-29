@@ -127,12 +127,16 @@ class Kamal::Configuration::Accessory
         context: "accessories/#{name}/env"
     end
 
+    # The load balancer fans the app's own service out to role targets only
+    # (see Kamal::Cli::Proxy#loadbalancer), so an accessory is never behind it
+    # and must keep the host/TLS it registers with kamal-proxy directly.
     def initialize_proxy
       Kamal::Configuration::Proxy.new \
         config: config,
         proxy_config: accessory_config["proxy"],
         context: "accessories/#{name}/proxy",
-        secrets: config.secrets
+        secrets: config.secrets,
+        load_balanced: false
     end
 
     def initialize_registry

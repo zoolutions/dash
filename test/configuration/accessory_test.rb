@@ -333,6 +333,46 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
     assert_equal [ "monitoring.example.com" ], @config.accessory(:monitoring).proxy.hosts
   end
 
+  # The load balancer only ever fans the app's own service out to role targets
+  # (Kamal::Cli::Proxy#loadbalancer collects from config.roles), so an accessory
+  # is never behind it and must keep its own hostname routing and TLS.
+  test "accessory proxy does not load balance even when the primary role is multi-host" do
+    assert @config.proxy.load_balancing?, "expected the app proxy to auto-activate load balancing"
+
+    accessory_proxy = @config.accessory(:monitoring).proxy
+
+    assert_not accessory_proxy.load_balancing?
+    assert_nil accessory_proxy.effective_loadbalancer
+  end
+
+  test "accessory proxy keeps host, tls and basic auth in its deploy options" do
+    @deploy[:accessories]["monitoring"]["proxy"].merge!(
+      "ssl" => true,
+      "basic_auth" => { "username" => "admin", "password" => "s3cr3t" }
+    )
+    options = Kamal::Configuration.new(@deploy).accessory(:monitoring).proxy.deploy_options
+
+    assert_equal [ "monitoring.example.com" ], options[:host]
+    assert options[:tls]
+    assert_equal "admin:s3cr3t", options[:"basic-auth"]
+  end
+
+  test "accessory proxy keeps tls_domains options" do
+    @deploy[:accessories]["monitoring"]["proxy"].merge!(
+      "ssl" => true,
+      "tls_domains" => { "source" => "/api/v1/kamal/domains" }
+    )
+    options = Kamal::Configuration.new(@deploy).accessory(:monitoring).proxy.deploy_options
+
+    assert_equal "/api/v1/kamal/domains", options[:"tls-domains-source"]
+  end
+
+  # An explicit loadbalancer on a role's proxy must still strip host/tls - the
+  # load balancer re-adds them at the edge.
+  test "role proxy still load balances" do
+    assert @config.primary_role.proxy.load_balancing?
+  end
+
   test "invalid boolean restart policy" do
     @deploy[:accessories]["mysql"]["options"] = { "restart" => false }
 

@@ -163,13 +163,14 @@ accessories:
     # `kamal proxy boot` (and `kamal deploy`) will run kamal-proxy on them
     # automatically.
     #
-    # Two caveats:
-    # - Accessory restarts are stop-then-start (no old/new container overlap),
-    #   so expect a brief interruption when restarting or rebooting.
-    # - With the loadbalancer active (explicit, or auto-activated by a
-    #   multi-host primary role), accessory hostname routing and SSL are not
-    #   wired through the loadbalancer - route accessory hostnames straight at
-    #   the accessory host's own proxy instead.
+    # Accessories are never load balanced. The loadbalancer fans the app's own
+    # service out to its role targets, so an accessory always registers its
+    # hostname and TLS with the kamal-proxy on its own host — whether or not the
+    # loadbalancer is active for the app. Point the accessory's DNS record at the
+    # accessory host, not at the loadbalancer.
+    #
+    # One caveat: accessory restarts are stop-then-start (no old/new container
+    # overlap), so expect a brief interruption when restarting or rebooting.
     #
     # For example:
     #

@@ -211,6 +211,18 @@ class CommandsAccessoryTest < ActiveSupport::TestCase
       new_command(:busybox).deploy(target: "172.1.0.2").join(" ")
   end
 
+  # Regression: a multi-host primary role auto-activates the load balancer, which
+  # used to strip --host/--tls from the accessory's registration as well, leaving
+  # it with no routing at all.
+  test "deploy keeps host and tls when the primary role auto-activates the loadbalancer" do
+    @config[:servers] = [ "1.1.1.1", "1.1.1.2" ]
+    @config[:accessories]["busybox"]["proxy"]["ssl"] = true
+
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy deploy custom-busybox --target=\"172.1.0.2:80\" --host=\"busybox.example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      new_command(:busybox).deploy(target: "172.1.0.2").join(" ")
+  end
+
   test "remove" do
     assert_equal \
       "docker exec kamal-proxy kamal-proxy remove custom-busybox",
