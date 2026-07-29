@@ -129,6 +129,21 @@ class Kamal::Configuration::Role
     end
   end
 
+  # One-line rendering of readiness_source, shared by the deploy banner and `kamal doctor`
+  # so both name the same gate the same way.
+  def readiness_description
+    case readiness_source
+    when :proxy
+      [ "kamal-proxy health check", proxy.healthcheck_path ].compact.join(" ")
+    when :healthcheck
+      healthcheck.port ? "healthcheck #{healthcheck.path}:#{healthcheck.port}" : "healthcheck (custom cmd)"
+    when :docker_options
+      "docker healthcheck (options: health-cmd)"
+    else
+      "NONE (old container stops #{readiness_delay}s after boot)"
+    end
+  end
+
   # Whether the operator has made a readiness decision for this role at all — declared a
   # healthcheck, hand-rolled a health-cmd option, or accepted the gap with `healthcheck: false`.
   # Distinct from readiness_source, which reports what actually gates the deploy.

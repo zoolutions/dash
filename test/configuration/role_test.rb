@@ -374,6 +374,36 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     assert_equal :healthcheck, config_with_roles.role(:workers).readiness_source
   end
 
+  test "readiness description names the proxy health check path" do
+    @deploy_with_roles[:proxy] = { "healthcheck" => { "path" => "/healthz" } }
+
+    assert_equal "kamal-proxy health check /healthz", config_with_roles.role(:web).readiness_description
+  end
+
+  test "readiness description names the healthcheck port and path" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "port" => 7434, "path" => "/readyz" }
+
+    assert_equal "healthcheck /readyz:7434", config_with_roles.role(:workers).readiness_description
+  end
+
+  test "readiness description marks a custom healthcheck cmd" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "cmd" => "pgrep -f bin/jobs" }
+
+    assert_equal "healthcheck (custom cmd)", config_with_roles.role(:workers).readiness_description
+  end
+
+  test "readiness description names a hand-rolled health-cmd option" do
+    @deploy_with_roles[:servers]["workers"]["options"] = { "health-cmd" => "pgrep -f bin/jobs" }
+
+    assert_equal "docker healthcheck (options: health-cmd)", config_with_roles.role(:workers).readiness_description
+  end
+
+  test "readiness description spells out the gap when there is no readiness source" do
+    @deploy_with_roles[:readiness_delay] = 12
+
+    assert_equal "NONE (old container stops 12s after boot)", config_with_roles.role(:workers).readiness_description
+  end
+
   test "healthcheck args are empty without a healthcheck" do
     assert_equal [], config_with_roles.role(:workers).healthcheck_args
   end

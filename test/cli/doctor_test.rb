@@ -128,6 +128,44 @@ class CliDoctorTest < CliTestCase
     assert_includes exception.message, "getaddrinfo"
   end
 
+  test "doctor reports the readiness source of every role" do
+    run_command("doctor", fixture: "deploy_with_readiness_sources").tap do |output|
+      assert_match "Readiness", output
+      assert_match "OK web: kamal-proxy health check /healthz", output
+      assert_match "OK pulse: docker healthcheck (options: health-cmd)", output
+      assert_match "OK listener: healthcheck /readyz:7434", output
+      assert_match "OK ticker: healthcheck (custom cmd)", output
+    end
+  end
+
+  test "doctor warns about a role with no readiness definition without failing" do
+    run_command("doctor", fixture: "deploy_with_readiness_sources").tap do |output|
+      assert_match "WARN workers: no healthcheck — the old container stops 7s after the new one starts", output
+      assert_match "add a `healthcheck:` block, or opt out with `healthcheck: false`", output
+      assert_match "ready to deploy", output
+    end
+  end
+
+  test "doctor accepts a role that explicitly opted out of a healthcheck" do
+    run_command("doctor", fixture: "deploy_with_readiness_sources").tap do |output|
+      assert_match "OK silent: healthcheck: false — accepted 2s after the container starts", output
+      assert_no_match(/WARN silent/, output)
+    end
+  end
+
+  test "doctor still reports readiness when the hosts are unreachable" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:execute)
+      .raises(SocketError.new("getaddrinfo: nodename nor servname provided, or not known"))
+
+    output = stdouted do
+      assert_raises(Kamal::Cli::DoctorError) do
+        with_argv([ "doctor", "-c", "test/fixtures/deploy_with_readiness_sources.yml" ]) { Kamal::Cli::Main.start }
+      end
+    end
+
+    assert_match "WARN workers: no healthcheck", output
+  end
+
   private
     def run_command(*command, fixture: "deploy_with_doctor")
       with_argv([ *command, "-c", "test/fixtures/#{fixture}.yml" ]) do
