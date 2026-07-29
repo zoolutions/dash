@@ -109,6 +109,44 @@ proxy:
   # Defaults to `false`:
   ssl_staging: true
 
+  # Basic auth
+  #
+  # Require HTTP Basic credentials on every request to this service. Requests
+  # without valid credentials get a 401 with a `WWW-Authenticate` challenge.
+  # The health check path stays open, so deploys are unaffected.
+  #
+  # Set exactly one of `password_secret` or `password` — never both.
+  #
+  # Prefer `password_secret`: it names an entry in `.kamal/secrets`, so the
+  # password never lives in this file.
+  #
+  #     basic_auth:
+  #       username: admin
+  #       password_secret: WEB_BASIC_AUTH_PASSWORD
+  #
+  # `password` sets the value directly. If you use it, interpolate rather than
+  # committing a literal:
+  #
+  #     basic_auth:
+  #       username: admin
+  #       password: <%= ENV["WEB_BASIC_AUTH_PASSWORD"] %>
+  #
+  basic_auth:
+    username: admin
+    password: <%= ENV["WEB_BASIC_AUTH_PASSWORD"] %>
+    password_secret: WEB_BASIC_AUTH_PASSWORD
+  #
+  # ### Notes
+  # - Requires a kamal-proxy that supports `--basic-auth`. This is newer than
+  #   the current `MINIMUM_VERSION`, so make sure your proxy is up to date
+  #   before enabling it — an older proxy fails the deploy on an unknown flag.
+  # - Basic credentials are replayable and are sent on every request. Use this
+  #   with `ssl: true`, or terminate TLS in front of the proxy.
+  # - kamal-proxy removes the `Authorization` header before forwarding, so a
+  #   service behind basic auth cannot also pass credentials through to its
+  #   target. When load balancing, the credentials are enforced by the load
+  #   balancer only.
+
   # Dynamic TLS domains
   #
   # kamal-proxy can learn TLS hostnames from your application at runtime

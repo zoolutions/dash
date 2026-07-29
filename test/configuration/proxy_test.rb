@@ -448,6 +448,100 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     assert_raises(Kamal::ConfigurationError) { config }
   end
 
+  test "deploy options with basic auth" do
+    @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin", "password" => "s3cr3t" } }
+
+    assert_equal "admin:s3cr3t", config.proxy.deploy_options[:"basic-auth"]
+  end
+
+  test "deploy options with basic auth password from secrets" do
+    with_test_secrets("secrets" => "WEB_PASSWORD=s3cr3t") do
+      @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin", "password_secret" => "WEB_PASSWORD" } }
+
+      assert_equal "admin:s3cr3t", config.proxy.deploy_options[:"basic-auth"]
+    end
+  end
+
+  test "deploy options without basic auth" do
+    @deploy[:proxy] = { "host" => "example.com" }
+
+    assert_not_includes config.proxy.deploy_options.keys, :"basic-auth"
+  end
+
+  test "basic auth password may contain colons" do
+    @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin", "password" => "pa:ss:word" } }
+
+    assert_equal "admin:pa:ss:word", config.proxy.deploy_options[:"basic-auth"]
+  end
+
+  test "basic auth requires a username" do
+    @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "password" => "s3cr3t" } }
+
+    error = assert_raises(Kamal::ConfigurationError) { config }
+    assert_equal "proxy/basic_auth: Missing username setting (required when basic_auth is set)", error.message
+  end
+
+  test "basic auth requires a password or password_secret" do
+    @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin" } }
+
+    error = assert_raises(Kamal::ConfigurationError) { config }
+    assert_equal "proxy/basic_auth: Missing password or password_secret setting (required when basic_auth is set)", error.message
+  end
+
+  test "basic auth rejects both password and password_secret" do
+    @deploy[:proxy] = {
+      "host" => "example.com",
+      "basic_auth" => { "username" => "admin", "password" => "s3cr3t", "password_secret" => "WEB_PASSWORD" }
+    }
+
+    error = assert_raises(Kamal::ConfigurationError) { config }
+    assert_equal "proxy/basic_auth: Specify one of 'password' or 'password_secret', not both", error.message
+  end
+
+  test "basic auth username must not contain a colon" do
+    @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "ad:min", "password" => "s3cr3t" } }
+
+    error = assert_raises(Kamal::ConfigurationError) { config }
+    assert_equal "proxy/basic_auth: Invalid username: cannot contain a colon", error.message
+  end
+
+  test "basic auth rejects a non-hash" do
+    @deploy[:proxy] = { "host" => "example.com", "basic_auth" => "admin:s3cr3t" }
+
+    assert_raises(Kamal::ConfigurationError) { config }
+  end
+
+  # Never fail open: an empty secret must abort the deploy, not silently drop
+  # the flag and leave the service unprotected.
+  test "basic auth with an empty password secret raises" do
+    with_test_secrets("secrets" => "WEB_PASSWORD=") do
+      @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin", "password_secret" => "WEB_PASSWORD" } }
+
+      error = assert_raises(Kamal::ConfigurationError) { config.proxy.deploy_options }
+      assert_match(/basic_auth/, error.message)
+    end
+  end
+
+  test "basic auth with an unknown password secret raises" do
+    with_test_secrets("secrets" => "OTHER_PASSWORD=s3cr3t") do
+      @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin", "password_secret" => "WEB_PASSWORD" } }
+
+      assert_raises(Kamal::ConfigurationError) { config.proxy.deploy_options }
+    end
+  end
+
+  # Basic auth is an edge concern. kamal-proxy deletes the Authorization header
+  # once a service enforces basic auth, so emitting the flag on BOTH the load
+  # balancer and the per-app proxy would have the load balancer authenticate,
+  # strip the header, and the app proxy 401 every forwarded request.
+  test "basic auth is left to the load balancer when load balancing" do
+    @deploy[:servers] = { "web" => [ "1.1.1.1", "1.1.1.2" ] }
+    @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin", "password" => "s3cr3t" } }
+
+    assert config.proxy.load_balancing?
+    assert_not_includes config.proxy.deploy_options.keys, :"basic-auth"
+  end
+
   private
     def config
       Kamal::Configuration.new(@deploy)
