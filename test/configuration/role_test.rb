@@ -320,6 +320,32 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     assert_equal "18s", config_with_roles.role(:workers).proxy.deploy_options[:"target-timeout"]
   end
 
+  test "readiness source is the proxy for a proxied role" do
+    assert_equal :proxy, config_with_roles.role(:web).readiness_source
+  end
+
+  test "readiness source is the proxy for a non-primary role that opts into it" do
+    @deploy_with_roles[:servers]["workers"]["proxy"] = true
+
+    assert_equal :proxy, config_with_roles.role(:workers).readiness_source
+  end
+
+  test "readiness source is none for a role without a proxy or a healthcheck" do
+    assert_equal :none, config_with_roles.role(:workers).readiness_source
+  end
+
+  test "readiness source is docker options when the role declares a health-cmd" do
+    @deploy_with_roles[:servers]["workers"]["options"] = { "health-cmd" => "pgrep -f bin/jobs" }
+
+    assert_equal :docker_options, config_with_roles.role(:workers).readiness_source
+  end
+
+  test "readiness source is none when health options do not declare a healthcheck" do
+    @deploy_with_roles[:servers]["workers"]["options"] = { "health-interval" => "5s" }
+
+    assert_equal :none, config_with_roles.role(:workers).readiness_source
+  end
+
   test "invalid boolean restart policy" do
     @deploy_with_roles[:servers]["workers"]["options"] = { "restart" => false }
 

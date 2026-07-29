@@ -349,7 +349,8 @@ class Kamal::Cli::Main < Kamal::Cli::Base
 
       say "Deploying #{config.service}#{" to #{config.destination}" if config.destination} (version #{config.abbreviated_version})", :magenta
       config.roles.each do |role|
-        say "  #{role.name}: #{role.hosts.count} #{"host".pluralize(role.hosts.count)} (#{role.hosts.join(", ")})"
+        hosts = "#{role.hosts.count} #{"host".pluralize(role.hosts.count)} (#{role.hosts.join(", ")})"
+        say "  #{role.name}: #{hosts} — readiness: #{readiness_source(role)}", (:yellow if role.readiness_source == :none)
       end
       say "  proxy: #{config.proxy_hosts.join(", ")}" if config.proxy_hosts.any?
       if config.proxy.load_balancing?
@@ -357,5 +358,16 @@ class Kamal::Cli::Main < Kamal::Cli::Base
         say "  loadbalancer: #{config.proxy.effective_loadbalancer}#{reason}"
       end
       say "  timeouts: deploy #{config.deploy_timeout}s, drain #{config.drain_timeout}s, readiness delay #{config.readiness_delay}s"
+    end
+
+    def readiness_source(role)
+      case role.readiness_source
+      when :proxy
+        [ "kamal-proxy health check", role.proxy.healthcheck_path ].compact.join(" ")
+      when :docker_options
+        "docker healthcheck (options: health-cmd)"
+      else
+        "NONE (old container stops #{KAMAL.config.readiness_delay}s after boot)"
+      end
     end
 end

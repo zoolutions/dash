@@ -79,6 +79,20 @@ class Kamal::Configuration::Role
     running_proxy? && proxy.ssl?
   end
 
+  # Where a deploy of this role actually waits for readiness before stopping the
+  # old container. Without a proxy or a docker healthcheck, Healthcheck::Poller
+  # only sees `.State.Status`, so staying `running` for the readiness delay is
+  # the whole gate.
+  def readiness_source
+    if running_proxy?
+      :proxy
+    elsif health_cmd_option?
+      :docker_options
+    else
+      :none
+    end
+  end
+
   def stop_args
     # When deploying with the proxy, kamal-proxy will drain request before returning so we don't need to wait.
     timeout = stop_timeout || (running_proxy? ? nil : config.drain_timeout)
@@ -228,6 +242,10 @@ class Kamal::Configuration::Role
 
     def restart_policy_option
       docker_options.find { |key, _| key.to_s == "restart" }&.last
+    end
+
+    def health_cmd_option?
+      docker_options.any? { |key, _| key.to_s == "health-cmd" }
     end
 
     def custom_labels

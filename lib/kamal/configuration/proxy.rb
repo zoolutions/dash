@@ -94,6 +94,11 @@ class Kamal::Configuration::Proxy
     proxy_config["path_prefixes"] || proxy_config["path_prefix"]&.split(",") || []
   end
 
+  # Nil when unset: the default lives in kamal-proxy, not here.
+  def healthcheck_path
+    proxy_config.dig("healthcheck", "path")
+  end
+
   def deploy_options
     opts = {
       host: hosts,
@@ -105,7 +110,7 @@ class Kamal::Configuration::Proxy
       "drain-timeout": seconds_duration(config.drain_timeout),
       "health-check-interval": seconds_duration(proxy_config.dig("healthcheck", "interval")),
       "health-check-timeout": seconds_duration(proxy_config.dig("healthcheck", "timeout")),
-      "health-check-path": proxy_config.dig("healthcheck", "path"),
+      "health-check-path": healthcheck_path,
       "health-check-port": proxy_config.dig("healthcheck", "port"),
       "health-check-host": proxy_config.dig("healthcheck", "host"),
       "target-timeout": seconds_duration(proxy_config["response_timeout"]),
