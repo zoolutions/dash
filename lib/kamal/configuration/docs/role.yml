@@ -46,6 +46,23 @@ servers:
     # for this role only; roles with a healthcheck never wait on it.
     readiness_delay: 4
 
+    # Rolling boot
+    #
+    # The root `boot` key paces the deploy across the whole cross-role host list, so it
+    # cannot serialize one role's hosts while another role keeps booting in parallel.
+    # Set `boot` on the role instead and its hosts are paced on their own — a second
+    # host in a worker role finally buys the redundancy it looks like it buys.
+    #
+    # `limit` is a count or a percentage of *this role's* hosts; `limit: 1` boots them
+    # one at a time. `wait` is the pause between hosts or groups, and defaults to none.
+    #
+    # A role using this key needs the role-first iteration of `boot/parallel_roles`.
+    # Kamal turns it on for you when you have not set it; an explicit
+    # `parallel_roles: false` is a conflict and raises instead.
+    boot:
+      limit: 25%
+      wait: 10
+
     # Option values are shell-escaped before reaching `docker run`, but `${...}` is
     # deliberately left for the deploy host's shell to expand. Role `env` is never
     # defined in that shell, so `${MY_VAR}` resolves to empty. Use the bare `$MY_VAR`

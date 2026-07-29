@@ -90,6 +90,7 @@ class Kamal::Configuration
     ensure_valid_loadbalancer
     ensure_valid_hooks_output!
     ensure_unproxied_roles_are_readiness_gated
+    ensure_role_boot_can_pace_its_hosts
   end
 
   # Resolves every secret the deploy will need so a missing secret fails fast,
@@ -159,6 +160,14 @@ class Kamal::Configuration
 
   def host_roles(host)
     roles.select { |role| role.hosts.include?(host) }
+  end
+
+  # Whether app commands iterate role-first. A role pacing its own hosts needs that: the
+  # host-first branch of on_roles has no per-role runner to hand boot options to. Setting
+  # `boot` on a role only overrides an unset parallel_roles — an explicit false conflicts
+  # and is rejected in ensure_role_boot_can_pace_its_hosts.
+  def parallel_roles?
+    !!(boot.parallel_roles || roles.any?(&:boot))
   end
 
   def host_accessories(host)
@@ -437,6 +446,20 @@ class Kamal::Configuration
         "or opt out explicitly with `healthcheck: false`. This warning will become an error in a future release."
 
       true
+    end
+
+    # `parallel_roles: false` iterates host-first, running each host's roles one after
+    # another inside a single per-host thread. There is no per-role runner there to pace,
+    # so the two keys cannot both be honoured — say which one to drop rather than quietly
+    # ignoring either.
+    def ensure_role_boot_can_pace_its_hosts
+      # select, not find: this is also where every role-scoped Boot gets built, so a bad
+      # one raises here rather than partway through a deploy.
+      paced = roles.select(&:boot)
+      return true if paced.empty? || boot.parallel_roles != false
+
+      raise Kamal::ConfigurationError, "servers/#{paced.first.name}/boot cannot be combined with boot/parallel_roles: false, " \
+        "which boots each host's roles in turn and so cannot pace one role's hosts. Remove one of them"
     end
 
     def ensure_unique_hosts_for_ssl_roles
