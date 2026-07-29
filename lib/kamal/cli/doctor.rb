@@ -15,7 +15,8 @@ class Kamal::Cli::Doctor
     proxy_version: "Proxy version",
     ports: "Ports",
     dns: "DNS",
-    certificate: "Certificates"
+    certificate: "Certificates",
+    readiness: "Readiness"
   }.freeze
 
   STATUS_COLORS = { ok: :green, warn: :yellow, fail: :red }.freeze
@@ -49,7 +50,7 @@ class Kamal::Cli::Doctor
   end
 
   def run
-    @results = host_check_results + endpoint_check_results
+    @results = host_check_results + endpoint_check_results + config_check_results
   end
 
   def failures
@@ -99,5 +100,9 @@ class Kamal::Cli::Doctor
 
     def endpoint_check_results
       Kamal::Cli::Doctor::EndpointChecks.new.run
+    end
+
+    def config_check_results
+      Kamal::Cli::Doctor::ConfigChecks.new.run
     end
 end

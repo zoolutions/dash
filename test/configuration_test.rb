@@ -572,4 +572,25 @@ class ConfigurationTest < ActiveSupport::TestCase
   test "does not warn when every role runs the proxy" do
     assert_equal "", stderred { Kamal::Configuration.new(@deploy) }
   end
+
+  test "parallel_roles? follows the global setting when no role paces itself" do
+    assert_not Kamal::Configuration.new(@deploy_with_roles).parallel_roles?
+    assert Kamal::Configuration.new(@deploy_with_roles.merge(boot: { "parallel_roles" => true })).parallel_roles?
+  end
+
+  test "a role-level boot forces role-first iteration" do
+    @deploy_with_roles[:servers]["workers"]["boot"] = { "limit" => 1 }
+
+    assert Kamal::Configuration.new(@deploy_with_roles).parallel_roles?
+  end
+
+  test "a role-level boot cannot be combined with an explicit parallel_roles false" do
+    @deploy_with_roles[:servers]["workers"]["boot"] = { "limit" => 1 }
+    @deploy_with_roles[:boot] = { "parallel_roles" => false }
+
+    error = assert_raises(Kamal::ConfigurationError) { Kamal::Configuration.new(@deploy_with_roles) }
+
+    assert_match "servers/workers/boot", error.message
+    assert_match "boot/parallel_roles: false", error.message
+  end
 end

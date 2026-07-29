@@ -389,6 +389,42 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     assert role.readiness_gated?
   end
 
+  test "readiness description names the proxy health check path" do
+    @deploy_with_roles[:proxy] = { "healthcheck" => { "path" => "/healthz" } }
+
+    assert_equal "kamal-proxy health check /healthz", config_with_roles.role(:web).readiness_description
+  end
+
+  test "readiness description names the healthcheck port and path" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "port" => 7434, "path" => "/readyz" }
+
+    assert_equal "healthcheck /readyz:7434", config_with_roles.role(:workers).readiness_description
+  end
+
+  test "readiness description marks a custom healthcheck cmd" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "cmd" => "pgrep -f bin/jobs" }
+
+    assert_equal "healthcheck (custom cmd)", config_with_roles.role(:workers).readiness_description
+  end
+
+  test "readiness description names a hand-rolled health-cmd option" do
+    @deploy_with_roles[:servers]["workers"]["options"] = { "health-cmd" => "pgrep -f bin/jobs" }
+
+    assert_equal "docker healthcheck (options: health-cmd)", config_with_roles.role(:workers).readiness_description
+  end
+
+  test "readiness description spells out the gap when there is no readiness source" do
+    @deploy_with_roles[:readiness_delay] = 12
+
+    assert_equal "NONE (old container stops 12s after boot)", config_with_roles.role(:workers).readiness_description
+  end
+
+  test "readiness description names the exec probe command" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "exec" => "bin/ready-check" }
+
+    assert_equal "healthcheck exec probe (bin/ready-check)", config_with_roles.role(:workers).readiness_description
+  end
+
   test "healthcheck args are empty without a healthcheck" do
     assert_equal [], config_with_roles.role(:workers).healthcheck_args
   end
@@ -509,6 +545,58 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     end
 
     assert_match "servers/workers/options/health-cmd: cannot contain ${...}", error.message
+  end
+
+  test "no boot specialization leaves the role unpaced" do
+    role = config_with_roles.role(:workers)
+
+    assert_nil role.boot
+    assert_equal({}, role.boot_runner_options)
+  end
+
+  test "the global boot limit never becomes per-role pacing" do
+    @deploy_with_roles[:boot] = { "limit" => 2, "wait" => 10 }
+
+    assert_equal({}, Kamal::Configuration.new(@deploy_with_roles).role(:workers).boot_runner_options)
+  end
+
+  test "boot specialization paces the role's own hosts" do
+    @deploy_with_roles[:servers]["workers"]["boot"] = { "limit" => 1 }
+
+    role = Kamal::Configuration.new(@deploy_with_roles).role(:workers)
+
+    assert_equal 1, role.boot.limit
+    assert_equal({ in: :sequence, wait: 0 }, role.boot_runner_options)
+  end
+
+  test "boot percentage counts the role's hosts, not the whole deploy" do
+    @deploy_with_roles[:servers]["web"] = [ "1.1.1.1", "1.1.1.2", "1.1.1.5", "1.1.1.6" ]
+    @deploy_with_roles[:servers]["workers"]["boot"] = { "limit" => "50%" }
+
+    assert_equal 1, Kamal::Configuration.new(@deploy_with_roles).role(:workers).boot.limit
+  end
+
+  test "boot is memoized, including the unspecialized nil" do
+    # Servers.new constructs every Role before Kamal::Configuration#initialize assigns
+    # @boot, so the role-scoped Boot has to be built on first read, not in the initializer.
+    @deploy_with_roles[:servers]["workers"]["boot"] = { "limit" => 1 }
+    config = Kamal::Configuration.new(@deploy_with_roles)
+
+    assert_same config.role(:workers).boot, config.role(:workers).boot
+
+    web = config.role(:web)
+    Kamal::Configuration::Boot.expects(:new).never
+    2.times { assert_nil web.boot }
+  end
+
+  test "parallel_roles is rejected inside a role's boot" do
+    @deploy_with_roles[:servers]["workers"]["boot"] = { "parallel_roles" => true }
+
+    error = assert_raises Kamal::ConfigurationError do
+      Kamal::Configuration.new(@deploy_with_roles)
+    end
+
+    assert_match "servers/workers/boot: unknown key: parallel_roles", error.message
   end
 
   private

@@ -163,7 +163,7 @@ class Kamal::Cli::Main < Kamal::Cli::Base
     puts "No documentation found for #{section}"
   end
 
-  desc "doctor", "Diagnose deploy readiness of servers, registry, proxy, ports, DNS, and certificates"
+  desc "doctor", "Diagnose deploy readiness of servers, registry, proxy, ports, DNS, certificates, and per-role readiness gates"
   def doctor
     say "Running readiness checks...", :magenta
     pre_connect_if_required
@@ -350,7 +350,7 @@ class Kamal::Cli::Main < Kamal::Cli::Base
       say "Deploying #{config.service}#{" to #{config.destination}" if config.destination} (version #{config.abbreviated_version})", :magenta
       config.roles.each do |role|
         hosts = "#{role.hosts.count} #{"host".pluralize(role.hosts.count)} (#{role.hosts.join(", ")})"
-        say "  #{role.name}: #{hosts} — readiness: #{readiness_source(role)}", (:yellow if role.readiness_source == :none)
+        say "  #{role.name}: #{hosts} — readiness: #{role.readiness_description}", (:yellow if role.readiness_source == :none)
       end
       say "  proxy: #{config.proxy_hosts.join(", ")}" if config.proxy_hosts.any?
       if config.proxy.load_balancing?
@@ -358,21 +358,5 @@ class Kamal::Cli::Main < Kamal::Cli::Base
         say "  loadbalancer: #{config.proxy.effective_loadbalancer}#{reason}"
       end
       say "  timeouts: deploy #{config.deploy_timeout}s, drain #{config.drain_timeout}s, readiness delay #{config.readiness_delay}s"
-    end
-
-    def readiness_source(role)
-      case role.readiness_source
-      when :proxy
-        [ "kamal-proxy health check", role.proxy.healthcheck_path ].compact.join(" ")
-      when :healthcheck
-        healthcheck = role.healthcheck
-        healthcheck.port ? "healthcheck #{healthcheck.path}:#{healthcheck.port}" : "healthcheck (custom cmd)"
-      when :healthcheck_exec
-        "healthcheck exec probe (#{role.healthcheck.exec})"
-      when :docker_options
-        "docker healthcheck (options: health-cmd)"
-      else
-        "NONE (old container stops #{role.readiness_delay}s after boot)"
-      end
     end
 end

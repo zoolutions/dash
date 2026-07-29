@@ -36,6 +36,42 @@ class ConfigurationBootTest < ActiveSupport::TestCase
     assert_equal true, config.boot.parallel_roles
   end
 
+  test "no runner options without a limit" do
+    assert_equal({}, config_with_boot(nil).boot.runner_options)
+    assert_equal({}, config_with_boot("wait" => 5).boot.runner_options)
+  end
+
+  test "limit of one runs in sequence to avoid a trailing wait" do
+    assert_equal({ in: :sequence, wait: 0 }, config_with_boot("limit" => 1).boot.runner_options)
+    assert_equal({ in: :sequence, wait: 5 }, config_with_boot("limit" => 1, "wait" => 5).boot.runner_options)
+  end
+
+  test "limit above one runs in groups" do
+    assert_equal({ in: :groups, limit: 3, wait: 0 }, config_with_boot("limit" => 3).boot.runner_options)
+    assert_equal({ in: :groups, limit: 3, wait: 2 }, config_with_boot("limit" => 3, "wait" => 2).boot.runner_options)
+  end
+
+  test "role-scoped boot counts percentages against the role's own hosts" do
+    config = config_with_boot(nil)
+
+    boot = Kamal::Configuration::Boot.new \
+      config: config, boot_config: { "limit" => "50%" }, host_count: 2, context: "servers/workers/boot"
+
+    assert_equal 1, boot.limit
+    assert_equal({ in: :sequence, wait: 0 }, boot.runner_options)
+  end
+
+  test "role-scoped boot reports its own context on a validation error" do
+    config = config_with_boot(nil)
+
+    error = assert_raises(Kamal::ConfigurationError) do
+      Kamal::Configuration::Boot.new \
+        config: config, boot_config: { "limit" => [ 1 ] }, host_count: 2, context: "servers/workers/boot"
+    end
+
+    assert_match "servers/workers/boot/limit", error.message
+  end
+
   private
     def config_with_boot(boot)
       deploy = {
