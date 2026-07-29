@@ -454,8 +454,8 @@ class CliMainTest < CliTestCase
     end
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-123$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", "'{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}'")
-      .returns("running").at_least_once # health check
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-123$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .returns("no-healthcheck:running").at_least_once # health check
 
     Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
@@ -890,6 +890,7 @@ class CliMainTest < CliTestCase
       assert_match /pulse: 1 host \(1\.1\.1\.4\) — readiness: docker healthcheck \(options: health-cmd\)/, output
       assert_match /listener: 1 host \(1\.1\.1\.5\) — readiness: healthcheck \/readyz:7434/, output
       assert_match /ticker: 1 host \(1\.1\.1\.6\) — readiness: healthcheck \(custom cmd\)/, output
+      assert_match /silent: 1 host \(1\.1\.1\.7\) — readiness: NONE \(old container stops 2s after boot\)/, output
     end
   end
 

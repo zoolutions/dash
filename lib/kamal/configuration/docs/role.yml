@@ -41,6 +41,11 @@ servers:
     cmd: "bin/jobs"
     stop_timeout: 30
 
+    # How long this role's container must keep running before the deploy accepts it,
+    # when there is no healthcheck to wait on. Overrides the root `readiness_delay`
+    # for this role only; roles with a healthcheck never wait on it.
+    readiness_delay: 4
+
     # Option values are shell-escaped before reaching `docker run`, but `${...}` is
     # deliberately left for the deploy host's shell to expand. Role `env` is never
     # defined in that shell, so `${MY_VAR}` resolves to empty. Use the bare `$MY_VAR`

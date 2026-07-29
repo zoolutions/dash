@@ -27,6 +27,12 @@ servers:
     cmd: bin/tick
     healthcheck:
       cmd: "pgrep -f bin/tick"
+  silent:
+    hosts:
+      - "1.1.1.7"
+    cmd: bin/silent
+    healthcheck: false
+    readiness_delay: 2
 registry:
   username: user
   password: pw
