@@ -17,11 +17,13 @@ servers:
       ROLE: "web"
     proxy: true
   workers:
+    healthcheck: false
     cmd: bin/jobs
     hosts:
       - 1.1.1.1
       - 1.1.1.2
   workers_tokyo:
+    healthcheck: false
     cmd: bin/jobs
     hosts:
       - 1.1.1.3

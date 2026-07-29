@@ -16,8 +16,10 @@ class ConfigurationTest < ActiveSupport::TestCase
 
     @config = Kamal::Configuration.new(@deploy)
 
+    # `healthcheck: false` keeps the readiness warning out of every unrelated test's
+    # stderr. The tests that exercise the warning delete the key first.
     @deploy_with_roles = @deploy.dup.merge({
-      servers: { "web" => [ "1.1.1.1", "1.1.1.2" ], "workers" => { "hosts" => [ "1.1.1.1", "1.1.1.3" ] } } })
+      servers: { "web" => [ "1.1.1.1", "1.1.1.2" ], "workers" => { "hosts" => [ "1.1.1.1", "1.1.1.3" ], "healthcheck" => false } } })
 
     @config_with_roles = Kamal::Configuration.new(@deploy_with_roles)
   end
@@ -529,6 +531,8 @@ class ConfigurationTest < ActiveSupport::TestCase
   end
 
   test "warns about a non-proxied role with no readiness definition" do
+    @deploy_with_roles[:servers]["workers"].delete("healthcheck")
+
     warning = stderred { Kamal::Configuration.new(@deploy_with_roles) }
 
     assert_match "Non-proxied role(s) workers have no healthcheck", warning
@@ -538,6 +542,7 @@ class ConfigurationTest < ActiveSupport::TestCase
   end
 
   test "warning names every ungated role" do
+    @deploy_with_roles[:servers]["workers"].delete("healthcheck")
     @deploy_with_roles[:servers]["tickers"] = { "hosts" => [ "1.1.1.4" ], "cmd" => "bin/tick" }
 
     warning = stderred { Kamal::Configuration.new(@deploy_with_roles) }
@@ -546,6 +551,8 @@ class ConfigurationTest < ActiveSupport::TestCase
   end
 
   test "does not warn about a role with no hosts" do
+    # Ungated on purpose: the silence has to come from the empty-hosts guard.
+    @deploy_with_roles[:servers]["workers"].delete("healthcheck")
     @deploy_with_roles[:servers]["workers"]["hosts"] = []
 
     assert_equal "", stderred { Kamal::Configuration.new(@deploy_with_roles.merge(allow_empty_roles: true)) }
@@ -564,6 +571,8 @@ class ConfigurationTest < ActiveSupport::TestCase
   end
 
   test "does not warn when the role hand-rolled a health-cmd option" do
+    # Ungated on purpose: the silence has to come from the health-cmd option.
+    @deploy_with_roles[:servers]["workers"].delete("healthcheck")
     @deploy_with_roles[:servers]["workers"]["options"] = { "health-cmd" => "pgrep -f bin/jobs" }
 
     assert_equal "", stderred { Kamal::Configuration.new(@deploy_with_roles) }

@@ -53,6 +53,32 @@ class CliAppTest < CliTestCase
     end
   end
 
+  test "a percentage boot limit groups by app hosts, not accessory hosts" do
+    # Four app hosts, four accessory hosts. Accessories are never booted here, so 25% is
+    # one app host per group — counting all eight would boot two at a time.
+    Kamal::Cli::App.any_instance.stubs(:on).with("1.1.1.1")
+    Kamal::Cli::App.any_instance.stubs(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3", "1.1.1.4" ])
+    Kamal::Cli::App.any_instance.stubs(:on).with(%w[ 1.1.1.1 1.1.1.2 1.1.1.3 1.1.1.4 1.1.1.5 1.1.1.6 1.1.1.7 1.1.1.8 ])
+
+    [ "1.1.1.1", "1.1.1.2", "1.1.1.3", "1.1.1.4" ].each do |host|
+      Kamal::Cli::App.any_instance.expects(:on).with([ host ]).with_block_given
+    end
+
+    run_command("boot", config: :with_percentage_boot_limit, host: nil)
+  end
+
+  test "a percentage boot limit narrows with --roles" do
+    # web only: 25% of two hosts clamps to one, not 25% of the whole file.
+    Kamal::Cli::App.any_instance.stubs(:on).with("1.1.1.1")
+    Kamal::Cli::App.any_instance.stubs(:on).with([ "1.1.1.1", "1.1.1.2" ])
+    Kamal::Cli::App.any_instance.stubs(:on).with(%w[ 1.1.1.1 1.1.1.2 1.1.1.3 1.1.1.4 1.1.1.5 1.1.1.6 1.1.1.7 1.1.1.8 ])
+
+    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1" ]).with_block_given
+    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.2" ]).with_block_given
+
+    run_command("boot", "--roles", "web", config: :with_percentage_boot_limit, host: nil)
+  end
+
   test "boot without parallel roles" do
     # Without parallel_roles: on() called with all hosts, roles sequential per host
     Kamal::Cli::App.any_instance.expects(:on).with("1.1.1.1").with_block_given.twice

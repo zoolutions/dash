@@ -243,7 +243,7 @@ module SSHKitDslRoles
       threads = roles.filter_map do |role|
         if (role_hosts = role.hosts & hosts).any?
           Thread.new do
-            on(role_hosts, rolling ? role.boot_runner_options : {}) { |host| instance_exec(host, role, &block) }
+            on(role_hosts, rolling ? role.boot_runner_options(role_hosts) : {}) { |host| instance_exec(host, role, &block) }
           rescue StandardError => e
             raise SSHKit::Runner::ExecuteError.new(e), "Exception while executing on #{role}: #{e.message}"
           end

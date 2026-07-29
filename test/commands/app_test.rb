@@ -4,7 +4,7 @@ class CommandsAppTest < ActiveSupport::TestCase
   setup do
     setup_test_secrets("secrets" => "RAILS_MASTER_KEY=456")
 
-    @config = { service: "app", image: "dhh/app", registry: { "username" => "dhh", "password" => "secret" }, servers: { "web" => [ "1.1.1.1" ], "workers" => [ "1.1.1.2" ] }, env: { "secret" => [ "RAILS_MASTER_KEY" ] }, builder: { "arch" => "amd64" } }
+    @config = { service: "app", image: "dhh/app", registry: { "username" => "dhh", "password" => "secret" }, servers: { "web" => [ "1.1.1.1" ], "workers" => { "hosts" => [ "1.1.1.2" ], "healthcheck" => false } }, env: { "secret" => [ "RAILS_MASTER_KEY" ] }, builder: { "arch" => "amd64" } }
   end
 
   teardown do
