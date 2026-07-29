@@ -44,6 +44,14 @@ class CommandsAppTest < ActiveSupport::TestCase
     assert_no_match %r{--health-}, new_command(role: "jobs", host: "1.1.1.2").execute_in_new_container("bin/rails", "db:setup", env: {}).join(" ")
   end
 
+  # A container with no docker healthcheck must not report the same string as one whose
+  # probe passed, or the poller cannot tell "nothing is checking this" from "it is healthy".
+  test "status distinguishes a missing healthcheck from a passing one" do
+    assert_equal \
+      "docker container ls --all --filter 'name=^app-web-999$' --quiet | xargs docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck:{{.State.Status}}{{end}}'",
+      new_command.status(version: "999").join(" ")
+  end
+
   test "run with volumes" do
     @config[:volumes] = [ "/local/path:/container/path" ]
 

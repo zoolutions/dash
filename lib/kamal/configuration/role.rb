@@ -147,6 +147,13 @@ class Kamal::Configuration::Role
     specializations["stop_timeout"] || config.stop_timeout
   end
 
+  # How long a role that has no healthcheck must merely keep running before the deploy
+  # accepts it. Role-specialized so a role that legitimately opts out can be tuned
+  # without slowing every other role down.
+  def readiness_delay
+    specializations["readiness_delay"] || config.readiness_delay
+  end
+
   def env(host)
     @envs ||= {}
     @envs[host] ||= [ config.env, specialized_env, *env_tags(host).map(&:env) ].reduce(:merge)

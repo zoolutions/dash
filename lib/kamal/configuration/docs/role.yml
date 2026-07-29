@@ -41,6 +41,11 @@ servers:
     cmd: "bin/jobs"
     stop_timeout: 30
 
+    # How long this role's container must keep running before the deploy accepts it,
+    # when there is no healthcheck to wait on. Overrides the root `readiness_delay`
+    # for this role only; roles with a healthcheck never wait on it.
+    readiness_delay: 4
+
     # Rolling boot
     #
     # The root `boot` key paces the deploy across the whole cross-role host list, so it

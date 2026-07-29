@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+
+# Runs on each host just before the previous container is stopped, once the new
+# version is already live. Use it to drain the old container: unsubscribe a queue
+# group, deregister from service discovery, wait for in-flight jobs.
+#
+# NOTE: $KAMAL_VERSION is the version being STOPPED, not the one being deployed.
+#
+# A failure here is logged and the deploy continues -- the old container is
+# stopped either way.
+
+echo "Draining $KAMAL_ROLE version $KAMAL_VERSION on $KAMAL_HOSTS..."

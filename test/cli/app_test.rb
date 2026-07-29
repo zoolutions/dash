@@ -146,8 +146,8 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", "'{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}'")
-      .returns("running").at_least_once # workers health check
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .returns("no-healthcheck:running").at_least_once # workers health check
 
     run_command("boot", config: :with_roles, host: nil).tap do |output|
       assert_match "Waiting for the first healthy web container before booting workers on 1.1.1.3...", output
@@ -200,7 +200,7 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", "'{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}'")
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
       .returns("unhealthy").at_least_once # workers health check
 
     run_command("boot", config: :with_roles, host: nil, allow_execute_error: true).tap do |output|
@@ -223,8 +223,8 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", "'{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}'")
-      .returns("running", "stopped").at_least_once # workers health check
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .returns("no-healthcheck:running", "no-healthcheck:stopped").at_least_once # workers health check
 
     run_command("boot", config: :with_roles, host: "1.1.1.3", allow_execute_error: true).tap do |output|
       assert_match "ERROR Failed to boot workers on 1.1.1.3", output
@@ -241,7 +241,7 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", "'{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}'")
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
       .returns("unhealthy") # workers health check
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
@@ -271,8 +271,8 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", "'{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}'")
-      .returns("stopped") # workers has no healthcheck, container just died
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .returns("no-healthcheck:stopped") # workers has no healthcheck, container just died
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", "xargs docker logs --timestamps 2>&1")
@@ -297,8 +297,8 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", "'{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}'")
-      .returns("running").at_least_once # workers health check
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .returns("no-healthcheck:running").at_least_once # workers health check
 
     run_command("boot", config: :with_only_workers, host: nil).tap do |output|
       assert_match /First workers container is healthy on 1.1.1.\d, booting any other roles/, output
@@ -695,6 +695,82 @@ class CliAppTest < CliTestCase
 
     assert @executions.none? { |args| args.join(" ").include?("kamal-proxy deploy") }
     assert @executions.any? { |args| args.join(" ").include?("app-web-latest") && args.join(" ").include?("docker stop") }
+  end
+
+  test "boot runs app stop hooks around stopping the old version" do
+    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    stub_running
+
+    run_command("boot").tap do |output|
+      assert_hook_ran "pre-app-stop", output
+      assert_hook_ran "post-app-stop", output
+      assert_match /pre-app-stop.*app-web-123.*xargs docker stop.*post-app-stop/m, output
+    end
+  end
+
+  test "boot passes the host, role and stopped version to the app stop hooks" do
+    Kamal::Cli::App.any_instance.stubs(:run_hook)
+    Kamal::Cli::App.any_instance.expects(:run_hook).with("pre-app-stop", hosts: "1.1.1.1", role: "web", version: "123")
+    Kamal::Cli::App.any_instance.expects(:run_hook).with("post-app-stop", hosts: "1.1.1.1", role: "web", version: "123")
+
+    stub_running
+
+    run_command("boot")
+  end
+
+  test "boot runs app stop hooks for a non-proxied role" do
+    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Kamal::Cli::Healthcheck::Poller.stubs(:wait_for_healthy)
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
+
+    run_command("boot", config: :with_proxy, host: "1.1.1.3").tap do |output|
+      assert_no_match /hooks\/pre-proxy-deploy/, output
+      assert_match /pre-app-stop.*app-workers-123.*xargs docker stop.*post-app-stop/m, output
+    end
+  end
+
+  test "boot runs app stop hooks for proxied roles too" do
+    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
+
+    run_command("boot", config: :with_proxy).tap do |output|
+      assert_match /kamal-proxy deploy app-web.*pre-app-stop/m, output
+    end
+  end
+
+  test "boot doesn't run app stop hooks when there is no old version" do
+    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Object.any_instance.stubs(:sleep)
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("12345678")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.first == :sh }.returns("") # no old version running
+
+    run_command("boot").tap do |output|
+      assert_no_match /hooks\/pre-app-stop/, output
+      assert_no_match /hooks\/post-app-stop/, output
+    end
+  end
+
+  test "boot skips app stop hooks with --skip-hooks" do
+    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    stub_running
+
+    run_command("boot", "--skip-hooks").tap do |output|
+      assert_match "docker container ls --all --filter 'name=^app-web-123$' --quiet | xargs docker stop", output
+      assert_no_match /hooks\/pre-app-stop/, output
+      assert_no_match /hooks\/post-app-stop/, output
+    end
+  end
+
+  test "boot continues the deploy when the pre-app-stop hook fails" do
+    fail_hook("pre-app-stop")
+    Object.any_instance.stubs(:sleep)
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
+
+    stderred { run_command("boot") }
+
+    assert @executions.any? { |args| args.join(" ").include?("app-web-123") && args.join(" ").include?("docker stop") }
+    assert @executions.any? { |args| args.first == ".kamal/hooks/post-app-stop" }
   end
 
   test "start runs proxy deploy hooks around the proxy deploy" do

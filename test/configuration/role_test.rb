@@ -312,6 +312,28 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     assert_equal [ "-t", 45 ], config_with_roles.role(:workers).stop_args
   end
 
+  test "readiness delay falls back to the root value" do
+    @deploy_with_roles[:readiness_delay] = 12
+
+    assert_equal 12, config_with_roles.role(:web).readiness_delay
+    assert_equal 12, config_with_roles.role(:workers).readiness_delay
+  end
+
+  test "role readiness delay overrides the root value" do
+    @deploy_with_roles[:readiness_delay] = 12
+    @deploy_with_roles[:servers]["workers"] = { "hosts" => [ "1.1.1.3" ], "cmd" => "bin/jobs", "readiness_delay" => 30 }
+
+    assert_equal 12, config_with_roles.role(:web).readiness_delay
+    assert_equal 30, config_with_roles.role(:workers).readiness_delay
+  end
+
+  test "role readiness delay of zero is honoured over a non-zero root" do
+    @deploy_with_roles[:readiness_delay] = 12
+    @deploy_with_roles[:servers]["workers"] = { "hosts" => [ "1.1.1.3" ], "cmd" => "bin/jobs", "readiness_delay" => 0 }
+
+    assert_equal 0, config_with_roles.role(:workers).readiness_delay
+  end
+
   test "role specific proxy config" do
     @deploy_with_roles[:proxy] = { "response_timeout" => 15 }
     @deploy_with_roles[:servers]["workers"]["proxy"] = { "response_timeout" => 18 }
