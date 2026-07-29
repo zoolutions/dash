@@ -18,16 +18,19 @@ class Kamal::Cli::Prune < Kamal::Cli::Base
     end
   end
 
-  desc "containers", "Prune all stopped containers, except the last n (default 5)"
-  option :retain, type: :numeric, default: nil, desc: "Number of containers to retain"
+  desc "containers", "Prune all stopped containers, except the last n per role (default 5)"
+  option :retain, type: :numeric, default: nil, desc: "Number of containers to retain per role"
   def containers
     retain = options.fetch(:retain, KAMAL.config.retain_containers)
     raise "retain must be at least 1" if retain < 1
 
     modify(lock: true) do
-      on(KAMAL.hosts) do
+      on(KAMAL.hosts) do |host|
         execute *KAMAL.auditor.record("Pruned containers"), verbosity: :debug
-        execute *KAMAL.prune.app_containers(retain: retain)
+
+        KAMAL.roles_on(host).each do |role|
+          execute *KAMAL.prune.app_containers(retain: retain, role: role)
+        end
       end
     end
   end

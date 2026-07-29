@@ -136,7 +136,8 @@ allow_empty_roles: false
 
 # Retain containers
 #
-# How many old containers and images we retain, defaults to 5:
+# How many old containers we retain per role, and how many images we retain,
+# defaults to 5:
 retain_containers: 3
 
 # Minimum version

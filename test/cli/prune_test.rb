@@ -17,11 +17,11 @@ class CliPruneTest < CliTestCase
 
   test "containers" do
     run_command("containers").tap do |output|
-      assert_match /docker ps -q -a --filter label=service=app --filter status=created --filter status=exited --filter status=dead | tail -n +6 | while read container_id; do docker rm $container_id; done on 1.1.1.\d/, output
+      assert_match /docker ps -q -a --filter label=service=app --filter label=destination= --filter label=role=web --filter status=created --filter status=exited --filter status=dead | tail -n \+6 | while read container_id; do docker rm \$container_id; done on 1.1.1.\d/, output
      end
 
     run_command("containers", "--retain", "10").tap do |output|
-      assert_match /docker ps -q -a --filter label=service=app --filter status=created --filter status=exited --filter status=dead | tail -n +11 | while read container_id; do docker rm $container_id; done on 1.1.1.\d/, output
+      assert_match /docker ps -q -a --filter label=service=app --filter label=destination= --filter label=role=web --filter status=created --filter status=exited --filter status=dead | tail -n \+11 | while read container_id; do docker rm \$container_id; done on 1.1.1.\d/, output
     end
 
     assert_raises(RuntimeError, "retain must be at least 1") do
@@ -29,8 +29,15 @@ class CliPruneTest < CliTestCase
     end
   end
 
+  test "containers prunes every role on the host separately" do
+    run_command("containers", config_file: "test/fixtures/deploy_with_roles.yml").tap do |output|
+      assert_match "--filter label=role=web --filter status=created", output
+      assert_match "--filter label=role=workers --filter status=created", output
+    end
+  end
+
   private
-    def run_command(*command)
-      stdouted { Kamal::Cli::Prune.start([ *command, "-c", "test/fixtures/deploy_with_accessories.yml" ]) }
+    def run_command(*command, config_file: "test/fixtures/deploy_with_accessories.yml")
+      stdouted { Kamal::Cli::Prune.start([ *command, "-c", config_file ]) }
     end
 end
