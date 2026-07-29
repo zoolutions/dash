@@ -2,7 +2,7 @@ class Kamal::Cli::Proxy::Reboot
   READY_TIMEOUT = 30
 
   attr_reader :host, :sshkit
-  delegate :execute, :capture_with_info, :info, to: :sshkit
+  delegate :execute, :capture_with_info, :info, :upload!, to: :sshkit
 
   def initialize(host, sshkit)
     @host = host
@@ -42,6 +42,10 @@ class Kamal::Cli::Proxy::Reboot
       execute *proxy.remove_container
       execute *proxy.ensure_proxy_directory
       execute *proxy.ensure_apps_config_directory
+
+      if (run_config = proxy.proxy_run_config)&.acme&.credentials?
+        upload! run_config.secrets_io, run_config.secrets_path, mode: "0600"
+      end
 
       execute *proxy.run(digest: drift.expected_digest)
     end

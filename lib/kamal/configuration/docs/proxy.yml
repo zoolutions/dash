@@ -342,6 +342,44 @@ proxy:
                                    # Defaults to the minimum version this gem
                                    # requires - only pin it to roll forward early,
                                    # never below the default
+    # ACME / Let's Encrypt
+    #
+    # Certificate issuance for the whole proxy, including DNS-01 challenges.
+    # These are proxy-wide, not per-app: every service on this proxy shares the
+    # ACME account and the DNS provider.
+    #
+    # `dns_provider` names the provider that answers DNS-01 challenges. Leave it
+    # at `auto` to let the proxy pick from the credentials it can see. An
+    # unsupported name is rejected here, at config time - kamal-proxy would only
+    # log a warning and then never issue a certificate.
+    #
+    # `prefer_wildcard` asks for a wildcard certificate when the DNS provider
+    # supports one, and `http_fallback` falls back to an HTTP-01 challenge when
+    # DNS-01 fails. Both default to true in the proxy.
+    #
+    # `directory` overrides the ACME directory URL - point it at Let's Encrypt's
+    # staging environment while you are working out a DNS setup, so you do not
+    # burn production rate limits on failed attempts.
+    #
+    # `credentials` names entries in `.kamal/secrets` to pass to the proxy
+    # container as environment variables - the API credentials your DNS provider
+    # needs (`CF_API_TOKEN`, `LOOPIA_API_USER`, ...). Name them exactly as the
+    # provider expects them, since the name is what reaches the container.
+    #
+    # They are written to a 0600 env file on the proxy host and passed with
+    # `--env-file`, never on the command line: a DNS API token can rewrite your
+    # zone, and `docker run --env` would leave it in process listings and audit
+    # logs. Adding or renaming one changes the proxy's config digest, so the next
+    # deploy reboots the proxy to pick it up; rotating a value does not, so run
+    # `kamal proxy reboot` yourself after a rotation.
+    acme:
+      email: admin@example.com
+      dns_provider: cloudflare
+      prefer_wildcard: true
+      http_fallback: false
+      directory: https://acme-staging-v02.api.letsencrypt.org/directory
+      credentials:
+        - CF_API_TOKEN
     options:                       # Additional options to pass to `docker run`
       label:
         - custom.label=kamal-proxy

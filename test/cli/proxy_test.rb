@@ -18,6 +18,37 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  test "boot writes acme credentials to a 0600 env file instead of the command line" do
+    with_test_secrets("secrets" => "CF_API_TOKEN=zone-rewriting-token") do
+      uploads = capture_uploads
+
+      run_command("boot", fixture: :with_proxy_acme).tap do |output|
+        assert_match "mkdir -p .kamal/proxy on 1.1.1.1", output
+        assert_match "--env-file .kamal/proxy/acme.env", output
+        assert_match "--acme-email=\"admin@example.com\"", output
+        assert_match "--acme-dns-provider=\"cloudflare\"", output
+        assert_match "--acme-http-fallback=\"false\"", output
+
+        assert_no_match(/zone-rewriting-token/, output)
+      end
+
+      assert_equal [ [ "CF_API_TOKEN=zone-rewriting-token\n", ".kamal/proxy/acme.env", "0600" ] ], uploads
+    end
+  end
+
+  test "reboot re-uploads the acme credentials before replacing the container" do
+    with_test_secrets("secrets" => "CF_API_TOKEN=zone-rewriting-token") do
+      uploads = capture_uploads
+
+      run_command("reboot", "-y", fixture: :with_proxy_acme).tap do |output|
+        assert_match "--env-file .kamal/proxy/acme.env", output
+        assert_no_match(/zone-rewriting-token/, output)
+      end
+
+      assert_equal [ [ "CF_API_TOKEN=zone-rewriting-token\n", ".kamal/proxy/acme.env", "0600" ] ], uploads
+    end
+  end
+
   test "boot with drifted proxy reboots automatically" do
     Object.any_instance.stubs(:sleep)
     stub_proxy_drift
@@ -814,6 +845,17 @@ class CliProxyTest < CliTestCase
   end
 
   private
+    # Records what upload! was handed rather than what the printer logged: the
+    # mode is the point, and the printer does not print it.
+    def capture_uploads
+      [].tap do |uploads|
+        SSHKit::Backend::Printer.any_instance.stubs(:upload!).with do |io, path, **options|
+          uploads << [ io.string, path, options[:mode] ]
+          true
+        end
+      end
+    end
+
     def run_command(*command, fixture: :with_proxy)
       stdouted { Kamal::Cli::Proxy.start([ *command, "-c", "test/fixtures/deploy_#{fixture}.yml" ]) }
     end

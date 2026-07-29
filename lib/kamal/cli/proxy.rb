@@ -35,6 +35,12 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
           if version && Kamal::Utils.older_version?(version, Kamal::Configuration::Proxy::Run::MINIMUM_VERSION)
             raise "kamal-proxy version #{version} is too old, run `kamal proxy reboot` in order to update to at least #{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}"
           end
+
+          if (run_config = proxy.proxy_run_config)&.acme&.credentials?
+            execute *proxy.ensure_proxy_directory
+            upload! run_config.secrets_io, run_config.secrets_path, mode: "0600"
+          end
+
           execute *proxy.ensure_apps_config_directory
           execute *proxy.start_or_run(digest: drift.expected_digest)
         end
