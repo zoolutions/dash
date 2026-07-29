@@ -453,14 +453,13 @@ class Kamal::Configuration
     # so the two keys cannot both be honoured — say which one to drop rather than quietly
     # ignoring either.
     def ensure_role_boot_can_pace_its_hosts
-      return true unless boot.parallel_roles == false
+      # select, not find: this is also where every role-scoped Boot gets built, so a bad
+      # one raises here rather than partway through a deploy.
+      paced = roles.select(&:boot)
+      return true if paced.empty? || boot.parallel_roles != false
 
-      if role = roles.find(&:boot)
-        raise Kamal::ConfigurationError, "servers/#{role.name}/boot cannot be combined with boot/parallel_roles: false, " \
-          "which boots each host's roles in turn and so cannot pace one role's hosts. Remove one of them"
-      end
-
-      true
+      raise Kamal::ConfigurationError, "servers/#{paced.first.name}/boot cannot be combined with boot/parallel_roles: false, " \
+        "which boots each host's roles in turn and so cannot pace one role's hosts. Remove one of them"
     end
 
     def ensure_unique_hosts_for_ssl_roles

@@ -157,6 +157,25 @@ class CliAppTest < CliTestCase
     end
   end
 
+  test "a role-level boot still waits for the first healthy web container" do
+    # Pacing a role flips iteration from host-first to role-first. The barrier is what
+    # guarantees the primary role goes first, and it has to survive that flip.
+    Object.any_instance.stubs(:sleep)
+
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
+
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .returns("no-healthcheck:running").at_least_once # workers health check
+
+    run_command("boot", config: :with_role_boot, host: nil).tap do |output|
+      assert_match "Waiting for the first healthy web container before booting workers on 1.1.1.3...", output
+      assert_match "Waiting for the first healthy web container before booting workers on 1.1.1.4...", output
+      assert_match "First web container is healthy, booting workers on 1.1.1.3", output
+      assert_match "First web container is healthy, booting workers on 1.1.1.4", output
+    end
+  end
+
   test "boot with web barrier closed" do
     Thread.report_on_exception = false
 
