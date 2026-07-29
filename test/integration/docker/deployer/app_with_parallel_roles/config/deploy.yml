@@ -9,6 +9,7 @@ servers:
     hosts:
       - vm1
     cmd: sleep infinity
+    healthcheck: false
 deploy_timeout: 2
 drain_timeout: 2
 readiness_delay: 0

@@ -394,6 +394,43 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     assert_equal "servers/workers/healthcheck: unknown key: max_attempts", error.message
   end
 
+  test "readiness is not gated for a role without a proxy or a healthcheck" do
+    assert_not config_with_roles.role(:workers).readiness_gated?
+  end
+
+  test "readiness is gated by a healthcheck block" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "port" => 7434 }
+
+    assert config_with_roles.role(:workers).readiness_gated?
+  end
+
+  test "readiness is gated by a hand-rolled health-cmd option" do
+    @deploy_with_roles[:servers]["workers"]["options"] = { "health-cmd" => "pgrep -f bin/jobs" }
+
+    assert config_with_roles.role(:workers).readiness_gated?
+  end
+
+  test "healthcheck false is an explicit opt-out, not a healthcheck" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = false
+
+    role = config_with_roles.role(:workers)
+
+    assert role.readiness_gated?
+    assert_nil role.healthcheck
+    assert_equal [], role.healthcheck_args
+    assert_equal :none, role.readiness_source
+  end
+
+  test "healthcheck true is rejected" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = true
+
+    error = assert_raises Kamal::ConfigurationError do
+      config_with_roles.role(:workers)
+    end
+
+    assert_equal "servers/workers/healthcheck: should be a hash, or false to accept no readiness gate for this role", error.message
+  end
+
   test "invalid boolean restart policy" do
     @deploy_with_roles[:servers]["workers"]["options"] = { "restart" => false }
 

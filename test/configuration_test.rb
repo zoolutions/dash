@@ -527,4 +527,49 @@ class ConfigurationTest < ActiveSupport::TestCase
       assert_match /MYSQL_ROOT_PASSWORD/, error.message
     end
   end
+
+  test "warns about a non-proxied role with no readiness definition" do
+    warning = stderred { Kamal::Configuration.new(@deploy_with_roles) }
+
+    assert_match "Non-proxied role(s) workers have no healthcheck", warning
+    assert_match "accepts the container as ready 7s after it merely starts", warning
+    assert_match "opt out explicitly with `healthcheck: false`", warning
+    assert_match "will become an error in a future release", warning
+  end
+
+  test "warning names every ungated role" do
+    @deploy_with_roles[:servers]["tickers"] = { "hosts" => [ "1.1.1.4" ], "cmd" => "bin/tick" }
+
+    warning = stderred { Kamal::Configuration.new(@deploy_with_roles) }
+
+    assert_match "Non-proxied role(s) tickers, workers have no healthcheck", warning
+  end
+
+  test "does not warn about a role with no hosts" do
+    @deploy_with_roles[:servers]["workers"]["hosts"] = []
+
+    assert_equal "", stderred { Kamal::Configuration.new(@deploy_with_roles.merge(allow_empty_roles: true)) }
+  end
+
+  test "does not warn when the role is gated by a healthcheck" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "port" => 7434 }
+
+    assert_equal "", stderred { Kamal::Configuration.new(@deploy_with_roles) }
+  end
+
+  test "does not warn when the role opts out with healthcheck false" do
+    @deploy_with_roles[:servers]["workers"]["healthcheck"] = false
+
+    assert_equal "", stderred { Kamal::Configuration.new(@deploy_with_roles) }
+  end
+
+  test "does not warn when the role hand-rolled a health-cmd option" do
+    @deploy_with_roles[:servers]["workers"]["options"] = { "health-cmd" => "pgrep -f bin/jobs" }
+
+    assert_equal "", stderred { Kamal::Configuration.new(@deploy_with_roles) }
+  end
+
+  test "does not warn when every role runs the proxy" do
+    assert_equal "", stderred { Kamal::Configuration.new(@deploy) }
+  end
 end
