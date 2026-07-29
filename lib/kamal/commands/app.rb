@@ -43,6 +43,13 @@ class Kamal::Commands::App < Kamal::Commands::Base
     pipe container_id_for_version(version), xargs(docker(:inspect, "--format", DOCKER_HEALTH_STATUS_FORMAT))
   end
 
+  # The `healthcheck: exec:` probe, run from the deploy host against the container that is
+  # booting. Single-quoted by #shell, so the command expands inside the container rather
+  # than in the deploy host's shell. Non-zero exit means not ready.
+  def health_probe(version:)
+    docker :exec, container_name(version), *shell([ role.healthcheck.exec ])
+  end
+
   def stop(version: nil)
     pipe \
       version ? container_id_for_version(version) : current_running_container_id,

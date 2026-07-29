@@ -792,6 +792,34 @@ class CliAppTest < CliTestCase
     assert @executions.any? { |args| args.first == ".kamal/hooks/post-app-stop" }
   end
 
+  test "boot gates a role with an exec healthcheck on the probe's exit code" do
+    stub_running
+
+    run_command("boot", config: :with_readiness_sources, host: "1.1.1.8").tap do |output|
+      assert_match "docker exec app-prober-latest sh -c 'bin/ready-check'", output
+      assert_match /Container is healthy!/, output
+      assert_no_match %r{--health-cmd}, output
+    end
+  end
+
+  test "boot leaves the old container running when the exec probe never passes" do
+    Kamal::Configuration.any_instance.stubs(:deploy_timeout).returns(0)
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
+
+    @executions = []
+    SSHKit::Backend::Abstract.any_instance.stubs(:execute)
+      .with { |*args| @executions << args; !args.join(" ").include?("bin/ready-check") }
+    SSHKit::Backend::Abstract.any_instance.stubs(:execute)
+      .with { |*args| args.join(" ").include?("bin/ready-check") }
+      .raises(SSHKit::Command::Failed.new("probe failed"))
+
+    stderred { run_command("boot", config: :with_readiness_sources, host: "1.1.1.8", allow_execute_error: true) }
+
+    assert @executions.any? { |args| args.join(" ").include?("sh -c 'bin/ready-check'") }, "expected the probe to have run"
+    assert @executions.any? { |args| args.join(" ").include?("docker run") }, "expected the new container to have booted"
+    assert @executions.none? { |args| args.join(" ").include?("app-prober-123") }, "expected the old container to be left alone"
+  end
+
   test "start runs proxy deploy hooks around the proxy deploy" do
     Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("999") # old version

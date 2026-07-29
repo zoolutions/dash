@@ -44,6 +44,26 @@ class CommandsAppTest < ActiveSupport::TestCase
     assert_no_match %r{--health-}, new_command(role: "jobs", host: "1.1.1.2").execute_in_new_container("bin/rails", "db:setup", env: {}).join(" ")
   end
 
+  test "run with an exec healthcheck adds no docker healthcheck flags" do
+    @config[:servers] = { "web" => [ "1.1.1.1" ], "jobs" => { "hosts" => [ "1.1.1.2" ], "cmd" => "bin/jobs", "healthcheck" => { "exec" => "bin/ready-check" } } }
+
+    assert_no_match %r{--health-}, new_command(role: "jobs", host: "1.1.1.2").run.join(" ")
+  end
+
+  test "health probe execs the role's command inside the versioned container" do
+    @config[:servers] = { "web" => [ "1.1.1.1" ], "jobs" => { "hosts" => [ "1.1.1.2" ], "cmd" => "bin/jobs", "healthcheck" => { "exec" => "bin/ready-check" } } }
+
+    assert_equal "docker exec app-jobs-999 sh -c 'bin/ready-check'",
+      new_command(role: "jobs", host: "1.1.1.2").health_probe(version: "999").join(" ")
+  end
+
+  test "health probe quotes the command so the deploy host's shell leaves it alone" do
+    @config[:servers] = { "web" => [ "1.1.1.1" ], "jobs" => { "hosts" => [ "1.1.1.2" ], "cmd" => "bin/jobs", "healthcheck" => { "exec" => "curl -f http://localhost:${PORT}/up" } } }
+
+    assert_equal "docker exec app-jobs-999 sh -c 'curl -f http://localhost:${PORT}/up'",
+      new_command(role: "jobs", host: "1.1.1.2").health_probe(version: "999").join(" ")
+  end
+
   # A container with no docker healthcheck must not report the same string as one whose
   # probe passed, or the poller cannot tell "nothing is checking this" from "it is healthy".
   test "status distinguishes a missing healthcheck from a passing one" do

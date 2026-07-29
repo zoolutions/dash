@@ -80,6 +80,27 @@ class CliHealthcheckPollerTest < CliTestCase
     assert_match /pulse declares a healthcheck but the container reports none/, error.message
   end
 
+  # An exec-probed container legitimately declares no docker healthcheck — the probe runs from
+  # the deploy host — so the drift check must not mistake that for flags that went missing.
+  test "an exec probe reports healthy without tripping the drift check" do
+    Kamal::Cli::Healthcheck::Poller.stubs(:sleep)
+
+    output = stdouted { wait_for_healthy(:prober, "healthy") }
+
+    assert_match /Container is healthy!/, output
+  end
+
+  test "an exec probe that keeps failing times out" do
+    Kamal::Cli::Healthcheck::Poller.stubs(:sleep)
+    KAMAL.config.stubs(:deploy_timeout).returns(0)
+
+    error = assert_raises Kamal::Cli::Healthcheck::Error do
+      stdouted { wait_for_healthy(:prober, "exec probe exited non-zero") }
+    end
+
+    assert_match /container not ready after 0 seconds \(exec probe exited non-zero\)/, error.message
+  end
+
   test "a healthcheck-less container that is not running reports its docker state" do
     Kamal::Cli::Healthcheck::Poller.stubs(:sleep)
     KAMAL.config.stubs(:deploy_timeout).returns(0)

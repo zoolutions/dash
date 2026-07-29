@@ -116,10 +116,13 @@ class Kamal::Configuration::Role
   # Where a deploy of this role actually waits for readiness before stopping the
   # old container. Without a proxy or a docker healthcheck, Healthcheck::Poller
   # only sees `.State.Status`, so staying `running` for the readiness delay is
-  # the whole gate.
+  # the whole gate. `:healthcheck_exec` is the odd one out: the container declares no
+  # docker healthcheck, the deploy host polls the probe itself.
   def readiness_source
     if running_proxy?
       :proxy
+    elsif healthcheck&.exec?
+      :healthcheck_exec
     elsif healthcheck
       :healthcheck
     elsif health_cmd_option?
@@ -137,6 +140,8 @@ class Kamal::Configuration::Role
       [ "kamal-proxy health check", proxy.healthcheck_path ].compact.join(" ")
     when :healthcheck
       healthcheck.port ? "healthcheck #{healthcheck.path}:#{healthcheck.port}" : "healthcheck (custom cmd)"
+    when :healthcheck_exec
+      "healthcheck exec probe (#{healthcheck.exec})"
     when :docker_options
       "docker healthcheck (options: health-cmd)"
     else

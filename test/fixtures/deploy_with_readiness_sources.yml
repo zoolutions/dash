@@ -33,6 +33,12 @@ servers:
     cmd: bin/silent
     healthcheck: false
     readiness_delay: 2
+  prober:
+    hosts:
+      - "1.1.1.8"
+    cmd: bin/probe
+    healthcheck:
+      exec: "bin/ready-check"
 registry:
   username: user
   password: pw

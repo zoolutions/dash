@@ -135,6 +135,8 @@ class CliDoctorTest < CliTestCase
       assert_match "OK pulse: docker healthcheck (options: health-cmd)", output
       assert_match "OK listener: healthcheck /readyz:7434", output
       assert_match "OK ticker: healthcheck (custom cmd)", output
+      assert_match "OK prober: healthcheck exec probe (bin/ready-check)", output
+      assert_no_match(/WARN prober/, output)
     end
   end
 

@@ -891,6 +891,7 @@ class CliMainTest < CliTestCase
       assert_match /listener: 1 host \(1\.1\.1\.5\) — readiness: healthcheck \/readyz:7434/, output
       assert_match /ticker: 1 host \(1\.1\.1\.6\) — readiness: healthcheck \(custom cmd\)/, output
       assert_match /silent: 1 host \(1\.1\.1\.7\) — readiness: NONE \(old container stops 2s after boot\)/, output
+      assert_match /prober: 1 host \(1\.1\.1\.8\) — readiness: healthcheck exec probe \(bin\/ready-check\)/, output
     end
   end
 
