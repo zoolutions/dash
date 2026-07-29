@@ -342,4 +342,14 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
 
     assert_equal %(accessories/mysql/options/restart: should be a string. Use "no" to disable restarts), error.message
   end
+
+  test "health option with braced expansion is rejected" do
+    @deploy[:accessories]["mysql"]["options"] = { "health-cmd" => "mysqladmin ping -h 127.0.0.1 -P ${MYSQL_PORT}" }
+
+    error = assert_raises Kamal::ConfigurationError do
+      Kamal::Configuration.new(@deploy)
+    end
+
+    assert_match "accessories/mysql/options/health-cmd: cannot contain ${...}", error.message
+  end
 end
