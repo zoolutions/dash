@@ -4,6 +4,7 @@ class Kamal::Configuration::Proxy
   DEFAULT_LOG_REQUEST_HEADERS = [ "Cache-Control", "Last-Modified", "User-Agent" ]
   CONTAINER_NAME = "kamal-proxy"
   LOADBALANCER_CONTAINER_NAME = "kamal-loadbalancer"
+  CLIENT_CA_FILENAME = "client-ca.pem"
 
   delegate :argumentize, :optionize, to: Kamal::Utils
 
@@ -100,6 +101,33 @@ class Kamal::Configuration::Proxy
     tls_path(config.proxy_boot.tls_container_directory, "key.pem") if custom_ssl_certificate?
   end
 
+  def tls_config
+    proxy_config["tls"] || {}
+  end
+
+  def on_demand_url
+    tls_config["on_demand_url"]
+  end
+
+  # A path on the machine running kamal, like error_pages_path - not on the
+  # deploy host. Kamal uploads it into the app's TLS directory, which the proxy
+  # container already mounts, and hands the proxy the path it sees there.
+  def client_ca_path
+    tls_config["client_ca_path"]
+  end
+
+  def client_ca?
+    client_ca_path.present?
+  end
+
+  def host_client_ca
+    tls_file_path(config.proxy_boot.tls_directory, CLIENT_CA_FILENAME) if client_ca?
+  end
+
+  def container_client_ca
+    tls_file_path(config.proxy_boot.tls_container_directory, CLIENT_CA_FILENAME) if client_ca?
+  end
+
   def path_prefixes
     proxy_config["path_prefixes"] || proxy_config["path_prefix"]&.split(",") || []
   end
@@ -141,12 +169,13 @@ class Kamal::Configuration::Proxy
       "log-request-header": proxy_config.dig("logging", "request_headers") || DEFAULT_LOG_REQUEST_HEADERS,
       "log-response-header": proxy_config.dig("logging", "response_headers"),
       "error-pages": error_pages
-    }.merge(tls_domains_options).compact
+    }.merge(tls_domains_options).merge(tls_options).compact
 
     if load_balancing?
       opts.delete(:host)
       opts.delete(:tls)
       tls_domains_options.each_key { |key| opts.delete(key) }
+      tls_options.each_key { |key| opts.delete(key) }
       # kamal-proxy deletes the Authorization header once a service enforces
       # basic auth, so the load balancer would authenticate the client and then
       # forward a credential-less request that this proxy would 401. Credentials
@@ -221,8 +250,27 @@ class Kamal::Configuration::Proxy
       }.compact
     end
 
+    # On-demand issuance, the mTLS client CA and the ACME cache only matter where
+    # the handshake happens. Like host/tls/tls-domains they are stripped from the
+    # per-app deploy when load balancing and re-added by
+    # Kamal::Configuration::Loadbalancer#deploy_options - an ask endpoint or a
+    # client CA on a proxy that never terminates TLS would do nothing at all.
+    def tls_options
+      {
+        "tls-on-demand-url": on_demand_url,
+        "tls-client-ca-path": container_client_ca,
+        "tls-acme-cache-path": tls_config["acme_cache_path"]
+      }.compact
+    end
+
     def tls_path(directory, filename)
-      File.join([ directory, role_name, filename ].compact) if custom_ssl_certificate?
+      tls_file_path(directory, filename) if custom_ssl_certificate?
+    end
+
+    # The path construction on its own: a client CA bundle lives beside the
+    # server certificate but has nothing to do with whether one was configured.
+    def tls_file_path(directory, filename)
+      File.join([ directory, role_name, filename ].compact)
     end
 
     def seconds_duration(value)

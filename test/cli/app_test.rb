@@ -398,6 +398,22 @@ class CliAppTest < CliTestCase
     end
   end
 
+  # The CA bundle is read from the machine running kamal and written into the
+  # apps-config tree the proxy container already mounts, so the flag can name a
+  # path that resolves inside the container.
+  test "boot with an mTLS client CA" do
+    Kamal::Configuration::Proxy.any_instance.stubs(:client_ca?).returns(true)
+    Kamal::Configuration::Proxy.any_instance.stubs(:client_ca_path).returns("test/fixtures/files/client-ca.pem")
+
+    stub_running
+    run_command("boot", config: :with_proxy).tap do |output|
+      assert_match "Writing SSL certificates for web on 1.1.1.1", output
+      assert_match "mkdir -p .kamal/proxy/apps-config/app/tls", output
+      assert_match "Uploading test/fixtures/files/client-ca.pem to .kamal/proxy/apps-config/app/tls/web/client-ca.pem", output
+      assert_match "--tls-client-ca-path=\"/home/kamal-proxy/.apps-config/app/tls/web/client-ca.pem\"", output
+    end
+  end
+
   test "start" do
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("999") # old version
 

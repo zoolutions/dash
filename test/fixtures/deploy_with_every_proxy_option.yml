@@ -68,6 +68,12 @@ proxy:
     source: /api/v1/kamal/domains
     interval: 300
     batch_size: 5
+  # on_demand_url lives in deploy_with_on_demand_tls.yml instead: kamal-proxy
+  # forbids it alongside hosts, a custom certificate and tls_domains, all of
+  # which this fixture needs.
+  tls:
+    client_ca_path: test/fixtures/files/client-ca.pem
+    acme_cache_path: /home/kamal-proxy/.config/kamal-proxy/acme
   run:
     debug: true
     metrics_port: 9090
