@@ -19,6 +19,11 @@ boot:
   limit: 25%
 
   # The number of seconds to wait between booting each group of hosts.
+  #
+  # This fills the gap between one group and the next, so it needs `limit` to mean anything:
+  # without one, every host boots in a single group and there is no gap to fill. Kamal warns
+  # if you set `wait` on its own. Nothing waits after the final group either — the deploy
+  # moves on as soon as the last host is up.
   wait: 10
 
   # Whether to boot roles in parallel on a host.

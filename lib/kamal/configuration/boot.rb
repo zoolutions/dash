@@ -24,6 +24,13 @@ class Kamal::Configuration::Boot
     end
   end
 
+  # Whether a limit is configured at all. Deliberately not a reader for the raw value:
+  # a percentage means nothing without the hosts it slices, so anything that needs the
+  # group size has to go through limit_for.
+  def limit?
+    boot_config["limit"].present?
+  end
+
   def wait
     boot_config["wait"]
   end

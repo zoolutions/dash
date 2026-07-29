@@ -55,7 +55,9 @@ servers:
     #
     # `limit` is a count, or a percentage of the hosts this run is booting for the role
     # (so `--roles` / `--hosts` narrow the denominator too); `limit: 1` boots them one at
-    # a time. `wait` is the pause between hosts or groups, and defaults to none.
+    # a time. `wait` is the pause between hosts or groups, and defaults to none. It needs
+    # `limit` to do anything — without one the role's hosts boot in a single group, leaving
+    # no gap to pause in, and Kamal warns. Nothing waits after the final group.
     #
     # A role using this key needs the role-first iteration of `boot/parallel_roles`.
     # Kamal turns it on for you when you have not set it; an explicit

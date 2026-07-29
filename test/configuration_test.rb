@@ -530,6 +530,41 @@ class ConfigurationTest < ActiveSupport::TestCase
     end
   end
 
+  test "warns when the root boot wait has no limit to pace against" do
+    warning = stderred { Kamal::Configuration.new(@deploy_with_roles.merge(boot: { "wait" => 10 })) }
+
+    assert_match "boot/wait is set to 10 but boot/limit is not", warning
+    assert_match "paces one group of hosts against the next", warning
+    assert_match "Set `boot/limit`", warning
+  end
+
+  test "warns when a role's boot wait has no limit to pace against" do
+    @deploy_with_roles[:servers]["workers"]["boot"] = { "wait" => 5 }
+
+    warning = stderred { Kamal::Configuration.new(@deploy_with_roles) }
+
+    assert_match "servers/workers/boot/wait is set to 5 but servers/workers/boot/limit is not", warning
+  end
+
+  test "does not warn when boot wait is paired with a limit" do
+    assert_equal "", stderred { Kamal::Configuration.new(@deploy_with_roles.merge(boot: { "limit" => 2, "wait" => 10 })) }
+  end
+
+  test "does not warn when a role pairs its boot wait with a limit" do
+    @deploy_with_roles[:servers]["workers"]["boot"] = { "limit" => 1, "wait" => 5 }
+
+    assert_equal "", stderred { Kamal::Configuration.new(@deploy_with_roles) }
+  end
+
+  test "does not warn about a boot limit with no wait" do
+    assert_equal "", stderred { Kamal::Configuration.new(@deploy_with_roles.merge(boot: { "limit" => 2 })) }
+  end
+
+  # A percentage limit still resolves to a group size, so it paces just as well as an integer.
+  test "does not warn when boot wait is paired with a percentage limit" do
+    assert_equal "", stderred { Kamal::Configuration.new(@deploy_with_roles.merge(boot: { "limit" => "50%", "wait" => 10 })) }
+  end
+
   test "warns about a non-proxied role with no readiness definition" do
     @deploy_with_roles[:servers]["workers"].delete("healthcheck")
 
