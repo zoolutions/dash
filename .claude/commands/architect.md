@@ -86,7 +86,7 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 | Shell out directly from `Cli` | Route through `Commands::*` builders |
 | Release gem before proxy image | Proxy image first — `MINIMUM_VERSION` must be pullable from ghcr.io |
 | Hardcode proxy version in tests | Interpolate `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` |
-| Commit to `main` | Feature branches root off `main`, merge into `dash` |
+| Commit to `main` | Feature branches root off `dash`, merge back into `dash` |
 | Skip tests | TDD — minitest + mocha first, at every layer touched |
 | Chase Apple-Silicon builder test failures as regressions | Known host-arch-dependent; pass in CI |
 

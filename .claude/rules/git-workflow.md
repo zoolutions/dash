@@ -8,7 +8,9 @@ Fork-specific. See `CLAUDE.md` for architecture/tooling and `.claude/rules/upstr
 |---|---|---|
 | `main` | Mirror of `basecamp/kamal` | Fast-forward only — **NEVER** commit here |
 | `dash` | Integration + release branch | Fork identity + merged features; PRs target this |
-| `feat/*` | Feature branches | Root off `main` (stays upstream-PR-able), merge **forward** into `dash` |
+| `feat/*` | Feature branches | Root off `dash` (always), merge **forward** into `dash` |
+
+**ALWAYS** root a feature branch off `dash`, never off `main`. `dash` is where the fork's features, fixes and toolkit live, so a `dash`-rooted branch builds on the real codebase, gets the `.claude/` toolkit for free, and merges back without replaying fork identity. Upstreaming stays possible from a `dash`-rooted branch — see "Upstreaming a feature" in `.claude/rules/upstream-sync.md` — it just extracts the feature's own diff instead of relying on the branch point.
 
 **NEVER** rebase a published branch (`main`, `dash`, or a shared `feat/*`) — history is shared, merge forward instead.
 
@@ -43,12 +45,12 @@ Refs #123
 
 ## PR Workflow
 
-1. Branch off `main`, not `dash` — keeps the branch upstream-PR-able
+1. Branch off `dash`, never off `main`
 2. Make focused, atomic commits
 3. Run the pre-commit checklist before every push
 4. Open the PR against `dash` (never `main`)
 5. Request review
-6. Merge `main` → your feature branch → `dash`, in that order, whenever `main` moves — never rebase
+6. Merge `dash` → your feature branch whenever `dash` moves, then merge the branch back into `dash` — never rebase
 
 ## PR and Issue Bodies
 
@@ -102,6 +104,7 @@ Full procedure, conflict playbook, and sync runbook: `.claude/rules/upstream-syn
 ## Rules
 
 - **NEVER** commit directly to `main`
+- **NEVER** root a feature branch off `main` — always off `dash`
 - **NEVER** force push to `main` or `dash`
 - **NEVER** edit `kamal.gemspec` or `bin/release` — upstream-owned, kept byte-identical so syncs never conflict
 - **ALWAYS** run rubocop + unit tests before pushing; run `bin/test` before merging into `dash`

@@ -118,7 +118,7 @@ For each unresolved comment, read the full body and categorise it:
 | "Tag this `v2.12.0.1`" | Bare `v*` tags belong to upstream; fork gem tags are `dash-v<version>` |
 | "Hardcode the proxy version string in the test" | Must interpolate `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` -- see `.claude/rules/testing.md` |
 | "Use a `-dash.1` style suffix for the proxy tag" | `Gem::Version` parses `-` as a prerelease marker, sorts BELOW the base, breaks `kamal proxy boot`'s version check |
-| "Rebase your branch onto `dash`" | Feature branches root off `main` and merge forward; never rebase a published branch |
+| "Rebase your branch onto `dash`" | Feature branches root off `dash` and merge it forward; never rebase a published branch |
 | "This builder test failure needs fixing" | If it's one of the two known Apple-Silicon arch-dependent failures in `test/commands/builder_test.rb`, it's not a regression -- confirm via `.claude/rules/testing.md` before touching assertions |
 | "This multi-host fixture doesn't need `loadbalancer: false`" | The fork auto-activates the loadbalancer for any primary role with >1 web host; Docker-in-Docker integration VMs can't resolve each other's hostnames without it disabled |
 

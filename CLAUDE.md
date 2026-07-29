@@ -20,11 +20,12 @@ mhenrixon's maintained fork of [kamal](https://github.com/basecamp/kamal) — de
 4. **NO `git push --tags`** — it would push fetched upstream tags to the fork; push single tags (`git push origin tag dash-v2.12.0.1`)
 5. **NO suffix proxy versions** like `v0.9.2-dash.1` — Gem::Version parses `-` as a prerelease, which sorts OLDER than the base and hard-fails `kamal proxy boot`
 6. **NO gem release before the proxy image exists** — the tag named by `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` must be pullable from ghcr.io first
-7. **NO rebasing published branches** — merge `main` forward; history is shared
+7. **NO rebasing published branches** — merge forward; history is shared
+8. **NO feature branches rooted off `main`** — always root off `dash`
 
 ### Always Do
 
-1. **Branch features off `main`** — keeps them upstream-PR-able; merge them into `dash`
+1. **Branch features off `dash`** — always; merge `dash` forward into them, then merge them back into `dash`
 2. **Mirror `kamal.gemspec` dependency changes into `dash.gemspec`** after every sync (`diff kamal.gemspec dash.gemspec`)
 3. **Interpolate `MINIMUM_VERSION` in test expectations** — never hardcode proxy versions
 4. **Run unit tests + rubocop before pushing `dash`**
@@ -84,7 +85,7 @@ Features (loadbalancing, …) live on their own branches and merge into `dash` �
 
 | Command | Purpose |
 |---------|---------|
-| `/lfg` | Full autonomous workflow: branch off `main` → understand → plan → TDD → verify → PR into `dash` |
+| `/lfg` | Full autonomous workflow: branch off `dash` → understand → plan → TDD → verify → PR into `dash` |
 | `/plan` | Read-only planning → GitHub issue or `docs/plans/` markdown (execute with `/lfg`) |
 | `/architect` | Coordinate multi-layer work across the Thor CLI → Commander → Commands → Configuration cake |
 | `/tdd` | Enforce RED → GREEN → REFACTOR with Minitest + Mocha |
@@ -101,13 +102,15 @@ Commands pin a model tier via frontmatter aliases (`sonnet` implementation, `opu
 
 ### Toolkit availability on feature branches
 
-This toolkit (CLAUDE.md, `.claude/`) is committed on `dash` only. Feature branches root off `main` (the pristine upstream mirror), so switching to one removes the toolkit from the working tree — slash commands stop loading. To work with the toolkit on a feature branch, materialize it without committing it:
+This toolkit (CLAUDE.md, `.claude/`) is committed on `dash`. Because feature branches always root off `dash`, they inherit it — slash commands load with no extra step.
+
+If you ever land on a `main`-rooted branch (an old branch, or a `pr/<feature>` branch created for upstreaming), the toolkit is absent. Materialize it without committing it:
 
 ```bash
 git restore --source=dash --worktree -- .claude CLAUDE.md
 ```
 
-The files appear as untracked — **never commit them on a `main`-rooted branch** (they would pollute an upstream-PR-able diff and conflict on merge into `dash`). Stage specific paths, not `git add -A`. Before opening an upstream PR, `git clean` them or leave them untracked.
+The files appear as untracked — **never commit them on a `main`-rooted branch**; they would pollute the upstream diff. `git clean` them before opening an upstream PR.
 
 ## More Documentation
 
