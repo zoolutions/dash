@@ -3,6 +3,7 @@ require "digest"
 require "base64"
 require "json"
 require "test_helper"
+require_relative "build_circuit"
 
 class IntegrationTest < ActiveSupport::TestCase
   # Stable per-worktree Compose project name: the same across repeated runs in a given
@@ -11,6 +12,10 @@ class IntegrationTest < ActiveSupport::TestCase
   COMPOSE_PROJECT = "kamal-test-#{Digest::SHA256.hexdigest(File.expand_path("../..", __dir__))[0, 8]}"
 
   setup do
+    # Once the build has failed outright for two tests running, every remaining
+    # test would pay the same doomed retry ladder for nothing. Bail out cheaply.
+    skip build_circuit.trip_message if build_circuit.tripped?
+
     ENV["TEST_ID"] = SecureRandom.hex
     authenticate_hub_cache
     compose_up_with_retry
@@ -182,20 +187,28 @@ class IntegrationTest < ActiveSupport::TestCase
       assert_equal "200", code
     end
 
+    # The build is deliberately outside the retried block: `up --no-build` never
+    # builds, so retrying it cannot fix a build failure — it would just run the
+    # whole backoff ladder a second time for the same doomed result.
     def compose_up_with_retry
       build_images_once
-      docker_compose "up -d --no-build"
-    rescue RuntimeError => e
-      raise if @compose_up_retried
-      @compose_up_retried = true
-      puts "compose up failed, retrying once: #{e.message.lines.first&.strip}"
-      docker_compose "down -t 0", raise_on_error: false
-      retry
+
+      begin
+        docker_compose "up -d --no-build"
+      rescue RuntimeError => e
+        raise if @compose_up_retried
+        @compose_up_retried = true
+        puts "compose up failed, retrying once: #{e.message.lines.first&.strip}"
+        docker_compose "down -t 0", raise_on_error: false
+        retry
+      end
     end
 
     # Base-image pulls go straight to Docker Hub from the host daemon, so a Hub
     # blip fails the build for this test and every one after it ($IMAGES_BUILT
-    # never gets set). Retry with backoff to ride out transient Hub outages.
+    # never gets set). Retry with backoff to ride out transient Hub outages, and
+    # tell the circuit breaker how it went so a runner that can never reach the
+    # registry stops the suite instead of repeating this for every test.
     def build_images_once
       return if $IMAGES_BUILT
       attempts = 0
@@ -203,12 +216,20 @@ class IntegrationTest < ActiveSupport::TestCase
         docker_compose "build"
       rescue RuntimeError => e
         attempts += 1
-        raise if attempts >= 3
+        if attempts >= 3
+          build_circuit.record_failure!
+          raise BuildCircuit::BuildFailed, e.message
+        end
         puts "compose build failed (attempt #{attempts}/3), retrying in #{15 * attempts}s: #{e.message.lines.first&.strip}"
         sleep 15 * attempts
         retry
       end
       $IMAGES_BUILT = true
+      build_circuit.record_success!
+    end
+
+    def build_circuit
+      BuildCircuit.default
     end
 
     def wait_for_healthy(timeout: 30)
