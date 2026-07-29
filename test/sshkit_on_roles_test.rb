@@ -64,6 +64,33 @@ class SshkitOnRolesTest < ActiveSupport::TestCase
     assert_operator booted.index("1.1.1.2"), :<, booted.index("1.1.1.4")
   end
 
+  # Stock SSHKit::Runner::Group sleeps after every slice, including the last. Kamal's boot
+  # wait paces one group against the next, so a trailing sleep is pure deploy latency.
+  test "a group-paced role does not wait after its final group" do
+    role = role_with(%w[ 1.1.1.1 1.1.1.2 1.1.1.3 1.1.1.4 ], in: :groups, limit: 2, wait: 5)
+
+    SSHKit::Runner::Group.any_instance.expects(:sleep).with(5).once
+
+    stdouted { on_roles([ role ], hosts: role.hosts, rolling: true) { |_host, _role| } }
+  end
+
+  test "a group-paced role whose hosts fit one group never waits" do
+    role = role_with(%w[ 1.1.1.1 1.1.1.2 ], in: :groups, limit: 2, wait: 5)
+
+    SSHKit::Runner::Group.any_instance.expects(:sleep).never
+
+    stdouted { on_roles([ role ], hosts: role.hosts, rolling: true) { |_host, _role| } }
+  end
+
+  test "a group-paced role still returns every host's result" do
+    role = role_with(%w[ 1.1.1.1 1.1.1.2 1.1.1.3 ], in: :groups, limit: 2, wait: 0)
+    booted = Queue.new
+
+    stdouted { on_roles([ role ], hosts: role.hosts, rolling: true) { |host, _role| booted << host.to_s } }
+
+    assert_equal %w[ 1.1.1.1 1.1.1.2 1.1.1.3 ], Array.new(booted.size) { booted.pop }.sort
+  end
+
   # Only the two methods on_roles asks a role for. boot_runner_options is handed the hosts
   # this run is pacing, so assert on_roles passes exactly the set it is about to run.
   def role_with(hosts, **runner_options)

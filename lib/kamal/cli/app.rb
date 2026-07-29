@@ -20,7 +20,9 @@ class Kamal::Cli::App < Kamal::Cli::Base
         barrier = Kamal::Cli::Healthcheck::Barrier.new
         cli = self
 
-        host_boot_groups.each do |hosts|
+        boot_groups = host_boot_groups
+
+        boot_groups.each_with_index do |hosts, index|
           host_list = Array(hosts).join(",")
           run_hook "pre-app-boot", hosts: host_list
 
@@ -29,7 +31,11 @@ class Kamal::Cli::App < Kamal::Cli::Base
           end
 
           run_hook "post-app-boot", hosts: host_list
-          sleep KAMAL.config.boot.wait if KAMAL.config.boot.wait
+
+          # `wait` paces one group against the next, so the last group has nothing to pace
+          # against. Without a `limit` there is only ever one group, and waiting at all
+          # would be a fixed delay on every deploy buying no staggering.
+          sleep KAMAL.config.boot.wait if KAMAL.config.boot.wait && index < boot_groups.size - 1
         end
 
         # Tag once the app booted on all hosts
