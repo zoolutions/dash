@@ -424,6 +424,30 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     end
   end
 
+  test "deploy options with path timeouts" do
+    @deploy[:proxy] = { "path_timeouts" => { "/api/reports" => "5m", "/uploads" => 120, "/stream" => 0 } }
+
+    assert_equal [ "/api/reports=5m", "/uploads=120s", "/stream=0s" ], config.proxy.deploy_options[:"path-timeout"]
+  end
+
+  test "deploy options without path timeouts" do
+    @deploy[:proxy] = { "host" => "example.com" }
+
+    assert_not_includes config.proxy.deploy_options.keys, :"path-timeout"
+  end
+
+  test "path timeouts must be a hash" do
+    @deploy[:proxy] = { "path_timeouts" => "/api=5m" }
+
+    assert_raises(Kamal::ConfigurationError) { config }
+  end
+
+  test "path timeouts values must be stringish" do
+    @deploy[:proxy] = { "path_timeouts" => { "/api" => [ "5m" ] } }
+
+    assert_raises(Kamal::ConfigurationError) { config }
+  end
+
   private
     def config
       Kamal::Configuration.new(@deploy)

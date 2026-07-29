@@ -112,6 +112,7 @@ class Kamal::Configuration::Proxy
       "read-target": proxy_config["read_targets"].presence,
       "read-target-websockets": proxy_config["read_target_websockets"] ? true : nil,
       "writer-affinity-timeout": seconds_duration(proxy_config["writer_affinity_timeout"]),
+      "path-timeout": path_timeout_args,
       "buffer-requests": proxy_config.fetch("buffering", { "requests": true }).fetch("requests", true),
       "buffer-responses": proxy_config.fetch("buffering", { "responses": true }).fetch("responses", true),
       "buffer-memory": proxy_config.dig("buffering", "memory"),
@@ -194,6 +195,15 @@ class Kamal::Configuration::Proxy
 
     def seconds_duration(value)
       value ? "#{value}s" : nil
+    end
+
+    def path_timeout_args
+      if (timeouts = proxy_config["path_timeouts"]).present?
+        timeouts.map do |prefix, duration|
+          duration = seconds_duration(duration) if duration.is_a?(Numeric)
+          "#{prefix}=#{duration}"
+        end
+      end
     end
 
     def error_pages
