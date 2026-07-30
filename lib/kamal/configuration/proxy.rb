@@ -166,7 +166,9 @@ class Kamal::Configuration::Proxy
       "read-target": proxy_config["read_targets"].presence,
       "read-target-websockets": proxy_config["read_target_websockets"] ? true : nil,
       "writer-affinity-timeout": seconds_duration(proxy_config["writer_affinity_timeout"]),
-      "path-timeout": path_timeout_args,
+      "path-timeout": path_timeout_args("path_timeouts"),
+      "request-timeout": seconds_duration(proxy_config["request_timeout"]),
+      "path-request-timeout": path_timeout_args("path_request_timeouts"),
       "buffer-requests": proxy_config.fetch("buffering", { "requests": true }).fetch("requests", true),
       "buffer-responses": proxy_config.fetch("buffering", { "responses": true }).fetch("responses", true),
       "buffer-memory": proxy_config.dig("buffering", "memory"),
@@ -181,7 +183,8 @@ class Kamal::Configuration::Proxy
       "log-response-header": proxy_config.dig("logging", "response_headers"),
       "error-pages": error_pages
     }.merge(tls_domains_options).merge(tls_options).merge(cache_options).merge(compress_options)
-      .merge(access_control_options).merge(traffic_options).merge(lifecycle_options).compact
+      .merge(access_control_options).merge(traffic_options).merge(lifecycle_options)
+      .merge(target_options).compact
 
     if load_balancing?
       opts.delete(:host)
@@ -273,6 +276,27 @@ class Kamal::Configuration::Proxy
         "tls-on-demand-url": on_demand_url,
         "tls-client-ca-path": container_client_ca,
         "tls-acme-cache-path": tls_config["acme_cache_path"]
+      }.compact
+    end
+
+    # The connection pool between the proxy and this app's containers, and how
+    # hard the proxy tries to place a request on a healthy one.
+    #
+    # Every value is passed through exactly as written. kamal-proxy resolves its
+    # own defaults from a zero (target_pool.go), and it has to do that server
+    # side because restored state and older RPC clients never see the CLI — so
+    # substituting a default here would be both redundant and wrong.
+    def target_options
+      target = proxy_config["target"] || {}
+
+      {
+        "target-max-conns": target["max_conns"],
+        "target-max-idle-conns": target["max_idle_conns"],
+        "target-idle-conn-timeout": seconds_duration(target["idle_conn_timeout"]),
+        "target-dial-timeout": seconds_duration(target["dial_timeout"]),
+        "target-disable-keep-alives": target["disable_keep_alives"] ? true : nil,
+        "target-try-duration": seconds_duration(target["try_duration"]),
+        "target-try-interval": seconds_duration(target["try_interval"])
       }.compact
     end
 
@@ -424,8 +448,11 @@ class Kamal::Configuration::Proxy
       "#{basic_auth["username"]}:#{password}"
     end
 
-    def path_timeout_args
-      if (timeouts = proxy_config["path_timeouts"]).present?
+    # Serves both --path-timeout and --path-request-timeout, which kamal-proxy
+    # reads with one parser. A duration may be a Go string ("5m") or plain
+    # seconds; 0 is a value, meaning no limit for that prefix.
+    def path_timeout_args(key)
+      if (timeouts = proxy_config[key]).present?
         timeouts.map do |prefix, duration|
           duration = seconds_duration(duration) if duration.is_a?(Numeric)
           "#{prefix}=#{duration}"
