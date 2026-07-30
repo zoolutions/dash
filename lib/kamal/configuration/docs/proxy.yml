@@ -335,6 +335,102 @@ proxy:
     max_response_body: 0
     memory: 2_000_000
 
+  # Header rules
+  #
+  # Rewrite headers on their way to the app and on their way back out, without
+  # the app knowing. `set` replaces whatever was there, `add` appends and keeps
+  # it, `remove` strips it.
+  #
+  # Names are canonicalised, and values have their leading and trailing
+  # whitespace trimmed. A value may contain colons — a CSP naming a scheme or a
+  # port survives intact.
+  #
+  # Two things kamal rejects rather than letting them fail late: a value with a
+  # newline or carriage return in it (that is response splitting, and shell
+  # escaping would silently turn it into a literal backslash-n), and a *request*
+  # rule naming `Host` — Go carries the host outside the header map, so the rule
+  # would do nothing at all.
+  #
+  # Response rules apply to what the app returned. Error pages, redirects, and
+  # auth or rate-limit rejections come from the proxy itself and are unaffected.
+  headers:
+    request:
+      set:
+        X-Forwarded-Host: app.example.com
+      add:
+        X-Request-Source: kamal
+      remove:
+        - X-Internal-Token
+    response:
+      set:
+        Strict-Transport-Security: max-age=31536000
+      add:
+        X-Served-By: kamal-proxy
+      remove:
+        - Server
+
+  # Redirects and rewrites
+  #
+  # A redirect answers the client with a `Location`; a rewrite changes the path
+  # the app receives while the client's URL stays as it was — which is what an
+  # SPA serving its own routes out of `/index.html` needs.
+  #
+  # `from` is a regular expression **anchored to the whole path**, so `/old` does
+  # not fire on `/not-old-either`. `to` is a path on this host, and for a
+  # redirect may also be a full http(s) URL. Captures are available as `$1`,
+  # `$2`, … Rules are tried in order and the first match wins.
+  #
+  # ### Watch the path prefix
+  #
+  # Both match the path **the client asked for, before `path_prefix` stripping**.
+  # An app mounted at `path_prefix: /api` with `strip_path_prefix` on sees
+  # `/users`, but a rule here still has to be written against `/api/users`. This
+  # is the part that is easy to get wrong.
+  #
+  # `status` applies to redirects only and must be 301, 302, 303, 307 or 308.
+  # It defaults to 301, so say 302 explicitly for anything you may want back.
+  redirects:
+    - from: /old
+      to: /new
+    - from: /gone/(.*)
+      to: https://elsewhere.example.com/$1
+      status: 302
+  rewrites:
+    - from: /api/(.*)
+      to: /v2/$1
+
+  # Canonical host
+  #
+  # Redirect every request to this host, to force apex or www one way.
+  canonical_host: www.example.com
+
+  # Scope cookie paths to the path prefix
+  #
+  # When the app is mounted under `path_prefix`, rewrite the `Path` of cookies it
+  # sets so they are scoped to the prefix rather than to the whole host.
+  #
+  # Defaults to `false`:
+  scope_cookie_paths: true
+
+  # Intercept error statuses
+  #
+  # Replace these statuses coming from the app with the proxy's own error pages,
+  # discarding whatever body the app sent. 4xx and 5xx codes only.
+  #
+  # This pairs with the root-level `error_pages_path`. It works without it, but
+  # not usefully: with no pages to render, the proxy falls back to a bare
+  # plaintext status line, so the app's own error page is thrown away and
+  # replaced by the words "Bad Gateway". Kamal warns when you do that.
+  intercept_errors:
+    - 502
+    - 503
+  #
+  # ### Note
+  # Everything in this section applies on the per-host proxy, including when a
+  # loadbalancer is configured — unlike TLS and access control, which move to the
+  # loadbalancer. Applying them at both layers would append an `add` header twice
+  # and run a rewrite over its own output.
+
   # Who the client is
   #
   # Rate limiting and IP allow lists are both only as correct as the address they

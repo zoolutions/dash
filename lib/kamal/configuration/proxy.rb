@@ -181,7 +181,7 @@ class Kamal::Configuration::Proxy
       "log-response-header": proxy_config.dig("logging", "response_headers"),
       "error-pages": error_pages
     }.merge(tls_domains_options).merge(tls_options).merge(cache_options).merge(compress_options)
-      .merge(access_control_options).compact
+      .merge(access_control_options).merge(traffic_options).compact
 
     if load_balancing?
       opts.delete(:host)
@@ -274,6 +274,47 @@ class Kamal::Configuration::Proxy
         "tls-client-ca-path": container_client_ca,
         "tls-acme-cache-path": tls_config["acme_cache_path"]
       }.compact
+    end
+
+    # Header rewriting, redirects, rewrites and error interception.
+    #
+    # Unlike TLS and access control these stay on the per-host proxy when load
+    # balancing — Kamal::Configuration::Loadbalancer#deploy_options drops them.
+    # The load balancer forwards to the per-host proxies, so applying the group
+    # at both layers would append an `add` header twice and run a rewrite over
+    # its own output.
+    def traffic_options
+      {
+        "set-request-header": header_rules("request", "set"),
+        "add-request-header": header_rules("request", "add"),
+        "remove-request-header": headers_config.dig("request", "remove").presence,
+        "set-response-header": header_rules("response", "set"),
+        "add-response-header": header_rules("response", "add"),
+        "remove-response-header": headers_config.dig("response", "remove").presence,
+        redirect: path_rules("redirects"),
+        rewrite: path_rules("rewrites"),
+        "canonical-host": proxy_config["canonical_host"],
+        "scope-cookie-paths": proxy_config["scope_cookie_paths"] ? true : nil,
+        "intercept-errors": proxy_config["intercept_errors"].presence
+      }.compact
+    end
+
+    def headers_config
+      proxy_config["headers"] || {}
+    end
+
+    # kamal-proxy cuts a rule at the first colon, so a value carrying colons of
+    # its own arrives intact.
+    def header_rules(direction, verb)
+      (headers_config.dig(direction, verb) || {}).map { |name, value| "#{name}: #{value}" }.presence
+    end
+
+    # '<pattern>=<replacement>', with ';status=<code>' appended for a redirect
+    # that asks for one. Cut at the first '=' on the proxy side.
+    def path_rules(key)
+      Array(proxy_config[key]).map do |rule|
+        "#{rule["from"]}=#{rule["to"]}#{";status=#{rule["status"]}" if rule["status"]}"
+      end.presence
     end
 
     # Rate limiting, the IP allow list, and the client-IP identification both of

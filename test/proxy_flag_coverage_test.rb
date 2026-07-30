@@ -37,9 +37,6 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
   # list shrinking to empty is what "R7 is done" means.
   R7_BACKLOG = {
     "deploy" => {
-      78 => %w[ add-request-header add-response-header set-request-header set-response-header
-                remove-request-header remove-response-header redirect rewrite canonical-host
-                scope-cookie-paths intercept-errors ],
       79 => %w[ session-affinity session-affinity-cookie sleep-after sleep-container wake-timeout ],
       80 => %w[ target-dial-timeout target-disable-keep-alives target-idle-conn-timeout
                 target-max-conns target-max-idle-conns target-try-duration target-try-interval

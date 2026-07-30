@@ -93,6 +93,7 @@ class Kamal::Configuration
     ensure_role_boot_can_pace_its_hosts
     ensure_boot_wait_paces_something
     ensure_rate_limit_can_identify_clients
+    ensure_intercepted_errors_have_pages
   end
 
   # Resolves every secret the deploy will need so a missing secret fails fast,
@@ -450,6 +451,23 @@ class Kamal::Configuration
         "Without one, Kamal accepts the container as ready #{readiness_delay}s after it merely starts " \
         "and then stops the previous container — traffic can be dropped. Add a `healthcheck:` block, " \
         "or opt out explicitly with `healthcheck: false`. This warning will become an error in a future release."
+
+      true
+    end
+
+    # `intercept_errors` discards the app's error body and renders the proxy's own
+    # page instead. With no pages to render, kamal-proxy falls back to a bare
+    # plaintext status line — so the app's error page is thrown away and replaced
+    # by the words "Bad Gateway". Legal, and almost never the intent.
+    def ensure_intercepted_errors_have_pages
+      return true if error_pages_path.present?
+
+      offenders = roles.select { |role| role.running_proxy? && role.proxy.proxy_config["intercept_errors"].present? }
+      return true if offenders.empty?
+
+      warn "Role(s) #{offenders.map(&:name).join(", ")}: intercept_errors is set but no error_pages_path is " \
+        "configured, so kamal-proxy replaces the app's error page with a bare plaintext status line. " \
+        "Set `error_pages_path:` to serve your own pages, or remove `intercept_errors` to let the app's through."
 
       true
     end

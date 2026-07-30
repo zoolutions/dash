@@ -59,6 +59,33 @@ proxy:
   basic_auth:
     username: admin
     password: secret
+  headers:
+    request:
+      set:
+        X-Forwarded-Host: app.example.com
+      add:
+        X-Request-Source: kamal
+      remove:
+        - X-Internal-Token
+    response:
+      set:
+        Strict-Transport-Security: max-age=31536000
+      add:
+        X-Served-By: kamal-proxy
+      remove:
+        - Server
+  redirects:
+    - from: /old
+      to: /new
+      status: 302
+  rewrites:
+    - from: /api/(.*)
+      to: /v2/$1
+  canonical_host: www.example.com
+  scope_cookie_paths: true
+  intercept_errors:
+    - 502
+    - 503
   # All three blocks together: trusted_proxies needs allow_ips or rate_limit to
   # do anything, and client_ip.header needs trusted_proxies.
   allow_ips:
