@@ -25,6 +25,12 @@ class Kamal::Configuration::Loadbalancer < Kamal::Configuration::Proxy
     # balancer is the only proxy that ever sees the real client address.
     opts.merge!(access_control_options)
 
+    # Traffic shaping goes the other way. The parent hands it over with
+    # everything else, but this proxy forwards to the per-host proxies, which
+    # apply the same rules again — an `add` header would arrive twice and a
+    # rewrite would run over its own output. Leave it to them.
+    traffic_options.each_key { |key| opts.delete(key) }
+
     # Basic auth is an edge concern for the same reason: the parent strips it
     # when load balancing so only the load balancer challenges clients.
     opts[:"basic-auth"] = basic_auth_credential if basic_auth_credential.present?

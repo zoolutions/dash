@@ -55,6 +55,7 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
       end
 
       validate_access_control!
+      validate_traffic_shaping!
 
       if run_config = config["run"]
         if run_config["bind_ips"].present?
@@ -172,10 +173,121 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
       end
     end
 
+    REDIRECT_STATUSES = [ 301, 302, 303, 307, 308 ].freeze
+
+    # RFC 9110 field name: a token. A space or a colon would also break the
+    # '<name>: <value>' encoding kamal-proxy cuts at the first colon.
+    HEADER_NAME = /\A[!#$%&'*+\-.^_`|~0-9A-Za-z]+\z/
+
+    def validate_traffic_shaping!
+      validate_header_rules!
+      validate_path_rules! "redirects", redirect: true
+      validate_path_rules! "rewrites", redirect: false
+
+      with_context("intercept_errors") do
+        Array(config["intercept_errors"]).each do |status|
+          unless status.is_a?(Integer) && status.between?(400, 599)
+            error "#{status} must be a 4xx or 5xx status code"
+          end
+        end
+      end
+    end
+
+    def validate_header_shape!(headers)
+      validate_type! headers, Hash
+
+      with_context("headers") do
+        unknown_keys_error(headers.keys - %w[ request response ]) if (headers.keys - %w[ request response ]).any?
+
+        headers.each do |direction, rules|
+          with_context(direction) do
+            validate_type! rules, Hash
+            unknown_keys_error(rules.keys - %w[ set add remove ]) if (rules.keys - %w[ set add remove ]).any?
+
+            %w[ set add ].each { |verb| with_context(verb) { validate_hash_of! rules[verb], String } if rules.key?(verb) }
+            with_context("remove") { validate_array_of! rules["remove"], String } if rules.key?("remove")
+          end
+        end
+      end
+
+      true
+    end
+
+    def validate_header_rules!
+      headers = config["headers"] || {}
+
+      with_context("headers") do
+        %w[ request response ].each do |direction|
+          rules = headers[direction] || {}
+
+          with_context(direction) do
+            %w[ set add ].each do |verb|
+              with_context(verb) { (rules[verb] || {}).each { |name, value| validate_header_rule! direction, name, value } }
+            end
+
+            with_context("remove") { Array(rules["remove"]).each { |name| validate_header_rule! direction, name, nil } }
+          end
+        end
+      end
+    end
+
+    def validate_header_rule!(direction, name, value)
+      unless name.to_s.match?(HEADER_NAME)
+        return error "'#{name}' is not a valid header name"
+      end
+
+      # Go carries the request host in Request.Host rather than the header map,
+      # so kamal-proxy refuses the rule instead of silently doing nothing.
+      if direction == "request" && name.to_s.downcase == "host"
+        return error "cannot rewrite the Host header"
+      end
+
+      # Escaping would turn a newline into a literal backslash-n, so the operator
+      # would get a value they did not write, with no error. And CR/LF in a
+      # header is response splitting.
+      if value.to_s.match?(/[\r\n]/)
+        error "'#{name}' has a value containing a newline or carriage return"
+      end
+    end
+
+    # The pattern is deliberately not compiled: Go's RE2 and Ruby's Onigmo differ
+    # at the edges (Ruby rejects Go's `(?P<name>...)`), and refusing a pattern
+    # kamal-proxy would have accepted is worse than finding out at deploy time.
+    def validate_path_rules!(key, redirect:)
+      Array(config[key]).each_with_index do |rule, index|
+        with_context(key) do
+          with_context(index) do
+            rule = {} unless rule.is_a?(Hash)
+
+            if rule["from"].blank? || rule["to"].blank?
+              next error "needs both from and to"
+            end
+
+            unless rule["to"].to_s.start_with?("/") || (redirect && rule["to"].to_s.match?(%r{\Ahttps?://}))
+              next error "to must be an absolute path starting with '/'#{" or a full http(s) URL" if redirect}"
+            end
+
+            if rule["status"].present?
+              if !redirect
+                error "status is only meaningful for a redirect"
+              elsif !REDIRECT_STATUSES.include?(rule["status"])
+                error "status must be one of #{REDIRECT_STATUSES.join(", ")}"
+              end
+            end
+          end
+        end
+      end
+    end
+
     # kamal-proxy's --rate-limit is a Float64, so half a request per second is a
     # legal rate. The docs example can only demonstrate one numeric type, and an
     # Integer there would reject 0.5 — so the shape is checked by hand instead.
     def validate_key_override!(key, value)
+      # Header names are the operator's to choose, so the docs example's names
+      # are illustrations rather than the permitted set — the example-driven
+      # unknown-key check would reject every real config. validate_header_rules!
+      # does the semantic checking.
+      return validate_header_shape!(value) if key.to_s == "headers"
       return false unless key.to_s == "rate_limit"
 
       validate_type! value, Hash
