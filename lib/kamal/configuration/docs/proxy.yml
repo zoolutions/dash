@@ -202,6 +202,36 @@ proxy:
     interval: 300
     batch_size: 1
 
+  # On-demand TLS, mTLS and the ACME cache
+  #
+  # Requires `ssl: true` — each of these settings only takes effect where TLS is
+  # terminated. When a loadbalancer is configured that is the loadbalancer, and
+  # kamal moves them there for you.
+  #
+  # `on_demand_url` turns on on-demand TLS: instead of a fixed `host` list, the
+  # proxy asks this endpoint whether it may issue a certificate for the hostname
+  # in an incoming handshake. A path is resolved against a healthy app target; an
+  # absolute http(s) URL is called directly. Answer 2xx to approve.
+  #
+  # On-demand TLS replaces the static hostname list, so it cannot be combined
+  # with `host`/`hosts`, with a custom `ssl` certificate, or with `tls_domains` —
+  # kamal rejects those at config time, because kamal-proxy would reject the
+  # deploy and there is no sensible winner to pick.
+  #
+  # `client_ca_path` requires mutual TLS: clients must present a certificate
+  # signed by this CA bundle. Unlike `acme_cache_path` it names a PEM file on the
+  # machine running kamal — the file is uploaded next to the app's TLS material
+  # under `.kamal/proxy/apps-config`, and the proxy is given the path it sees
+  # inside its own container.
+  #
+  # `acme_cache_path` is where the proxy stores its ACME assets, and is a path
+  # *inside* the proxy container. Point it somewhere in the `kamal-proxy-config`
+  # volume so issued certificates survive a proxy reboot.
+  tls:
+    on_demand_url: https://app.example.com/api/v1/tls/ask
+    client_ca_path: config/tls/client-ca.pem
+    acme_cache_path: /home/kamal-proxy/.config/kamal-proxy/acme
+
   # Forward headers
   #
   # Whether to forward the `X-Forwarded-For` and `X-Forwarded-Proto` headers.

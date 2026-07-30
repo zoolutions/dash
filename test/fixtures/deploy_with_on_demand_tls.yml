@@ -1,0 +1,22 @@
+# The second maximal proxy fixture, for options that cannot coexist with the
+# first. kamal-proxy rejects on-demand TLS alongside a static host list, a custom
+# certificate, or tls_domains — all three of which
+# deploy_with_every_proxy_option.yml needs for its own coverage.
+#
+# test/proxy_flag_coverage_test.rb unions the flags both fixtures emit, so a key
+# belongs in whichever one can actually express it.
+service: app
+image: dhh/app
+servers:
+  web:
+    - "1.1.1.1"
+registry:
+  username: user
+  password: pw
+builder:
+  arch: amd64
+proxy:
+  loadbalancer: false
+  ssl: true
+  tls:
+    on_demand_url: https://app.example.com/api/v1/tls/ask

@@ -6,7 +6,11 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
       # Skip SSL host validation when a loadbalancer is present (SSL is
       # disabled when using a loadbalancer) or when a tls_domains source
       # provides the hostnames at runtime.
-      if config["host"].blank? && config["hosts"].blank? && config["ssl"] && config["loadbalancer"].blank? && config.dig("tls_domains", "source").blank?
+      # On-demand TLS joins loadbalancer and tls_domains as a source of hostnames
+      # that only exist at handshake time - demanding a static host here would
+      # reject the one shape kamal-proxy requires for it.
+      if config["host"].blank? && config["hosts"].blank? && config["ssl"] && config["loadbalancer"].blank? &&
+         config.dig("tls_domains", "source").blank? && config.dig("tls", "on_demand_url").blank?
         error "Must set a host to enable automatic SSL"
       end
 
@@ -36,6 +40,10 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
 
       if config["basic_auth"].is_a?(Hash)
         validate_basic_auth! config["basic_auth"]
+      end
+
+      if config["tls"].is_a?(Hash)
+        validate_tls! config["tls"]
       end
 
       if run_config = config["run"]
@@ -108,6 +116,44 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
             error "unsupported dns_provider '#{provider}'. " \
               "Supported providers: #{Kamal::Configuration::Proxy::Acme::DNS_PROVIDERS.join(", ")}"
           end
+        end
+      end
+    end
+
+    # kamal-proxy rejects each of these combinations outright rather than
+    # picking a winner (ServiceOptions.Validate), so there is no precedence to
+    # document - only a deploy that would fail after the SSH round-trip. Fail here.
+    def validate_tls!(tls)
+      with_context("tls") do
+        on_demand_url = tls["on_demand_url"]
+        client_ca_path = tls["client_ca_path"]
+
+        if (on_demand_url.present? || client_ca_path.present?) && !config["ssl"]
+          error "#{on_demand_url.present? ? "on_demand_url" : "client_ca_path"} requires ssl"
+        end
+
+        if on_demand_url.present?
+          if config["host"].present? || config["hosts"].present?
+            error "cannot set on_demand_url together with host or hosts - " \
+              "on-demand TLS issues certificates for whatever hostnames the ask endpoint approves"
+          end
+
+          if config["ssl"].is_a?(Hash)
+            error "cannot set on_demand_url together with a custom ssl certificate"
+          end
+
+          if config.dig("tls_domains", "source").present?
+            error "cannot set on_demand_url together with tls_domains - " \
+              "both manage certificates for hostnames discovered at runtime, and only one can serve the handshake"
+          end
+
+          unless valid_tls_domains_source?(on_demand_url)
+            error "on_demand_url must be a path starting with '/' or an http(s) URL"
+          end
+        end
+
+        if client_ca_path.present? && !File.exist?(client_ca_path)
+          error "client_ca_path '#{client_ca_path}' does not exist"
         end
       end
     end

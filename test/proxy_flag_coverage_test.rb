@@ -16,6 +16,8 @@ require "test_helper"
 class ProxyFlagCoverageTest < ActiveSupport::TestCase
   MANIFEST = YAML.load_file(File.expand_path("fixtures/kamal_proxy_flags.yml", __dir__))
 
+  MAXIMAL_FIXTURES = %w[ deploy_with_every_proxy_option deploy_with_on_demand_tls ].freeze
+
   # Flags that are not deploy.yml's business — a decision, not a backlog.
   NEVER_EXPOSED = {
     "deploy" => {
@@ -35,7 +37,6 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
   # list shrinking to empty is what "R7 is done" means.
   R7_BACKLOG = {
     "deploy" => {
-      74 => %w[ tls-on-demand-url tls-client-ca-path tls-acme-cache-path ],
       75 => %w[ cache cache-allow-set-cookie cache-max-body cache-max-ttl cache-max-variants
                 cache-vary-cookie cache-vary-header ],
       76 => %w[ compress compress-content-type compress-min-length ],
@@ -144,23 +145,28 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
       MESSAGE
     end
 
-    # Flags the gem actually produces, generated from the maximal fixture rather
+    # Flags the gem actually produces, generated from the maximal fixtures rather
     # than read off the deploy_options hash — a key that resolves to nil emits
     # nothing, and should not count as covered.
     def emitted_deploy_flags
-      flag_names maximal_config.role(:web).proxy.deploy_command_args(target: "1.1.1.1")
+      maximal_configs.flat_map { |config| flag_names config.role(:web).proxy.deploy_command_args(target: "1.1.1.1") }.uniq
     end
 
     def emitted_run_flags
-      flag_names maximal_config.proxy_run("1.1.1.1").run_command
+      maximal_configs.flat_map { |config| flag_names config.proxy_run("1.1.1.1")&.run_command }.uniq
     end
 
     def flag_names(args)
       Array(args).join(" ").scan(/--([a-z0-9-]+)/).flatten.uniq
     end
 
-    def maximal_config
-      @maximal_config ||= Kamal::Configuration.create_from \
-        config_file: Pathname.new(File.expand_path("fixtures/deploy_with_every_proxy_option.yml", __dir__))
+    # More than one, because some options are mutually exclusive: kamal-proxy
+    # forbids on-demand TLS alongside a host list, a custom certificate or
+    # tls_domains, so one fixture cannot hold every key. Coverage is the union.
+    def maximal_configs
+      @maximal_configs ||= MAXIMAL_FIXTURES.map do |fixture|
+        Kamal::Configuration.create_from \
+          config_file: Pathname.new(File.expand_path("fixtures/#{fixture}.yml", __dir__))
+      end
     end
 end
