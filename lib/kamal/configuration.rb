@@ -94,6 +94,7 @@ class Kamal::Configuration
     ensure_boot_wait_paces_something
     ensure_rate_limit_can_identify_clients
     ensure_intercepted_errors_have_pages
+    ensure_sleep_has_a_docker_socket
   end
 
   # Resolves every secret the deploy will need so a missing secret fails fast,
@@ -453,6 +454,29 @@ class Kamal::Configuration
         "or opt out explicitly with `healthcheck: false`. This warning will become an error in a future release."
 
       true
+    end
+
+    # Scale-to-zero is a deploy-time setting with a boot-time prerequisite: the
+    # proxy can only stop and start containers through the runtime socket, and it
+    # is only mounted when proxy/run/docker_socket names it. Without that, the
+    # first request after an idle period hangs until wake_timeout and 503s, which
+    # reads as a broken proxy rather than as a missing key. Say the key instead.
+    #
+    # Checked here rather than in Validator::Proxy because a role may carry
+    # `sleep` while the root carries the socket — role.proxy is the merged view,
+    # the validator only ever sees one side.
+    def ensure_sleep_has_a_docker_socket
+      offenders = roles.select do |role|
+        next false unless role.running_proxy?
+
+        role.proxy.proxy_config.dig("sleep", "after").present? && role.proxy.run&.docker_socket.blank?
+      end
+
+      return true if offenders.empty?
+
+      raise Kamal::ConfigurationError, "Role(s) #{offenders.map(&:name).join(", ")}: " \
+        "proxy/sleep requires proxy/run/docker_socket - kamal-proxy can only stop and start containers " \
+        "through the container runtime socket, and it is not mounted into the proxy without it"
     end
 
     # `intercept_errors` discards the app's error body and renders the proxy's own

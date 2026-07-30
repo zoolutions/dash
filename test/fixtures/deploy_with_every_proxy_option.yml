@@ -59,6 +59,16 @@ proxy:
   basic_auth:
     username: admin
     password: secret
+  session_affinity:
+    enabled: true
+    cookie: _kamal_affinity
+  # sleep needs run/docker_socket below; it cannot coexist with on-demand TLS,
+  # which lives in deploy_with_on_demand_tls.yml.
+  sleep:
+    after: 300
+    wake_timeout: 30
+    containers:
+      - app-web
   headers:
     request:
       set:
@@ -136,6 +146,7 @@ proxy:
   run:
     debug: true
     metrics_port: 9090
+    docker_socket: /var/run/docker.sock
     acme:
       email: admin@example.com
       dns_provider: cloudflare

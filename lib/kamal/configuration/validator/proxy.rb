@@ -56,6 +56,7 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
 
       validate_access_control!
       validate_traffic_shaping!
+      validate_lifecycle!
 
       if run_config = config["run"]
         if run_config["bind_ips"].present?
@@ -175,9 +176,47 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
 
     REDIRECT_STATUSES = [ 301, 302, 303, 307, 308 ].freeze
 
-    # RFC 9110 field name: a token. A space or a colon would also break the
+    # An RFC 9110 token, which is both a valid header field name and a valid
+    # cookie name. For a header, a space or a colon would also break the
     # '<name>: <value>' encoding kamal-proxy cuts at the first colon.
-    HEADER_NAME = /\A[!#$%&'*+\-.^_`|~0-9A-Za-z]+\z/
+    TOKEN = /\A[!#$%&'*+\-.^_`|~0-9A-Za-z]+\z/
+
+    # Session affinity and scale-to-zero. The one rule NOT here is that sleep
+    # needs proxy/run/docker_socket: a role can carry `sleep` while the root
+    # carries the socket, and this validator runs against the role's own proxy
+    # block before it is merged. Kamal::Configuration checks that pairing on the
+    # merged config instead.
+    def validate_lifecycle!
+      affinity = config["session_affinity"] || {}
+      sleep_config = config["sleep"] || {}
+
+      with_context("session_affinity") do
+        if affinity["cookie"].present?
+          if !affinity["enabled"]
+            error "cookie has no effect without enabled: true"
+          elsif !affinity["cookie"].to_s.match?(TOKEN)
+            # net/http drops a cookie with an invalid name when it writes the
+            # response, which looks exactly like affinity not working.
+            error "cookie '#{affinity["cookie"]}' is not a valid cookie name"
+          end
+        end
+      end
+
+      with_context("sleep") do
+        if sleep_config["after"].present?
+          error "after cannot be negative" if sleep_config["after"].to_i.negative?
+          error "wake_timeout cannot be negative" if sleep_config["wake_timeout"].to_i.negative?
+
+          if config.dig("tls", "on_demand_url").present?
+            error "after cannot be combined with tls/on_demand_url - " \
+              "a sleeping target cannot answer the ask endpoint, and waking one would let any hostname start a container"
+          end
+        else
+          error "containers has no effect without after" if sleep_config["containers"].present?
+          error "wake_timeout has no effect without after" if sleep_config["wake_timeout"].present?
+        end
+      end
+    end
 
     def validate_traffic_shaping!
       validate_header_rules!
@@ -232,7 +271,7 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
     end
 
     def validate_header_rule!(direction, name, value)
-      unless name.to_s.match?(HEADER_NAME)
+      unless name.to_s.match?(TOKEN)
         return error "'#{name}' is not a valid header name"
       end
 
