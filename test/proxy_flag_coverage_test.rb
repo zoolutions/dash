@@ -37,8 +37,6 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
   # list shrinking to empty is what "R7 is done" means.
   R7_BACKLOG = {
     "deploy" => {
-      75 => %w[ cache cache-allow-set-cookie cache-max-body cache-max-ttl cache-max-variants
-                cache-vary-cookie cache-vary-header ],
       76 => %w[ compress compress-content-type compress-min-length ],
       77 => %w[ rate-limit rate-limit-burst rate-limit-exempt allow-ip trusted-proxy client-ip-header ],
       78 => %w[ add-request-header add-response-header set-request-header set-response-header
@@ -51,7 +49,6 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
       81 => %w[ exclude-metrics-path ]
     },
     "run" => {
-      75 => %w[ cache-store cache-store-timeout cache-memory-size cache-lease-ttl cache-lease-wait ],
       81 => %w[ docker-socket http3 idle-timeout ignore-restore-errors log-format metrics-allow-ip
                 min-tls proxy-protocol proxy-protocol-allow-ip read-header-timeout read-timeout
                 reuse-port shutdown-timeout trace-context write-timeout ]

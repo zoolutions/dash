@@ -31,6 +31,12 @@ module Kamal::Utils
     options.flatten.compact
   end
 
+  # kamal-proxy takes durations as Go duration strings; deploy.yml takes plain
+  # seconds. Zero is a real value (it disables the timeout), so only nil drops out.
+  def seconds_duration(value)
+    "#{value}s" if value
+  end
+
   # Flattens a one-to-many structure into an array of two-element arrays each containing a key-value pair
   def flatten_args(args)
     args.flat_map { |key, value| value.try(:map) { |entry| [ key, entry ] } || [ [ key, value ] ] }

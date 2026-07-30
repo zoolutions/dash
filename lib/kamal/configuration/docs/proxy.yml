@@ -335,6 +335,55 @@ proxy:
     max_response_body: 0
     memory: 2_000_000
 
+  # Response cache
+  #
+  # An RFC 9111 shared cache in front of this service. Nothing is stored unless
+  # the app marks a response `public` with an `s-maxage` or `max-age`, and a
+  # response carrying `Set-Cookie` is refused unless `allow_set_cookie` says
+  # otherwise — a shared cache replaying one client's cookie to the next is the
+  # worst thing it could do.
+  #
+  # This block is the *policy*, and it is per service. Where the entries live is
+  # proxy-wide and set under `run/cache` below.
+  #
+  # Only `enabled` is required. Everything else keeps kamal-proxy's own default
+  # until you set it.
+  #
+  # `max_ttl` caps the lifetime the app asks for, in seconds, so one mistaken
+  # directive cannot pin content until the next deploy. `max_body` is the largest
+  # response body to store, in bytes — the same plain byte counts `buffering`
+  # uses. Bigger responses still reach the client, they are just not kept.
+  #
+  # `max_variants` is how many representations one URL may hold when the app
+  # negotiates with `Vary` (negative switches automatic variants off and refuses
+  # a varying response outright).
+  #
+  # `vary_headers` and `vary_cookies` add request headers and cookie names to the
+  # cache key for EVERY response this service stores. Headers the app already
+  # names in `Vary` are keyed automatically per URL and need no entry here —
+  # naming one moves it into the key for every path in the service, which is
+  # usually not what you want.
+  #
+  # ### When it is not caching
+  #
+  # A cache that quietly stores nothing is the usual first surprise. kamal-proxy
+  # explains every refusal — check `kamal proxy logs` for the reason, and the
+  # `cache_refusals_total` metric (by `reason`) if you run with `metrics_port`.
+  # The common reasons are a missing `Cache-Control: public, max-age=...` on the
+  # app's response, a `Set-Cookie` header, a body over `max_body`, and
+  # `variant_limit` from `max_variants`.
+  cache:
+    enabled: true
+    max_ttl: 300
+    max_body: 1_048_576
+    max_variants: 8
+    vary_headers:
+      - Accept-Encoding
+      - Accept-Language
+    vary_cookies:
+      - locale
+    allow_set_cookie: false
+
   # Logging
   #
   # Configure request logging for the proxy.
@@ -410,6 +459,35 @@ proxy:
       directory: https://acme-staging-v02.api.letsencrypt.org/directory
       credentials:
         - CF_API_TOKEN
+    # Response cache storage
+    #
+    # Where the entries cached by `proxy/cache` are kept. Proxy-wide: one store
+    # serves every service on this proxy, so unlike the policy above it belongs
+    # here, in the run configuration, and changing it reboots the proxy.
+    #
+    # `store` is `memory` (the default — a per-node cache) or a `redis://` /
+    # `rediss://` URL that every proxy pointed at it shares, so one fetch warms
+    # the whole fleet.
+    #
+    # Note that a Redis URL with credentials in it ends up on the proxy's
+    # `docker run` command line, and so in host process listings and in kamal's
+    # audit log. Until that has a secrets-backed path, prefer a store reachable
+    # over a private network without a password in the URL.
+    #
+    # The remaining three only matter with a shared store, and are seconds:
+    #
+    # `store_timeout` is how long the store may take to answer before the request
+    # goes to the app instead — a store that is slow or down then costs a cache,
+    # never a failed request. `lease_ttl` is how long one proxy's claim on a key
+    # outlives the proxy itself; `lease_wait` is how long a request waits for
+    # another proxy's in-flight fetch before fetching itself. Both take negative
+    # values to switch cross-node coalescing off.
+    cache:
+      store: redis://cache.example.com:6379/0
+      store_timeout: 2
+      memory_size: 134_217_728
+      lease_ttl: 30
+      lease_wait: 1
     options:                       # Additional options to pass to `docker run`
       label:
         - custom.label=kamal-proxy

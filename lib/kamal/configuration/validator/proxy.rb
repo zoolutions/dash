@@ -46,6 +46,10 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
         validate_tls! config["tls"]
       end
 
+      if config["cache"].is_a?(Hash)
+        validate_cache! config["cache"]
+      end
+
       if run_config = config["run"]
         if run_config["bind_ips"].present?
           ensure_valid_bind_ips(run_config["bind_ips"])
@@ -59,6 +63,10 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
 
         if run_config["acme"].is_a?(Hash)
           validate_acme! run_config["acme"]
+        end
+
+        if run_config["cache"].is_a?(Hash)
+          validate_cache_store! run_config["cache"]
         end
       end
     end
@@ -154,6 +162,36 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
 
         if client_ca_path.present? && !File.exist?(client_ca_path)
           error "client_ca_path '#{client_ca_path}' does not exist"
+        end
+      end
+    end
+
+    # kamal-proxy reads the cache policy only when --cache is set and ignores it
+    # otherwise, so a tuned block with no `enabled` is a cache that silently
+    # never caches - this issue's own predicted first support question.
+    def validate_cache!(cache)
+      return if cache["enabled"]
+
+      with_context("cache") do
+        if (orphaned = cache.keys - [ "enabled" ]).any?
+          error "#{orphaned.first} has no effect without enabled: true - " \
+            "kamal-proxy ignores the cache policy entirely when --cache is absent"
+        end
+      end
+    end
+
+    # An unsupported store is rejected in kamal-proxy's preRun, which means the
+    # proxy container exits at boot rather than a deploy failing. Catch it before
+    # the fleet loses its proxy.
+    def validate_cache_store!(cache)
+      store = cache["store"]
+      return if store.blank?
+
+      with_context("run") do
+        with_context("cache") do
+          unless store == "memory" || store.to_s.match?(%r{\Arediss?://\S+\z})
+            error "store must be 'memory' or a redis:// or rediss:// URL"
+          end
         end
       end
     end

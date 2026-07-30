@@ -59,6 +59,16 @@ proxy:
   basic_auth:
     username: admin
     password: secret
+  cache:
+    enabled: true
+    max_ttl: 300
+    max_body: 1_048_576
+    max_variants: 8
+    vary_headers:
+      - Accept-Encoding
+    vary_cookies:
+      - locale
+    allow_set_cookie: true
   logging:
     request_headers:
       - Cache-Control
@@ -84,3 +94,9 @@ proxy:
       # true renders as a bare flag, false as --flag=false; cover both shapes.
       prefer_wildcard: true
       http_fallback: false
+    cache:
+      store: redis://cache.example.com:6379/0
+      store_timeout: 2
+      memory_size: 134_217_728
+      lease_ttl: 30
+      lease_wait: 1
