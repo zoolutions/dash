@@ -15,6 +15,7 @@ class Kamal::Configuration::Proxy::Run
     @config = config
     @run_config = run_config
     @context = context
+    ensure_no_conflicting_flags
   end
 
   def self.digest(*parts)
@@ -113,12 +114,30 @@ class Kamal::Configuration::Proxy::Run
   end
 
   def run_command_options
+    named_run_command_options.merge(flags)
+  end
+
+  # Everything the gem has a key for, as opposed to whatever `flags` passes
+  # through. Kept separate so the two can be checked against each other.
+  def named_run_command_options
     # recheck-targets-on-restore: after a reboot, re-verify restored targets
     # with live health checks instead of trusting the saved state — a dead
     # target demotes to 503 and self-heals rather than serving 502s forever.
     # Available from MINIMUM_VERSION, so it is always safe to pass.
     { debug: debug? || nil, "metrics-port": metrics_port, "recheck-targets-on-restore": true, "docker-socket": docker_socket }
-      .compact.merge(cache_options)
+      .compact.merge(cache_options).merge(server_options)
+  end
+
+  # Anything kamal-proxy accepts that has no key of its own yet. Values are
+  # optionized as written - `true` is a bare flag, anything else takes a value -
+  # because the point of an escape hatch is that the gem holds no opinion about
+  # the flag it is forwarding.
+  #
+  # Note the asymmetry with `options`, which is a `docker run` passthrough. The
+  # names are deliberately different; most of why this gap went unnoticed is
+  # that `options` reads like it should do this.
+  def flags
+    (run_config["flags"] || {}).transform_keys(&:to_sym)
   end
 
   # What proxy/sleep needs in order to stop and start containers. Reaching this
@@ -200,7 +219,49 @@ class Kamal::Configuration::Proxy::Run
     run_config.hash
   end
 
+  # Whether an operator turned on PROXY protocol without saying who may speak
+  # it. Kamal::Configuration warns about this: the header rewrites the
+  # connecting address that allow_ips and rate_limit key on, so honouring it
+  # from anywhere is a client-IP spoofing hole.
+  def proxy_protocol_unrestricted?
+    run_config["proxy_protocol"] && Array(run_config["proxy_protocol_allow_ips"]).empty?
+  end
+
   private
+    # The proxy's own listeners and process-level behaviour, as opposed to the
+    # per-service deadlines in Kamal::Configuration::Proxy#deploy_options. Zero
+    # disables each of the timeouts, so it is a value rather than an absence.
+    def server_options
+      {
+        "log-format": run_config["log_format"],
+        "trace-context": run_config["trace_context"],
+        "min-tls": run_config["min_tls"]&.to_s,
+        http3: run_config["http3"] ? true : nil,
+        "reuse-port": run_config["reuse_port"] ? true : nil,
+        "ignore-restore-errors": run_config["ignore_restore_errors"] ? true : nil,
+        "proxy-protocol": run_config["proxy_protocol"] ? true : nil,
+        "proxy-protocol-allow-ip": run_config["proxy_protocol_allow_ips"].presence,
+        "metrics-allow-ip": run_config["metrics_allow_ips"].presence,
+        "read-header-timeout": seconds_duration(run_config["read_header_timeout"]),
+        "read-timeout": seconds_duration(run_config["read_timeout"]),
+        "write-timeout": seconds_duration(run_config["write_timeout"]),
+        "idle-timeout": seconds_duration(run_config["idle_timeout"]),
+        "shutdown-timeout": seconds_duration(run_config["shutdown_timeout"])
+      }.compact
+    end
+
+    # A passthrough flag that a named key already emits would be optionized
+    # twice, and kamal-proxy would silently take the last one. Refuse instead.
+    # Only Proxy::Run knows which flags the named keys produce, so the check
+    # cannot live in the validator with the rest.
+    def ensure_no_conflicting_flags
+      conflicts = flags.keys.map(&:to_s) & named_run_command_options.keys.map(&:to_s)
+      return true if conflicts.empty?
+
+      raise Kamal::ConfigurationError,
+        "#{@context}/flags: #{conflicts.sort.join(", ")} is already set by a named key - remove one of them"
+    end
+
     # Where cached responses are kept, which is a property of the proxy rather
     # than of any one service - the policy that fills the cache is per service,
     # in proxy/cache.

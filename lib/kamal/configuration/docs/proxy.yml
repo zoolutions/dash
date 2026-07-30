@@ -242,6 +242,17 @@ proxy:
   # will forward them if it is set to `false`.
   forward_headers: true
 
+  # Paths to leave out of the Prometheus metrics
+  #
+  # Request paths that should not be counted, typically health and readiness
+  # endpoints that would otherwise dominate the histograms.
+  #
+  # This is a per-service deploy setting even though it reads like metrics
+  # configuration — where the metrics are served and who may read them are
+  # proxy-wide and live under `run/metrics_port` and `run/metrics_allow_ips`.
+  exclude_metrics_paths:
+    - /up
+
   # Two different deadlines
   #
   # `response_timeout` bounds how long the app may take to *start* answering —
@@ -764,6 +775,114 @@ proxy:
       directory: https://acme-staging-v02.api.letsencrypt.org/directory
       credentials:
         - CF_API_TOKEN
+    # Logging and tracing
+    #
+    # `log_format` is the shape of every line the proxy writes, the access log
+    # included: `json` (the default) or `text`. `logfmt` is accepted as a name
+    # for `text`.
+    #
+    # `trace_context` decides what happens to the W3C `traceparent` header:
+    # `off` ignores it, `propagate` (the default) logs the trace an incoming
+    # request carries and forwards the header untouched, and `generate` also
+    # starts a trace when a request arrives without one.
+    log_format: json
+    trace_context: propagate
+
+    # TLS floor
+    #
+    # The lowest TLS version the HTTPS listener will negotiate: `1.2` (the
+    # default) or `1.3`. Quote it — unquoted YAML reads it as a number.
+    #
+    # This narrows what the listener accepts and cannot widen it. TLS 1.0 and
+    # 1.1 are refused outright, and HTTP/3 is always 1.3 regardless.
+    min_tls: "1.2"
+
+    # HTTP/3
+    #
+    # Offer HTTP/3 (QUIC) alongside HTTP/1.1 and HTTP/2. Needs UDP on the HTTPS
+    # port reachable as well as TCP.
+    #
+    # Defaults to false:
+    http3: true
+
+    # PROXY protocol
+    #
+    # Accept PROXY protocol v1/v2 headers on the HTTP and HTTPS listeners, so
+    # client addresses survive an L4 load balancer that cannot set
+    # `X-Forwarded-For`.
+    #
+    # **Set `proxy_protocol_allow_ips` with it.** Left empty, the proxy honours a
+    # PROXY header from any peer that can reach the port — and that header
+    # rewrites the connecting address every other feature keys on, including
+    # `allow_ips` and `rate_limit`. Kamal warns when you enable one without the
+    # other.
+    proxy_protocol: true
+    proxy_protocol_allow_ips:
+      - 10.0.0.0/8
+
+    # Metrics access
+    #
+    # Serve the metrics endpoint (see `metrics_port` above) only to these
+    # addresses or CIDR ranges. Empty means everyone who can reach the port.
+    #
+    # The metrics listener has no service behind it and matches the connecting
+    # address only — there is no forwarded chain to trust here, so
+    # `proxy/client_ip` does not apply.
+    #
+    # To leave paths out of the metrics themselves, see
+    # `proxy/exclude_metrics_paths`, which is a per-service deploy setting.
+    metrics_allow_ips:
+      - 10.0.0.0/8
+
+    # Server timeouts
+    #
+    # Connection-level deadlines for the proxy's own listeners, in seconds.
+    # These are proxy-wide; the per-service deadlines are `response_timeout` and
+    # `request_timeout` above.
+    #
+    # `read_header_timeout` bounds how long a client may take to send request
+    # headers. `read_timeout` bounds reading a whole request including its body,
+    # so a non-zero value truncates slow uploads. `write_timeout` bounds writing
+    # a whole response, so a non-zero value truncates SSE and streaming.
+    # `idle_timeout` is how long an idle keep-alive connection is kept.
+    #
+    # Zero disables each of them, and is a real value rather than "unset".
+    #
+    # `shutdown_timeout` is how long in-flight requests get to drain when the
+    # proxy stops.
+    read_header_timeout: 10
+    read_timeout: 30
+    write_timeout: 30
+    idle_timeout: 60
+    shutdown_timeout: 30
+
+    # Boot with an empty routing state when restoring the saved state fails,
+    # rather than refusing to start.
+    #
+    # Defaults to false:
+    ignore_restore_errors: true
+
+    # Bind listeners with SO_REUSEPORT, so an overlapping proxy generation can
+    # share the ports during a handoff.
+    #
+    # Defaults to false:
+    reuse_port: true
+
+    # Escape hatch for `kamal-proxy run`
+    #
+    # Anything kamal-proxy accepts that has no key above. Note the difference
+    # from `options` below, which many people expect to do this: `flags` goes to
+    # `kamal-proxy run`, `options` goes to `docker run`.
+    #
+    # `true` renders a bare flag; anything else renders `--flag value`. No
+    # translation is applied, so write Go durations and lists the way
+    # kamal-proxy wants them.
+    #
+    # A key here that a named setting already emits is rejected rather than
+    # passed twice — set one or the other.
+    flags:
+      some-new-flag: value
+
     # Container runtime socket
     #
     # Path to the container runtime socket, which is what `proxy/sleep` needs in

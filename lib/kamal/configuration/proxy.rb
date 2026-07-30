@@ -181,7 +181,11 @@ class Kamal::Configuration::Proxy
       "basic-auth": basic_auth_credential,
       "log-request-header": proxy_config.dig("logging", "request_headers") || DEFAULT_LOG_REQUEST_HEADERS,
       "log-response-header": proxy_config.dig("logging", "response_headers"),
-      "error-pages": error_pages
+      "error-pages": error_pages,
+      # A deploy flag despite reading like metrics configuration: where the
+      # metrics are served and who may read them are proxy-wide and live under
+      # proxy/run, but which of *this service's* paths are counted is per service.
+      "exclude-metrics-path": proxy_config["exclude_metrics_paths"].presence
     }.merge(tls_domains_options).merge(tls_options).merge(cache_options).merge(compress_options)
       .merge(access_control_options).merge(traffic_options).merge(lifecycle_options)
       .merge(target_options).compact
