@@ -27,7 +27,7 @@ class Kamal::Configuration::Validator
               unless key.to_s == "proxy" && boolean?(value.class)
                 validate_type! value, *(Array if key == :servers), Hash
               end
-            elsif key.to_s == "ssl"
+            elsif key.to_s == "ssl" || key.to_s == "compress"
                 validate_type! value, TrueClass, FalseClass, Hash
             elsif key.to_s == "hooks_output"
                 validate_hooks_output!(value)

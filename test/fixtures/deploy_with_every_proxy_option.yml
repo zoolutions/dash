@@ -59,6 +59,15 @@ proxy:
   basic_auth:
     username: admin
     password: secret
+  # The block form, so all three flags are emitted. The `compress: true`
+  # shorthand is covered in test/configuration/proxy/compress_test.rb.
+  compress:
+    encodings:
+      - zstd
+      - gzip
+    content_types:
+      - text/html
+    min_length: 1024
   cache:
     enabled: true
     max_ttl: 300

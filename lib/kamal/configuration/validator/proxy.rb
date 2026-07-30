@@ -50,6 +50,10 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
         validate_cache! config["cache"]
       end
 
+      if config["compress"].is_a?(Hash)
+        validate_compress! config["compress"]
+      end
+
       if run_config = config["run"]
         if run_config["bind_ips"].present?
           ensure_valid_bind_ips(run_config["bind_ips"])
@@ -162,6 +166,44 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
 
         if client_ca_path.present? && !File.exist?(client_ca_path)
           error "client_ca_path '#{client_ca_path}' does not exist"
+        end
+      end
+    end
+
+    # Mirrors CompressionOptions.Validate, which rejects each of these after the
+    # deploy has already reached the host.
+    def validate_compress!(compress)
+      with_context("compress") do
+        encodings = Array(compress["encodings"])
+        enabled = compress["enabled"] || encodings.any?
+
+        unless enabled
+          if (orphaned = compress.keys - [ "enabled" ]).any?
+            error "#{orphaned.first} has no effect without compression - set enabled: true or name the encodings"
+          end
+
+          return
+        end
+
+        encodings.each do |encoding|
+          canonical = Kamal::Configuration::Proxy::COMPRESSION_ENCODING_ALIASES.fetch(encoding.to_s, encoding.to_s)
+
+          unless Kamal::Configuration::Proxy::SUPPORTED_COMPRESSION_ENCODINGS.include?(canonical)
+            error "unsupported encoding '#{encoding}'. " \
+              "Supported encodings: #{Kamal::Configuration::Proxy::SUPPORTED_COMPRESSION_ENCODINGS.join(", ")}"
+          end
+        end
+
+        if compress["min_length"].to_i.negative?
+          error "min_length cannot be negative"
+        end
+
+        Array(compress["content_types"]).each do |content_type|
+          # A main-type wildcard would match everything the proxy cannot see
+          # inside, so kamal-proxy allows a wildcard only in the subtype.
+          unless content_type.to_s.match?(%r{\A[^/*\s]+/[^/\s]+\z})
+            error "content_types entry '#{content_type}' must be a media type such as text/html or text/*"
+          end
         end
       end
     end
