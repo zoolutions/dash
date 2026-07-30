@@ -181,7 +181,7 @@ class Kamal::Configuration::Proxy
       "log-response-header": proxy_config.dig("logging", "response_headers"),
       "error-pages": error_pages
     }.merge(tls_domains_options).merge(tls_options).merge(cache_options).merge(compress_options)
-      .merge(access_control_options).merge(traffic_options).compact
+      .merge(access_control_options).merge(traffic_options).merge(lifecycle_options).compact
 
     if load_balancing?
       opts.delete(:host)
@@ -273,6 +273,26 @@ class Kamal::Configuration::Proxy
         "tls-on-demand-url": on_demand_url,
         "tls-client-ca-path": container_client_ca,
         "tls-acme-cache-path": tls_config["acme_cache_path"]
+      }.compact
+    end
+
+    # Session affinity and scale-to-zero: which target a client keeps, and
+    # whether the targets are running at all.
+    #
+    # Sleep needs the container runtime socket, which is a run-level setting -
+    # Kamal::Configuration#ensure_sleep_has_a_docker_socket refuses the pairing
+    # rather than letting the first request after an idle period hang.
+    def lifecycle_options
+      affinity = proxy_config["session_affinity"] || {}
+      sleep_config = proxy_config["sleep"] || {}
+      affinity_enabled = affinity["enabled"] ? true : nil
+
+      {
+        "session-affinity": affinity_enabled,
+        "session-affinity-cookie": (affinity["cookie"] if affinity_enabled),
+        "sleep-after": seconds_duration(sleep_config["after"]),
+        "wake-timeout": seconds_duration(sleep_config["wake_timeout"]),
+        "sleep-container": sleep_config["containers"].presence
       }.compact
     end
 

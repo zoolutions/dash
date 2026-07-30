@@ -117,7 +117,15 @@ class Kamal::Configuration::Proxy::Run
     # with live health checks instead of trusting the saved state — a dead
     # target demotes to 503 and self-heals rather than serving 502s forever.
     # Available from MINIMUM_VERSION, so it is always safe to pass.
-    { debug: debug? || nil, "metrics-port": metrics_port, "recheck-targets-on-restore": true }.compact.merge(cache_options)
+    { debug: debug? || nil, "metrics-port": metrics_port, "recheck-targets-on-restore": true, "docker-socket": docker_socket }
+      .compact.merge(cache_options)
+  end
+
+  # What proxy/sleep needs in order to stop and start containers. Reaching this
+  # socket is root-equivalent on the host, so nothing turns it on implicitly -
+  # an operator has to name it, and naming it is also what mounts it (below).
+  def docker_socket
+    run_config["docker_socket"]
   end
 
   def docker_options_args
@@ -127,8 +135,18 @@ class Kamal::Configuration::Proxy::Run
       *logging_args,
       *("--expose=#{metrics_port}" if metrics_port.present?),
       *acme_secrets_args,
+      *docker_socket_args,
       *options_args
     ].compact
+  end
+
+  # The flag only tells kamal-proxy where to look inside its own container, so
+  # without this mount the socket is not there and a sleeping service never
+  # wakes - which the operator sees as one hung request, not as a misconfiguration.
+  def docker_socket_args
+    if docker_socket.present?
+      Kamal::Configuration::Volume.new(host_path: docker_socket, container_path: docker_socket).docker_args
+    end
   end
 
   # Where the ACME DNS credentials land on the proxy host. Under the proxy's own

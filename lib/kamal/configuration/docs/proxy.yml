@@ -335,6 +335,55 @@ proxy:
     max_response_body: 0
     memory: 2_000_000
 
+  # Session affinity
+  #
+  # Keep each client on the target that first served it, for apps holding session
+  # state in the instance. Off by default, and rightly so — every request is
+  # otherwise free to go to whichever target is best placed to serve it.
+  #
+  # The client carries an opaque HttpOnly cookie naming its target. When that
+  # target leaves the pool the next request falls through to another one and is
+  # re-pinned, so a deploy does not strand anybody. Reads served by a
+  # `read_targets` replica are never pinned.
+  #
+  # `cookie` renames the pin cookie; kamal-proxy picks a sensible default.
+  session_affinity:
+    enabled: true
+    cookie: _kamal_affinity
+
+  # Scale to zero
+  #
+  # Stop this service's containers after `after` seconds with no traffic, and
+  # start them again on the next request, which is held until they are healthy.
+  # Health checks and the proxy's own TLS probes are not traffic and never wake a
+  # sleeping service.
+  #
+  # `wake_timeout` is how long a request waits for the containers to come back
+  # before giving up with a 503. `containers` names the containers to stop and
+  # start, replacing what the proxy infers from the target address — needed when
+  # a target names a network alias rather than a container.
+  #
+  # ### This needs the container runtime socket
+  #
+  # Stopping and starting containers means talking to the runtime, so the proxy
+  # must have been booted with `run/docker_socket` set. That is a boot-time
+  # prerequisite for a deploy-time setting, so kamal checks it while reading this
+  # file rather than letting the first request hang.
+  #
+  # Setting `run/docker_socket` also mounts that socket into the proxy container
+  # — the flag alone only says where to look. **Reaching the container runtime
+  # socket is root-equivalent on the host**, which is why it is a separate,
+  # explicit setting and not something enabling sleep does for you.
+  #
+  # Not compatible with `tls/on_demand_url`: a sleeping target cannot answer the
+  # ask endpoint, and waking one would let any hostname on the internet start a
+  # container.
+  sleep:
+    after: 300
+    wake_timeout: 30
+    containers:
+      - app-web
+
   # Header rules
   #
   # Rewrite headers on their way to the app and on their way back out, without
@@ -656,6 +705,20 @@ proxy:
       directory: https://acme-staging-v02.api.letsencrypt.org/directory
       credentials:
         - CF_API_TOKEN
+    # Container runtime socket
+    #
+    # Path to the container runtime socket, which is what `proxy/sleep` needs in
+    # order to stop and start containers. Setting it does two things: it passes
+    # the path to kamal-proxy, and it mounts that path into the proxy container,
+    # since the flag alone only says where to look.
+    #
+    # **Reaching this socket is root-equivalent on the host.** It is a separate,
+    # explicit setting for exactly that reason — nothing else in deploy.yml turns
+    # it on for you.
+    #
+    # Defaults to none, with scale-to-zero disabled:
+    docker_socket: /var/run/docker.sock
+
     # Response cache storage
     #
     # Where the entries cached by `proxy/cache` are kept. Proxy-wide: one store
