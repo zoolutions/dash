@@ -92,6 +92,7 @@ class Kamal::Configuration
     ensure_unproxied_roles_are_readiness_gated
     ensure_role_boot_can_pace_its_hosts
     ensure_boot_wait_paces_something
+    ensure_rate_limit_can_identify_clients
   end
 
   # Resolves every secret the deploy will need so a missing secret fails fast,
@@ -449,6 +450,31 @@ class Kamal::Configuration
         "Without one, Kamal accepts the container as ready #{readiness_delay}s after it merely starts " \
         "and then stops the previous container — traffic can be dropped. Add a `healthcheck:` block, " \
         "or opt out explicitly with `healthcheck: false`. This warning will become an error in a future release."
+
+      true
+    end
+
+    # A rate limiter is only as correct as the address it keys on. `forward_headers:
+    # true` says something sits in front of the proxy, and without `trusted_proxies`
+    # kamal-proxy keys on that something's address rather than the client's — so the
+    # limiter throttles the whole world as one client, or nobody at all. Warn rather
+    # than raise: the config is legal, just almost certainly not what was meant.
+    def ensure_rate_limit_can_identify_clients
+      offenders = roles.select do |role|
+        next false unless role.running_proxy?
+
+        proxy_config = role.proxy.proxy_config
+        proxy_config.dig("rate_limit", "requests").present? &&
+          proxy_config["forward_headers"] &&
+          Array(proxy_config.dig("client_ip", "trusted_proxies")).empty?
+      end
+
+      return true if offenders.empty?
+
+      warn "Role(s) #{offenders.map(&:name).join(", ")}: rate_limit is set with forward_headers, " \
+        "but no proxy/client_ip/trusted_proxies. kamal-proxy will key the limiter on the address of " \
+        "whatever sits in front of it, not on the client's — so it throttles every visitor as one " \
+        "client, or none of them. Declare the proxies in front with `client_ip: trusted_proxies:`."
 
       true
     end

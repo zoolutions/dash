@@ -180,13 +180,15 @@ class Kamal::Configuration::Proxy
       "log-request-header": proxy_config.dig("logging", "request_headers") || DEFAULT_LOG_REQUEST_HEADERS,
       "log-response-header": proxy_config.dig("logging", "response_headers"),
       "error-pages": error_pages
-    }.merge(tls_domains_options).merge(tls_options).merge(cache_options).merge(compress_options).compact
+    }.merge(tls_domains_options).merge(tls_options).merge(cache_options).merge(compress_options)
+      .merge(access_control_options).compact
 
     if load_balancing?
       opts.delete(:host)
       opts.delete(:tls)
       tls_domains_options.each_key { |key| opts.delete(key) }
       tls_options.each_key { |key| opts.delete(key) }
+      access_control_options.each_key { |key| opts.delete(key) }
       # kamal-proxy deletes the Authorization header once a service enforces
       # basic auth, so the load balancer would authenticate the client and then
       # forward a credential-less request that this proxy would 401. Credentials
@@ -271,6 +273,25 @@ class Kamal::Configuration::Proxy
         "tls-on-demand-url": on_demand_url,
         "tls-client-ca-path": container_client_ca,
         "tls-acme-cache-path": tls_config["acme_cache_path"]
+      }.compact
+    end
+
+    # Rate limiting, the IP allow list, and the client-IP identification both of
+    # them key on. Stripped when load balancing and re-added by
+    # Kamal::Configuration::Loadbalancer#deploy_options: the per-host proxy's peer
+    # is the load balancer, so an allow list here would refuse every request and
+    # one limiter would count the whole fleet as a single client.
+    def access_control_options
+      client_ip = proxy_config["client_ip"] || {}
+      rate_limit = proxy_config["rate_limit"] || {}
+
+      {
+        "allow-ip": proxy_config["allow_ips"].presence,
+        "trusted-proxy": client_ip["trusted_proxies"].presence,
+        "client-ip-header": client_ip["header"],
+        "rate-limit": rate_limit["requests"],
+        "rate-limit-burst": rate_limit["burst"],
+        "rate-limit-exempt": rate_limit["exempt"].presence
       }.compact
     end
 

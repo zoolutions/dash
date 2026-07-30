@@ -54,6 +54,8 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
         validate_compress! config["compress"]
       end
 
+      validate_access_control!
+
       if run_config = config["run"]
         if run_config["bind_ips"].present?
           ensure_valid_bind_ips(run_config["bind_ips"])
@@ -168,6 +170,105 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
           error "client_ca_path '#{client_ca_path}' does not exist"
         end
       end
+    end
+
+    # kamal-proxy's --rate-limit is a Float64, so half a request per second is a
+    # legal rate. The docs example can only demonstrate one numeric type, and an
+    # Integer there would reject 0.5 — so the shape is checked by hand instead.
+    def validate_key_override!(key, value)
+      return false unless key.to_s == "rate_limit"
+
+      validate_type! value, Hash
+
+      with_context("rate_limit") do
+        unknown_keys_error(value.keys - %w[ requests burst exempt ]) if (value.keys - %w[ requests burst exempt ]).any?
+
+        with_context("requests") { validate_type! value["requests"], Numeric } if value.key?("requests")
+        with_context("burst") { validate_type! value["burst"], Integer } if value.key?("burst")
+        with_context("exempt") { validate_array_of! value["exempt"], String } if value.key?("exempt")
+      end
+
+      true
+    end
+
+    # Rate limiting and the IP allow list are only as correct as the address they
+    # key on, so kamal-proxy ties the three settings together with rules that
+    # otherwise surface only once the deploy has reached a host.
+    def validate_access_control!
+      allow_ips = Array(config["allow_ips"])
+      client_ip = config["client_ip"] || {}
+      rate_limit = config["rate_limit"] || {}
+      trusted_proxies = Array(client_ip["trusted_proxies"])
+      rate_limited = rate_limit["requests"].present?
+
+      with_context("allow_ips") { allow_ips.each { |entry| validate_ip_entry! entry } }
+      with_context("rate_limit") { with_context("exempt") { Array(rate_limit["exempt"]).each { |entry| validate_ip_entry! entry } } }
+
+      with_context("client_ip") do
+        with_context("trusted_proxies") do
+          trusted_proxies.each do |entry|
+            validate_ip_entry! entry
+
+            # Trusting everything means trusting every client to speak for
+            # someone else, which is the bypass this setting exists to prevent.
+            if default_route?(entry)
+              error "'#{entry}' is a default route - " \
+                "trusting every address means trusting every client to speak for someone else"
+            end
+          end
+        end
+
+        if trusted_proxies.any? && allow_ips.empty? && !rate_limited
+          error "trusted_proxies has no effect without allow_ips or rate_limit"
+        end
+
+        if client_ip["header"].present? && trusted_proxies.empty? && (allow_ips.any? || rate_limited)
+          error "header requires trusted_proxies, or the header would be ignored while appearing to be honored"
+        end
+      end
+
+      with_context("rate_limit") do
+        if rate_limited
+          error "requests cannot be negative" if rate_limit["requests"].to_f.negative?
+          error "burst cannot be negative" if rate_limit["burst"].to_i.negative?
+        else
+          error "burst has no effect without requests" if rate_limit["burst"].present?
+          error "exempt has no effect without requests" if rate_limit["exempt"].present?
+        end
+      end
+
+      # kamal-proxy serves the health check path without an address check and
+      # without a rate limit so deploys keep working, which makes '/' a hole
+      # straight through both features.
+      if (allow_ips.any? || rate_limited) && config.dig("healthcheck", "path") == "/"
+        with_context("healthcheck") do
+          error "path cannot be '/' when allow_ips or rate_limit is set, " \
+            "as that path is served without an address check or a rate limit"
+        end
+      end
+    end
+
+    # IPAddr is looser than the proxy's netip parsing in two ways that matter: it
+    # drops an IPv6 zone rather than rejecting it, and it accepts IPv4-mapped
+    # forms. Both would match nothing at runtime while looking configured.
+    def validate_ip_entry!(entry)
+      if entry.to_s.include?("%")
+        return error "'#{entry}' carries an IPv6 zone; write the address without it"
+      end
+
+      address = IPAddr.new(entry.to_s)
+
+      if address.ipv4_mapped?
+        error "'#{entry}' is IPv4-mapped; write it as plain IPv4"
+      end
+    rescue IPAddr::Error
+      error "'#{entry}' is not a valid address or CIDR range"
+    end
+
+    def default_route?(entry)
+      IPAddr.new(entry.to_s).prefix.zero?
+    rescue IPAddr::Error
+      false
     end
 
     # Mirrors CompressionOptions.Validate, which rejects each of these after the

@@ -335,6 +335,72 @@ proxy:
     max_response_body: 0
     memory: 2_000_000
 
+  # Who the client is
+  #
+  # Rate limiting and IP allow lists are both only as correct as the address they
+  # key on, so configure this first if anything sits in front of kamal-proxy.
+  #
+  # With no `trusted_proxies`, the client is always the address that opened the
+  # connection — nothing a client sends can influence it, which is what makes the
+  # allow list meaningful.
+  #
+  # Once you declare `trusted_proxies`, and only when the connecting address is
+  # one of them, kamal-proxy reads the forwarded chain instead: it walks the
+  # chain from the nearest hop backwards past every proxy you declared, and the
+  # first address none of your proxies wrote is the client. **List every hop**,
+  # not only the one that connects to kamal-proxy — a chain it cannot resolve
+  # denies the request rather than falling back to the connecting address.
+  #
+  # `header` names the header carrying the original client IP (`CF-Connecting-IP`
+  # behind Cloudflare, `True-Client-IP` behind some others); kamal-proxy reads it
+  # instead of `X-Forwarded-For`. It is only honoured when `trusted_proxies` is
+  # set, because otherwise it is just something the client wrote — kamal rejects
+  # that combination rather than appearing to honour it.
+  #
+  # Addresses and ranges are plain IPv4/IPv6 or CIDR. Write IPv4 as IPv4, not as
+  # an IPv4-mapped IPv6 range, and leave IPv6 zones off — neither matches
+  # anything. If clients reach you over IPv6, list IPv6 ranges too, or they are
+  # denied.
+  client_ip:
+    header: CF-Connecting-IP
+    trusted_proxies:
+      - 173.245.48.0/20
+      - 2400:cb00::/32
+
+  # Rate limiting
+  #
+  # A per-client token bucket. Requests over the limit get a 429. IPv6 clients
+  # are counted per /64, since one client can pick any address inside its own.
+  #
+  # `requests` is requests per second and may be fractional — 0.5 is one request
+  # every two seconds. `burst` is how many requests a client may make back to
+  # back before the limit applies (default: the rate, rounded up). `exempt` lists
+  # addresses and ranges the limit skips, for monitoring and health probes.
+  rate_limit:
+    requests: 100
+    burst: 20
+    exempt:
+      - 10.0.0.0/8
+
+  # IP allow list
+  #
+  # Serve this service only to these addresses and ranges; everything else gets a
+  # 403. Combine with `client_ip` above when you are behind a CDN, or the list is
+  # matched against the CDN's addresses rather than your visitors'.
+  allow_ips:
+    - 10.0.0.0/8
+    - 192.168.0.0/16
+  #
+  # ### Notes
+  # - The health check path is served without an address check and without a rate
+  #   limit, so it stays reachable during a deploy. That means it cannot be `/` —
+  #   kamal rejects `healthcheck: path: /` while either feature is on, because it
+  #   would leave the whole service open. The default `/up` is fine.
+  # - When a loadbalancer is configured, all of this moves to the loadbalancer:
+  #   the per-host proxies see the loadbalancer as their peer, so an allow list
+  #   there would refuse every request and one rate limiter would count the whole
+  #   fleet as a single client.
+
   # Response compression
   #
   # Serve gzip, brotli or zstd without the app knowing about it. Responses the
