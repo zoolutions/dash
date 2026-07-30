@@ -6,6 +6,17 @@ class Kamal::Configuration::Proxy
   LOADBALANCER_CONTAINER_NAME = "kamal-loadbalancer"
   CLIENT_CA_FILENAME = "client-ca.pem"
 
+  # What `compress: true` offers. kamal-proxy has no "on" state without an
+  # explicit list - --compress *is* the list - so the shorthand has to pick.
+  # Best ratio first, matching the proxy's own default ordering; the client's
+  # Accept-Encoding q-values still outrank this preference.
+  DEFAULT_COMPRESSION_ENCODINGS = %w[ zstd br gzip ].freeze
+
+  SUPPORTED_COMPRESSION_ENCODINGS = %w[ gzip br zstd ].freeze
+
+  # kamal-proxy maps `brotli` onto the `br` token that travels in Content-Encoding.
+  COMPRESSION_ENCODING_ALIASES = { "brotli" => "br" }.freeze
+
   delegate :argumentize, :optionize, :seconds_duration, to: Kamal::Utils
 
   attr_reader :config, :proxy_config, :role_name, :run, :secrets
@@ -169,7 +180,7 @@ class Kamal::Configuration::Proxy
       "log-request-header": proxy_config.dig("logging", "request_headers") || DEFAULT_LOG_REQUEST_HEADERS,
       "log-response-header": proxy_config.dig("logging", "response_headers"),
       "error-pages": error_pages
-    }.merge(tls_domains_options).merge(tls_options).merge(cache_options).compact
+    }.merge(tls_domains_options).merge(tls_options).merge(cache_options).merge(compress_options).compact
 
     if load_balancing?
       opts.delete(:host)
@@ -260,6 +271,21 @@ class Kamal::Configuration::Proxy
         "tls-on-demand-url": on_demand_url,
         "tls-client-ca-path": container_client_ca,
         "tls-acme-cache-path": tls_config["acme_cache_path"]
+      }.compact
+    end
+
+    # `compress: true` and the block form both land here. --compress is a list of
+    # encodings rather than a switch, so "on" always means naming them: a bare
+    # --compress would take the next flag on the command line as its value.
+    def compress_options
+      compress = proxy_config["compress"]
+      settings = compress.is_a?(Hash) ? compress : {}
+      return {} unless compress == true || settings["enabled"] || settings["encodings"].present?
+
+      {
+        compress: settings["encodings"].presence || DEFAULT_COMPRESSION_ENCODINGS,
+        "compress-content-type": settings["content_types"].presence,
+        "compress-min-length": settings["min_length"]
       }.compact
     end
 

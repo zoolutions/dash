@@ -335,6 +335,41 @@ proxy:
     max_response_body: 0
     memory: 2_000_000
 
+  # Response compression
+  #
+  # Serve gzip, brotli or zstd without the app knowing about it. Responses the
+  # app already encoded, event streams, and media types that do not shrink are
+  # passed through untouched.
+  #
+  # `compress: true` is the common case: it offers zstd, br and gzip in that
+  # order — best ratio first, and the client's own `Accept-Encoding` preference
+  # still wins — and leaves the length and media-type defaults to the proxy.
+  #
+  #     compress: true
+  #
+  # The block form is for when you want something narrower. `encodings` names
+  # what to offer, most preferred first, from `gzip`, `br` (or `brotli`) and
+  # `zstd`; naming it is enough to switch compression on. `min_length` is the
+  # response size in bytes below which compressing costs more than it saves
+  # (proxy default 1024; set 1 to compress everything).
+  #
+  # `content_types` **replaces** the proxy's built-in list of compressible media
+  # types rather than adding to it, so name every type you want compressed, not
+  # just the extra ones. Entries are exact types or type wildcards. Note that
+  # `text/event-stream` is never compressed unless you name it here — holding
+  # bytes back to fill the encoder's window is exactly what an event stream's
+  # client asked you not to do.
+  compress:
+    enabled: true
+    encodings:
+      - zstd
+      - br
+      - gzip
+    content_types:
+      - text/html
+      - application/json
+    min_length: 1024
+
   # Response cache
   #
   # An RFC 9111 shared cache in front of this service. Nothing is stored unless
