@@ -37,9 +37,6 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
   # list shrinking to empty is what "R7 is done" means.
   R7_BACKLOG = {
     "deploy" => {
-      80 => %w[ target-dial-timeout target-disable-keep-alives target-idle-conn-timeout
-                target-max-conns target-max-idle-conns target-try-duration target-try-interval
-                request-timeout path-request-timeout ],
       81 => %w[ exclude-metrics-path ]
     },
     "run" => {

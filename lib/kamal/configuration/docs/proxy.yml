@@ -242,19 +242,78 @@ proxy:
   # will forward them if it is set to `false`.
   forward_headers: true
 
-  # Response timeout
+  # Two different deadlines
   #
-  # How long to wait for requests to complete before timing out, defaults to 30 seconds:
+  # `response_timeout` bounds how long the app may take to *start* answering —
+  # its clock stops once response headers arrive. `request_timeout` bounds the
+  # whole request, including streaming the body back to the client.
+  #
+  # They are not interchangeable, and the usual confusion is setting the first
+  # and still seeing requests hang: a slow trickle of body bytes never trips
+  # `response_timeout`, because the app answered promptly. WebSocket and
+  # event-stream responses are exempt from `request_timeout`.
+  #
+  # `response_timeout` defaults to 30 seconds; `request_timeout` defaults to 0,
+  # meaning no limit.
   response_timeout: 10
+  request_timeout: 30
 
   # Per-path timeouts
   #
-  # Override the response timeout for requests under specific path prefixes.
-  # Values are Go duration strings ("90s", "5m") or plain seconds; 0 disables
-  # the timeout entirely, which suits streaming and SSE endpoints:
+  # Override either deadline below a path prefix. Values are Go duration strings
+  # ("90s", "5m") or plain seconds; 0 removes the limit for that prefix, which
+  # suits streaming and SSE endpoints.
   path_timeouts:
     "/api/reports": "5m"
     "/stream": 0
+  path_request_timeouts:
+    "/uploads": "10m"
+    "/stream": 0
+
+  # Target connections and retries
+  #
+  # The connection pool between the proxy and this app's containers, and how
+  # hard the proxy tries to place a request on a healthy one.
+  #
+  # `max_conns` caps simultaneous connections per target, idle ones included.
+  # Requests over the cap queue rather than failing, and a streaming response
+  # holds its connection until the body closes — so pair a low cap with
+  # `request_timeout`. `max_idle_conns` caps the idle connections kept open.
+  # Both apply *per pool*, and every entry in `path_timeouts` adds another pool.
+  #
+  # `idle_conn_timeout` is how long an idle connection is kept; set it below the
+  # app's own keep-alive timeout, or the proxy will hand a request to a socket
+  # the app has already closed. `dial_timeout` bounds establishing a connection
+  # — `response_timeout` cannot cover that, since its clock starts only once the
+  # request has been written.
+  #
+  # `try_duration` keeps looking for a healthy target for that long before
+  # giving up, with `try_interval` between attempts. Only idempotent requests
+  # without a body are re-sent to another target.
+  #
+  # ### What 0 means here
+  #
+  # Not the same thing for every key, because the proxy resolves its own
+  # defaults from a zero:
+  #
+  # * `max_conns: 0` — unlimited
+  # * `try_duration: 0` — a single attempt, no retrying
+  # * `request_timeout: 0` — no limit
+  # * `max_idle_conns: 0` — the proxy's default of 100, **not** "keep none"
+  # * `idle_conn_timeout: 0` — the proxy's default of 90s
+  # * `dial_timeout: 0` — the proxy's default of 30s
+  # * `try_interval: 0` — the proxy's default of 250ms
+  #
+  # So there is no way to ask for zero idle connections; leave the key unset
+  # unless you mean to change it.
+  target:
+    max_conns: 100
+    max_idle_conns: 10
+    idle_conn_timeout: 90
+    dial_timeout: 5
+    disable_keep_alives: false
+    try_duration: 30
+    try_interval: 1
 
   # Path-based routing
   #

@@ -57,6 +57,7 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
       validate_access_control!
       validate_traffic_shaping!
       validate_lifecycle!
+      validate_tuning!
 
       if run_config = config["run"]
         if run_config["bind_ips"].present?
@@ -180,6 +181,41 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
     # cookie name. For a header, a space or a colon would also break the
     # '<name>: <value>' encoding kamal-proxy cuts at the first colon.
     TOKEN = /\A[!#$%&'*+\-.^_`|~0-9A-Za-z]+\z/
+
+    POOL_KEYS = %w[ max_conns max_idle_conns idle_conn_timeout dial_timeout try_duration try_interval ].freeze
+
+    # A zero is meaningful for most of these, so only negatives are refused.
+    # kamal-proxy clamps them rather than failing when it reads saved state, and
+    # rejects them from a client — this is the client.
+    def validate_tuning!
+      target = config["target"] || {}
+
+      with_context("target") do
+        POOL_KEYS.each do |key|
+          error "#{key} cannot be negative" if target[key].to_f.negative?
+        end
+
+        # A retry interval paces attempts within a duration; without one there is
+        # only ever a single attempt for it to pace.
+        if target["try_interval"].present? && target["try_duration"].to_i.zero?
+          error "try_interval has no effect without try_duration"
+        end
+      end
+
+      if config["request_timeout"].to_f.negative?
+        with_context("request_timeout") { error "cannot be negative" }
+      end
+
+      # Both maps reach kamal-proxy's one parsePathTimeouts, which refuses a
+      # negative duration.
+      %w[ path_timeouts path_request_timeouts ].each do |key|
+        with_context(key) do
+          (config[key] || {}).each do |prefix, duration|
+            error "'#{prefix}' cannot be negative" if duration.is_a?(Numeric) && duration.negative?
+          end
+        end
+      end
+    end
 
     # Session affinity and scale-to-zero. The one rule NOT here is that sleep
     # needs proxy/run/docker_socket: a role can carry `sleep` while the root
