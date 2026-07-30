@@ -9,7 +9,7 @@ class Kamal::Configuration::Proxy::Run
   DIGEST_SCHEMA_VERSION = "v1"
 
   attr_reader :config, :run_config
-  delegate :argumentize, :optionize, to: Kamal::Utils
+  delegate :argumentize, :optionize, :seconds_duration, to: Kamal::Utils
 
   def initialize(config, run_config:, context: "proxy/run")
     @config = config
@@ -117,7 +117,7 @@ class Kamal::Configuration::Proxy::Run
     # with live health checks instead of trusting the saved state — a dead
     # target demotes to 503 and self-heals rather than serving 502s forever.
     # Available from MINIMUM_VERSION, so it is always safe to pass.
-    { debug: debug? || nil, "metrics-port": metrics_port, "recheck-targets-on-restore": true }.compact
+    { debug: debug? || nil, "metrics-port": metrics_port, "recheck-targets-on-restore": true }.compact.merge(cache_options)
   end
 
   def docker_options_args
@@ -183,6 +183,26 @@ class Kamal::Configuration::Proxy::Run
   end
 
   private
+    # Where cached responses are kept, which is a property of the proxy rather
+    # than of any one service - the policy that fills the cache is per service,
+    # in proxy/cache.
+    #
+    # lease_ttl and lease_wait take negative values to switch cross-node
+    # coalescing off. That survives the space-separated rendering the rest of
+    # this command uses: pflag reads the argument after `--flag` unconditionally,
+    # without treating a leading dash as the next flag.
+    def cache_options
+      cache = run_config["cache"] || {}
+
+      {
+        "cache-store": cache["store"],
+        "cache-store-timeout": seconds_duration(cache["store_timeout"]),
+        "cache-memory-size": cache["memory_size"],
+        "cache-lease-ttl": seconds_duration(cache["lease_ttl"]),
+        "cache-lease-wait": seconds_duration(cache["lease_wait"])
+      }.compact
+    end
+
     def acme_secrets_args
       argumentize "--env-file", secrets_path if acme.credentials?
     end

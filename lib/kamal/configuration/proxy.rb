@@ -6,7 +6,7 @@ class Kamal::Configuration::Proxy
   LOADBALANCER_CONTAINER_NAME = "kamal-loadbalancer"
   CLIENT_CA_FILENAME = "client-ca.pem"
 
-  delegate :argumentize, :optionize, to: Kamal::Utils
+  delegate :argumentize, :optionize, :seconds_duration, to: Kamal::Utils
 
   attr_reader :config, :proxy_config, :role_name, :run, :secrets
 
@@ -169,7 +169,7 @@ class Kamal::Configuration::Proxy
       "log-request-header": proxy_config.dig("logging", "request_headers") || DEFAULT_LOG_REQUEST_HEADERS,
       "log-response-header": proxy_config.dig("logging", "response_headers"),
       "error-pages": error_pages
-    }.merge(tls_domains_options).merge(tls_options).compact
+    }.merge(tls_domains_options).merge(tls_options).merge(cache_options).compact
 
     if load_balancing?
       opts.delete(:host)
@@ -263,6 +263,24 @@ class Kamal::Configuration::Proxy
       }.compact
     end
 
+    # The cache policy, which is per service - the store it writes into is
+    # proxy-wide and lives in proxy/run/cache. Only --cache is derived from a
+    # truthy key; every other default stays in kamal-proxy, so an unset key emits
+    # nothing rather than restating a default the gem would then have to track.
+    def cache_options
+      cache = proxy_config["cache"] || {}
+
+      {
+        cache: cache["enabled"] ? true : nil,
+        "cache-max-ttl": seconds_duration(cache["max_ttl"]),
+        "cache-max-body": cache["max_body"],
+        "cache-max-variants": cache["max_variants"],
+        "cache-vary-header": cache["vary_headers"].presence,
+        "cache-vary-cookie": cache["vary_cookies"].presence,
+        "cache-allow-set-cookie": cache["allow_set_cookie"] ? true : nil
+      }.compact
+    end
+
     def tls_path(directory, filename)
       tls_file_path(directory, filename) if custom_ssl_certificate?
     end
@@ -271,10 +289,6 @@ class Kamal::Configuration::Proxy
     # server certificate but has nothing to do with whether one was configured.
     def tls_file_path(directory, filename)
       File.join([ directory, role_name, filename ].compact)
-    end
-
-    def seconds_duration(value)
-      value ? "#{value}s" : nil
     end
 
     # kamal-proxy takes the credential as <username>:<password> and cuts at the
