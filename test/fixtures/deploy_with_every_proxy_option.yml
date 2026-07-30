@@ -59,6 +59,19 @@ proxy:
   basic_auth:
     username: admin
     password: secret
+  # All three blocks together: trusted_proxies needs allow_ips or rate_limit to
+  # do anything, and client_ip.header needs trusted_proxies.
+  allow_ips:
+    - 10.0.0.0/8
+  client_ip:
+    header: CF-Connecting-IP
+    trusted_proxies:
+      - 173.245.48.0/20
+  rate_limit:
+    requests: 100
+    burst: 20
+    exempt:
+      - 10.0.0.0/8
   # The block form, so all three flags are emitted. The `compress: true`
   # shorthand is covered in test/configuration/proxy/compress_test.rb.
   compress:

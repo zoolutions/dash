@@ -21,6 +21,10 @@ class Kamal::Configuration::Loadbalancer < Kamal::Configuration::Proxy
     opts.merge!(tls_domains_options)
     opts.merge!(tls_options)
 
+    # Access control is an edge concern for a sharper reason than TLS: the load
+    # balancer is the only proxy that ever sees the real client address.
+    opts.merge!(access_control_options)
+
     # Basic auth is an edge concern for the same reason: the parent strips it
     # when load balancing so only the load balancer challenges clients.
     opts[:"basic-auth"] = basic_auth_credential if basic_auth_credential.present?

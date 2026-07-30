@@ -37,7 +37,6 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
   # list shrinking to empty is what "R7 is done" means.
   R7_BACKLOG = {
     "deploy" => {
-      77 => %w[ rate-limit rate-limit-burst rate-limit-exempt allow-ip trusted-proxy client-ip-header ],
       78 => %w[ add-request-header add-response-header set-request-header set-response-header
                 remove-request-header remove-response-header redirect rewrite canonical-host
                 scope-cookie-paths intercept-errors ],
