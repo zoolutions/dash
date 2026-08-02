@@ -95,6 +95,7 @@ class Kamal::Configuration
     ensure_rate_limit_can_identify_clients
     ensure_intercepted_errors_have_pages
     ensure_sleep_has_a_docker_socket
+    ensure_proxy_protocol_names_its_peers
   end
 
   # Resolves every secret the deploy will need so a missing secret fails fast,
@@ -452,6 +453,22 @@ class Kamal::Configuration
         "Without one, Kamal accepts the container as ready #{readiness_delay}s after it merely starts " \
         "and then stops the previous container — traffic can be dropped. Add a `healthcheck:` block, " \
         "or opt out explicitly with `healthcheck: false`. This warning will become an error in a future release."
+
+      true
+    end
+
+    # A PROXY protocol header rewrites the connecting address, which is the one
+    # thing on a request nothing else can influence — and the one every access
+    # control decision keys on. Honouring it from any peer that can reach the
+    # port hands that address to whoever asks. Warn rather than raise: a proxy on
+    # a private network with no other route in is a legitimate configuration.
+    def ensure_proxy_protocol_names_its_peers
+      offenders = all_hosts.select { |host| proxy_run(host)&.proxy_protocol_unrestricted? }
+      return true if offenders.empty?
+
+      warn "Host(s) #{offenders.sort.join(", ")}: proxy_protocol is enabled without proxy_protocol_allow_ips, " \
+        "so kamal-proxy honours a PROXY header from any peer that can reach the port. That header sets the client " \
+        "address `allow_ips`, `rate_limit` and the access log all use. Name the load balancers you actually run."
 
       true
     end

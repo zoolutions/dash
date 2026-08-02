@@ -35,15 +35,19 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
   # test/fixtures/deploy_with_every_proxy_option.yml. The flag then has to show up
   # in the generated command or this test fails — which is the point. The waiver
   # list shrinking to empty is what "R7 is done" means.
+  #
+  # It is empty. Every flag kamal-proxy accepts is now either emitted from a
+  # deploy.yml key or waived above with a reason. A new proxy release that adds
+  # one fails this test at the MINIMUM_VERSION bump, which is the only moment
+  # anyone is thinking about gem/proxy compatibility.
+  #
+  # Do NOT close that gap with proxy/run/flags. The escape hatch forwards
+  # anything, so putting a new flag in the fixture's `flags:` would turn this
+  # check green while leaving the flag unreachable by name — exactly the silence
+  # this test exists to break. Give it a key.
   R7_BACKLOG = {
-    "deploy" => {
-      81 => %w[ exclude-metrics-path ]
-    },
-    "run" => {
-      81 => %w[ http3 idle-timeout ignore-restore-errors log-format metrics-allow-ip
-                min-tls proxy-protocol proxy-protocol-allow-ip read-header-timeout read-timeout
-                reuse-port shutdown-timeout trace-context write-timeout ]
-    }
+    "deploy" => {},
+    "run" => {}
   }.freeze
 
   WAIVED = NEVER_EXPOSED.to_h { |subcommand, never|

@@ -44,6 +44,8 @@ proxy:
   writer_affinity_timeout: 30
   path_timeouts:
     /uploads: 300
+  exclude_metrics_paths:
+    - /up
   request_timeout: 30
   path_request_timeouts:
     /uploads: 600
@@ -158,6 +160,27 @@ proxy:
     debug: true
     metrics_port: 9090
     docker_socket: /var/run/docker.sock
+    log_format: text
+    trace_context: generate
+    min_tls: "1.3"
+    http3: true
+    reuse_port: true
+    ignore_restore_errors: true
+    proxy_protocol: true
+    proxy_protocol_allow_ips:
+      - 10.0.0.0/8
+    metrics_allow_ips:
+      - 10.0.0.0/8
+    read_header_timeout: 10
+    read_timeout: 30
+    write_timeout: 30
+    idle_timeout: 60
+    shutdown_timeout: 15
+    # Deliberately a name kamal-proxy will never have. run.flags forwards
+    # anything, so a real flag here would fake coverage for it — see the note on
+    # R7_BACKLOG in test/proxy_flag_coverage_test.rb.
+    flags:
+      not-a-real-kamal-proxy-flag: value
     acme:
       email: admin@example.com
       dns_provider: cloudflare

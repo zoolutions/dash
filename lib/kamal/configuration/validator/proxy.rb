@@ -77,6 +77,8 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
         if run_config["cache"].is_a?(Hash)
           validate_cache_store! run_config["cache"]
         end
+
+        validate_run_server_options! run_config
       end
     end
   end
@@ -363,6 +365,17 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
       # unknown-key check would reject every real config. validate_header_rules!
       # does the semantic checking.
       return validate_header_shape!(value) if key.to_s == "headers"
+
+      # The whole point of proxy/run/flags is that the gem does not know the flag
+      # names, so the example's key is an illustration and the unknown-key check
+      # would reject every real use. Proxy::Run rejects one that collides with a
+      # named key; nothing else about the name is the gem's business.
+      if key.to_s == "flags"
+        validate_type! value, Hash
+        with_context("flags") { validate_hash_of! value, String }
+        return true
+      end
+
       return false unless key.to_s == "rate_limit"
 
       validate_type! value, Hash
@@ -493,6 +506,53 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
             error "content_types entry '#{content_type}' must be a media type such as text/html or text/*"
           end
         end
+      end
+    end
+
+    LOG_FORMATS = %w[ json text logfmt ].freeze
+    TRACE_CONTEXT_MODES = %w[ off propagate generate ].freeze
+    MIN_TLS_VERSIONS = %w[ 1.2 1.3 ].freeze
+    REFUSED_TLS_VERSIONS = %w[ 1.0 1.1 ].freeze
+    RUN_TIMEOUTS = %w[ read_header_timeout read_timeout write_timeout idle_timeout shutdown_timeout ].freeze
+
+    # kamal-proxy validates these three in preRun, so a typo does not fail the
+    # deploy - it stops the proxy container from booting at all.
+    def validate_run_server_options!(run_config)
+      with_context("run") do
+        if (format = run_config["log_format"]).present? && !LOG_FORMATS.include?(format.to_s.downcase.strip)
+          error "log_format '#{format}' is not a log format - use json or text"
+        end
+
+        if (mode = run_config["trace_context"]).present? && !TRACE_CONTEXT_MODES.include?(mode.to_s.downcase.strip)
+          error "trace_context '#{mode}' is not a trace context mode - use off, propagate or generate"
+        end
+
+        validate_min_tls! run_config["min_tls"]
+
+        RUN_TIMEOUTS.each do |key|
+          error "#{key} cannot be negative" if run_config[key].to_f.negative?
+        end
+
+        %w[ metrics_allow_ips proxy_protocol_allow_ips ].each do |key|
+          with_context(key) { Array(run_config[key]).each { |entry| validate_ip_entry! entry } }
+        end
+      end
+    end
+
+    # Accepts the spellings kamal-proxy's normalizeTLSVersion reduces - a `tls`
+    # or `tlsv` prefix, and `_` for `.` - so a config written for upstream is not
+    # rejected here and accepted there.
+    def validate_min_tls!(value)
+      return if value.blank?
+
+      normalized = value.to_s.downcase.strip.sub(/\Atlsv?/, "").tr("_", ".")
+
+      if REFUSED_TLS_VERSIONS.include?(normalized)
+        # The flag narrows what the listener negotiates; it was never a way to
+        # widen it, and Go refuses these regardless.
+        error "min_tls #{normalized} cannot be enabled - the lowest accepted minimum is #{MIN_TLS_VERSIONS.first}"
+      elsif !MIN_TLS_VERSIONS.include?(normalized)
+        error "min_tls '#{value}' is not a TLS version - use #{MIN_TLS_VERSIONS.join(" or ")}"
       end
     end
 
