@@ -176,9 +176,12 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
     assert_no_match(/intercept_errors is set but no error_pages_path/, out)
   end
 
-  # The load balancer forwards to the per-host proxies, so applying these twice
-  # would duplicate an added header and rewrite a path twice over.
-  test "traffic shaping stays off the load balancer" do
+  # The load balancer forwards to the per-host proxies, so applying headers and
+  # rewrites twice would duplicate an added header and rewrite a path twice
+  # over — they stay per-app. Canonical host goes the other way: kamal-proxy's
+  # redirectURLIfNeeded consults r.TLS, so a per-app redirect behind the LB
+  # would emit http:// Locations to HTTPS clients — it moves to the edge.
+  test "traffic shaping stays off the load balancer, canonical host moves to it" do
     proxy_config = {
       "loadbalancer" => "lb.example.com", "ssl" => true, "hosts" => [ "app.example.com" ],
       "headers" => { "request" => { "add" => { "X-Request-Source" => "kamal" } } },
@@ -188,11 +191,13 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
     config = configuration(proxy_config)
 
     assert_equal [ "X-Request-Source: kamal" ], config.proxy.deploy_options[:"add-request-header"]
+    assert_not config.proxy.deploy_options.key?(:"canonical-host"), "expected --canonical-host to stay off the per-app proxy"
 
     loadbalancer = Kamal::Configuration::Loadbalancer.new config: config, proxy_config: proxy_config, secrets: config.secrets
-    %i[ add-request-header rewrite canonical-host ].each do |flag|
+    %i[ add-request-header rewrite ].each do |flag|
       assert_not loadbalancer.deploy_options.key?(flag), "expected --#{flag} to stay off the load balancer"
     end
+    assert_equal "www.example.com", loadbalancer.deploy_options[:"canonical-host"]
   end
 
   private
