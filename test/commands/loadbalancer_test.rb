@@ -345,6 +345,18 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
       new_command.list.join(" ")
   end
 
+  test "list json" do
+    assert_equal \
+      "docker exec load-balancer kamal-proxy list --json",
+      new_command.list(json: true).join(" ")
+  end
+
+  # One source of truth for what the LB fronts: the deploy step and the reboot
+  # re-registration both draw targets from here, so they cannot diverge.
+  test "target_hosts collects the hosts of every proxy-running role" do
+    assert_equal [ "1.1.1.1", "1.1.1.2" ], new_loadbalancer_config.target_hosts
+  end
+
   test "config_digest" do
     assert_equal \
       "docker inspect load-balancer --format '{{ index .Config.Labels \"org.kamal.proxy-config-digest\" }}'",

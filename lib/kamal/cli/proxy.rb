@@ -426,14 +426,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
       end
     when "deploy"
       if KAMAL.config.proxy.load_balancing?
-        targets = []
-        KAMAL.config.roles.each do |role|
-          next unless role.running_proxy?
-
-          role.hosts.each do |host|
-            targets << host
-          end
-        end
+        targets = KAMAL.loadbalancer_config.target_hosts
 
         on(KAMAL.config.proxy.effective_loadbalancer) do |host|
           Kamal::Cli::Proxy::LoadbalancerClaim.new(host, self).claim_service

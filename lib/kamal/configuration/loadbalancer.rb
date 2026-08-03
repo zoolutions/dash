@@ -23,6 +23,13 @@ class Kamal::Configuration::Loadbalancer < Kamal::Configuration::Proxy
     optionize ({ target: target_arg }).merge(deploy_options), with: "="
   end
 
+  # The hosts the load balancer forwards to: every host of every role that
+  # runs a proxy. One source of truth for the deploy step and the reboot
+  # re-registration, so their target lists cannot diverge.
+  def target_hosts
+    config.roles.select(&:running_proxy?).flat_map(&:hosts)
+  end
+
   def directory
     File.join config.run_directory, "loadbalancer"
   end
