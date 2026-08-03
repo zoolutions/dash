@@ -355,6 +355,12 @@ class CommandsProxyTest < ActiveSupport::TestCase
       new_command.holder_container_id.join(" ")
   end
 
+  test "disable_restart" do
+    assert_equal \
+      "docker update --restart=no kamal-proxy",
+      new_command.disable_restart.join(" ")
+  end
+
   test "drain" do
     assert_equal \
       "docker exec kamal-proxy kamal-proxy drain --drain-timeout=30s",

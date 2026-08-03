@@ -143,11 +143,17 @@ class CliProxyTest < CliTestCase
     run_command("boot", fixture: :with_proxy_port_holder).tap do |output|
       assert_match "Handing off kamal-proxy on 1.1.1.1 to a new generation (zero downtime)...", output
       assert_match_with_digest "docker run --name kamal-proxy-next --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port on 1.1.1.1", output
+      assert_match "docker update --restart=no kamal-proxy on 1.1.1.1", output
       assert_match "docker exec kamal-proxy kamal-proxy drain --drain-timeout=30s on 1.1.1.1", output
       assert_match "docker wait kamal-proxy on 1.1.1.1", output
       assert_match "docker container rm kamal-proxy on 1.1.1.1", output
       assert_match "docker container rename kamal-proxy-next kamal-proxy on 1.1.1.1", output
       assert_no_match(/docker container stop --time/, output)
+
+      # The restart policy must be cancelled BEFORE draining - drain makes the
+      # old proxy exit on its own, which an active restart policy would undo.
+      assert_operator output.index("docker update --restart=no kamal-proxy on 1.1.1.1"),
+        :<, output.index("docker exec kamal-proxy kamal-proxy drain")
     end
   end
 

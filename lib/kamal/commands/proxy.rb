@@ -113,6 +113,12 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
     container_id_for(container_name: proxy_run_config.holder_container_name, only_running: true)
   end
 
+  # Cancel the restart policy before draining: drain makes the proxy exit on
+  # its own, which - unlike `docker stop` - an active restart policy would undo.
+  def disable_restart
+    docker :update, "--restart=no", container_name
+  end
+
   def drain(timeout: nil)
     docker :exec, container_name, "kamal-proxy", :drain, *("--drain-timeout=#{timeout}s" if timeout)
   end
