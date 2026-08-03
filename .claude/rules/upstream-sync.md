@@ -25,7 +25,7 @@ git checkout dash && git merge feat/loadbalancing && <tests> && git push
 
 | File | Resolution |
 |---|---|
-| `lib/kamal/version.rb` | take upstream's — the fork version is only ever written by `bin/release-dash` at release time |
+| `lib/kamal/version.rb` | keep ours — from 3.0.0 the fork declares its own major, so upstream's version never lands here; `bin/release-dash` is the only writer |
 | `Gemfile.lock` | take either side, run `bundle install`, commit the result |
 | `lib/kamal/configuration/proxy/run.rb` (`MINIMUM_VERSION`) | upstream bumped their proxy: release the proxy fork first (`v<new-base>.1`), then set that tag here |
 | `lib/kamal/configuration/proxy/run.rb` (repository) / `boot.rb` (`repository_name`) | keep `ghcr.io/mhenrixon` |
@@ -47,10 +47,10 @@ docker buildx imagetools inspect ghcr.io/mhenrixon/kamal-proxy:v0.9.2.1   # amd6
 # 2. this repo, on dash:
 #    ensure Kamal::Configuration::Proxy::Run::MINIMUM_VERSION == that tag
 bin/test                          # full suite incl. integration
-bin/release-dash 2.12.0.1         # version.rb + Gemfile.lock, tag dash-v2.12.0.1, gem push dash
+bin/release-dash 3.0.0            # version.rb + Gemfile.lock, tag dash-v3.0.0, gem push dash
 ```
 
-Tag grammar: gem tags `dash-v<upstream>.<n>`, proxy image tags `v<upstream-base>.<n>`. Gem versions are four-segment `<upstream>.<n>` — `Gem::Version` sorts them above the upstream base and below its next release. Never `-suffix` tags: Gem::Version treats `-` as a prerelease marker that sorts BELOW the base and breaks the proxy minimum-version check.
+Tag grammar: gem tags `dash-v<version>`; from 3.0.0 the gem version is plain three-segment semver (`3.0.0`, tag `dash-v3.0.0`) — the fork declares its own major and no longer tracks upstream's number (the legacy four-segment `<upstream>.<n>` grammar covers only the pre-3.0 line). Proxy image tags stay `v<upstream-base>.<n>` — they still track upstream kamal-proxy releases. Never `-suffix` tags: Gem::Version treats `-` as a prerelease marker that sorts BELOW the base and breaks the proxy minimum-version check.
 
 ## Upstreaming a feature
 
@@ -74,6 +74,6 @@ Rejected-by-basecamp features (see `ROADMAP.md`'s "safe moat" list) are never up
 ## Never
 
 - commit to `main` or rebase published branches
-- `git push --tags` — single-tag pushes only (`git push origin tag dash-v2.12.0.1`)
+- `git push --tags` — single-tag pushes only (`git push origin tag dash-v3.0.0`)
 - release the gem while `MINIMUM_VERSION` names an unpublished proxy tag
 - edit `kamal.gemspec`, `bin/release`, or other upstream-owned files

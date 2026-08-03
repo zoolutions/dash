@@ -16,8 +16,8 @@ mhenrixon's maintained fork of [kamal](https://github.com/basecamp/kamal) — de
 
 1. **NO commits on `main`** — it is a fast-forward-only mirror of basecamp/kamal
 2. **NO edits to `kamal.gemspec` or `bin/release`** — upstream files kept pristine so syncs never conflict; the fork owns `dash.gemspec` and `bin/release-dash`
-3. **NO `v*` git tags** — upstream owns that namespace; fork gem tags are `dash-v<version>`
-4. **NO `git push --tags`** — it would push fetched upstream tags to the fork; push single tags (`git push origin tag dash-v2.12.0.1`)
+3. **NO `v*` git tags** — upstream owns that namespace; fork gem tags are `dash-v<version>` (own semver major from 3.0.0)
+4. **NO `git push --tags`** — it would push fetched upstream tags to the fork; push single tags (`git push origin tag dash-v3.0.0`)
 5. **NO suffix proxy versions** like `v0.9.2-dash.1` — Gem::Version parses `-` as a prerelease, which sorts OLDER than the base and hard-fails `kamal proxy boot`
 6. **NO gem release before the proxy image exists** — the tag named by `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` must be pullable from ghcr.io first
 7. **NO rebasing published branches** — merge forward; history is shared
@@ -36,7 +36,7 @@ mhenrixon's maintained fork of [kamal](https://github.com/basecamp/kamal) — de
 bin/test                              # Full suite (integration needs Docker + published proxy image)
 bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'  # Unit tests only
 bundle exec rubocop --parallel        # Lint
-bin/release-dash 2.12.0.1             # Release the dash gem (proxy image must exist first)
+bin/release-dash 3.0.0                # Release the dash gem (proxy image must exist first)
 git fetch upstream --tags --prune     # Start of every sync
 ```
 

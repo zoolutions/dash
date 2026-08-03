@@ -12,6 +12,36 @@
 #
 proxy:
 
+
+  # Where each option lives when a loadbalancer fronts the fleet
+  #
+  # Every deploy option has exactly one home (see
+  # Kamal::Configuration::Proxy::DEPLOY_OPTION_DISPOSITIONS - the layering
+  # contract that enforces this):
+  #
+  #   edge     - applied only by the loadbalancer, stripped from the per-host
+  #              proxies: host/hosts, ssl (certificates, on-demand, mTLS),
+  #              ssl_redirect, ssl_staging, ssl_domains, basic_auth,
+  #              allow_ips, client_ip, rate_limit, session_affinity,
+  #              canonical_host, redirects, cache, read_routing
+  #
+  #   per-app  - applied only by the per-host proxies, next to the app:
+  #              headers, rewrites, intercept_errors, sleep, compress
+  #
+  #   both     - each layer runs its own copy, deliberately: healthcheck,
+  #              response/request timeouts, path timeouts, target pool
+  #              tuning, buffering, path_prefix, strip_path_prefix,
+  #              forward_headers, logging, exclude_metrics_paths
+  #
+  # Without a loadbalancer the single proxy is every layer at once and the
+  # whole surface applies to it. `loadbalancer`, `reboot_on_deploy` and `run`
+  # configure the containers themselves rather than a deployment, so they
+  # have no layer.
+
+  # ==========================================================================
+  # 1. Essentials — enough for most apps
+  # ==========================================================================
+
   # Hosts
   #
   # The hosts that will be used to serve the app. The proxy will only route requests
@@ -22,10 +52,11 @@ proxy:
   #
   # Specify one of `host` or `hosts`.
   host: foo.example.com
+
   hosts:
     - foo.example.com
     - bar.example.com
-    
+
   # Loadbalancer
   #
   # Specify a host to run the loadbalancer on. The loadbalancer will distribute requests
@@ -160,208 +191,6 @@ proxy:
   # Defaults to `false`:
   ssl_staging: true
 
-  # Basic auth
-  #
-  # Require HTTP Basic credentials on every request to this service. Requests
-  # without valid credentials get a 401 with a `WWW-Authenticate` challenge.
-  # The health check path stays open, so deploys are unaffected.
-  #
-  # Set exactly one of `password_secret` or `password` — never both.
-  #
-  # Prefer `password_secret`: it names an entry in `.kamal/secrets`, so the
-  # password never lives in this file.
-  #
-  #     basic_auth:
-  #       username: admin
-  #       password_secret: WEB_BASIC_AUTH_PASSWORD
-  #
-  # `password` sets the value directly. If you use it, interpolate rather than
-  # committing a literal:
-  #
-  #     basic_auth:
-  #       username: admin
-  #       password: <%= ENV["WEB_BASIC_AUTH_PASSWORD"] %>
-  #
-  basic_auth:
-    username: admin
-    password: <%= ENV["WEB_BASIC_AUTH_PASSWORD"] %>
-    password_secret: WEB_BASIC_AUTH_PASSWORD
-  #
-  # ### Notes
-  # - Requires a kamal-proxy that supports `--basic-auth`. This is newer than
-  #   the current `MINIMUM_VERSION`, so make sure your proxy is up to date
-  #   before enabling it — an older proxy fails the deploy on an unknown flag.
-  # - Basic credentials are replayable and are sent on every request. Use this
-  #   with `ssl: true`, or terminate TLS in front of the proxy.
-  # - kamal-proxy removes the `Authorization` header before forwarding, so a
-  #   service behind basic auth cannot also pass credentials through to its
-  #   target. When load balancing, the credentials are enforced by the load
-  #   balancer only.
-
-  # Dynamic TLS domains
-  #
-  # kamal-proxy can learn TLS hostnames from your application at runtime
-  # instead of fixing them at deploy time. It polls `source` — a path
-  # (resolved against a healthy app target) or an absolute http(s) URL —
-  # for the domain list and manages Let's Encrypt certificates for it
-  # automatically. When `source` is set, `ssl: true` is allowed without
-  # `host`/`hosts`.
-  #
-  # `interval` is the poll interval in seconds (proxy default: 300).
-  #
-  # `batch_size` controls how many domains share a certificate: 1 (the
-  # proxy default) issues per-domain certs; 2-25 enables stable SAN batching.
-  #
-  # Authentication tokens for the poll endpoint and the refresh nudge are
-  # read by the proxy from the `KAMAL_PROXY_DOMAINS_TOKEN` and
-  # `KAMAL_PROXY_REFRESH_TOKEN` environment variables. Set them on the proxy
-  # container via `proxy.run.options.env` — never as deploy flags, which
-  # leak into process listings and audit logs.
-  ssl_domains:
-    source: /api/v1/kamal/domains
-    interval: 300
-    batch_size: 1
-
-  # Forward headers
-  #
-  # Whether to forward the `X-Forwarded-For` and `X-Forwarded-Proto` headers.
-  #
-  # If you are behind a trusted proxy, you can set this to `true` to forward the headers.
-  #
-  # By default, kamal-proxy will not forward the headers if the `ssl` option is set to `true`, and
-  # will forward them if it is set to `false`.
-  forward_headers: true
-
-  # Paths to leave out of the Prometheus metrics
-  #
-  # Request paths that should not be counted, typically health and readiness
-  # endpoints that would otherwise dominate the histograms.
-  #
-  # This is a per-service deploy setting even though it reads like metrics
-  # configuration — where the metrics are served and who may read them are
-  # proxy-wide and live under `run/metrics_port` and `run/metrics_allow_ips`.
-  exclude_metrics_paths:
-    - /up
-
-  # Two different deadlines
-  #
-  # `response_timeout` bounds how long the app may take to *start* answering —
-  # its clock stops once response headers arrive. `request_timeout` bounds the
-  # whole request, including streaming the body back to the client.
-  #
-  # They are not interchangeable, and the usual confusion is setting the first
-  # and still seeing requests hang: a slow trickle of body bytes never trips
-  # `response_timeout`, because the app answered promptly. WebSocket and
-  # event-stream responses are exempt from `request_timeout`.
-  #
-  # `response_timeout` defaults to 30 seconds; `request_timeout` defaults to 0,
-  # meaning no limit.
-  response_timeout: 10
-  request_timeout: 30
-
-  # Per-path timeouts
-  #
-  # Override either deadline below a path prefix. Values are Go duration strings
-  # ("90s", "5m") or plain seconds; 0 removes the limit for that prefix, which
-  # suits streaming and SSE endpoints.
-  path_response_timeouts:
-    "/api/reports": "5m"
-    "/stream": 0
-  path_request_timeouts:
-    "/uploads": "10m"
-    "/stream": 0
-
-  # Target connections and retries
-  #
-  # The connection pool between the proxy and this app's containers, and how
-  # hard the proxy tries to place a request on a healthy one.
-  #
-  # `max_conns` caps simultaneous connections per target, idle ones included.
-  # Requests over the cap queue rather than failing, and a streaming response
-  # holds its connection until the body closes — so pair a low cap with
-  # `request_timeout`. `max_idle_conns` caps the idle connections kept open.
-  # Both apply *per pool*, and every entry in `path_response_timeouts` adds another pool.
-  #
-  # `idle_conn_timeout` is how long an idle connection is kept; set it below the
-  # app's own keep-alive timeout, or the proxy will hand a request to a socket
-  # the app has already closed. `dial_timeout` bounds establishing a connection
-  # — `response_timeout` cannot cover that, since its clock starts only once the
-  # request has been written.
-  #
-  # `try_duration` keeps looking for a healthy target for that long before
-  # giving up, with `try_interval` between attempts. Only idempotent requests
-  # without a body are re-sent to another target.
-  #
-  # ### What 0 means here
-  #
-  # Not the same thing for every key, because the proxy resolves its own
-  # defaults from a zero:
-  #
-  # * `max_conns: 0` — unlimited
-  # * `try_duration: 0` — a single attempt, no retrying
-  # * `request_timeout: 0` — no limit
-  # * `max_idle_conns: 0` — the proxy's default of 100, **not** "keep none"
-  # * `idle_conn_timeout: 0` — the proxy's default of 90s
-  # * `dial_timeout: 0` — the proxy's default of 30s
-  # * `try_interval: 0` — the proxy's default of 250ms
-  #
-  # So there is no way to ask for zero idle connections; leave the key unset
-  # unless you mean to change it.
-  target:
-    max_conns: 100
-    max_idle_conns: 10
-    idle_conn_timeout: 90
-    dial_timeout: 5
-    disable_keep_alives: false
-    try_duration: 30
-    try_interval: 1
-
-  # Path-based routing
-  #
-  # For applications that split their traffic to different services based on the request path,
-  # you can use path-based routing to mount services under different path prefixes.
-  # Usage sample: path_prefix: '/api'
-  #
-  # You can also specify multiple paths in two ways.
-  #
-  # When using path_prefix you can supply multiple routes separated by commas.
-  path_prefix: "/api,/oauth_callback"
-  # You can also specify paths as a list of paths, the configuration will be
-  # rolled together into a comma separated string.
-  path_prefixes:
-    - "/api"
-    - "/oauth_callback"
-  # By default, the path prefix will be stripped from the request before it is forwarded upstream.
-  #
-  # So in the example above, a request to /api/users/123 will be forwarded to web-1 as /users/123.
-  #
-  # To instead forward the request with the original path (including the prefix),
-  # specify --strip-path-prefix=false
-  strip_path_prefix: false
-
-  # Read-only targets
-  #
-  # kamal-proxy can split traffic between the deployed (writer) targets and a
-  # set of read-only targets, e.g. app instances backed by database replicas.
-  # Read requests are routed to the read targets; write requests always go to
-  # the writers.
-  #
-  # Targets are host:port addresses reachable from the proxy.
-  #
-  # `websockets` routes WebSocket traffic to the read targets too (default
-  # `false`). `writer_affinity_timeout` is how long, in seconds, a client's
-  # reads stick to the writer after it makes a write, so clients always read
-  # their own writes (default 1 second).
-  #
-  # When a loadbalancer fronts the fleet, read routing is decided there — at
-  # the only layer that sees the whole fleet.
-  read_routing:
-    targets:
-      - 192.168.0.2:3000
-      - 192.168.0.3:3000
-    websockets: true
-    writer_affinity_timeout: 10
-
   # Healthcheck
   #
   # When deploying, the proxy will by default hit `/up` once every second until we hit
@@ -379,70 +208,45 @@ proxy:
     port: 3001
     host: health.example.com
 
-  # Buffering
-  #
-  # Whether to buffer request and response bodies in the proxy.
-  #
-  # By default, buffering is enabled with a max request body size of 1GB and no limit
-  # for response size.
-  #
-  # You can also set the memory limit for buffering, which defaults to 1MB; anything
-  # larger than that is written to disk.
-  buffering:
-    requests: true
-    responses: true
-    max_request_body: 40_000_000
-    max_response_body: 0
-    memory: 2_000_000
 
-  # Session affinity
-  #
-  # Keep each client on the target that first served it, for apps holding session
-  # state in the instance. Off by default, and rightly so — every request is
-  # otherwise free to go to whichever target is best placed to serve it.
-  #
-  # The client carries an opaque HttpOnly cookie naming its target. When that
-  # target leaves the pool the next request falls through to another one and is
-  # re-pinned, so a deploy does not strand anybody. Reads served by a
-  # `read_targets` replica are never pinned.
-  #
-  # `cookie` renames the pin cookie; kamal-proxy picks a sensible default.
-  session_affinity:
-    enabled: true
-    cookie: _kamal_affinity
+  # ==========================================================================
+  # 2. Traffic & routing
+  # ==========================================================================
 
-  # Scale to zero
+  # Path-based routing
   #
-  # Stop this service's containers after `after` seconds with no traffic, and
-  # start them again on the next request, which is held until they are healthy.
-  # Health checks and the proxy's own TLS probes are not traffic and never wake a
-  # sleeping service.
+  # For applications that split their traffic to different services based on the request path,
+  # you can use path-based routing to mount services under different path prefixes.
+  # Usage sample: path_prefix: '/api'
   #
-  # `wake_timeout` is how long a request waits for the containers to come back
-  # before giving up with a 503. `containers` names the containers to stop and
-  # start, replacing what the proxy infers from the target address — needed when
-  # a target names a network alias rather than a container.
+  # You can also specify multiple paths in two ways.
   #
-  # ### This needs the container runtime socket
+  # When using path_prefix you can supply multiple routes separated by commas.
+  path_prefix: "/api,/oauth_callback"
+
+  # You can also specify paths as a list of paths, the configuration will be
+  # rolled together into a comma separated string.
+  path_prefixes:
+    - "/api"
+    - "/oauth_callback"
+
+  # By default, the path prefix will be stripped from the request before it is forwarded upstream.
   #
-  # Stopping and starting containers means talking to the runtime, so the proxy
-  # must have been booted with `run/docker_socket` set. That is a boot-time
-  # prerequisite for a deploy-time setting, so kamal checks it while reading this
-  # file rather than letting the first request hang.
+  # So in the example above, a request to /api/users/123 will be forwarded to web-1 as /users/123.
   #
-  # Setting `run/docker_socket` also mounts that socket into the proxy container
-  # — the flag alone only says where to look. **Reaching the container runtime
-  # socket is root-equivalent on the host**, which is why it is a separate,
-  # explicit setting and not something enabling sleep does for you.
+  # To instead forward the request with the original path (including the prefix),
+  # specify --strip-path-prefix=false
+  strip_path_prefix: false
+
+  # Forward headers
   #
-  # Not compatible with `tls/on_demand_url`: a sleeping target cannot answer the
-  # ask endpoint, and waking one would let any hostname on the internet start a
-  # container.
-  sleep:
-    after: 300
-    wake_timeout: 30
-    containers:
-      - app-web
+  # Whether to forward the `X-Forwarded-For` and `X-Forwarded-Proto` headers.
+  #
+  # If you are behind a trusted proxy, you can set this to `true` to forward the headers.
+  #
+  # By default, kamal-proxy will not forward the headers if the `ssl` option is set to `true`, and
+  # will forward them if it is set to `false`.
+  forward_headers: true
 
   # Header rules
   #
@@ -504,6 +308,7 @@ proxy:
     - from: /gone/(.*)
       to: https://elsewhere.example.com/$1
       status: 302
+
   rewrites:
     - from: /api/(.*)
       to: /v2/$1
@@ -512,14 +317,6 @@ proxy:
   #
   # Redirect every request to this host, to force apex or www one way.
   canonical_host: www.example.com
-
-  # Scope cookie paths to the path prefix
-  #
-  # When the app is mounted under `path_prefix`, rewrite the `Path` of cookies it
-  # sets so they are scoped to the prefix rather than to the whole host.
-  #
-  # Defaults to `false`:
-  scope_cookie_paths: true
 
   # Intercept error statuses
   #
@@ -539,6 +336,73 @@ proxy:
   # loadbalancer is configured — unlike TLS and access control, which move to the
   # loadbalancer. Applying them at both layers would append an `add` header twice
   # and run a rewrite over its own output.
+
+
+  # ==========================================================================
+  # 3. Security & access
+  # ==========================================================================
+
+  # Basic auth
+  #
+  # Require HTTP Basic credentials on every request to this service. Requests
+  # without valid credentials get a 401 with a `WWW-Authenticate` challenge.
+  # The health check path stays open, so deploys are unaffected.
+  #
+  # Set exactly one of `password_secret` or `password` — never both.
+  #
+  # Prefer `password_secret`: it names an entry in `.kamal/secrets`, so the
+  # password never lives in this file.
+  #
+  #     basic_auth:
+  #       username: admin
+  #       password_secret: WEB_BASIC_AUTH_PASSWORD
+  #
+  # `password` sets the value directly. If you use it, interpolate rather than
+  # committing a literal:
+  #
+  #     basic_auth:
+  #       username: admin
+  #       password: <%= ENV["WEB_BASIC_AUTH_PASSWORD"] %>
+  #
+  basic_auth:
+    username: admin
+    password: <%= ENV["WEB_BASIC_AUTH_PASSWORD"] %>
+    password_secret: WEB_BASIC_AUTH_PASSWORD
+  #
+  # ### Notes
+  # - Requires a kamal-proxy that supports `--basic-auth`. This is newer than
+  #   the current `MINIMUM_VERSION`, so make sure your proxy is up to date
+  #   before enabling it — an older proxy fails the deploy on an unknown flag.
+  # - Basic credentials are replayable and are sent on every request. Use this
+  #   with `ssl: true`, or terminate TLS in front of the proxy.
+  # - kamal-proxy removes the `Authorization` header before forwarding, so a
+  #   service behind basic auth cannot also pass credentials through to its
+  #   target. When load balancing, the credentials are enforced by the load
+  #   balancer only.
+
+  # Dynamic TLS domains
+  #
+  # kamal-proxy can learn TLS hostnames from your application at runtime
+  # instead of fixing them at deploy time. It polls `source` — a path
+  # (resolved against a healthy app target) or an absolute http(s) URL —
+  # for the domain list and manages Let's Encrypt certificates for it
+  # automatically. When `source` is set, `ssl: true` is allowed without
+  # `host`/`hosts`.
+  #
+  # `interval` is the poll interval in seconds (proxy default: 300).
+  #
+  # `batch_size` controls how many domains share a certificate: 1 (the
+  # proxy default) issues per-domain certs; 2-25 enables stable SAN batching.
+  #
+  # Authentication tokens for the poll endpoint and the refresh nudge are
+  # read by the proxy from the `KAMAL_PROXY_DOMAINS_TOKEN` and
+  # `KAMAL_PROXY_REFRESH_TOKEN` environment variables. Set them on the proxy
+  # container via `proxy.run.options.env` — never as deploy flags, which
+  # leak into process listings and audit logs.
+  ssl_domains:
+    source: /api/v1/kamal/domains
+    interval: 300
+    batch_size: 1
 
   # Who the client is
   #
@@ -605,6 +469,102 @@ proxy:
   #   the per-host proxies see the loadbalancer as their peer, so an allow list
   #   there would refuse every request and one rate limiter would count the whole
   #   fleet as a single client.
+
+
+  # ==========================================================================
+  # 4. Performance & observability
+  # ==========================================================================
+
+  # Two different deadlines
+  #
+  # `response_timeout` bounds how long the app may take to *start* answering —
+  # its clock stops once response headers arrive. `request_timeout` bounds the
+  # whole request, including streaming the body back to the client.
+  #
+  # They are not interchangeable, and the usual confusion is setting the first
+  # and still seeing requests hang: a slow trickle of body bytes never trips
+  # `response_timeout`, because the app answered promptly. WebSocket and
+  # event-stream responses are exempt from `request_timeout`.
+  #
+  # `response_timeout` defaults to 30 seconds; `request_timeout` defaults to 0,
+  # meaning no limit.
+  response_timeout: 10
+
+  request_timeout: 30
+
+  # Per-path timeouts
+  #
+  # Override either deadline below a path prefix. Values are Go duration strings
+  # ("90s", "5m") or plain seconds; 0 removes the limit for that prefix, which
+  # suits streaming and SSE endpoints.
+  path_response_timeouts:
+    "/api/reports": "5m"
+    "/stream": 0
+
+  path_request_timeouts:
+    "/uploads": "10m"
+    "/stream": 0
+
+  # Target connections and retries
+  #
+  # The connection pool between the proxy and this app's containers, and how
+  # hard the proxy tries to place a request on a healthy one.
+  #
+  # `max_conns` caps simultaneous connections per target, idle ones included.
+  # Requests over the cap queue rather than failing, and a streaming response
+  # holds its connection until the body closes — so pair a low cap with
+  # `request_timeout`. `max_idle_conns` caps the idle connections kept open.
+  # Both apply *per pool*, and every entry in `path_response_timeouts` adds another pool.
+  #
+  # `idle_conn_timeout` is how long an idle connection is kept; set it below the
+  # app's own keep-alive timeout, or the proxy will hand a request to a socket
+  # the app has already closed. `dial_timeout` bounds establishing a connection
+  # — `response_timeout` cannot cover that, since its clock starts only once the
+  # request has been written.
+  #
+  # `try_duration` keeps looking for a healthy target for that long before
+  # giving up, with `try_interval` between attempts. Only idempotent requests
+  # without a body are re-sent to another target.
+  #
+  # ### What 0 means here
+  #
+  # Not the same thing for every key, because the proxy resolves its own
+  # defaults from a zero:
+  #
+  # * `max_conns: 0` — unlimited
+  # * `try_duration: 0` — a single attempt, no retrying
+  # * `request_timeout: 0` — no limit
+  # * `max_idle_conns: 0` — the proxy's default of 100, **not** "keep none"
+  # * `idle_conn_timeout: 0` — the proxy's default of 90s
+  # * `dial_timeout: 0` — the proxy's default of 30s
+  # * `try_interval: 0` — the proxy's default of 250ms
+  #
+  # So there is no way to ask for zero idle connections; leave the key unset
+  # unless you mean to change it.
+  target:
+    max_conns: 100
+    max_idle_conns: 10
+    idle_conn_timeout: 90
+    dial_timeout: 5
+    disable_keep_alives: false
+    try_duration: 30
+    try_interval: 1
+
+  # Buffering
+  #
+  # Whether to buffer request and response bodies in the proxy.
+  #
+  # By default, buffering is enabled with a max request body size of 1GB and no limit
+  # for response size.
+  #
+  # You can also set the memory limit for buffering, which defaults to 1MB; anything
+  # larger than that is written to disk.
+  buffering:
+    requests: true
+    responses: true
+    max_request_body: 40_000_000
+    max_response_body: 0
+    memory: 2_000_000
 
   # Response compression
   #
@@ -693,6 +653,17 @@ proxy:
       - locale
     allow_set_cookie: false
 
+  # Paths to leave out of the Prometheus metrics
+  #
+  # Request paths that should not be counted, typically health and readiness
+  # endpoints that would otherwise dominate the histograms.
+  #
+  # This is a per-service deploy setting even though it reads like metrics
+  # configuration — where the metrics are served and who may read them are
+  # proxy-wide and live under `run/metrics_port` and `run/metrics_allow_ips`.
+  exclude_metrics_paths:
+    - /up
+
   # Logging
   #
   # Configure request logging for the proxy.
@@ -705,6 +676,88 @@ proxy:
     response_headers:
       - X-Request-ID
       - X-Request-Start
+
+
+  # ==========================================================================
+  # 5. Fleet — multi-host behaviour
+  # ==========================================================================
+
+  # Read-only targets
+  #
+  # kamal-proxy can split traffic between the deployed (writer) targets and a
+  # set of read-only targets, e.g. app instances backed by database replicas.
+  # Read requests are routed to the read targets; write requests always go to
+  # the writers.
+  #
+  # Targets are host:port addresses reachable from the proxy.
+  #
+  # `websockets` routes WebSocket traffic to the read targets too (default
+  # `false`). `writer_affinity_timeout` is how long, in seconds, a client's
+  # reads stick to the writer after it makes a write, so clients always read
+  # their own writes (default 1 second).
+  #
+  # When a loadbalancer fronts the fleet, read routing is decided there — at
+  # the only layer that sees the whole fleet.
+  read_routing:
+    targets:
+      - 192.168.0.2:3000
+      - 192.168.0.3:3000
+    websockets: true
+    writer_affinity_timeout: 10
+
+  # Session affinity
+  #
+  # Keep each client on the target that first served it, for apps holding session
+  # state in the instance. Off by default, and rightly so — every request is
+  # otherwise free to go to whichever target is best placed to serve it.
+  #
+  # The client carries an opaque HttpOnly cookie naming its target. When that
+  # target leaves the pool the next request falls through to another one and is
+  # re-pinned, so a deploy does not strand anybody. Reads served by a
+  # `read_targets` replica are never pinned.
+  #
+  # `cookie` renames the pin cookie; kamal-proxy picks a sensible default.
+  session_affinity:
+    enabled: true
+    cookie: _kamal_affinity
+
+  # Scale to zero
+  #
+  # Stop this service's containers after `after` seconds with no traffic, and
+  # start them again on the next request, which is held until they are healthy.
+  # Health checks and the proxy's own TLS probes are not traffic and never wake a
+  # sleeping service.
+  #
+  # `wake_timeout` is how long a request waits for the containers to come back
+  # before giving up with a 503. `containers` names the containers to stop and
+  # start, replacing what the proxy infers from the target address — needed when
+  # a target names a network alias rather than a container.
+  #
+  # ### This needs the container runtime socket
+  #
+  # Stopping and starting containers means talking to the runtime, so the proxy
+  # must have been booted with `run/docker_socket` set. That is a boot-time
+  # prerequisite for a deploy-time setting, so kamal checks it while reading this
+  # file rather than letting the first request hang.
+  #
+  # Setting `run/docker_socket` also mounts that socket into the proxy container
+  # — the flag alone only says where to look. **Reaching the container runtime
+  # socket is root-equivalent on the host**, which is why it is a separate,
+  # explicit setting and not something enabling sleep does for you.
+  #
+  # Not compatible with `tls/on_demand_url`: a sleeping target cannot answer the
+  # ask endpoint, and waking one would let any hostname on the internet start a
+  # container.
+  sleep:
+    after: 300
+    wake_timeout: 30
+    containers:
+      - app-web
+
+
+  # ==========================================================================
+  # 6. Proxy container (run)
+  # ==========================================================================
 
   # Run configuration
   #
@@ -928,6 +981,9 @@ proxy:
       store: redis://cache.example.com:6379/0
       store_timeout: 2
       memory_size: 134_217_728
+    # `options` are `docker run` options for the proxy container - resource
+    # limits, labels, extra mounts - NOT kamal-proxy flags. A kamal-proxy flag
+    # the gem has no key for goes in `flags` above instead.
     options:                       # Additional options to pass to `docker run`
       label:
         - custom.label=kamal-proxy

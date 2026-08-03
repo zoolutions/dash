@@ -79,7 +79,7 @@ Two builder tests are known-failing on Apple Silicon only (host-arch dependent) 
 
 | What | Grammar | Example | Push |
 |---|---|---|---|
-| Gem (this repo) | `dash-v<upstream>.<n>` | `dash-v2.12.0.1` | `git push origin tag dash-v2.12.0.1` |
+| Gem (this repo) | `dash-v<semver>` (own major from 3.0.0) | `dash-v3.0.0` | `git push origin tag dash-v3.0.0` |
 | Proxy image (kamal-proxy) | `v<upstream-base>.<n>` | `v0.9.2.1` | `git push origin tag v0.9.2.1` |
 
 - **NEVER** a bare `v<version>` tag — upstream owns that namespace on both repos
@@ -96,7 +96,7 @@ script/release-dash v0.9.2.1
 
 # 2. this repo, on dash — confirm MINIMUM_VERSION matches, then:
 bin/test
-bin/release-dash 2.12.0.1
+bin/release-dash 3.0.0
 ```
 
 Full procedure, conflict playbook, and sync runbook: `.claude/rules/upstream-sync.md`.
