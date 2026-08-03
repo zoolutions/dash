@@ -48,8 +48,15 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     command = new_command.run.join(" ")
 
     assert_match "--expose=9090", command
-    assert_match "--env-file .kamal/proxy/acme.env", command
-    assert_match "kamal-proxy run --metrics-port \"9090\" --recheck-targets-on-restore --cache-store \"redis://cache.example.com:6379/0\" --acme-email=\"admin@example.com\"", command
+    assert_match "--env-file .kamal/proxy/secrets.env", command
+    assert_match "kamal-proxy run --metrics-port \"9090\" --recheck-targets-on-restore --acme-email=\"admin@example.com\"", command
+
+    # The store reaches the edge through the env file, not the command line.
+    assert_no_match(/cache.example.com/, command)
+
+    with_test_secrets("secrets" => "CF_API_TOKEN=token") do
+      assert_match "CACHE_STORE=redis://cache.example.com:6379/0", new_loadbalancer_config.run.secrets_io.string
+    end
   end
 
   test "run on a proxy host keeps the shared container name and proxy config volume" do
@@ -134,9 +141,14 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
   test "deploy propagates basic auth to the load balancer only" do
     @config[:proxy]["basic_auth"] = { "username" => "admin", "password" => "s3cr3t" }
 
+    command = new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ])
+
     assert_equal \
       "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --basic-auth=\"admin:s3cr3t\" --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
-      new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
+      command.join(" ")
+
+    # Printed output redacts the credential, here as on the per-app deploy.
+    assert_includes Kamal::Utils.redacted(command), "--basic-auth=[REDACTED]"
 
     config = Kamal::Configuration.new(@config, version: "123")
     assert_not_includes config.proxy.deploy_options.keys, :"basic-auth"

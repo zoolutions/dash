@@ -21,11 +21,25 @@ module Kamal::Utils
   end
 
   # Returns a list of shell-dashed option arguments. If the value is true, it's treated like a value-less option.
+  # A Sensitive value stays Sensitive: the rendered option keeps the real value
+  # for execution and a redacted form for anything kamal prints - same contract
+  # as argumentize's `sensitive:` kwarg, but decided per value by the caller.
   def optionize(args, with: nil, escape: true)
     options = if with
-      flatten_args(args).collect { |(key, value)| value == true ? "--#{key}" : "--#{key}#{with}#{escape ? escape_shell_value(value) : value}" }
+      flatten_args(args).collect do |(key, value)|
+        if value == true
+          "--#{key}"
+        else
+          rendered = "--#{key}#{with}#{escape ? escape_shell_value(value) : value}"
+          value.is_a?(Kamal::Utils::Sensitive) ? sensitive(rendered, redaction: "--#{key}#{with}#{value.redaction}") : rendered
+        end
+      end
     else
-      flatten_args(args).collect { |(key, value)| [ "--#{key}", value == true ? nil : escape ? escape_shell_value(value) : value ] }
+      flatten_args(args).collect do |(key, value)|
+        rendered = value == true ? nil : escape ? escape_shell_value(value) : value
+        rendered = sensitive(rendered, redaction: value.redaction) if value.is_a?(Kamal::Utils::Sensitive)
+        [ "--#{key}", rendered ]
+      end
     end
 
     options.flatten.compact

@@ -4,6 +4,12 @@ class Kamal::Configuration::Proxy::Run
   DEFAULT_HTTPS_PORT = 443
   DEFAULT_LOG_MAX_SIZE = "10m"
 
+  # One env file for everything the proxy must know but nothing may print:
+  # ACME DNS credentials and the cache store URL. Also referenced by
+  # Kamal::Commands::Proxy#remove_proxy_secrets_file, which cleans it up when
+  # the config no longer needs it.
+  SECRETS_FILENAME = "secrets.env"
+
   # Bump when the digest serialization changes, so every host converges with
   # exactly one reboot after upgrading kamal.
   DIGEST_SCHEMA_VERSION = "v1"
@@ -25,14 +31,15 @@ class Kamal::Configuration::Proxy::Run
   # Digest of the materialized run invocation, used to detect drift between
   # the running proxy container and the current configuration.
   #
-  # The ACME credential names ride along because --env-file names a path, not the
-  # variables inside it: swapping one credential for another would otherwise leave
-  # the digest unmoved and the old proxy running. Their values deliberately stay
-  # out — the digest is published as a docker label, and hashing secret material
-  # into a world-readable label buys an offline guessing target for nothing.
-  # Rotating a credential's value still needs an explicit `kamal proxy reboot`.
+  # The secret *names* ride along because --env-file names a path, not the
+  # variables inside it: swapping one credential for another (or adding the
+  # cache store) would otherwise leave the digest unmoved and the old proxy
+  # running. The values deliberately stay out — the digest is published as a
+  # docker label, and hashing secret material into a world-readable label buys
+  # an offline guessing target for nothing. Rotating a credential's value or
+  # the store URL still needs an explicit `kamal proxy reboot`.
   def config_digest
-    self.class.digest(image, run_command, *docker_options_args, *acme.credential_names)
+    self.class.digest(image, run_command, *docker_options_args, *secret_names)
   end
 
   def acme
@@ -153,7 +160,7 @@ class Kamal::Configuration::Proxy::Run
       *publish_args,
       *logging_args,
       *("--expose=#{metrics_port}" if metrics_port.present?),
-      *acme_secrets_args,
+      *secrets_args,
       *docker_socket_args,
       *options_args
     ].compact
@@ -168,16 +175,21 @@ class Kamal::Configuration::Proxy::Run
     end
   end
 
-  # Where the ACME DNS credentials land on the proxy host. Under the proxy's own
-  # directory rather than the app's env directory, because the container is
-  # host-scoped and shared by every app on the host - and so `kamal proxy remove`
-  # takes the credentials with it.
+  # Where the proxy's secrets land on the host - the ACME DNS credentials and
+  # the cache store URL, which may embed one. Under the proxy's own directory
+  # rather than the app's env directory, because the container is host-scoped
+  # and shared by every app on the host - and so `kamal proxy remove` takes
+  # the secrets with it.
   def secrets_path
-    File.join host_directory, "acme.env"
+    File.join host_directory, SECRETS_FILENAME
+  end
+
+  def secrets?
+    acme.credentials? || cache_store.present?
   end
 
   def secrets_io
-    acme.secrets_io
+    Kamal::EnvFile.new(acme.credentials_env.merge(cache_store_env)).to_io
   end
 
   def host_directory
@@ -264,7 +276,10 @@ class Kamal::Configuration::Proxy::Run
 
     # Where cached responses are kept, which is a property of the proxy rather
     # than of any one service - the policy that fills the cache is per service,
-    # in proxy/cache.
+    # in proxy/cache. The store itself is deliberately absent: a store URL may
+    # embed credentials, so it travels as CACHE_STORE in the secrets env file
+    # (kamal-proxy reads it as the --cache-store default) rather than on a
+    # command line that lands in process listings and the audit log.
     #
     # lease_ttl and lease_wait take negative values to switch cross-node
     # coalescing off. That survives the space-separated rendering the rest of
@@ -274,7 +289,6 @@ class Kamal::Configuration::Proxy::Run
       cache = run_config["cache"] || {}
 
       {
-        "cache-store": cache["store"],
         "cache-store-timeout": seconds_duration(cache["store_timeout"]),
         "cache-memory-size": cache["memory_size"],
         "cache-lease-ttl": seconds_duration(cache["lease_ttl"]),
@@ -282,8 +296,20 @@ class Kamal::Configuration::Proxy::Run
       }.compact
     end
 
-    def acme_secrets_args
-      argumentize "--env-file", secrets_path if acme.credentials?
+    def cache_store
+      run_config.dig("cache", "store")
+    end
+
+    def cache_store_env
+      cache_store.present? ? { "CACHE_STORE" => cache_store } : {}
+    end
+
+    def secret_names
+      [ *acme.credential_names, ("CACHE_STORE" if cache_store.present?) ].compact
+    end
+
+    def secrets_args
+      argumentize "--env-file", secrets_path if secrets?
     end
 
     def format_bind_ip(ip)

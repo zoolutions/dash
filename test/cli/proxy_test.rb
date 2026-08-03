@@ -24,7 +24,7 @@ class CliProxyTest < CliTestCase
 
       run_command("boot", fixture: :with_proxy_acme).tap do |output|
         assert_match "mkdir -p .kamal/proxy on 1.1.1.1", output
-        assert_match "--env-file .kamal/proxy/acme.env", output
+        assert_match "--env-file .kamal/proxy/secrets.env", output
         assert_match "--acme-email=\"admin@example.com\"", output
         assert_match "--acme-dns-provider=\"cloudflare\"", output
         assert_match "--acme-http-fallback=\"false\"", output
@@ -32,7 +32,7 @@ class CliProxyTest < CliTestCase
         assert_no_match(/zone-rewriting-token/, output)
       end
 
-      assert_equal [ [ "CF_API_TOKEN=zone-rewriting-token\n", ".kamal/proxy/acme.env", "0600" ] ], uploads
+      assert_equal [ [ "CF_API_TOKEN=zone-rewriting-token\n", ".kamal/proxy/secrets.env", "0600" ] ], uploads
     end
   end
 
@@ -41,11 +41,33 @@ class CliProxyTest < CliTestCase
       uploads = capture_uploads
 
       run_command("reboot", "-y", fixture: :with_proxy_acme).tap do |output|
-        assert_match "--env-file .kamal/proxy/acme.env", output
+        assert_match "--env-file .kamal/proxy/secrets.env", output
         assert_no_match(/zone-rewriting-token/, output)
       end
 
-      assert_equal [ [ "CF_API_TOKEN=zone-rewriting-token\n", ".kamal/proxy/acme.env", "0600" ] ], uploads
+      assert_equal [ [ "CF_API_TOKEN=zone-rewriting-token\n", ".kamal/proxy/secrets.env", "0600" ] ], uploads
+    end
+  end
+
+  test "boot delivers the cache store through the secrets env file, never printing the URL" do
+    uploads = capture_uploads
+
+    run_command("boot", fixture: :with_proxy_cache_store).tap do |output|
+      assert_match "mkdir -p .kamal/proxy on 1.1.1.1", output
+      assert_match "--env-file .kamal/proxy/secrets.env", output
+
+      assert_no_match(/supers3cret/, output)
+      assert_no_match(/--cache-store/, output)
+    end
+
+    assert_equal [ [ "CACHE_STORE=redis://:supers3cret@cache.example.com:6379/0\n", ".kamal/proxy/secrets.env", "0600" ] ], uploads
+  end
+
+  # C3: a host keeps no secrets it no longer needs - when the config block
+  # goes away, the next boot takes the env file with it.
+  test "boot removes a stale secrets env file when the config no longer needs it" do
+    run_command("boot").tap do |output|
+      assert_match "rm .kamal/proxy/secrets.env", output
     end
   end
 
@@ -564,13 +586,13 @@ class CliProxyTest < CliTestCase
 
       run_command("boot", fixture: :with_loadbalancer_acme).tap do |output|
         assert_match "mkdir -p .kamal/proxy on lb.example.com", output
-        assert_match "--env-file .kamal/proxy/acme.env", output
+        assert_match "--env-file .kamal/proxy/secrets.env", output
         assert_match "--acme-email=\"admin@example.com\"", output
 
         assert_no_match(/zone-rewriting-token/, output)
       end
 
-      assert_includes uploads, [ "CF_API_TOKEN=zone-rewriting-token\n", ".kamal/proxy/acme.env", "0600" ]
+      assert_includes uploads, [ "CF_API_TOKEN=zone-rewriting-token\n", ".kamal/proxy/secrets.env", "0600" ]
     end
   end
 
@@ -585,7 +607,7 @@ class CliProxyTest < CliTestCase
         assert_no_match(/zone-rewriting-token/, output)
       end
 
-      assert_includes uploads, [ "CF_API_TOKEN=zone-rewriting-token\n", ".kamal/proxy/acme.env", "0600" ]
+      assert_includes uploads, [ "CF_API_TOKEN=zone-rewriting-token\n", ".kamal/proxy/secrets.env", "0600" ]
     end
   end
 

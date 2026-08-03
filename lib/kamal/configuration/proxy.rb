@@ -592,7 +592,10 @@ class Kamal::Configuration::Proxy
         raise Kamal::ConfigurationError, "proxy/basic_auth: password_secret '#{secret_name}' is empty"
       end
 
-      "#{basic_auth["username"]}:#{password}"
+      # Sensitive, so SSHKit redacts the credential wherever kamal prints the
+      # deploy command - at :info verbosity it used to land in plain text
+      # (registry-login precedent; Utils.optionize passes the marking through).
+      Kamal::Utils.sensitive("#{basic_auth["username"]}:#{password}")
     end
 
     # Serves both --path-timeout and --path-request-timeout, which kamal-proxy

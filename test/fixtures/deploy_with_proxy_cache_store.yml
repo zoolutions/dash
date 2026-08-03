@@ -1,0 +1,16 @@
+service: app
+image: dhh/app
+servers:
+  - "1.1.1.1"
+registry:
+  username: user
+  password: pw
+builder:
+  arch: amd64
+proxy:
+  host: app.example.com
+  cache:
+    enabled: true
+  run:
+    cache:
+      store: redis://:supers3cret@cache.example.com:6379/0

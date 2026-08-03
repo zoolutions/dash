@@ -63,12 +63,39 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
     assert_equal "kamal-proxy run --recheck-targets-on-restore", run_config({}).run_command
   end
 
-  test "store settings become kamal-proxy run flags" do
+  test "store tuning becomes kamal-proxy run flags, the store itself never does" do
     run = run_config "store" => "redis://cache.example.com:6379/0", "store_timeout" => 2, "memory_size" => 134_217_728
 
     assert_equal "kamal-proxy run --recheck-targets-on-restore " \
-      "--cache-store \"redis://cache.example.com:6379/0\" --cache-store-timeout \"2s\" " \
-      "--cache-memory-size \"134217728\"", run.run_command
+      "--cache-store-timeout \"2s\" --cache-memory-size \"134217728\"", run.run_command
+  end
+
+  # A store URL may carry credentials, and the run command lands in host
+  # process listings and kamal's audit log. kamal-proxy reads CACHE_STORE from
+  # its environment as the --cache-store default, so the URL travels in the
+  # 0600 proxy secrets env file instead - the acme mechanism made shared.
+  test "the store travels in the proxy secrets env file, never on the command line" do
+    run = run_config "store" => "redis://:supers3cret@cache.example.com:6379/0"
+
+    assert_equal "CACHE_STORE=redis://:supers3cret@cache.example.com:6379/0\n", run.secrets_io.string
+    assert_equal ".kamal/proxy/secrets.env", run.secrets_path
+    assert_includes run.docker_options_args, "--env-file"
+    assert_includes run.docker_options_args, ".kamal/proxy/secrets.env"
+
+    assert_no_match(/supers3cret/, run.run_command)
+    assert_no_match(/supers3cret/, run.docker_options_args.join(" "))
+  end
+
+  test "acme credentials and the cache store share one secrets env file" do
+    with_test_secrets("secrets" => "CF_API_TOKEN=zone-rewriting-token") do
+      config = Kamal::Configuration.new(@deploy.merge(proxy: { "run" => {
+        "acme" => { "email" => "admin@example.com", "credentials" => [ "CF_API_TOKEN" ] },
+        "cache" => { "store" => "redis://cache.example.com:6379/0" }
+      } }))
+
+      assert_equal "CF_API_TOKEN=zone-rewriting-token\nCACHE_STORE=redis://cache.example.com:6379/0\n",
+        config.proxy.run.secrets_io.string
+    end
   end
 
   # Negative lease values switch cross-node coalescing off, and pflag takes the
@@ -80,12 +107,14 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
     assert_match "--cache-lease-wait \"0s\"", run.run_command
   end
 
-  test "config_digest changes when the store changes" do
-    memory = run_config("store" => "memory").config_digest
-    redis = run_config("store" => "redis://cache.example.com:6379/0").config_digest
-
-    assert_not_equal memory, redis
-    assert_not_equal run_config({}).config_digest, memory
+  # Mirrors acme.credential_names: the digest is published as a world-readable
+  # docker label, and hashing a URL that may embed a password would hand out an
+  # offline guessing target. Presence moves the digest; rotating the URL's
+  # value needs an explicit `kamal proxy reboot`, same as an acme credential.
+  test "config_digest tracks the store's presence, never its value" do
+    assert_not_equal run_config({}).config_digest, run_config("store" => "memory").config_digest
+    assert_equal run_config("store" => "memory").config_digest,
+      run_config("store" => "redis://:supers3cret@cache.example.com:6379/0").config_digest
   end
 
   # Validation

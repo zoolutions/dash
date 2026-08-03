@@ -901,16 +901,19 @@ proxy:
     #
     # Where the entries cached by `proxy/cache` are kept. Proxy-wide: one store
     # serves every service on this proxy, so unlike the policy above it belongs
-    # here, in the run configuration, and changing it reboots the proxy.
+    # here, in the run configuration. Adding or removing it reboots the proxy
+    # on the next deploy.
     #
     # `store` is `memory` (the default — a per-node cache) or a `redis://` /
     # `rediss://` URL that every proxy pointed at it shares, so one fetch warms
     # the whole fleet.
     #
-    # Note that a Redis URL with credentials in it ends up on the proxy's
-    # `docker run` command line, and so in host process listings and in kamal's
-    # audit log. Until that has a secrets-backed path, prefer a store reachable
-    # over a private network without a password in the URL.
+    # The URL never appears on the proxy's command line: kamal delivers it as
+    # `CACHE_STORE` in a 0600 env file on the host (alongside any ACME
+    # credentials), so a password in the URL stays out of process listings and
+    # kamal's audit log. The trade-off, same as the ACME credentials: changing
+    # only the URL's *value* does not move the drift digest — run
+    # `kamal proxy reboot` after rotating it.
     #
     # The remaining three only matter with a shared store, and are seconds:
     #

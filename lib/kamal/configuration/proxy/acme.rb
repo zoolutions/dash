@@ -41,8 +41,10 @@ class Kamal::Configuration::Proxy::Acme
     credential_names.any?
   end
 
-  def secrets_io
-    Kamal::EnvFile.new(credential_names.to_h { |name| [ name, secrets[name] ] }).to_io
+  # The resolved credentials, for the shared proxy secrets env file that
+  # Proxy::Run#secrets_io assembles (cache store and acme travel together).
+  def credentials_env
+    credential_names.to_h { |name| [ name, secrets[name] ] }
   end
 
   # Rendered with `=` rather than a space, unlike the rest of the run command:
