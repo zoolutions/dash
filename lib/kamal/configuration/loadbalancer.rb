@@ -33,10 +33,14 @@ class Kamal::Configuration::Loadbalancer < Kamal::Configuration::Proxy
 
   # Docker options for the load balancer container: publish/logging/options
   # plus the mounts and env file the proxy's run surface brings along —
-  # notably the acme credentials env file, without which the edge cannot
-  # issue certificates even though it is the layer terminating TLS.
+  # notably the secrets env file, without which the edge cannot issue
+  # certificates even though it is the layer terminating TLS.
+  #
+  # The one holder-mode exception: port_holder suppresses publish_args on the
+  # proxy hosts (the holder owns the ports there), but the load balancer has
+  # no holder — its reboot path is stop->run — so it always publishes its own.
   def run_args
-    run.docker_options_args
+    [ *(run.publish_args if run.port_holder?), *run.docker_options_args ]
   end
 
   # Digest of what the load balancer container is booted with, so a second app

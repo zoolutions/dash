@@ -52,6 +52,10 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
     docker :inspect, container_name, "--format", "'{{ index .Config.Labels \"#{Kamal::Commands::Proxy::CONFIG_DIGEST_LABEL}\" }}'"
   end
 
+  def container_id
+    container_id_for(container_name: container_name)
+  end
+
   def info
     docker :ps, "--filter", "'name=^#{container_name}$'"
   end

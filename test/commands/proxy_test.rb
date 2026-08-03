@@ -272,6 +272,12 @@ class CommandsProxyTest < ActiveSupport::TestCase
       new_command.list.join(" ")
   end
 
+  test "list json" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy list --json",
+      new_command.list(json: true).join(" ")
+  end
+
   test "config_digest" do
     assert_equal \
       "docker inspect kamal-proxy --format '{{ index .Config.Labels \"org.kamal.proxy-config-digest\" }}'",

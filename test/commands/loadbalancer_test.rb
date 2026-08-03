@@ -59,6 +59,16 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     end
   end
 
+  # The load balancer has no port holder - its reboot path is stop->run - so
+  # holder mode on the proxy fleet must not strip the LB's own port publishing.
+  test "run still publishes ports when the proxy fleet runs in port_holder mode" do
+    @config[:proxy]["run"] = { "port_holder" => true }
+
+    command = new_command.run.join(" ")
+
+    assert_match "--publish 80:80 --publish 443:443", command
+  end
+
   test "run on a proxy host keeps the shared container name and proxy config volume" do
     @config[:proxy]["loadbalancer"] = "1.1.1.1"
 

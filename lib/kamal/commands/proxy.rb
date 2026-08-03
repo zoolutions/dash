@@ -65,8 +65,8 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
     end
   end
 
-  def list(name: container_name)
-    docker :exec, name, "kamal-proxy", :list
+  def list(name: container_name, json: false)
+    docker :exec, name, "kamal-proxy", :list, *("--json" if json)
   end
 
   # Zero-downtime handoff commands (proxy/run port_holder mode)

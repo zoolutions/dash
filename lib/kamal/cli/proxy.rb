@@ -65,6 +65,9 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
       end
 
       if KAMAL.config.proxy.load_balancing?
+        lb_drifted = Concurrent::Array.new
+        lb_stale = Concurrent::Array.new
+
         on(KAMAL.config.proxy.effective_loadbalancer) do |host|
           info "Starting loadbalancer on #{host}..."
           execute *KAMAL.registry.login
@@ -89,8 +92,38 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
             Kamal::Cli::App::SslCertificates.new(host, role, self).run
           end
 
-          Kamal::Cli::Proxy::LoadbalancerClaim.new(host, self).claim_run_config
-          execute *KAMAL.loadbalancer.start_or_run
+          # The same drift detection the proxy hosts get: a loadbalancer booted
+          # with a different config digest reboots below (or warns, when
+          # automatic reboot is off) instead of serving a stale config forever.
+          container_id = capture_with_info(*KAMAL.loadbalancer.container_id, raise_on_non_zero_exit: false).strip
+          current_digest = capture_with_info(*KAMAL.loadbalancer.config_digest, raise_on_non_zero_exit: false).strip
+
+          if container_id.present? && current_digest != KAMAL.loadbalancer_config.run_config_digest
+            if auto_reboot
+              # Leave the old loadbalancer serving until its reboot below.
+              lb_drifted << host.to_s
+            else
+              lb_stale << host.to_s
+              execute *KAMAL.loadbalancer.start_or_run
+            end
+          else
+            Kamal::Cli::Proxy::LoadbalancerClaim.new(host, self).claim_run_config
+            execute *KAMAL.loadbalancer.start_or_run
+          end
+        end
+
+        if lb_stale.any?
+          say "The loadbalancer on #{lb_stale.sort.join(", ")} is running with a configuration that no longer matches the deploy config. " \
+              "Automatic reboot is disabled (proxy: reboot_on_deploy: false) - run `kamal proxy reboot` to apply the new configuration.", :yellow
+        end
+
+        lb_drifted.sort.each do |host|
+          say "Loadbalancer configuration changed, rebooting on #{host}...", :magenta
+          run_hook "pre-loadbalancer-reboot", hosts: host
+          on(host) do |h|
+            Kamal::Cli::Proxy::LoadbalancerReboot.new(h, self).run
+          end
+          run_hook "post-loadbalancer-reboot", hosts: host
         end
       end
     end
@@ -207,31 +240,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
           run_hook "pre-loadbalancer-reboot", hosts: lb_host
 
           on(lb_host) do |host|
-            execute *KAMAL.auditor.record("Rebooted loadbalancer"), verbosity: :debug
-            execute *KAMAL.registry.login
-
-            info "Stopping and removing #{KAMAL.loadbalancer.container_name} on #{host}, if running..."
-            execute *KAMAL.loadbalancer.stop, raise_on_non_zero_exit: false
-            execute *KAMAL.loadbalancer.remove_container
-
-            # Same as boot: the replacement container's --env-file must find
-            # current secrets, not whatever an earlier boot left behind.
-            if (lb_run = KAMAL.loadbalancer_config.run).secrets?
-              execute *KAMAL.loadbalancer.ensure_proxy_directory
-              upload! lb_run.secrets_io, lb_run.secrets_path, mode: "0600"
-            else
-              execute *KAMAL.loadbalancer.remove_proxy_secrets_file, raise_on_non_zero_exit: false
-            end
-
-            execute *KAMAL.loadbalancer.ensure_apps_config_directory
-
-            Kamal::Cli::Proxy::LoadbalancerClaim.new(host, self).claim_run_config(replace: true)
-            execute *KAMAL.loadbalancer.run
-
-            # kamal-proxy keeps its service state in the config volume, which the
-            # replacement container re-mounts - every app's routes survive.
-            services = capture_with_info(*KAMAL.loadbalancer.list).strip
-            info "Services registered on the load balancer at #{host} after reboot:\n#{services}"
+            Kamal::Cli::Proxy::LoadbalancerReboot.new(host, self).run
           end
 
           run_hook "post-loadbalancer-reboot", hosts: lb_host

@@ -16,8 +16,7 @@ class Kamal::Cli::Proxy::Reboot
     pull_image
     replace_container
     wait_until_ready
-    re_register_services
-    verify_services
+    verify_services re_register_services
   end
 
   private
@@ -123,9 +122,10 @@ class Kamal::Cli::Proxy::Reboot
 
     # Re-register this app's services rather than relying solely on the
     # proxy's own state restore — a proxy that came back with missing routes
-    # would otherwise 404 until the next deploy.
+    # would otherwise 404 until the next deploy. Returns the registered
+    # service names for verify_services to check.
     def re_register_services
-      @registered_services = []
+      registered_services = []
 
       KAMAL.roles_on(host).select(&:running_proxy?).each do |role|
         app = KAMAL.app(role: role, host: host)
@@ -138,7 +138,7 @@ class Kamal::Cli::Proxy::Reboot
 
         info "Re-registering #{role.container_prefix} with kamal-proxy on #{host}..."
         execute *app.deploy(target: endpoint)
-        @registered_services << role.container_prefix
+        registered_services << role.container_prefix
       end
 
       KAMAL.config.accessories.select(&:running_proxy?).each do |accessory_config|
@@ -150,15 +150,20 @@ class Kamal::Cli::Proxy::Reboot
 
         info "Re-registering #{accessory_config.service_name} with kamal-proxy on #{host}..."
         execute *accessory.deploy(target: target)
-        @registered_services << accessory_config.service_name
+        registered_services << accessory_config.service_name
       end
+
+      registered_services
     end
 
-    def verify_services
-      return if @registered_services.empty?
+    # `list --json` returns {"services": {"<name>": ...}} - exact key
+    # membership, where a substring match over the human table would find one
+    # service's name inside another's ("app" in "other-app").
+    def verify_services(registered_services)
+      return if registered_services.empty?
 
-      listing = capture_with_info(*proxy.list)
-      missing = @registered_services.reject { |name| listing.include?(name) }
+      listed = JSON.parse(capture_with_info(*proxy.list(json: true))).fetch("services", {}).keys
+      missing = registered_services - listed
 
       if missing.any?
         raise Kamal::Cli::BootError, "kamal-proxy on #{host} is missing services after reboot: #{missing.join(", ")}"
