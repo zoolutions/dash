@@ -88,10 +88,10 @@ class ConfigurationProxyLifecycleTest < ActiveSupport::TestCase
   # let any SNI on the internet start a container.
   test "sleep cannot be combined with on-demand TLS" do
     error = assert_raises(Kamal::ConfigurationError) do
-      configuration SOCKET.merge("ssl" => true, "tls" => { "on_demand_url" => "/ask" }, "sleep" => { "after" => 300 })
+      configuration SOCKET.merge("ssl" => { "on_demand_url" => "/ask" }, "sleep" => { "after" => 300 })
     end
 
-    assert_equal "proxy/sleep: after cannot be combined with tls/on_demand_url - " \
+    assert_equal "proxy/sleep: after cannot be combined with ssl/on_demand_url - " \
       "a sleeping target cannot answer the ask endpoint, and waking one would let any hostname start a container",
       error.message
   end

@@ -130,6 +130,19 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
       "or the header would be ignored while appearing to be honored", error.message
   end
 
+  # Unconditionally, not only when allow_ips/rate_limit key on it: kamal-proxy
+  # rewrites the client address (and X-Forwarded-For) from the header for
+  # logging and everything downstream, so honoring it from untrusted peers is
+  # a client-spoofable identity - exactly what the shipped docs say it is not.
+  test "a client_ip header without trusted_proxies is rejected even without allow_ips or rate_limit" do
+    error = assert_raises(Kamal::ConfigurationError) do
+      configuration "client_ip" => { "header" => "CF-Connecting-IP" }
+    end
+
+    assert_equal "proxy/client_ip: header requires trusted_proxies, " \
+      "or the header would be ignored while appearing to be honored", error.message
+  end
+
   test "burst without requests is rejected" do
     error = assert_raises(Kamal::ConfigurationError) { configuration "rate_limit" => { "burst" => 20 } }
 

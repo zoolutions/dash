@@ -23,10 +23,10 @@ class Kamal::Cli::App::SslCertificates
       end
     end
 
-    # The server certificate arrives as secret content; the client CA is a public
-    # trust anchor named by a local path, so it is uploaded straight from disk.
+    # The client CA arrives the same way the server certificate does: as
+    # secret content named in .kamal/secrets, resolved here at upload time.
     if role.proxy.client_ca?
-      upload!(role.proxy.client_ca_path, role.proxy.host_client_ca, mode: "0644")
+      upload!(StringIO.new(role.proxy.client_ca_pem_content), role.proxy.host_client_ca, mode: "0644")
     end
   end
 

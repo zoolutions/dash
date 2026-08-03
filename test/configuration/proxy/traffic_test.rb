@@ -139,15 +139,53 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
 
   # The rest
 
-  test "canonical_host and scope_cookie_paths" do
-    options = deploy_options "canonical_host" => "www.example.com", "scope_cookie_paths" => true
+  test "canonical_host becomes --canonical-host" do
+    options = deploy_options "canonical_host" => "www.example.com"
 
     assert_equal "www.example.com", options[:"canonical-host"]
-    assert_equal true, options[:"scope-cookie-paths"]
   end
 
-  test "scope_cookie_paths false emits nothing" do
-    assert_not deploy_options("scope_cookie_paths" => false).key?(:"scope-cookie-paths")
+  # kamal-proxy rejects the pair (canonical redirection needs a fixed host,
+  # on-demand TLS has none) - today the deploy fails after the SSH round-trip.
+  test "canonical_host cannot be combined with on_demand_url" do
+    error = assert_raises(Kamal::ConfigurationError) do
+      configuration "canonical_host" => "www.example.com", "ssl" => { "on_demand_url" => "/ask" }
+    end
+
+    assert_equal "proxy/canonical_host: cannot be combined with ssl/on_demand_url - " \
+      "canonical redirection needs a fixed host, and on-demand TLS has none", error.message
+  end
+
+  # A canonical host the proxy does not serve is a redirect loop-or-404
+  # machine: every request bounces to a hostname no service answers for.
+  test "canonical_host must be listed in hosts" do
+    error = assert_raises(Kamal::ConfigurationError) do
+      configuration "canonical_host" => "www.example.com", "hosts" => [ "example.com" ]
+    end
+
+    assert_equal "proxy/canonical_host: 'www.example.com' is not in hosts - " \
+      "every request would redirect to a hostname this service does not serve", error.message
+  end
+
+  test "canonical_host in hosts is accepted" do
+    assert configuration("canonical_host" => "www.example.com", "hosts" => [ "example.com", "www.example.com" ])
+    assert configuration("canonical_host" => "www.example.com", "host" => "www.example.com")
+    # Without a static host list (e.g. behind a loadbalancer) there is nothing
+    # to check against.
+    assert configuration("canonical_host" => "www.example.com")
+  end
+
+  # The wire format is '<from>=<to>' and kamal-proxy cuts at the FIRST '=', so
+  # an '=' inside the pattern silently builds a rule for the wrong path.
+  test "redirect and rewrite from cannot contain an equals sign" do
+    %w[ redirects rewrites ].each do |key|
+      error = assert_raises(Kamal::ConfigurationError, "expected #{key} to reject '='") do
+        configuration key => [ { "from" => "/old=path", "to" => "/new" } ]
+      end
+
+      assert_equal "proxy/#{key}/0: from cannot contain '=' - " \
+        "the <from>=<to> wire format cuts at the first '=' and would silently build a different rule", error.message
+    end
   end
 
   test "intercept_errors becomes repeated flags" do
@@ -183,7 +221,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
   # would emit http:// Locations to HTTPS clients — it moves to the edge.
   test "traffic shaping stays off the load balancer, canonical host moves to it" do
     proxy_config = {
-      "loadbalancer" => "lb.example.com", "ssl" => true, "hosts" => [ "app.example.com" ],
+      "loadbalancer" => "lb.example.com", "ssl" => true, "hosts" => [ "app.example.com", "www.example.com" ],
       "headers" => { "request" => { "add" => { "X-Request-Source" => "kamal" } } },
       "rewrites" => [ { "from" => "/(.*)", "to" => "/prefix/$1" } ],
       "canonical_host" => "www.example.com"

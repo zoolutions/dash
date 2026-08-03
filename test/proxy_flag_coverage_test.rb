@@ -21,13 +21,17 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
   # Flags that are not deploy.yml's business — a decision, not a backlog.
   NEVER_EXPOSED = {
     "deploy" => {
-      "force" => "CLI-level concern (kamal proxy deploy), not operator config"
+      "force" => "CLI-level concern (kamal proxy deploy), not operator config",
+      "tls-acme-cache-path" => "cut for 3.0 (#93 D4) - kamal-proxy's default already persists ACME assets in the kamal-proxy-config volume, so the knob only offered ways to break that",
+      "scope-cookie-paths" => "cut for 3.0 (#93 D4) - niche cookie-path rewriting under path_prefix; re-expose post-3.0 if someone asks for it"
     },
     "run" => {
       "http-port" => "the gem publishes host:container ports via docker; the proxy listens on its default inside",
       "https-port" => "same as --http-port",
       "data-dir" => "fixed by the kamal-proxy-config volume mount in Kamal::Commands::Proxy#run",
-      "cache-store" => "delivered as CACHE_STORE via the 0600 proxy secrets env file - a store URL may embed credentials that must stay out of process listings and the audit log"
+      "cache-store" => "delivered as CACHE_STORE via the 0600 proxy secrets env file - a store URL may embed credentials that must stay out of process listings and the audit log",
+      "cache-lease-ttl" => "cut for 3.0 (#93 D4) - cross-node coalescing tuning with sane proxy defaults; proxy/run/flags remains the escape hatch",
+      "cache-lease-wait" => "same as --cache-lease-ttl"
     }
   }.freeze
 
@@ -155,7 +159,7 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
 
     # More than one, because some options are mutually exclusive: kamal-proxy
     # forbids on-demand TLS alongside a host list, a custom certificate or
-    # tls_domains, so one fixture cannot hold every key. Coverage is the union.
+    # ssl_domains, so one fixture cannot hold every key. Coverage is the union.
     def maximal_configs
       @maximal_configs ||= MAXIMAL_FIXTURES.map do |fixture|
         Kamal::Configuration.create_from \

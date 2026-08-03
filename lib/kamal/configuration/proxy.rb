@@ -45,7 +45,6 @@ class Kamal::Configuration::Proxy
     "tls-domains-batch-size": :edge,
     "tls-on-demand-url": :edge,
     "tls-client-ca-path": :edge,
-    "tls-acme-cache-path": :edge,
 
     # --- Edge: the load balancer is the only proxy that ever sees the real
     # client address — an allow list on a per-app proxy would refuse every
@@ -101,7 +100,6 @@ class Kamal::Configuration::Proxy
     "add-response-header": :per_app,
     "remove-response-header": :per_app,
     rewrite: :per_app,
-    "scope-cookie-paths": :per_app,
     "intercept-errors": :per_app,
 
     # --- Per-app: sleep stops and starts app containers through the docker
@@ -260,23 +258,40 @@ class Kamal::Configuration::Proxy
     tls_path(config.proxy_boot.tls_container_directory, "key.pem") if custom_ssl_certificate?
   end
 
-  def tls_config
-    proxy_config["tls"] || {}
+  # Everything TLS lives in the one `ssl` hash - certificate material,
+  # on-demand issuance and the mTLS client CA. One naming family instead of a
+  # separate `tls:` block.
+  def ssl_config
+    proxy_config["ssl"].is_a?(Hash) ? proxy_config["ssl"] : {}
   end
 
   def on_demand_url
-    tls_config["on_demand_url"]
+    ssl_config["on_demand_url"]
   end
 
-  # A path on the machine running kamal, like error_pages_path - not on the
-  # deploy host. Kamal uploads it into the app's TLS directory, which the proxy
-  # container already mounts, and hands the proxy the path it sees there.
-  def client_ca_path
-    tls_config["client_ca_path"]
+  # The name of a secret in .kamal/secrets holding the CA bundle client
+  # certificates must chain to - mirroring ssl.certificate_pem, not a local
+  # file path. Kamal uploads the content into the app's TLS directory, which
+  # the proxy container already mounts, and hands the proxy the path it sees
+  # there.
+  def client_ca_pem
+    ssl_config["client_ca_pem"]
   end
 
   def client_ca?
-    client_ca_path.present?
+    client_ca_pem.present?
+  end
+
+  # Resolved at upload time, not config time, so `kamal app logs` and friends
+  # work on machines without the secret. A blank secret raises like
+  # basic_auth.password_secret - silently deploying without the client CA
+  # would turn mTLS off.
+  def client_ca_pem_content
+    secrets[client_ca_pem].tap do |content|
+      if content.blank?
+        raise Kamal::ConfigurationError, "proxy/ssl: client_ca_pem secret '#{client_ca_pem}' is empty"
+      end
+    end
   end
 
   def host_client_ca
@@ -318,10 +333,10 @@ class Kamal::Configuration::Proxy
       "health-check-port": proxy_config.dig("healthcheck", "port"),
       "health-check-host": proxy_config.dig("healthcheck", "host"),
       "target-timeout": seconds_duration(proxy_config["response_timeout"]),
-      "read-target": proxy_config["read_targets"].presence,
-      "read-target-websockets": proxy_config["read_target_websockets"] ? true : nil,
-      "writer-affinity-timeout": seconds_duration(proxy_config["writer_affinity_timeout"]),
-      "path-timeout": path_timeout_args("path_timeouts"),
+      "read-target": proxy_config.dig("read_routing", "targets").presence,
+      "read-target-websockets": proxy_config.dig("read_routing", "websockets") ? true : nil,
+      "writer-affinity-timeout": seconds_duration(proxy_config.dig("read_routing", "writer_affinity_timeout")),
+      "path-timeout": path_timeout_args("path_response_timeouts"),
       "request-timeout": seconds_duration(proxy_config["request_timeout"]),
       "path-request-timeout": path_timeout_args("path_request_timeouts"),
       "buffer-requests": proxy_config.fetch("buffering", { "requests": true }).fetch("requests", true),
@@ -341,7 +356,7 @@ class Kamal::Configuration::Proxy
       # metrics are served and who may read them are proxy-wide and live under
       # proxy/run, but which of *this service's* paths are counted is per service.
       "exclude-metrics-path": proxy_config["exclude_metrics_paths"].presence
-    }.merge(tls_domains_options).merge(tls_options).merge(cache_options).merge(compress_options)
+    }.merge(ssl_domains_options).merge(tls_options).merge(cache_options).merge(compress_options)
       .merge(access_control_options).merge(traffic_options).merge(lifecycle_options)
       .merge(target_options).compact
   end
@@ -408,22 +423,21 @@ class Kamal::Configuration::Proxy
 
     # Flags for kamal-proxy's dynamic domain source (runtime TLS hostnames).
     # TLS terminates wherever these flags land — :edge in the layering contract.
-    def tls_domains_options
+    def ssl_domains_options
       {
-        "tls-domains-source": proxy_config.dig("tls_domains", "source"),
-        "tls-domains-interval": seconds_duration(proxy_config.dig("tls_domains", "interval")),
-        "tls-domains-batch-size": proxy_config.dig("tls_domains", "batch_size")
+        "tls-domains-source": proxy_config.dig("ssl_domains", "source"),
+        "tls-domains-interval": seconds_duration(proxy_config.dig("ssl_domains", "interval")),
+        "tls-domains-batch-size": proxy_config.dig("ssl_domains", "batch_size")
       }.compact
     end
 
-    # On-demand issuance, the mTLS client CA and the ACME cache only matter where
-    # the handshake happens (:edge) - an ask endpoint or a client CA on a proxy
+    # On-demand issuance and the mTLS client CA only matter where the
+    # handshake happens (:edge) - an ask endpoint or a client CA on a proxy
     # that never terminates TLS would do nothing at all.
     def tls_options
       {
         "tls-on-demand-url": on_demand_url,
-        "tls-client-ca-path": container_client_ca,
-        "tls-acme-cache-path": tls_config["acme_cache_path"]
+        "tls-client-ca-path": container_client_ca
       }.compact
     end
 
@@ -486,7 +500,6 @@ class Kamal::Configuration::Proxy
         redirect: path_rules("redirects"),
         rewrite: path_rules("rewrites"),
         "canonical-host": proxy_config["canonical_host"],
-        "scope-cookie-paths": proxy_config["scope_cookie_paths"] ? true : nil,
         "intercept-errors": proxy_config["intercept_errors"].presence
       }.compact
     end
@@ -530,9 +543,13 @@ class Kamal::Configuration::Proxy
     # `compress: true` and the block form both land here. --compress is a list of
     # encodings rather than a switch, so "on" always means naming them: a bare
     # --compress would take the next flag on the command line as its value.
+    #
+    # An explicit `enabled: false` wins over encodings implying "on" - it is
+    # the off switch for a block whose tuning the operator wants to keep.
     def compress_options
       compress = proxy_config["compress"]
       settings = compress.is_a?(Hash) ? compress : {}
+      return {} if settings["enabled"] == false
       return {} unless compress == true || settings["enabled"] || settings["encodings"].present?
 
       {
