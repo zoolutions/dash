@@ -83,6 +83,7 @@ class Kamal::Cli::Proxy::Reboot
       execute *proxy.run(digest: drift.expected_digest, name: proxy.next_container_name)
       wait_until_ready(name: proxy.next_container_name)
 
+      execute *proxy.disable_restart
       execute *proxy.drain(timeout: KAMAL.config.drain_timeout)
       execute *proxy.wait_for_exit
       execute *proxy.remove_stopped_container
