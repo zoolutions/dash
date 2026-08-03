@@ -9,12 +9,12 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
     @proxy_run_config = config.proxy_run(host)
   end
 
-  def run(digest: nil)
+  def run(digest: nil, name: nil)
     if proxy_run_config
       docker \
         :run,
-        "--name", container_name,
-        "--network", "kamal",
+        "--name", name || container_name,
+        *proxy_run_config.network_args,
         "--detach",
         "--restart", "unless-stopped",
         "--volume", "kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy",
@@ -53,8 +53,8 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
     docker :inspect, container_name, "--format", "'{{ index .Config.Labels \"#{CONFIG_DIGEST_LABEL}\" }}'"
   end
 
-  def container_id
-    container_id_for(container_name: container_name)
+  def container_id(only_running: false)
+    container_id_for(container_name: container_name, only_running: only_running)
   end
 
   def pull
@@ -65,8 +65,54 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
     end
   end
 
-  def list
-    docker :exec, container_name, "kamal-proxy", :list
+  def list(name: container_name, json: false)
+    docker :exec, name, "kamal-proxy", :list, *("--json" if json)
+  end
+
+  # Zero-downtime handoff commands (proxy/run port_holder mode)
+
+  def port_holder?
+    proxy_run_config&.port_holder? || false
+  end
+
+  def next_container_name
+    "#{container_name}-next"
+  end
+
+  def run_holder
+    docker \
+      :run,
+      "--name", proxy_run_config.holder_container_name,
+      "--network", "kamal",
+      "--detach",
+      "--restart", "unless-stopped",
+      *proxy_run_config.holder_docker_args,
+      *proxy_run_config.image,
+      "kamal-proxy", "hold"
+  end
+
+  def start_holder_or_run
+    combine docker(:container, :start, proxy_run_config.holder_container_name), run_holder, by: "||"
+  end
+
+  def holder_container_id
+    container_id_for(container_name: proxy_run_config.holder_container_name, only_running: true)
+  end
+
+  def drain(timeout: nil)
+    docker :exec, container_name, "kamal-proxy", :drain, *("--drain-timeout=#{timeout}s" if timeout)
+  end
+
+  def wait_for_exit(name: container_name)
+    docker :wait, name
+  end
+
+  def remove_stopped_container(name: container_name)
+    docker :container, :rm, name
+  end
+
+  def promote_next_container
+    docker :container, :rename, next_container_name, container_name
   end
 
   def logs(timestamps: true, since: nil, lines: nil, grep: nil, grep_options: nil)

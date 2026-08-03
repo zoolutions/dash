@@ -16,8 +16,7 @@ class Kamal::Cli::Proxy::Reboot
     pull_image
     replace_container
     wait_until_ready
-    re_register_services
-    verify_services
+    verify_services re_register_services
   end
 
   private
@@ -37,11 +36,21 @@ class Kamal::Cli::Proxy::Reboot
     end
 
     def replace_container
+      execute *proxy.ensure_proxy_directory
+      execute *proxy.ensure_apps_config_directory
+
+      if proxy.port_holder?
+        replace_generation
+      else
+        stop_and_replace
+      end
+    end
+
+    # Phase 1 replacement: stop the old container, start the new one. Brief gap.
+    def stop_and_replace
       info "Stopping and removing kamal-proxy on #{host}, if running..."
       execute *proxy.stop(timeout: KAMAL.config.drain_timeout + 10), raise_on_non_zero_exit: false
       execute *proxy.remove_container
-      execute *proxy.ensure_proxy_directory
-      execute *proxy.ensure_apps_config_directory
 
       if (run_config = proxy.proxy_run_config)&.secrets?
         upload! run_config.secrets_io, run_config.secrets_path, mode: "0600"
@@ -53,11 +62,57 @@ class Kamal::Cli::Proxy::Reboot
       execute *proxy.run(digest: drift.expected_digest)
     end
 
-    def wait_until_ready
+    # Zero-downtime replacement: overlap a new generation on the port-holder's
+    # namespace, then drain the old one out.
+    def replace_generation
+      if holder_running?
+        if generation_running?
+          handoff_generation
+        else
+          execute *proxy.remove_container
+          execute *proxy.run(digest: drift.expected_digest)
+        end
+      else
+        migrate_to_holder
+      end
+    end
+
+    def handoff_generation
+      info "Handing off kamal-proxy on #{host} to a new generation (zero downtime)..."
+      execute *proxy.remove_stopped_container(name: proxy.next_container_name), raise_on_non_zero_exit: false
+      execute *proxy.run(digest: drift.expected_digest, name: proxy.next_container_name)
+      wait_until_ready(name: proxy.next_container_name)
+
+      execute *proxy.drain(timeout: KAMAL.config.drain_timeout)
+      execute *proxy.wait_for_exit
+      execute *proxy.remove_stopped_container
+      execute *proxy.promote_next_container
+    end
+
+    # The old proxy still owns the published ports, so the holder cannot bind
+    # them until it is gone. One final replacement with a brief gap.
+    def migrate_to_holder
+      info "Migrating kamal-proxy on #{host} to the port-holder architecture (brief gap)..."
+      execute *proxy.stop(timeout: KAMAL.config.drain_timeout + 10), raise_on_non_zero_exit: false
+      execute *proxy.remove_container
+
+      execute *proxy.run_holder
+      execute *proxy.run(digest: drift.expected_digest)
+    end
+
+    def holder_running?
+      capture_with_info(*proxy.holder_container_id, raise_on_non_zero_exit: false).strip.present?
+    end
+
+    def generation_running?
+      capture_with_info(*proxy.container_id(only_running: true), raise_on_non_zero_exit: false).strip.present?
+    end
+
+    def wait_until_ready(name: nil)
       deadline = Time.now + READY_TIMEOUT
 
       begin
-        capture_with_info(*proxy.list, verbosity: :debug)
+        capture_with_info(*proxy.list(**{ name: name }.compact), verbosity: :debug)
       rescue SSHKit::Command::Failed
         raise Kamal::Cli::BootError, "kamal-proxy on #{host} did not become ready within #{READY_TIMEOUT} seconds" if Time.now >= deadline
         sleep 0.5
@@ -67,9 +122,10 @@ class Kamal::Cli::Proxy::Reboot
 
     # Re-register this app's services rather than relying solely on the
     # proxy's own state restore — a proxy that came back with missing routes
-    # would otherwise 404 until the next deploy.
+    # would otherwise 404 until the next deploy. Returns the registered
+    # service names for verify_services to check.
     def re_register_services
-      @registered_services = []
+      registered_services = []
 
       KAMAL.roles_on(host).select(&:running_proxy?).each do |role|
         app = KAMAL.app(role: role, host: host)
@@ -82,7 +138,7 @@ class Kamal::Cli::Proxy::Reboot
 
         info "Re-registering #{role.container_prefix} with kamal-proxy on #{host}..."
         execute *app.deploy(target: endpoint)
-        @registered_services << role.container_prefix
+        registered_services << role.container_prefix
       end
 
       KAMAL.config.accessories.select(&:running_proxy?).each do |accessory_config|
@@ -94,15 +150,20 @@ class Kamal::Cli::Proxy::Reboot
 
         info "Re-registering #{accessory_config.service_name} with kamal-proxy on #{host}..."
         execute *accessory.deploy(target: target)
-        @registered_services << accessory_config.service_name
+        registered_services << accessory_config.service_name
       end
+
+      registered_services
     end
 
-    def verify_services
-      return if @registered_services.empty?
+    # `list --json` returns {"services": {"<name>": ...}} - exact key
+    # membership, where a substring match over the human table would find one
+    # service's name inside another's ("app" in "other-app").
+    def verify_services(registered_services)
+      return if registered_services.empty?
 
-      listing = capture_with_info(*proxy.list)
-      missing = @registered_services.reject { |name| listing.include?(name) }
+      listed = JSON.parse(capture_with_info(*proxy.list(json: true))).fetch("services", {}).keys
+      missing = registered_services - listed
 
       if missing.any?
         raise Kamal::Cli::BootError, "kamal-proxy on #{host} is missing services after reboot: #{missing.join(", ")}"
