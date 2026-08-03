@@ -69,6 +69,14 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
     docker :exec, name, "kamal-proxy", :list, *("--json" if json)
   end
 
+  def cache_stats(count: false, json: false)
+    docker :exec, container_name, "kamal-proxy", :cache, :stats, *optionize({ count: count || nil, json: json || nil }.compact)
+  end
+
+  def cache_purge(service, path_prefix: nil)
+    docker :exec, container_name, "kamal-proxy", :cache, :purge, service, *optionize({ "path-prefix": path_prefix }.compact)
+  end
+
   # One mount destination per line - what the running container was actually
   # booted with, as opposed to what the current configuration would mount.
   def mount_destinations

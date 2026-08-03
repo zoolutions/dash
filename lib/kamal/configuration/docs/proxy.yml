@@ -633,11 +633,20 @@ proxy:
   # naming one moves it into the key for every path in the service, which is
   # usually not what you want.
   #
+  # ### Administering it
+  #
+  # `kamal proxy cache stats` reports what the cache is holding (add `--count`
+  # to measure entries and bytes per service, `--json` for the raw report),
+  # and `kamal proxy cache purge` drops this app's cached responses
+  # (`--path-prefix /assets` to narrow it). Both run on the layer that owns
+  # the cache - the loadbalancer when load balancing, else each proxy host.
+  #
   # ### When it is not caching
   #
-  # A cache that quietly stores nothing is the usual first surprise. kamal-proxy
-  # explains every refusal — check `kamal proxy logs` for the reason, and the
-  # `cache_refusals_total` metric (by `reason`) if you run with `metrics_port`.
+  # A cache that quietly stores nothing is the usual first surprise. Start with
+  # `kamal proxy cache stats`; kamal-proxy also explains every refusal — check
+  # `kamal proxy logs` for the reason, and the `cache_refusals_total` metric
+  # (by `reason`) if you run with `metrics_port`.
   # The common reasons are a missing `Cache-Control: public, max-age=...` on the
   # app's response, a `Set-Cookie` header, a body over `max_body`, and
   # `variant_limit` from `max_variants`.

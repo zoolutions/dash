@@ -448,6 +448,49 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
     end
   end
 
+  desc "cache SUBCOMMAND", "Manage the response cache (stats, purge)"
+  option :count, type: :boolean, default: false, desc: "stats: measure entries and bytes per service (walks a shared store's keyspace)"
+  option :json, type: :boolean, default: false, desc: "stats: print the raw report as JSON"
+  option :path_prefix, type: :string, default: nil, desc: "purge: drop only the entries below this path, e.g. /assets"
+  def cache(subcommand)
+    count, json, path_prefix = options[:count], options[:json], options[:path_prefix]
+
+    case subcommand
+    when "stats"
+      # The cache lives where its policy applies: at the loadbalancer when
+      # load balancing (cache is edge-only in the layering contract),
+      # otherwise on each proxy host.
+      if KAMAL.config.proxy.load_balancing?
+        on(KAMAL.config.proxy.effective_loadbalancer) do |host|
+          puts_by_host host, capture_with_info(*KAMAL.loadbalancer.cache_stats(count: count, json: json)), type: "Loadbalancer"
+        end
+      else
+        on(KAMAL.proxy_hosts) do |host|
+          puts_by_host host, capture_with_info(*KAMAL.proxy(host).cache_stats(count: count, json: json)), type: "Proxy"
+        end
+      end
+    when "purge"
+      if KAMAL.config.proxy.load_balancing?
+        # The loadbalancer registers one service under the bare service name.
+        on(KAMAL.config.proxy.effective_loadbalancer) do |host|
+          execute *KAMAL.auditor.record("Purged the response cache"), verbosity: :debug
+          puts_by_host host, capture_with_info(*KAMAL.loadbalancer.cache_purge(KAMAL.config.service, path_prefix: path_prefix)), type: "Loadbalancer"
+        end
+      else
+        # Each proxied role registered its own service, so purge walks them.
+        on(KAMAL.proxy_hosts) do |host|
+          execute *KAMAL.auditor.record("Purged the response cache"), verbosity: :debug
+
+          KAMAL.roles_on(host).select(&:running_proxy?).each do |role|
+            puts_by_host host, capture_with_info(*KAMAL.proxy(host).cache_purge(role.container_prefix, path_prefix: path_prefix)), type: "Proxy"
+          end
+        end
+      end
+    else
+      puts "Unknown cache subcommand: #{subcommand}. Available: stats, purge"
+    end
+  end
+
   desc "domains SUBCOMMAND", "Manage dynamic TLS domains (refresh, list, stats)"
   def domains(subcommand)
     case subcommand

@@ -230,6 +230,20 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     assert_no_match(/--rewrite/, command)
   end
 
+  # Cache policy is edge-only under load balancing, so the admin surface
+  # lives on the load balancer - registered under the bare service name.
+  test "cache stats" do
+    assert_equal \
+      "docker exec load-balancer kamal-proxy cache stats --count",
+      new_command.cache_stats(count: true).join(" ")
+  end
+
+  test "cache purge" do
+    assert_equal \
+      "docker exec load-balancer kamal-proxy cache purge app",
+      new_command.cache_purge("app").join(" ")
+  end
+
   test "domains" do
     assert_equal \
       "docker exec load-balancer kamal-proxy domains list",

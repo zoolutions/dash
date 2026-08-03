@@ -48,6 +48,17 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
     docker :exec, container_name, "kamal-proxy", :list
   end
 
+  # Cache policy is edge-only under load balancing (see the layering contract),
+  # so the cache admin surface lives here - registered under the bare service
+  # name, unlike the per-role services on the proxy hosts.
+  def cache_stats(count: false, json: false)
+    docker :exec, container_name, "kamal-proxy", :cache, :stats, *optionize({ count: count || nil, json: json || nil }.compact)
+  end
+
+  def cache_purge(service, path_prefix: nil)
+    docker :exec, container_name, "kamal-proxy", :cache, :purge, service, *optionize({ "path-prefix": path_prefix }.compact)
+  end
+
   def config_digest
     docker :inspect, container_name, "--format", "'{{ index .Config.Labels \"#{Kamal::Commands::Proxy::CONFIG_DIGEST_LABEL}\" }}'"
   end

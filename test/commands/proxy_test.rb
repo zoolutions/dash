@@ -278,6 +278,30 @@ class CommandsProxyTest < ActiveSupport::TestCase
       new_command.list(json: true).join(" ")
   end
 
+  test "cache stats" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy cache stats",
+      new_command.cache_stats.join(" ")
+  end
+
+  test "cache stats with count and json" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy cache stats --count --json",
+      new_command.cache_stats(count: true, json: true).join(" ")
+  end
+
+  test "cache purge" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy cache purge app-web",
+      new_command.cache_purge("app-web").join(" ")
+  end
+
+  test "cache purge with path prefix" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy cache purge app-web --path-prefix \"/assets\"",
+      new_command.cache_purge("app-web", path_prefix: "/assets").join(" ")
+  end
+
   test "mount_destinations" do
     assert_equal \
       "docker inspect kamal-proxy --format '{{range .Mounts}}{{println .Destination}}{{end}}'",
