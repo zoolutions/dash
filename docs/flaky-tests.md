@@ -4,6 +4,35 @@ One entry per investigated intermittent failure. Prune entries whose tests no lo
 
 ---
 
+## 2026-08-03 — `CliAppTest#test_boot_failure_on_a_non-primary_role_dumps_container_and_health_logs`
+
+**Signature class:** thread-scheduling / output-interleaving — *unresolved, watch-listed*
+
+**Evidence:** [run 30813133243, job 91684343300](https://github.com/mhenrixon/kamal/actions/runs/30813133243/job/91684343300)
+(`issue-98-doctor-docker-socket`, commit `24e1851b`, Ruby 3.2, seed 9006).
+
+**Matrix:** 1 of 5 cells — Ruby 3.3/3.4/4.0 and RuboCop passed on the identical
+commit. The PR's diff (doctor socket check) touches neither app boot, barriers,
+nor this test's stubs.
+
+**Mechanism (suspected, not proven):** the test boots multiple roles across
+threads with `sleep` stubbed out and asserts on interleaved thread output
+(`ERROR Failed to boot workers`, dumped container/health logs, and an
+`assert_no_match` on the barrier message). Thread scheduling on a loaded CI
+runner can plausibly reorder or drop an expected line. The job log truncated
+immediately after the failure header, so the exact failed assertion is
+unknown — capture it on the next occurrence before attempting a fix.
+
+**Reproduction:** none locally — 15 consecutive runs of the `boot failure`
+tests on the same branch passed (Apple Silicon, Ruby 3.4), including with CI's
+seed 9006 (seed only shuffles within-run order, so this is weak evidence).
+
+**Disposition:** `gh run rerun --failed` on the identical commit turned the
+job green — same pattern as the 2026-07-29 entry below. Watch-listed; if it
+recurs, grab the full assertion diff from the fresh log first.
+
+---
+
 ## 2026-07-29 — `bin/test` exits 1 after reporting 0 failures
 
 **Signature class:** CI-environment / process-exit divergence — *unresolved, watch-listed*
