@@ -21,7 +21,7 @@ class ProxyLayeringTest < ActiveSupport::TestCase
 
   # Same pair as the flag coverage canary: some options are mutually exclusive
   # (kamal-proxy forbids on-demand TLS alongside hosts, a custom certificate or
-  # tls_domains), so one fixture cannot emit every key. Coverage is the union.
+  # ssl_domains), so one fixture cannot emit every key. Coverage is the union.
   MAXIMAL_FIXTURES = %w[ deploy_with_every_proxy_option deploy_with_on_demand_tls ].freeze
 
   test "every proxy deploy option has a recorded layering disposition" do

@@ -31,6 +31,7 @@ proxy:
   ssl:
     certificate_pem: PROXY_CERT
     private_key_pem: PROXY_KEY
+    client_ca_pem: CLIENT_CA_PEM
   ssl_staging: true
   ssl_redirect: true
   forward_headers: true
@@ -38,11 +39,12 @@ proxy:
   path_prefixes:
     - /api
   response_timeout: 20
-  read_targets:
-    - "1.1.1.2"
-  read_target_websockets: true
-  writer_affinity_timeout: 30
-  path_timeouts:
+  read_routing:
+    targets:
+      - "1.1.1.2"
+    websockets: true
+    writer_affinity_timeout: 30
+  path_response_timeouts:
     /uploads: 300
   exclude_metrics_paths:
     - /up
@@ -105,7 +107,6 @@ proxy:
     - from: /api/(.*)
       to: /v2/$1
   canonical_host: www.example.com
-  scope_cookie_paths: true
   intercept_errors:
     - 502
     - 503
@@ -146,16 +147,10 @@ proxy:
       - Cache-Control
     response_headers:
       - X-Request-Id
-  tls_domains:
+  ssl_domains:
     source: /api/v1/kamal/domains
     interval: 300
     batch_size: 5
-  # on_demand_url lives in deploy_with_on_demand_tls.yml instead: kamal-proxy
-  # forbids it alongside hosts, a custom certificate and tls_domains, all of
-  # which this fixture needs.
-  tls:
-    client_ca_path: test/fixtures/files/client-ca.pem
-    acme_cache_path: /home/kamal-proxy/.config/kamal-proxy/acme
   run:
     debug: true
     metrics_port: 9090
@@ -192,5 +187,3 @@ proxy:
       store: redis://cache.example.com:6379/0
       store_timeout: 2
       memory_size: 134_217_728
-      lease_ttl: 30
-      lease_wait: 1

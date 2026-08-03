@@ -383,10 +383,10 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
     assert_equal "admin:s3cr3t", options[:"basic-auth"].to_s
   end
 
-  test "accessory proxy keeps tls_domains options" do
+  test "accessory proxy keeps ssl_domains options" do
     @deploy[:accessories]["monitoring"]["proxy"].merge!(
       "ssl" => true,
-      "tls_domains" => { "source" => "/api/v1/kamal/domains" }
+      "ssl_domains" => { "source" => "/api/v1/kamal/domains" }
     )
     options = Kamal::Configuration.new(@deploy).accessory(:monitoring).proxy.deploy_options
 

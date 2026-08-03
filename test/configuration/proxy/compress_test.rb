@@ -39,6 +39,14 @@ class ConfigurationProxyCompressTest < ActiveSupport::TestCase
     assert_equal [ "gzip" ], options[:compress]
   end
 
+  # An explicit off switch beats an implicit on: `enabled: false` with tuned
+  # settings kept around is "temporarily off", not "on because encodings imply
+  # it" - it used to silently keep compression running.
+  test "enabled false wins over encodings" do
+    assert_empty deploy_options("enabled" => false, "encodings" => [ "gzip" ]).keys.grep(/compress/)
+    assert_empty deploy_options("enabled" => false, "min_length" => 1024).keys.grep(/compress/)
+  end
+
   test "encodings reach the proxy as repeated flags in order" do
     args = configuration("compress" => { "encodings" => [ "br", "gzip" ] })
       .proxy.deploy_command_args(target: "1.1.1.1")
@@ -73,11 +81,19 @@ class ConfigurationProxyCompressTest < ActiveSupport::TestCase
 
   test "content_types without compression is a config error" do
     error = assert_raises(Kamal::ConfigurationError) do
-      configuration "compress" => { "enabled" => false, "content_types" => [ "text/html" ] }
+      configuration "compress" => { "content_types" => [ "text/html" ] }
     end
 
     assert_equal "proxy/compress: content_types has no effect without compression - " \
       "set enabled: true or name the encodings", error.message
+  end
+
+  # Unlike an absent `enabled` with orphaned tuning (above), an explicit false
+  # is a deliberate off switch - the settings stay for flipping it back on.
+  test "enabled false with tuned settings is legal and off" do
+    config = configuration "compress" => { "enabled" => false, "content_types" => [ "text/html" ] }
+
+    assert_empty config.proxy.deploy_options.keys.grep(/compress/)
   end
 
   test "an unsupported encoding is a config error" do

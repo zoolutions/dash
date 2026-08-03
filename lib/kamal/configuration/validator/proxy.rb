@@ -4,13 +4,13 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
       super
 
       # Skip SSL host validation when a loadbalancer is present (SSL is
-      # disabled when using a loadbalancer) or when a tls_domains source
+      # disabled when using a loadbalancer) or when a ssl_domains source
       # provides the hostnames at runtime.
-      # On-demand TLS joins loadbalancer and tls_domains as a source of hostnames
+      # On-demand TLS joins loadbalancer and ssl_domains as a source of hostnames
       # that only exist at handshake time - demanding a static host here would
       # reject the one shape kamal-proxy requires for it.
       if config["host"].blank? && config["hosts"].blank? && config["ssl"] && config["loadbalancer"].blank? &&
-         config.dig("tls_domains", "source").blank? && config.dig("tls", "on_demand_url").blank?
+         config.dig("ssl_domains", "source").blank? && ssl_config["on_demand_url"].blank?
         error "Must set a host to enable automatic SSL"
       end
 
@@ -23,27 +23,17 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
       end
 
       if config["ssl"].is_a?(Hash)
-        if config["ssl"]["certificate_pem"].present? && config["ssl"]["private_key_pem"].blank?
-          error "Missing private_key_pem setting (required when certificate_pem is present)"
-        end
-
-        if config["ssl"]["private_key_pem"].present? && config["ssl"]["certificate_pem"].blank?
-          error "Missing certificate_pem setting (required when private_key_pem is present)"
-        end
+        validate_ssl_hash! config["ssl"]
       end
 
       # Truthiness, not present? — an empty hash must still fail the
       # "Missing source" check rather than silently disable the feature.
-      if config["tls_domains"]
-        validate_tls_domains! config["tls_domains"]
+      if config["ssl_domains"]
+        validate_ssl_domains! config["ssl_domains"]
       end
 
       if config["basic_auth"].is_a?(Hash)
         validate_basic_auth! config["basic_auth"]
-      end
-
-      if config["tls"].is_a?(Hash)
-        validate_tls! config["tls"]
       end
 
       if config["cache"].is_a?(Hash)
@@ -56,6 +46,7 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
 
       validate_access_control!
       validate_traffic_shaping!
+      validate_canonical_host!
       validate_lifecycle!
       validate_tuning!
 
@@ -98,21 +89,21 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
       end
     end
 
-    def validate_tls_domains!(tls_domains)
-      with_context("tls_domains") do
-        source = tls_domains["source"]
+    def validate_ssl_domains!(ssl_domains)
+      with_context("ssl_domains") do
+        source = ssl_domains["source"]
 
         if source.blank?
-          error "Missing source setting (required when tls_domains is set)"
-        elsif !valid_tls_domains_source?(source)
+          error "Missing source setting (required when ssl_domains is set)"
+        elsif !valid_ssl_domains_source?(source)
           error "source must be a path starting with '/' or an http(s) URL"
         end
 
-        if (interval = tls_domains["interval"]) && (!interval.is_a?(Integer) || interval < 1)
+        if (interval = ssl_domains["interval"]) && (!interval.is_a?(Integer) || interval < 1)
           error "interval must be a positive integer"
         end
 
-        if (batch_size = tls_domains["batch_size"]) && (!batch_size.is_a?(Integer) || !batch_size.between?(1, 25))
+        if (batch_size = ssl_domains["batch_size"]) && (!batch_size.is_a?(Integer) || !batch_size.between?(1, 25))
           error "batch_size must be an integer between 1 and 25"
         end
       end
@@ -139,42 +130,47 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
       end
     end
 
-    # kamal-proxy rejects each of these combinations outright rather than
-    # picking a winner (ServiceOptions.Validate), so there is no precedence to
-    # document - only a deploy that would fail after the SSH round-trip. Fail here.
-    def validate_tls!(tls)
-      with_context("tls") do
-        on_demand_url = tls["on_demand_url"]
-        client_ca_path = tls["client_ca_path"]
-
-        if (on_demand_url.present? || client_ca_path.present?) && !config["ssl"]
-          error "#{on_demand_url.present? ? "on_demand_url" : "client_ca_path"} requires ssl"
+    # The whole TLS surface lives in the one `ssl` hash: certificate material,
+    # on-demand issuance and the mTLS client CA. kamal-proxy rejects the
+    # on-demand combinations outright rather than picking a winner
+    # (ServiceOptions.Validate), so there is no precedence to document - only
+    # a deploy that would fail after the SSH round-trip. Fail here.
+    def validate_ssl_hash!(ssl)
+      with_context("ssl") do
+        if ssl["certificate_pem"].present? && ssl["private_key_pem"].blank?
+          error "Missing private_key_pem setting (required when certificate_pem is present)"
         end
 
-        if on_demand_url.present?
+        if ssl["private_key_pem"].present? && ssl["certificate_pem"].blank?
+          error "Missing certificate_pem setting (required when private_key_pem is present)"
+        end
+
+        if (on_demand_url = ssl["on_demand_url"]).present?
           if config["host"].present? || config["hosts"].present?
             error "cannot set on_demand_url together with host or hosts - " \
               "on-demand TLS issues certificates for whatever hostnames the ask endpoint approves"
           end
 
-          if config["ssl"].is_a?(Hash)
+          if ssl["certificate_pem"].present?
             error "cannot set on_demand_url together with a custom ssl certificate"
           end
 
-          if config.dig("tls_domains", "source").present?
-            error "cannot set on_demand_url together with tls_domains - " \
+          if config.dig("ssl_domains", "source").present?
+            error "cannot set on_demand_url together with ssl_domains - " \
               "both manage certificates for hostnames discovered at runtime, and only one can serve the handshake"
           end
 
-          unless valid_tls_domains_source?(on_demand_url)
+          unless valid_ssl_domains_source?(on_demand_url)
             error "on_demand_url must be a path starting with '/' or an http(s) URL"
           end
         end
-
-        if client_ca_path.present? && !File.exist?(client_ca_path)
-          error "client_ca_path '#{client_ca_path}' does not exist"
-        end
       end
+    end
+
+    # `ssl` may be a boolean or the hash form - the hash-only settings read
+    # through this so a bare `ssl: true` never trips a Hash dig.
+    def ssl_config
+      config["ssl"].is_a?(Hash) ? config["ssl"] : {}
     end
 
     REDIRECT_STATUSES = [ 301, 302, 303, 307, 308 ].freeze
@@ -208,9 +204,15 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
         with_context("request_timeout") { error "cannot be negative" }
       end
 
+      # Sibling consistency: kamal-proxy clamps a negative --target-timeout as
+      # silently as a negative --request-timeout.
+      if config["response_timeout"].to_f.negative?
+        with_context("response_timeout") { error "cannot be negative" }
+      end
+
       # Both maps reach kamal-proxy's one parsePathTimeouts, which refuses a
       # negative duration.
-      %w[ path_timeouts path_request_timeouts ].each do |key|
+      %w[ path_response_timeouts path_request_timeouts ].each do |key|
         with_context(key) do
           (config[key] || {}).each do |prefix, duration|
             error "'#{prefix}' cannot be negative" if duration.is_a?(Numeric) && duration.negative?
@@ -245,13 +247,36 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
           error "after cannot be negative" if sleep_config["after"].to_i.negative?
           error "wake_timeout cannot be negative" if sleep_config["wake_timeout"].to_i.negative?
 
-          if config.dig("tls", "on_demand_url").present?
-            error "after cannot be combined with tls/on_demand_url - " \
+          if ssl_config["on_demand_url"].present?
+            error "after cannot be combined with ssl/on_demand_url - " \
               "a sleeping target cannot answer the ask endpoint, and waking one would let any hostname start a container"
           end
         else
           error "containers has no effect without after" if sleep_config["containers"].present?
           error "wake_timeout has no effect without after" if sleep_config["wake_timeout"].present?
+        end
+      end
+    end
+
+    # kamal-proxy rejects canonical_host + on-demand TLS after the SSH round
+    # trip (canonical redirection needs a fixed host, on-demand TLS has none),
+    # and a canonical host outside the host list redirects every request to a
+    # hostname this service does not serve.
+    def validate_canonical_host!
+      canonical_host = config["canonical_host"]
+      return if canonical_host.blank?
+
+      with_context("canonical_host") do
+        if ssl_config["on_demand_url"].present?
+          error "cannot be combined with ssl/on_demand_url - " \
+            "canonical redirection needs a fixed host, and on-demand TLS has none"
+        end
+
+        hosts = Array(config["hosts"].presence || config["host"]&.split(","))
+
+        if hosts.any? && !hosts.include?(canonical_host)
+          error "'#{canonical_host}' is not in hosts - " \
+            "every request would redirect to a hostname this service does not serve"
         end
       end
     end
@@ -340,6 +365,14 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
               next error "needs both from and to"
             end
 
+            # The wire format is '<from>=<to>' and kamal-proxy cuts at the
+            # FIRST '=', so an '=' inside the pattern silently builds a rule
+            # for a different path.
+            if rule["from"].to_s.include?("=")
+              next error "from cannot contain '=' - " \
+                "the <from>=<to> wire format cuts at the first '=' and would silently build a different rule"
+            end
+
             unless rule["to"].to_s.start_with?("/") || (redirect && rule["to"].to_s.match?(%r{\Ahttps?://}))
               next error "to must be an absolute path starting with '/'#{" or a full http(s) URL" if redirect}"
             end
@@ -422,7 +455,10 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
           error "trusted_proxies has no effect without allow_ips or rate_limit"
         end
 
-        if client_ip["header"].present? && trusted_proxies.empty? && (allow_ips.any? || rate_limited)
+        # Unconditional: even without allow_ips/rate_limit, kamal-proxy rewrites
+        # the client address (and X-Forwarded-For) from this header, so honoring
+        # it from untrusted peers is a client-spoofable identity.
+        if client_ip["header"].present? && trusted_proxies.empty?
           error "header requires trusted_proxies, or the header would be ignored while appearing to be honored"
         end
       end
@@ -475,6 +511,11 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
     # deploy has already reached the host.
     def validate_compress!(compress)
       with_context("compress") do
+        # An explicit false is a deliberate off switch - the tuned settings may
+        # stay for when it is flipped back on. (Distinct from an absent enabled
+        # with orphaned tuning, which is a block that never did anything.)
+        return if compress["enabled"] == false
+
         encodings = Array(compress["encodings"])
         enabled = compress["enabled"] || encodings.any?
 
@@ -606,7 +647,7 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
       end
     end
 
-    def valid_tls_domains_source?(source)
+    def valid_ssl_domains_source?(source)
       source.is_a?(String) && (source.start_with?("/") || source.match?(%r{\Ahttps?://\S+\z}i))
     end
 

@@ -96,6 +96,7 @@ class Kamal::Configuration
     ensure_intercepted_errors_have_pages
     ensure_sleep_has_a_docker_socket
     ensure_proxy_protocol_names_its_peers
+    ensure_max_idle_conns_meaningful
   end
 
   # Resolves every secret the deploy will need so a missing secret fails fast,
@@ -494,6 +495,23 @@ class Kamal::Configuration
       raise Kamal::ConfigurationError, "Role(s) #{offenders.map(&:name).join(", ")}: " \
         "proxy/sleep requires proxy/run/docker_socket - kamal-proxy can only stop and start containers " \
         "through the container runtime socket, and it is not mounted into the proxy without it"
+    end
+
+    # kamal-proxy resolves a zero max_idle_conns to its default of 100
+    # (target_pool.go resolves defaults from zeros), so the one value an
+    # operator writes to mean "keep none" is the one value that cannot mean it.
+    # Legal, so warn rather than raise.
+    def ensure_max_idle_conns_meaningful
+      offenders = roles.select do |role|
+        role.running_proxy? && role.proxy.proxy_config.dig("target", "max_idle_conns") == 0
+      end
+      return true if offenders.empty?
+
+      warn "Role(s) #{offenders.map(&:name).join(", ")}: target/max_idle_conns: 0 means the proxy default of 100, " \
+        "not \"keep none\" - kamal-proxy resolves its defaults from zeros. Leave it unset for the default, " \
+        "or set 1 for the practical minimum."
+
+      true
     end
 
     # `intercept_errors` discards the app's error body and renders the proxy's own

@@ -308,15 +308,15 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     end
   end
 
-  test "tls_domains flags in deploy_options" do
-    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => "/api/v1/kamal/domains", "interval" => 300, "batch_size" => 5 } }
+  test "ssl_domains flags in deploy_options" do
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "source" => "/api/v1/kamal/domains", "interval" => 300, "batch_size" => 5 } }
     options = config.proxy.deploy_options
     assert_equal "/api/v1/kamal/domains", options[:"tls-domains-source"]
     assert_equal "300s", options[:"tls-domains-interval"]
     assert_equal 5, options[:"tls-domains-batch-size"]
   end
 
-  test "tls_domains flags absent when not configured" do
+  test "ssl_domains flags absent when not configured" do
     @deploy[:proxy] = { "ssl" => true, "host" => "example.com" }
     options = config.proxy.deploy_options
     assert_not options.key?(:"tls-domains-source")
@@ -324,21 +324,21 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     assert_not options.key?(:"tls-domains-batch-size")
   end
 
-  test "tls_domains with source only" do
-    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => "https://app.example.com/domains" } }
+  test "ssl_domains with source only" do
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "source" => "https://app.example.com/domains" } }
     options = config.proxy.deploy_options
     assert_equal "https://app.example.com/domains", options[:"tls-domains-source"]
     assert_not options.key?(:"tls-domains-interval")
     assert_not options.key?(:"tls-domains-batch-size")
   end
 
-  test "ssl with no host allowed when tls_domains source is set" do
-    @deploy[:proxy] = { "ssl" => true, "tls_domains" => { "source" => "/domains" } }
+  test "ssl with no host allowed when ssl_domains source is set" do
+    @deploy[:proxy] = { "ssl" => true, "ssl_domains" => { "source" => "/domains" } }
     assert config.proxy.ssl?
   end
 
-  test "deploy_options strips tls_domains flags when load balancing" do
-    @deploy[:proxy] = { "loadbalancer" => "lb.example.com", "ssl" => true, "hosts" => [ "app.example.com" ], "tls_domains" => { "source" => "/domains" } }
+  test "deploy_options strips ssl_domains flags when load balancing" do
+    @deploy[:proxy] = { "loadbalancer" => "lb.example.com", "ssl" => true, "hosts" => [ "app.example.com" ], "ssl_domains" => { "source" => "/domains" } }
     options = config.proxy.deploy_options
     assert_not options.key?(:"tls-domains-source")
     assert_not options.key?(:"tls-domains-interval")
@@ -358,9 +358,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
       "canonical_host" => "www.example.com",
       "redirects" => [ { "from" => "/old", "to" => "/new", "status" => 302 } ],
       "cache" => { "enabled" => true, "max_ttl" => 300 },
-      "read_targets" => [ "1.1.1.2" ],
-      "read_target_websockets" => true,
-      "writer_affinity_timeout" => 30
+      "read_routing" => { "targets" => [ "1.1.1.2" ], "websockets" => true, "writer_affinity_timeout" => 30 }
     }
 
     options = config.proxy.deploy_options
@@ -410,51 +408,51 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     assert_includes config.proxy.deploy_options.keys, :"target-max-conns"
   end
 
-  test "tls_domains without source" do
-    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "interval" => 300 } }
+  test "ssl_domains without source" do
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "interval" => 300 } }
     assert_raises(Kamal::ConfigurationError) { config.proxy }
   end
 
-  test "tls_domains empty hash" do
-    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => {} }
+  test "ssl_domains empty hash" do
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => {} }
     assert_raises(Kamal::ConfigurationError) { config.proxy }
   end
 
-  test "tls_domains source must be a path or http url" do
+  test "ssl_domains source must be a path or http url" do
     [ "example.com/domains", "ftp://example.com/domains", "domains" ].each do |source|
-      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => source } }
+      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "source" => source } }
       assert_raises(Kamal::ConfigurationError, "expected #{source.inspect} to be rejected") { config.proxy }
     end
   end
 
-  test "tls_domains source accepts http and https urls" do
+  test "ssl_domains source accepts http and https urls" do
     [ "http://app.internal/domains", "https://app.example.com/api/v1/kamal/domains" ].each do |source|
-      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => source } }
+      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "source" => source } }
       assert_equal source, config.proxy.deploy_options[:"tls-domains-source"]
     end
   end
 
-  test "tls_domains interval must be a positive integer" do
+  test "ssl_domains interval must be a positive integer" do
     [ 0, -300, "300", 1.5 ].each do |interval|
-      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => "/domains", "interval" => interval } }
+      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "source" => "/domains", "interval" => interval } }
       assert_raises(Kamal::ConfigurationError, "expected interval #{interval.inspect} to be rejected") { config.proxy }
     end
   end
 
-  test "tls_domains batch_size must be between 1 and 25" do
+  test "ssl_domains batch_size must be between 1 and 25" do
     [ 0, 26, "5", 1.5 ].each do |batch_size|
-      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => "/domains", "batch_size" => batch_size } }
+      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "source" => "/domains", "batch_size" => batch_size } }
       assert_raises(Kamal::ConfigurationError, "expected batch_size #{batch_size} to be rejected") { config.proxy }
     end
 
     [ 1, 25 ].each do |batch_size|
-      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => "/domains", "batch_size" => batch_size } }
+      @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "source" => "/domains", "batch_size" => batch_size } }
       assert_equal batch_size, config.proxy.deploy_options[:"tls-domains-batch-size"]
     end
   end
 
-  test "tls_domains rejects unknown keys" do
-    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "source" => "/domains", "sources" => "/other" } }
+  test "ssl_domains rejects unknown keys" do
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "source" => "/domains", "sources" => "/other" } }
     assert_raises(Kamal::ConfigurationError) { config.proxy }
   end
 
@@ -474,9 +472,11 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     @deploy[:proxy] = {
       "ssl" => true, "host" => "example.com",
       "ssl_staging" => true,
-      "read_targets" => [ "192.168.0.2:3000", "192.168.0.3:3000" ],
-      "read_target_websockets" => true,
-      "writer_affinity_timeout" => 10
+      "read_routing" => {
+        "targets" => [ "192.168.0.2:3000", "192.168.0.3:3000" ],
+        "websockets" => true,
+        "writer_affinity_timeout" => 10
+      }
     }
     options = config.proxy.deploy_options
     assert_equal true, options[:"tls-staging"]
@@ -495,32 +495,32 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
   end
 
   test "ssl_staging and read_target_websockets false emit no flags" do
-    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_staging" => false, "read_target_websockets" => false }
+    @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_staging" => false, "read_routing" => { "websockets" => false } }
     options = config.proxy.deploy_options
     assert_not options.key?(:"tls-staging")
     assert_not options.key?(:"read-target-websockets")
   end
 
   test "read_targets in deploy command args" do
-    @deploy[:proxy] = { "host" => "example.com", "read_targets" => [ "192.168.0.2:3000" ] }
+    @deploy[:proxy] = { "host" => "example.com", "read_routing" => { "targets" => [ "192.168.0.2:3000" ] } }
     args = config.proxy.deploy_command_args(target: "abc123:80")
     assert_includes args.join(" "), "--read-target=\"192.168.0.2:3000\""
   end
 
-  test "invalid types for ssl_staging, read_targets and writer affinity keys" do
-    {
-      "ssl_staging" => "yes",
-      "read_targets" => "192.168.0.2:3000",
-      "read_target_websockets" => 1,
-      "writer_affinity_timeout" => "10"
-    }.each do |key, value|
-      @deploy[:proxy] = { "host" => "example.com", key => value }
-      assert_raises(Kamal::ConfigurationError, "expected #{key}=#{value.inspect} to be rejected") { config.proxy }
+  test "invalid types for ssl_staging and read_routing keys" do
+    [
+      { "ssl_staging" => "yes" },
+      { "read_routing" => { "targets" => "192.168.0.2:3000" } },
+      { "read_routing" => { "websockets" => 1 } },
+      { "read_routing" => { "writer_affinity_timeout" => "10" } }
+    ].each do |override|
+      @deploy[:proxy] = { "host" => "example.com" }.merge(override)
+      assert_raises(Kamal::ConfigurationError, "expected #{override.inspect} to be rejected") { config.proxy }
     end
   end
 
   test "deploy options with path timeouts" do
-    @deploy[:proxy] = { "path_timeouts" => { "/api/reports" => "5m", "/uploads" => 120, "/stream" => 0 } }
+    @deploy[:proxy] = { "path_response_timeouts" => { "/api/reports" => "5m", "/uploads" => 120, "/stream" => 0 } }
 
     assert_equal [ "/api/reports=5m", "/uploads=120s", "/stream=0s" ], config.proxy.deploy_options[:"path-timeout"]
   end
@@ -532,13 +532,13 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
   end
 
   test "path timeouts must be a hash" do
-    @deploy[:proxy] = { "path_timeouts" => "/api=5m" }
+    @deploy[:proxy] = { "path_response_timeouts" => "/api=5m" }
 
     assert_raises(Kamal::ConfigurationError) { config }
   end
 
   test "path timeouts values must be stringish" do
-    @deploy[:proxy] = { "path_timeouts" => { "/api" => [ "5m" ] } }
+    @deploy[:proxy] = { "path_response_timeouts" => { "/api" => [ "5m" ] } }
 
     assert_raises(Kamal::ConfigurationError) { config }
   end

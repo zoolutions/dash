@@ -154,9 +154,9 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     assert_not_includes config.proxy.deploy_options.keys, :"basic-auth"
   end
 
-  test "deploy propagates tls_domains flags" do
+  test "deploy propagates ssl_domains flags" do
     @config[:proxy]["ssl"] = true
-    @config[:proxy]["tls_domains"] = { "source" => "/api/v1/kamal/domains", "interval" => 300, "batch_size" => 5 }
+    @config[:proxy]["ssl_domains"] = { "source" => "/api/v1/kamal/domains", "interval" => 300, "batch_size" => 5 }
     assert_equal \
       "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --tls-domains-source=\"/api/v1/kamal/domains\" --tls-domains-interval=\"300s\" --tls-domains-batch-size=\"5\"",
       new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
@@ -194,9 +194,7 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
   end
 
   test "deploy re-adds read routing at the load balancer" do
-    @config[:proxy]["read_targets"] = [ "1.1.1.2" ]
-    @config[:proxy]["read_target_websockets"] = true
-    @config[:proxy]["writer_affinity_timeout"] = 30
+    @config[:proxy]["read_routing"] = { "targets" => [ "1.1.1.2" ], "websockets" => true, "writer_affinity_timeout" => 30 }
 
     command = new_command.deploy(targets: [ "1.1.1.1" ])
 

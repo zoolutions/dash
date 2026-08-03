@@ -98,15 +98,6 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
     end
   end
 
-  # Negative lease values switch cross-node coalescing off, and pflag takes the
-  # next argument for a `--flag value` pair without checking for a leading dash.
-  test "negative lease durations survive the space-separated rendering" do
-    run = run_config "store" => "redis://cache.example.com:6379/0", "lease_ttl" => -1, "lease_wait" => 0
-
-    assert_match "--cache-lease-ttl \"-1s\"", run.run_command
-    assert_match "--cache-lease-wait \"0s\"", run.run_command
-  end
-
   # Mirrors acme.credential_names: the digest is published as a world-readable
   # docker label, and hashing a URL that may embed a password would hand out an
   # offline guessing target. Presence moves the digest; rotating the URL's

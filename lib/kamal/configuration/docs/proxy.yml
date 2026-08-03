@@ -116,9 +116,29 @@ proxy:
   #
   # Kamal supports loading custom SSL certificates directly from secrets. You should
   # pass a hash mapping the `certificate_pem` and `private_key_pem` to the secret names.
+  #
+  # The hash is also home to the rest of the TLS surface:
+  #
+  # `on_demand_url` turns on on-demand TLS: instead of a fixed `host` list, the
+  # proxy asks this endpoint whether it may issue a certificate for the hostname
+  # in an incoming handshake. A path is resolved against a healthy app target; an
+  # absolute http(s) URL is called directly. Answer 2xx to approve. On-demand TLS
+  # replaces the static hostname list, so it cannot be combined with
+  # `host`/`hosts`, with `certificate_pem`, or with `ssl_domains` — kamal rejects
+  # those at config time, because kamal-proxy would reject the deploy and there
+  # is no sensible winner to pick.
+  #
+  # `client_ca_pem` requires mutual TLS: clients must present a certificate
+  # signed by this CA bundle. Like `certificate_pem` it names a secret in
+  # `.kamal/secrets`; the content is uploaded next to the app's TLS material
+  # under `.kamal/proxy/apps-config`, and the proxy is given the path it sees
+  # inside its own container. An empty secret fails the deploy rather than
+  # silently turning mTLS off.
   ssl:
     certificate_pem: CERTIFICATE_PEM
     private_key_pem: PRIVATE_KEY_PEM
+    on_demand_url: https://app.example.com/api/v1/tls/ask
+    client_ca_pem: CLIENT_CA_PEM
   # ### Notes
   # - If the certificate or key is missing or invalid, deployments will fail.
   # - Always handle SSL certificates and private keys securely. Avoid hard-coding them in source control.
@@ -197,40 +217,10 @@ proxy:
   # `KAMAL_PROXY_REFRESH_TOKEN` environment variables. Set them on the proxy
   # container via `proxy.run.options.env` — never as deploy flags, which
   # leak into process listings and audit logs.
-  tls_domains:
+  ssl_domains:
     source: /api/v1/kamal/domains
     interval: 300
     batch_size: 1
-
-  # On-demand TLS, mTLS and the ACME cache
-  #
-  # Requires `ssl: true` — each of these settings only takes effect where TLS is
-  # terminated. When a loadbalancer is configured that is the loadbalancer, and
-  # kamal moves them there for you.
-  #
-  # `on_demand_url` turns on on-demand TLS: instead of a fixed `host` list, the
-  # proxy asks this endpoint whether it may issue a certificate for the hostname
-  # in an incoming handshake. A path is resolved against a healthy app target; an
-  # absolute http(s) URL is called directly. Answer 2xx to approve.
-  #
-  # On-demand TLS replaces the static hostname list, so it cannot be combined
-  # with `host`/`hosts`, with a custom `ssl` certificate, or with `tls_domains` —
-  # kamal rejects those at config time, because kamal-proxy would reject the
-  # deploy and there is no sensible winner to pick.
-  #
-  # `client_ca_path` requires mutual TLS: clients must present a certificate
-  # signed by this CA bundle. Unlike `acme_cache_path` it names a PEM file on the
-  # machine running kamal — the file is uploaded next to the app's TLS material
-  # under `.kamal/proxy/apps-config`, and the proxy is given the path it sees
-  # inside its own container.
-  #
-  # `acme_cache_path` is where the proxy stores its ACME assets, and is a path
-  # *inside* the proxy container. Point it somewhere in the `kamal-proxy-config`
-  # volume so issued certificates survive a proxy reboot.
-  tls:
-    on_demand_url: https://app.example.com/api/v1/tls/ask
-    client_ca_path: config/tls/client-ca.pem
-    acme_cache_path: /home/kamal-proxy/.config/kamal-proxy/acme
 
   # Forward headers
   #
@@ -274,7 +264,7 @@ proxy:
   # Override either deadline below a path prefix. Values are Go duration strings
   # ("90s", "5m") or plain seconds; 0 removes the limit for that prefix, which
   # suits streaming and SSE endpoints.
-  path_timeouts:
+  path_response_timeouts:
     "/api/reports": "5m"
     "/stream": 0
   path_request_timeouts:
@@ -290,7 +280,7 @@ proxy:
   # Requests over the cap queue rather than failing, and a streaming response
   # holds its connection until the body closes — so pair a low cap with
   # `request_timeout`. `max_idle_conns` caps the idle connections kept open.
-  # Both apply *per pool*, and every entry in `path_timeouts` adds another pool.
+  # Both apply *per pool*, and every entry in `path_response_timeouts` adds another pool.
   #
   # `idle_conn_timeout` is how long an idle connection is kept; set it below the
   # app's own keep-alive timeout, or the proxy will hand a request to a socket
@@ -357,20 +347,20 @@ proxy:
   # the writers.
   #
   # Targets are host:port addresses reachable from the proxy.
-  read_targets:
-    - 192.168.0.2:3000
-    - 192.168.0.3:3000
-
-  # Whether to route WebSocket traffic to read targets, when available.
   #
-  # Defaults to `false`:
-  read_target_websockets: true
-
-  # How long, in seconds, a client's reads stick to the writer after it makes
-  # a write, so clients always read their own writes.
+  # `websockets` routes WebSocket traffic to the read targets too (default
+  # `false`). `writer_affinity_timeout` is how long, in seconds, a client's
+  # reads stick to the writer after it makes a write, so clients always read
+  # their own writes (default 1 second).
   #
-  # Defaults to 1 second:
-  writer_affinity_timeout: 10
+  # When a loadbalancer fronts the fleet, read routing is decided there — at
+  # the only layer that sees the whole fleet.
+  read_routing:
+    targets:
+      - 192.168.0.2:3000
+      - 192.168.0.3:3000
+    websockets: true
+    writer_affinity_timeout: 10
 
   # Healthcheck
   #
@@ -634,6 +624,9 @@ proxy:
   # response size in bytes below which compressing costs more than it saves
   # (proxy default 1024; set 1 to compress everything).
   #
+  # An explicit `enabled: false` switches compression off even when `encodings`
+  # are named — it is the off switch for a block whose tuning you want to keep.
+  #
   # `content_types` **replaces** the proxy's built-in list of compressible media
   # types rather than adding to it, so name every type you want compressed, not
   # just the extra ones. Entries are exact types or type wildcards. Note that
@@ -747,6 +740,12 @@ proxy:
     # at `auto` to let the proxy pick from the credentials it can see. An
     # unsupported name is rejected here, at config time - kamal-proxy would only
     # log a warning and then never issue a certificate.
+    #
+    # kamal-proxy also accepts short aliases for the canonical names - `cf`
+    # (cloudflare), `do` (digitalocean), `gcp`/`google`/`googledns` (gcloud),
+    # `gd` (godaddy), `hz` (hetzner), `nc` (namecheap), `aws`/`r53` (route53)
+    # and `vr` (vultr). Prefer the canonical name; the aliases exist so a
+    # config written for the proxy's own CLI is not rejected here.
     #
     # `prefer_wildcard` asks for a wildcard certificate when the DNS provider
     # supports one, and `http_fallback` falls back to an HTTP-01 challenge when

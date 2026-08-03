@@ -280,19 +280,12 @@ class Kamal::Configuration::Proxy::Run
     # embed credentials, so it travels as CACHE_STORE in the secrets env file
     # (kamal-proxy reads it as the --cache-store default) rather than on a
     # command line that lands in process listings and the audit log.
-    #
-    # lease_ttl and lease_wait take negative values to switch cross-node
-    # coalescing off. That survives the space-separated rendering the rest of
-    # this command uses: pflag reads the argument after `--flag` unconditionally,
-    # without treating a leading dash as the next flag.
     def cache_options
       cache = run_config["cache"] || {}
 
       {
         "cache-store-timeout": seconds_duration(cache["store_timeout"]),
-        "cache-memory-size": cache["memory_size"],
-        "cache-lease-ttl": seconds_duration(cache["lease_ttl"]),
-        "cache-lease-wait": seconds_duration(cache["lease_wait"])
+        "cache-memory-size": cache["memory_size"]
       }.compact
     end
 

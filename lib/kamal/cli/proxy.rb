@@ -79,6 +79,15 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
           end
 
           execute *KAMAL.loadbalancer.ensure_apps_config_directory
+
+          # TLS terminates at the load balancer, so the TLS material the app
+          # hosts get - custom certificates and the mTLS client CA - must
+          # reach this host too; the LB container reads it through the same
+          # apps-config mount the per-host proxies use.
+          KAMAL.config.roles.select(&:running_proxy?).each do |role|
+            Kamal::Cli::App::SslCertificates.new(host, role, self).run
+          end
+
           Kamal::Cli::Proxy::LoadbalancerClaim.new(host, self).claim_run_config
           execute *KAMAL.loadbalancer.start_or_run
         end

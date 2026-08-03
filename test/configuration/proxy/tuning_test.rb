@@ -27,7 +27,7 @@ class ConfigurationProxyTuningTest < ActiveSupport::TestCase
   # AC2 — the same builder, not a parallel copy.
   test "both path timeout maps are built by the same code path" do
     options = deploy_options \
-      "path_timeouts" => { "/uploads" => 300 },
+      "path_response_timeouts" => { "/uploads" => 300 },
       "path_request_timeouts" => { "/uploads" => 600, "/stream" => 0 }
 
     assert_equal [ "/uploads=300s" ], options[:"path-timeout"]
@@ -122,10 +122,32 @@ class ConfigurationProxyTuningTest < ActiveSupport::TestCase
     assert_equal "proxy/request_timeout: cannot be negative", error.message
   end
 
+  # Sibling consistency: request_timeout already refuses negatives, and
+  # kamal-proxy clamps a negative --target-timeout just as silently.
+  test "a negative response_timeout is rejected" do
+    error = assert_raises(Kamal::ConfigurationError) { configuration "response_timeout" => -1 }
+
+    assert_equal "proxy/response_timeout: cannot be negative", error.message
+  end
+
+  # Zero means "use the proxy default of 100", not "keep none" - an operator
+  # writing 0 to disable idle connections gets the opposite. Legal, so warn.
+  test "max_idle_conns zero warns that it means the proxy default" do
+    out = stderred { Kamal::Configuration.new @deploy.merge(proxy: { "target" => { "max_idle_conns" => 0 } }) }
+
+    assert_match "max_idle_conns: 0 means the proxy default of 100, not \"keep none\"", out
+  end
+
+  test "no warning for a positive max_idle_conns" do
+    out = stderred { Kamal::Configuration.new @deploy.merge(proxy: { "target" => { "max_idle_conns" => 10 } }) }
+
+    assert_no_match(/max_idle_conns/, out)
+  end
+
   # kamal-proxy's parsePathTimeouts rejects these; both maps go through it.
   test "a negative path timeout is rejected in either map" do
-    assert_equal "proxy/path_timeouts: '/uploads' cannot be negative",
-      assert_raises(Kamal::ConfigurationError) { configuration "path_timeouts" => { "/uploads" => -1 } }.message
+    assert_equal "proxy/path_response_timeouts: '/uploads' cannot be negative",
+      assert_raises(Kamal::ConfigurationError) { configuration "path_response_timeouts" => { "/uploads" => -1 } }.message
 
     assert_equal "proxy/path_request_timeouts: '/uploads' cannot be negative",
       assert_raises(Kamal::ConfigurationError) { configuration "path_request_timeouts" => { "/uploads" => -1 } }.message
