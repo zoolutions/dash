@@ -12,9 +12,14 @@ class Kamal::Configuration::Loadbalancer < Kamal::Configuration::Proxy
 
   # The load balancer fans a single service out to many targets, so unlike the
   # per-app proxy deploy (which takes one target) it takes the full list and
-  # joins them into a single --target flag, honouring app_port for each.
+  # joins them into a single --target flag.
+  #
+  # Each target is a per-host proxy, reached on its published HTTP port
+  # (run.http_port, default 80) - the only cross-host surface it exposes.
+  # Never app_port: that is how a per-host proxy reaches the app container
+  # inside its own docker network, and nothing listens on it across hosts.
   def deploy_command_args(targets:)
-    target_arg = targets.map { |target| "#{target}:#{app_port}" }.join(",")
+    target_arg = targets.map { |target| "#{target}:#{run.http_port}" }.join(",")
     optionize ({ target: target_arg }).merge(deploy_options), with: "="
   end
 
