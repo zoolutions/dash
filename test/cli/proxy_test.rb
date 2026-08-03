@@ -1046,6 +1046,45 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  # The LB reboot path must not rely solely on the deploy step that follows
+  # it: if that step fails, a freshly rebooted LB would be stranded with no
+  # services and the site down. Re-register this app's routes immediately,
+  # mirroring the per-host proxy reboot, and verify via the JSON listing.
+  test "reboot re-registers this apps service on the load balancer and verifies it" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_registry(service_owner: loadbalancer_owner_token(:with_loadbalancer))
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :exec, "load-balancer", "kamal-proxy", :list, "--json")
+      .returns({ services: { "app" => { "target" => "1.1.1.1:80" } } }.to_json)
+
+    run_command("reboot", "-y", fixture: :with_loadbalancer).tap do |output|
+      assert_match "Re-registering app with the load balancer on lb.example.com", output
+      assert_match "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\"", output
+    end
+  end
+
+  test "reboot fails when the load balancer is missing this apps service after re-registration" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_registry(service_owner: loadbalancer_owner_token(:with_loadbalancer))
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :exec, "load-balancer", "kamal-proxy", :list, "--json")
+      .returns({ services: { "other-app" => {} } }.to_json)
+
+    error = assert_raises(SSHKit::Runner::ExecuteError) { run_command("reboot", "-y", fixture: :with_loadbalancer) }
+    assert_match "missing service app after reboot", error.message
+  end
+
+  # No owner record means this app never deployed through the LB - the
+  # ordinary deploy step registers it later; there is nothing to restore.
+  test "reboot skips load balancer re-registration when the service was never registered" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_registry
+
+    run_command("reboot", "-y", fixture: :with_loadbalancer).tap do |output|
+      assert_no_match(/kamal-proxy deploy/, output)
+    end
+  end
+
   test "remove refuses when other apps are installed on the loadbalancer host" do
     Thread.report_on_exception = false
     Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)

@@ -44,8 +44,8 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
     docker :exec, container_name, "kamal-proxy", "domains", subcommand
   end
 
-  def list
-    docker :exec, container_name, "kamal-proxy", :list
+  def list(json: false)
+    docker :exec, container_name, "kamal-proxy", :list, *("--json" if json)
   end
 
   # Cache policy is edge-only under load balancing (see the layering contract),

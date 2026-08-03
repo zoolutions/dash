@@ -129,11 +129,21 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
       new_command.deploy(targets: [ "1.1.1.1" ]).join(" ")
   end
 
-  test "deploy uses app_port for targets" do
+  # The LB reaches the per-host proxies over their published HTTP port - the
+  # only cross-host surface they expose. app_port is how each per-host proxy
+  # reaches the app container inside its own docker network; nothing listens
+  # on it across hosts, so leaking it here left targets permanently unhealthy.
+  test "deploy targets the per-host proxies published http port, not app_port" do
     @config[:proxy]["app_port"] = 3000
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:3000,1.1.1.2:3000\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
+  end
+
+  test "deploy honors a custom proxy run http_port for targets" do
+    @config[:proxy]["run"] = { "http_port" => 8080 }
+
+    assert_match "--target=\"1.1.1.1:8080,1.1.1.2:8080\"", new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
   end
 
   test "deploy propagates rich proxy options (healthcheck, response timeout, path prefix)" do
@@ -333,6 +343,18 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     assert_equal \
       "docker exec load-balancer kamal-proxy list",
       new_command.list.join(" ")
+  end
+
+  test "list json" do
+    assert_equal \
+      "docker exec load-balancer kamal-proxy list --json",
+      new_command.list(json: true).join(" ")
+  end
+
+  # One source of truth for what the LB fronts: the deploy step and the reboot
+  # re-registration both draw targets from here, so they cannot diverge.
+  test "target_hosts collects the hosts of every proxy-running role" do
+    assert_equal [ "1.1.1.1", "1.1.1.2" ], new_loadbalancer_config.target_hosts
   end
 
   test "config_digest" do
