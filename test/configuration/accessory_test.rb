@@ -380,7 +380,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
 
     assert_equal [ "monitoring.example.com" ], options[:host]
     assert options[:tls]
-    assert_equal "admin:s3cr3t", options[:"basic-auth"]
+    assert_equal "admin:s3cr3t", options[:"basic-auth"].to_s
   end
 
   test "accessory proxy keeps tls_domains options" do

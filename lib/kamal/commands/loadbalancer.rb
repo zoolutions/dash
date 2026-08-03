@@ -92,10 +92,14 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
     make_directory loadbalancer_config.directory
   end
 
-  # Where the acme credentials env file lands (see Proxy::Run#secrets_path) -
+  # Where the proxy secrets env file lands (see Proxy::Run#secrets_path) -
   # the same .kamal/proxy directory the per-app proxy hosts use.
   def ensure_proxy_directory
     make_directory loadbalancer_config.run.host_directory
+  end
+
+  def remove_proxy_secrets_file
+    remove_file loadbalancer_config.run.secrets_path
   end
 
   def ensure_apps_config_directory

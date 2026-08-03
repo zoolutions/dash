@@ -115,6 +115,12 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
     make_directory config.proxy_boot.apps_directory
   end
 
+  # Static path rather than proxy_run_config.secrets_path: the file must be
+  # removable precisely when the run config (or its secrets) is gone.
+  def remove_proxy_secrets_file
+    remove_file File.join(config.proxy_boot.host_directory, Kamal::Configuration::Proxy::Run::SECRETS_FILENAME)
+  end
+
   def boot_config
     [ :echo, "#{substitute(read_boot_options)} #{substitute(read_image)}:#{substitute(read_image_version)} #{substitute(read_run_command)}" ]
   end

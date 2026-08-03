@@ -198,9 +198,16 @@ class CommandsAppTest < ActiveSupport::TestCase
   test "deploy with basic auth" do
     @config[:proxy] = { "ssl" => true, "host" => "example.com", "basic_auth" => { "username" => "admin", "password" => "s3cr3t" } }
 
+    command = new_command.deploy(target: "172.1.0.2")
+
+    # The executed argv carries the real credential...
     assert_equal \
       "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"172.1.0.2:80\" --host=\"example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --basic-auth=\"admin:s3cr3t\" --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
-      new_command.deploy(target: "172.1.0.2").join(" ")
+      command.join(" ")
+
+    # ...but anything kamal prints redacts it (registry-login precedent).
+    assert_includes Kamal::Utils.redacted(command), "--basic-auth=[REDACTED]"
+    assert_no_match(/s3cr3t/, Kamal::Utils.redacted(command).join(" "))
   end
 
   test "deploy with SSL" do

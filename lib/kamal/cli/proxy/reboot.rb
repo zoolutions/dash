@@ -43,8 +43,11 @@ class Kamal::Cli::Proxy::Reboot
       execute *proxy.ensure_proxy_directory
       execute *proxy.ensure_apps_config_directory
 
-      if (run_config = proxy.proxy_run_config)&.acme&.credentials?
+      if (run_config = proxy.proxy_run_config)&.secrets?
         upload! run_config.secrets_io, run_config.secrets_path, mode: "0600"
+      else
+        # A host keeps no secrets it no longer needs.
+        execute *proxy.remove_proxy_secrets_file, raise_on_non_zero_exit: false
       end
 
       execute *proxy.run(digest: drift.expected_digest)

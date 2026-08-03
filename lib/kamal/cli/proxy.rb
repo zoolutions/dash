@@ -36,9 +36,12 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
             raise "kamal-proxy version #{version} is too old, run `kamal proxy reboot` in order to update to at least #{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}"
           end
 
-          if (run_config = proxy.proxy_run_config)&.acme&.credentials?
+          if (run_config = proxy.proxy_run_config)&.secrets?
             execute *proxy.ensure_proxy_directory
             upload! run_config.secrets_io, run_config.secrets_path, mode: "0600"
+          else
+            # A host keeps no secrets it no longer needs.
+            execute *proxy.remove_proxy_secrets_file, raise_on_non_zero_exit: false
           end
 
           execute *proxy.ensure_apps_config_directory
@@ -65,11 +68,14 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
           info "Starting loadbalancer on #{host}..."
           execute *KAMAL.registry.login
 
-          # The load balancer terminates TLS, so it issues certificates too -
-          # its host needs the acme credentials just like the proxy hosts do.
-          if (lb_run = KAMAL.loadbalancer_config.run).acme.credentials?
+          # The load balancer terminates TLS and owns the cache, so its host
+          # needs the proxy secrets (acme credentials, cache store) just like
+          # the proxy hosts do.
+          if (lb_run = KAMAL.loadbalancer_config.run).secrets?
             execute *KAMAL.loadbalancer.ensure_proxy_directory
             upload! lb_run.secrets_io, lb_run.secrets_path, mode: "0600"
+          else
+            execute *KAMAL.loadbalancer.remove_proxy_secrets_file, raise_on_non_zero_exit: false
           end
 
           execute *KAMAL.loadbalancer.ensure_apps_config_directory
@@ -199,10 +205,12 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
             execute *KAMAL.loadbalancer.remove_container
 
             # Same as boot: the replacement container's --env-file must find
-            # current credentials, not whatever an earlier boot left behind.
-            if (lb_run = KAMAL.loadbalancer_config.run).acme.credentials?
+            # current secrets, not whatever an earlier boot left behind.
+            if (lb_run = KAMAL.loadbalancer_config.run).secrets?
               execute *KAMAL.loadbalancer.ensure_proxy_directory
               upload! lb_run.secrets_io, lb_run.secrets_path, mode: "0600"
+            else
+              execute *KAMAL.loadbalancer.remove_proxy_secrets_file, raise_on_non_zero_exit: false
             end
 
             execute *KAMAL.loadbalancer.ensure_apps_config_directory

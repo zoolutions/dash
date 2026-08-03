@@ -26,7 +26,8 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
     "run" => {
       "http-port" => "the gem publishes host:container ports via docker; the proxy listens on its default inside",
       "https-port" => "same as --http-port",
-      "data-dir" => "fixed by the kamal-proxy-config volume mount in Kamal::Commands::Proxy#run"
+      "data-dir" => "fixed by the kamal-proxy-config volume mount in Kamal::Commands::Proxy#run",
+      "cache-store" => "delivered as CACHE_STORE via the 0600 proxy secrets env file - a store URL may embed credentials that must stay out of process listings and the audit log"
     }
   }.freeze
 

@@ -546,14 +546,25 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
   test "deploy options with basic auth" do
     @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin", "password" => "s3cr3t" } }
 
-    assert_equal "admin:s3cr3t", config.proxy.deploy_options[:"basic-auth"]
+    assert_equal "admin:s3cr3t", config.proxy.deploy_options[:"basic-auth"].to_s
+  end
+
+  # The credential is marked sensitive so SSHKit redacts it wherever kamal
+  # prints the command - at :info verbosity it used to land in plain text.
+  test "basic auth credential is redacted in printed output" do
+    @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin", "password" => "s3cr3t" } }
+
+    credential = config.proxy.deploy_options[:"basic-auth"]
+
+    assert_kind_of Kamal::Utils::Sensitive, credential
+    assert_no_match(/s3cr3t/, Kamal::Utils.redacted(credential))
   end
 
   test "deploy options with basic auth password from secrets" do
     with_test_secrets("secrets" => "WEB_PASSWORD=s3cr3t") do
       @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin", "password_secret" => "WEB_PASSWORD" } }
 
-      assert_equal "admin:s3cr3t", config.proxy.deploy_options[:"basic-auth"]
+      assert_equal "admin:s3cr3t", config.proxy.deploy_options[:"basic-auth"].to_s
     end
   end
 
@@ -566,7 +577,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
   test "basic auth password may contain colons" do
     @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin", "password" => "pa:ss:word" } }
 
-    assert_equal "admin:pa:ss:word", config.proxy.deploy_options[:"basic-auth"]
+    assert_equal "admin:pa:ss:word", config.proxy.deploy_options[:"basic-auth"].to_s
   end
 
   test "basic auth requires a username" do
