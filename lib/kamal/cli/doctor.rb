@@ -5,7 +5,7 @@ require "kamal/sshkit_with_ext"
 class Kamal::Cli::Doctor
   include SSHKit::DSL
 
-  HOST_CHECKS = %i[ ssh docker registry proxy_image proxy_version ports ]
+  HOST_CHECKS = %i[ ssh docker registry proxy_image proxy_version proxy_socket ports ]
 
   CHECK_TITLES = {
     ssh: "SSH",
@@ -13,6 +13,7 @@ class Kamal::Cli::Doctor
     registry: "Registry",
     proxy_image: "Proxy image",
     proxy_version: "Proxy version",
+    proxy_socket: "Proxy docker socket",
     ports: "Ports",
     dns: "DNS",
     certificate: "Certificates",
@@ -85,7 +86,10 @@ class Kamal::Cli::Doctor
           checks = Kamal::Cli::Doctor::HostChecks.new(host.hostname, self, proxy_host: proxy_hosts.include?(host.hostname)).run
           mutex.synchronize { results_by_host[host.hostname] = checks }
         end
-      rescue SSHKit::Runner::ExecuteError, SSHKit::Runner::MultipleExecuteError => e
+      # Only ExecuteError: sshkit 1.25 has no MultipleExecuteError, and naming
+      # a constant that does not exist turns "a host's checks failed" into a
+      # NameError - the opposite of the doctor's never-crash contract.
+      rescue SSHKit::Runner::ExecuteError => e
         # Per-check errors are captured inside HostChecks; getting here means a
         # host's checks never completed at all. Record those as SSH failures below.
         error = e

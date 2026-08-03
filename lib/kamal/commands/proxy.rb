@@ -69,6 +69,12 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
     docker :exec, name, "kamal-proxy", :list, *("--json" if json)
   end
 
+  # One mount destination per line - what the running container was actually
+  # booted with, as opposed to what the current configuration would mount.
+  def mount_destinations
+    docker :inspect, container_name, "--format", "'{{range .Mounts}}{{println .Destination}}{{end}}'"
+  end
+
   # Zero-downtime handoff commands (proxy/run port_holder mode)
 
   def port_holder?

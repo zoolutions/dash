@@ -110,6 +110,82 @@ class CliDoctorTest < CliTestCase
     end
   end
 
+  # The config-time sleep/docker_socket check covers the *current* config; a
+  # proxy booted before the socket was added silently lacks the mount until
+  # the next reboot, and the failure mode is one hung request when a sleeping
+  # service never wakes. The doctor inspects what is actually mounted.
+  test "doctor reports a mounted docker socket" do
+    stub_proxy_version Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
+    stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy\n/var/run/docker.sock"
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+
+    run_command("doctor", fixture: "deploy_with_doctor_socket").tap do |output|
+      assert_match "OK 1.1.1.1: docker socket /var/run/docker.sock is mounted", output
+    end
+  end
+
+  test "doctor fails when sleep is configured but the running proxy lacks the socket mount" do
+    stub_proxy_version Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
+    stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy"
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+
+    exception = assert_raises(Kamal::Cli::DoctorError) { run_command("doctor", fixture: "deploy_with_doctor_socket") }
+    assert_includes exception.message, "no /var/run/docker.sock mount"
+    assert_includes exception.message, "kamal proxy reboot"
+  end
+
+  # Without sleep nothing hangs yet, so a missing mount is drift, not breakage.
+  test "doctor warns when the socket is configured without sleep and not mounted" do
+    stub_proxy_version Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
+    stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy"
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+
+    run_command("doctor", fixture: "deploy_with_doctor_socket_only").tap do |output|
+      assert_match "WARN 1.1.1.1: the running kamal-proxy has no /var/run/docker.sock mount", output
+      assert_match "ready to deploy", output
+    end
+  end
+
+  # Root-equivalent access the config no longer asks for deserves a flag.
+  test "doctor warns about a mounted socket the config no longer asks for" do
+    stub_proxy_version Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
+    stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy\n/var/run/docker.sock"
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+
+    run_command("doctor").tap do |output|
+      assert_match "WARN 1.1.1.1: the running kamal-proxy mounts /var/run/docker.sock but the config no longer asks for it", output
+      assert_match "ready to deploy", output
+    end
+  end
+
+  test "doctor reports a boot-time socket when the proxy is not running" do
+    stub_proxy_version nil
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.first == :ss }
+      .returns("")
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+
+    run_command("doctor", fixture: "deploy_with_doctor_socket").tap do |output|
+      assert_match "OK 1.1.1.1: docker socket /var/run/docker.sock will be mounted on boot", output
+    end
+  end
+
+  test "doctor stays quiet about sockets when none is configured or mounted" do
+    stub_proxy_version Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
+    stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy"
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+
+    run_command("doctor").tap do |output|
+      assert_match "OK 1.1.1.1: no docker socket configured or mounted", output
+    end
+  end
+
   test "doctor with local registry skips login" do
     run_command("doctor", fixture: "deploy_with_local_registry").tap do |output|
       assert_match "OK 1.1.1.1: local registry, no login required", output
@@ -179,6 +255,17 @@ class CliDoctorTest < CliTestCase
       SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
         .with(*PROXY_VERSION_CAPTURE_ARGS)
         .returns(version.to_s)
+
+      # A running proxy also gets its mounts inspected; default to none so
+      # tests that do not care about the socket check stay quiet. Call
+      # stub_proxy_mounts after this to override.
+      stub_proxy_mounts ""
+    end
+
+    def stub_proxy_mounts(destinations)
+      SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+        .with(:docker, :inspect, "kamal-proxy", "--format", "'{{range .Mounts}}{{println .Destination}}{{end}}'", raise_on_non_zero_exit: false)
+        .returns(destinations)
     end
 
     def stub_domain_resolution(to:)

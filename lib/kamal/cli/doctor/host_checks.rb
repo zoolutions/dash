@@ -65,6 +65,7 @@ class Kamal::Cli::Doctor::HostChecks
       {
         proxy_image: proxy_image_check,
         proxy_version: proxy_version_check(version, version_error),
+        proxy_socket: proxy_socket_check(proxy_running: version.present?),
         ports: ports_check(proxy_running: version.present?)
       }
     end
@@ -101,6 +102,48 @@ class Kamal::Cli::Doctor::HostChecks
       end
     rescue ArgumentError
       result :proxy_version, :warn, "running image tag #{version} is not a version number"
+    end
+
+    # What a container path has to look like to count as a container runtime
+    # socket when the config no longer names one.
+    DOCKER_SOCKET_PATTERN = %r{docker\.sock\z}
+
+    # The config-time sleep/docker_socket pairing check covers the *current*
+    # config; the running container keeps whatever it was booted with. A proxy
+    # from before the socket was added silently lacks the mount - the failure
+    # mode is one hung request when a sleeping service never wakes - and one
+    # from before it was removed keeps root-equivalent host access.
+    def proxy_socket_check(proxy_running:)
+      expected = KAMAL.config.proxy_run(host)&.docker_socket
+
+      unless proxy_running
+        detail = expected ? "docker socket #{expected} will be mounted on boot" : "no docker socket configured"
+        return result(:proxy_socket, :ok, detail)
+      end
+
+      mounted = capture_with_info(*KAMAL.proxy(host).mount_destinations, raise_on_non_zero_exit: false).split("\n").map(&:strip)
+
+      if expected
+        if mounted.include?(expected)
+          result :proxy_socket, :ok, "docker socket #{expected} is mounted"
+        elsif sleep_configured?
+          result :proxy_socket, :fail, "the running kamal-proxy has no #{expected} mount, so sleeping services never wake - run `kamal proxy reboot`"
+        else
+          # Nothing sleeps yet, so nothing hangs - drift rather than breakage.
+          result :proxy_socket, :warn, "the running kamal-proxy has no #{expected} mount - run `kamal proxy reboot` to apply the current configuration"
+        end
+      elsif (stray = mounted.grep(DOCKER_SOCKET_PATTERN).first)
+        result :proxy_socket, :warn, "the running kamal-proxy mounts #{stray} but the config no longer asks for it - " \
+          "the socket is root-equivalent host access; `kamal proxy reboot` removes it"
+      else
+        result :proxy_socket, :ok, "no docker socket configured or mounted"
+      end
+    rescue StandardError => e
+      result :proxy_socket, :warn, "could not check the docker socket (#{e.message})"
+    end
+
+    def sleep_configured?
+      KAMAL.config.roles.any? { |role| role.running_proxy? && role.proxy.proxy_config["sleep"].present? }
     end
 
     def ports_check(proxy_running:)

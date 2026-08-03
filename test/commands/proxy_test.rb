@@ -278,6 +278,12 @@ class CommandsProxyTest < ActiveSupport::TestCase
       new_command.list(json: true).join(" ")
   end
 
+  test "mount_destinations" do
+    assert_equal \
+      "docker inspect kamal-proxy --format '{{range .Mounts}}{{println .Destination}}{{end}}'",
+      new_command.mount_destinations.join(" ")
+  end
+
   test "config_digest" do
     assert_equal \
       "docker inspect kamal-proxy --format '{{ index .Config.Labels \"org.kamal.proxy-config-digest\" }}'",
