@@ -10,34 +10,6 @@ class Kamal::Configuration::Loadbalancer < Kamal::Configuration::Proxy
     super
   end
 
-  def deploy_options
-    opts = super
-
-    # The parent strips host/tls/tls-domains when load balancing (the
-    # app-level proxy no longer owns TLS) — the load balancer is where they
-    # belong, so re-add.
-    opts[:host] = hosts if hosts.present?
-    opts[:tls] = true if ssl?
-    opts.merge!(tls_domains_options)
-    opts.merge!(tls_options)
-
-    # Access control is an edge concern for a sharper reason than TLS: the load
-    # balancer is the only proxy that ever sees the real client address.
-    opts.merge!(access_control_options)
-
-    # Traffic shaping goes the other way. The parent hands it over with
-    # everything else, but this proxy forwards to the per-host proxies, which
-    # apply the same rules again — an `add` header would arrive twice and a
-    # rewrite would run over its own output. Leave it to them.
-    traffic_options.each_key { |key| opts.delete(key) }
-
-    # Basic auth is an edge concern for the same reason: the parent strips it
-    # when load balancing so only the load balancer challenges clients.
-    opts[:"basic-auth"] = basic_auth_credential if basic_auth_credential.present?
-
-    opts
-  end
-
   # The load balancer fans a single service out to many targets, so unlike the
   # per-app proxy deploy (which takes one target) it takes the full list and
   # joins them into a single --target flag, honouring app_port for each.
@@ -50,22 +22,30 @@ class Kamal::Configuration::Loadbalancer < Kamal::Configuration::Proxy
     File.join config.run_directory, "loadbalancer"
   end
 
-  # Publish/logging/docker options for the load balancer container. When the
-  # deploy YAML sets proxy.run, honour it (publish: false, custom ports,
-  # options); otherwise fall back to publishing the default 80/443.
-  def run_args
-    if run
-      [ *run.publish_args, *run.logging_args, *run.options_args ]
-    else
-      [ "--publish", "80:80", "--publish", "443:443" ]
-    end
+  # The load balancer is a kamal-proxy container, so proxy/run applies to it
+  # exactly as it does to the per-host proxies. Without a run block it still
+  # needs the default surface (published ports, log rotation, the apps-config
+  # mount and the run command) to boot from, so fall back to an empty config
+  # rather than to nil.
+  def run
+    @run ||= Kamal::Configuration::Proxy::Run.new(config, run_config: {})
   end
 
-  # Digest of the argv the load balancer container is booted with, so a second
-  # app pointing at the same host can tell whether its proxy/run agrees with
-  # whatever is already running there.
+  # Docker options for the load balancer container: publish/logging/options
+  # plus the mounts and env file the proxy's run surface brings along —
+  # notably the acme credentials env file, without which the edge cannot
+  # issue certificates even though it is the layer terminating TLS.
+  def run_args
+    run.docker_options_args
+  end
+
+  # Digest of what the load balancer container is booted with, so a second app
+  # pointing at the same host can tell whether its proxy/run agrees with
+  # whatever is already running there. Same composition as the proxy's own
+  # drift digest: image, run command, docker options and the acme credential
+  # names (their values deliberately stay out - see Proxy::Run#config_digest).
   def run_config_digest
-    Kamal::Configuration::Proxy::Run.digest(*run_args)
+    run.config_digest
   end
 
   # Kamal has no app identifier, so ownership of a service on a shared load
@@ -101,4 +81,13 @@ class Kamal::Configuration::Loadbalancer < Kamal::Configuration::Proxy
   def on_proxy_host?
     config.proxy_hosts.include?(config.proxy.effective_loadbalancer)
   end
+
+  private
+    # The edge half of the layering contract (see
+    # Kamal::Configuration::Proxy::DEPLOY_OPTION_DISPOSITIONS): the load
+    # balancer applies the edge and shared concerns, and leaves the per-app
+    # ones to the per-host proxies it forwards to.
+    def retained_dispositions
+      %i[ edge both ]
+    end
 end

@@ -345,6 +345,71 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     assert_not options.key?(:"tls-domains-batch-size")
   end
 
+  # Session affinity: both layers used to pin with the same cookie name but
+  # separate HMAC keys, so the inner proxy clobbered the edge pin every other
+  # request — the edge is the only layer whose pin can stick.
+  # Canonical host and redirects consult r.TLS only (kamal-proxy
+  # redirectURLIfNeeded), so behind the LB they emitted http:// Locations to
+  # HTTPS clients. Cache policy and read routing are edge decisions.
+  test "deploy_options strips session affinity, canonical host, redirects, cache and read routing when load balancing" do
+    @deploy[:proxy] = {
+      "loadbalancer" => "lb.example.com",
+      "session_affinity" => { "enabled" => true, "cookie" => "_kamal_affinity" },
+      "canonical_host" => "www.example.com",
+      "redirects" => [ { "from" => "/old", "to" => "/new", "status" => 302 } ],
+      "cache" => { "enabled" => true, "max_ttl" => 300 },
+      "read_targets" => [ "1.1.1.2" ],
+      "read_target_websockets" => true,
+      "writer_affinity_timeout" => 30
+    }
+
+    options = config.proxy.deploy_options
+
+    %i[ session-affinity session-affinity-cookie canonical-host redirect
+        cache cache-max-ttl read-target read-target-websockets writer-affinity-timeout ].each do |key|
+      assert_not_includes options.keys, key
+    end
+  end
+
+  # Sleep needs the docker socket and container names, which only exist on the
+  # app hosts; compress must run once, next to the app, or the LB would
+  # re-compress what the per-app proxy already encoded.
+  test "deploy_options keeps sleep and compress per app when load balancing" do
+    @deploy[:proxy] = {
+      "loadbalancer" => "lb.example.com",
+      "sleep" => { "after" => 300 },
+      "compress" => true,
+      "run" => { "docker_socket" => "/var/run/docker.sock" }
+    }
+
+    options = config.proxy.deploy_options
+
+    assert_includes options.keys, :"sleep-after"
+    assert_includes options.keys, :compress
+  end
+
+  # kamal-proxy gates TLSRedirect on TLSEnabled, and tls is already stripped
+  # per-app — the whole TLS family terminates at the edge.
+  test "deploy_options strips ssl staging and ssl redirect when load balancing" do
+    @deploy[:proxy] = {
+      "loadbalancer" => "lb.example.com", "hosts" => [ "app.example.com" ],
+      "ssl" => true, "ssl_staging" => true, "ssl_redirect" => true
+    }
+
+    options = config.proxy.deploy_options
+
+    assert_not_includes options.keys, :"tls-staging"
+    assert_not_includes options.keys, :"tls-redirect"
+  end
+
+  # Each layer has a real connection pool between itself and its targets, so
+  # pool tuning applies at both — deliberately, not by omission.
+  test "deploy_options keeps target pool tuning at both layers when load balancing" do
+    @deploy[:proxy] = { "loadbalancer" => "lb.example.com", "target" => { "max_conns" => 100 } }
+
+    assert_includes config.proxy.deploy_options.keys, :"target-max-conns"
+  end
+
   test "tls_domains without source" do
     @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "tls_domains" => { "interval" => 300 } }
     assert_raises(Kamal::ConfigurationError) { config.proxy }

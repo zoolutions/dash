@@ -17,6 +17,154 @@ class Kamal::Configuration::Proxy
   # kamal-proxy maps `brotli` onto the `br` token that travels in Content-Encoding.
   COMPRESSION_ENCODING_ALIASES = { "brotli" => "br" }.freeze
 
+  # The layering contract. When the fork's load balancer fronts the per-host
+  # proxies, every deploy option lives at exactly one layer — or at both, on
+  # purpose. Nothing is allowed to be undecided: #deploy_options refuses to
+  # emit a key that has no disposition here, and test/proxy_layering_test.rb
+  # fails the build if a new option is added without one.
+  #
+  #   :edge    — only where clients connect. Stripped from the per-app deploy,
+  #              applied by the load balancer.
+  #   :per_app — only next to the app. Applied per-app, stripped from the
+  #              load balancer.
+  #   :both    — each layer genuinely has its own copy of the concern.
+  #
+  # Without load balancing the single proxy is every layer at once and the
+  # whole surface applies to it.
+  DEPLOY_OPTION_DISPOSITIONS = {
+    # --- Edge: TLS terminates where the handshake happens, and kamal-proxy
+    # gates TLSRedirect on TLSEnabled, so the whole family travels together.
+    host: :edge,
+    tls: :edge,
+    "tls-staging": :edge,
+    "tls-certificate-path": :edge,
+    "tls-private-key-path": :edge,
+    "tls-redirect": :edge,
+    "tls-domains-source": :edge,
+    "tls-domains-interval": :edge,
+    "tls-domains-batch-size": :edge,
+    "tls-on-demand-url": :edge,
+    "tls-client-ca-path": :edge,
+    "tls-acme-cache-path": :edge,
+
+    # --- Edge: the load balancer is the only proxy that ever sees the real
+    # client address — an allow list on a per-app proxy would refuse every
+    # request (its peer is the LB) and one limiter would count the whole
+    # fleet as a single client.
+    "allow-ip": :edge,
+    "trusted-proxy": :edge,
+    "client-ip-header": :edge,
+    "rate-limit": :edge,
+    "rate-limit-burst": :edge,
+    "rate-limit-exempt": :edge,
+
+    # --- Edge: kamal-proxy deletes the Authorization header once a service
+    # enforces basic auth, so an inner proxy would 401 the credential-less
+    # request the load balancer forwards. Credentials belong at the edge only.
+    "basic-auth": :edge,
+
+    # --- Edge: both layers used to pin with the same cookie name but separate
+    # HMAC keys, so the inner proxy clobbered the edge pin every other request.
+    # Only the edge pin can stick.
+    "session-affinity": :edge,
+    "session-affinity-cookie": :edge,
+
+    # --- Edge: redirectURLIfNeeded consults r.TLS only, so behind the LB a
+    # per-app redirect emits http:// Locations to HTTPS clients.
+    "canonical-host": :edge,
+    redirect: :edge,
+
+    # --- Edge: one response cache, at the edge — two layers of cache would
+    # double the storage and let the inner cache serve entries the edge
+    # already invalidated. The store it writes into is proxy-wide (proxy/run).
+    cache: :edge,
+    "cache-max-ttl": :edge,
+    "cache-max-body": :edge,
+    "cache-max-variants": :edge,
+    "cache-vary-header": :edge,
+    "cache-vary-cookie": :edge,
+    "cache-allow-set-cookie": :edge,
+
+    # --- Edge: splitting reads from writes is a fleet-level routing decision;
+    # per-app proxies each front a single host and have nothing to split.
+    "read-target": :edge,
+    "read-target-websockets": :edge,
+    "writer-affinity-timeout": :edge,
+
+    # --- Per-app: applied next to the app, exactly once. The LB forwards to
+    # the per-host proxies, so running these at both layers would add a header
+    # twice or run a rewrite over its own output.
+    "set-request-header": :per_app,
+    "add-request-header": :per_app,
+    "remove-request-header": :per_app,
+    "set-response-header": :per_app,
+    "add-response-header": :per_app,
+    "remove-response-header": :per_app,
+    rewrite: :per_app,
+    "scope-cookie-paths": :per_app,
+    "intercept-errors": :per_app,
+
+    # --- Per-app: sleep stops and starts app containers through the docker
+    # socket — the LB has neither the socket nor the containers, and its
+    # targets are host addresses, so a sleep flag there fails the deploy.
+    "sleep-after": :per_app,
+    "wake-timeout": :per_app,
+    "sleep-container": :per_app,
+
+    # --- Per-app: compress once, next to the app. Double-running was only
+    # safe by accident of the Content-Encoding guard.
+    compress: :per_app,
+    "compress-content-type": :per_app,
+    "compress-min-length": :per_app,
+
+    # --- Both, deliberately: each layer has a real connection pool to its own
+    # targets (LB -> per-host proxies, per-host proxy -> app containers), so
+    # pool tuning and request deadlines apply to each hop.
+    "target-timeout": :both,
+    "target-max-conns": :both,
+    "target-max-idle-conns": :both,
+    "target-idle-conn-timeout": :both,
+    "target-dial-timeout": :both,
+    "target-disable-keep-alives": :both,
+    "target-try-duration": :both,
+    "target-try-interval": :both,
+    "path-timeout": :both,
+    "request-timeout": :both,
+    "path-request-timeout": :both,
+    "deploy-timeout": :both,
+    "drain-timeout": :both,
+
+    # --- Both: each layer health-checks its own targets, buffers its own
+    # connections, routes its own paths and writes its own logs.
+    "health-check-interval": :both,
+    "health-check-timeout": :both,
+    "health-check-path": :both,
+    "health-check-port": :both,
+    "health-check-host": :both,
+    "buffer-requests": :both,
+    "buffer-responses": :both,
+    "buffer-memory": :both,
+    "max-request-body": :both,
+    "max-response-body": :both,
+    "path-prefix": :both,
+    "strip-path-prefix": :both,
+    "forward-headers": :both,
+    "log-request-header": :both,
+    "log-response-header": :both,
+    "error-pages": :both,
+    "exclude-metrics-path": :both
+  }.freeze
+
+  # Refusing beats guessing: a deploy option nobody placed would silently land
+  # on both layers, which is how session affinity broke in the only topology
+  # where it matters.
+  def self.disposition(key)
+    DEPLOY_OPTION_DISPOSITIONS.fetch(key) do
+      raise Kamal::ConfigurationError,
+        "proxy deploy option --#{key} has no layering disposition - add it to Kamal::Configuration::Proxy::DEPLOY_OPTION_DISPOSITIONS"
+    end
+  end
+
   delegate :argumentize, :optionize, :seconds_duration, to: Kamal::Utils
 
   attr_reader :config, :proxy_config, :role_name, :run, :secrets
@@ -149,7 +297,14 @@ class Kamal::Configuration::Proxy
   end
 
   def deploy_options
-    opts = {
+    all_deploy_options.select { |key, _| retained_dispositions.include?(self.class.disposition(key)) }
+  end
+
+  # The full option surface before the layering contract is applied — what a
+  # single proxy (no load balancer) deploys with. Public so the layering canary
+  # can enumerate every key the gem emits.
+  def all_deploy_options
+    {
       host: hosts,
       tls: ssl? ? true : nil,
       "tls-staging": proxy_config["ssl_staging"] ? true : nil,
@@ -189,21 +344,6 @@ class Kamal::Configuration::Proxy
     }.merge(tls_domains_options).merge(tls_options).merge(cache_options).merge(compress_options)
       .merge(access_control_options).merge(traffic_options).merge(lifecycle_options)
       .merge(target_options).compact
-
-    if load_balancing?
-      opts.delete(:host)
-      opts.delete(:tls)
-      tls_domains_options.each_key { |key| opts.delete(key) }
-      tls_options.each_key { |key| opts.delete(key) }
-      access_control_options.each_key { |key| opts.delete(key) }
-      # kamal-proxy deletes the Authorization header once a service enforces
-      # basic auth, so the load balancer would authenticate the client and then
-      # forward a credential-less request that this proxy would 401. Credentials
-      # belong at the edge only.
-      opts.delete(:"basic-auth")
-    end
-
-    opts
   end
 
   def deploy_command_args(target:)
@@ -243,6 +383,14 @@ class Kamal::Configuration::Proxy
   end
 
   private
+    # Which dispositions this layer keeps. The per-app proxy behind a load
+    # balancer sheds the edge concerns; without load balancing there is no
+    # other layer to defer to. Kamal::Configuration::Loadbalancer overrides
+    # this to keep the edge and shed the per-app concerns.
+    def retained_dispositions
+      load_balancing? ? %i[ per_app both ] : %i[ edge per_app both ]
+    end
+
     def primary_role_first_host
       config.primary_role&.hosts&.first
     end
@@ -259,9 +407,7 @@ class Kamal::Configuration::Proxy
     end
 
     # Flags for kamal-proxy's dynamic domain source (runtime TLS hostnames).
-    # TLS terminates wherever these flags land, so like host/tls they are
-    # stripped from the per-app deploy when load balancing and re-added by
-    # Kamal::Configuration::Loadbalancer#deploy_options.
+    # TLS terminates wherever these flags land — :edge in the layering contract.
     def tls_domains_options
       {
         "tls-domains-source": proxy_config.dig("tls_domains", "source"),
@@ -271,10 +417,8 @@ class Kamal::Configuration::Proxy
     end
 
     # On-demand issuance, the mTLS client CA and the ACME cache only matter where
-    # the handshake happens. Like host/tls/tls-domains they are stripped from the
-    # per-app deploy when load balancing and re-added by
-    # Kamal::Configuration::Loadbalancer#deploy_options - an ask endpoint or a
-    # client CA on a proxy that never terminates TLS would do nothing at all.
+    # the handshake happens (:edge) - an ask endpoint or a client CA on a proxy
+    # that never terminates TLS would do nothing at all.
     def tls_options
       {
         "tls-on-demand-url": on_demand_url,
@@ -305,7 +449,9 @@ class Kamal::Configuration::Proxy
     end
 
     # Session affinity and scale-to-zero: which target a client keeps, and
-    # whether the targets are running at all.
+    # whether the targets are running at all. Not one layer: affinity is :edge
+    # (an inner pin would clobber the edge pin), sleep is :per_app (only the
+    # app hosts have the docker socket and the containers).
     #
     # Sleep needs the container runtime socket, which is a run-level setting -
     # Kamal::Configuration#ensure_sleep_has_a_docker_socket refuses the pairing
@@ -324,13 +470,11 @@ class Kamal::Configuration::Proxy
       }.compact
     end
 
-    # Header rewriting, redirects, rewrites and error interception.
-    #
-    # Unlike TLS and access control these stay on the per-host proxy when load
-    # balancing — Kamal::Configuration::Loadbalancer#deploy_options drops them.
-    # The load balancer forwards to the per-host proxies, so applying the group
-    # at both layers would append an `add` header twice and run a rewrite over
-    # its own output.
+    # Header rewriting, redirects, rewrites and error interception. Not one
+    # layer: headers/rewrites/error interception are :per_app (the LB would
+    # append an `add` header twice and run a rewrite over its own output),
+    # while canonical-host and redirect are :edge (they consult r.TLS, so
+    # behind the LB they would emit http:// Locations to HTTPS clients).
     def traffic_options
       {
         "set-request-header": header_rules("request", "set"),
@@ -366,10 +510,9 @@ class Kamal::Configuration::Proxy
     end
 
     # Rate limiting, the IP allow list, and the client-IP identification both of
-    # them key on. Stripped when load balancing and re-added by
-    # Kamal::Configuration::Loadbalancer#deploy_options: the per-host proxy's peer
-    # is the load balancer, so an allow list here would refuse every request and
-    # one limiter would count the whole fleet as a single client.
+    # them key on. :edge - the per-host proxy's peer is the load balancer, so an
+    # allow list there would refuse every request and one limiter would count
+    # the whole fleet as a single client.
     def access_control_options
       client_ip = proxy_config["client_ip"] || {}
       rate_limit = proxy_config["rate_limit"] || {}

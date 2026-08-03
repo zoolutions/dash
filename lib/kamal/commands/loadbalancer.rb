@@ -9,17 +9,18 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
   end
 
   def run
-    pipe \
-      [ :echo, proxy_image ],
-      xargs(docker(:run,
-        "--name", container_name,
-        "--network", "kamal",
-        "--detach",
-        "--restart", "unless-stopped",
-        "--label", label,
-        "--label", "#{Kamal::Commands::Proxy::CONFIG_DIGEST_LABEL}=#{loadbalancer_config.run_config_digest}",
-        *run_args,
-        *volume_mounts))
+    docker \
+      :run,
+      "--name", container_name,
+      "--network", "kamal",
+      "--detach",
+      "--restart", "unless-stopped",
+      "--label", label,
+      "--label", "#{Kamal::Commands::Proxy::CONFIG_DIGEST_LABEL}=#{loadbalancer_config.run_config_digest}",
+      *config_volume,
+      *run_args,
+      *loadbalancer_config.run.image,
+      *loadbalancer_config.run.run_command
   end
 
   def start
@@ -91,6 +92,12 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
     make_directory loadbalancer_config.directory
   end
 
+  # Where the acme credentials env file lands (see Proxy::Run#secrets_path) -
+  # the same .kamal/proxy directory the per-app proxy hosts use.
+  def ensure_proxy_directory
+    make_directory loadbalancer_config.run.host_directory
+  end
+
   def ensure_apps_config_directory
     make_directory config.proxy_boot.apps_directory
   end
@@ -120,13 +127,6 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
       loadbalancer_config.run_args
     end
 
-    def proxy_image
-      [
-        loadbalancer_config.config.proxy_boot.image_default,
-        Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
-      ].join(":")
-    end
-
     def on_proxy_host?
       loadbalancer_config.on_proxy_host?
     end
@@ -139,17 +139,15 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
       end
     end
 
-    def volume_mounts
+    # kamal-proxy keeps its state under /home/kamal-proxy/.config/kamal-proxy
+    # whichever host it runs on - only the volume name differs, so a dedicated
+    # load balancer and a shared proxy host never fight over the same volume.
+    # (The apps-config mount comes with run_args, via the proxy's run surface.)
+    def config_volume
       if on_proxy_host?
-        # When on a proxy host, use same volume mounts as proxy for app deployments
-        [
-          "--volume", "kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy",
-          "--volume", "$PWD/#{config.proxy_boot.apps_directory}:/home/kamal-proxy/.apps-config"
-        ]
+        [ "--volume", "kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy" ]
       else
-        [
-          "--volume", "kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer"
-        ]
+        [ "--volume", "kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy" ]
       end
     end
 end

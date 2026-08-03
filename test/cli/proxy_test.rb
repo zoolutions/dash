@@ -548,7 +548,44 @@ class CliProxyTest < CliTestCase
       assert_match "mkdir -p .kamal/proxy/apps-config", output
       # Check loadbalancer is started
       assert_match "Starting loadbalancer on lb.example.com", output
-      assert_match "docker container start load-balancer || echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer", output
+      assert_match "docker container start load-balancer || docker run --name load-balancer", output
+      assert_match "ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run", output
+    end
+  end
+
+  # The load balancer terminates TLS, so it must be able to issue certificates:
+  # the acme credentials env file has to reach its host too, not only the
+  # per-app proxy hosts.
+  test "boot with loadbalancer uploads the acme credentials to the loadbalancer host" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    with_test_secrets("secrets" => "CF_API_TOKEN=zone-rewriting-token") do
+      uploads = capture_uploads
+
+      run_command("boot", fixture: :with_loadbalancer_acme).tap do |output|
+        assert_match "mkdir -p .kamal/proxy on lb.example.com", output
+        assert_match "--env-file .kamal/proxy/acme.env", output
+        assert_match "--acme-email=\"admin@example.com\"", output
+
+        assert_no_match(/zone-rewriting-token/, output)
+      end
+
+      assert_includes uploads, [ "CF_API_TOKEN=zone-rewriting-token\n", ".kamal/proxy/acme.env", "0600" ]
+    end
+  end
+
+  test "reboot with loadbalancer re-uploads the acme credentials before replacing the container" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    with_test_secrets("secrets" => "CF_API_TOKEN=zone-rewriting-token") do
+      uploads = capture_uploads
+
+      run_command("reboot", "-y", fixture: :with_loadbalancer_acme).tap do |output|
+        assert_match "mkdir -p .kamal/proxy on lb.example.com", output
+        assert_no_match(/zone-rewriting-token/, output)
+      end
+
+      assert_includes uploads, [ "CF_API_TOKEN=zone-rewriting-token\n", ".kamal/proxy/acme.env", "0600" ]
     end
   end
 
@@ -564,7 +601,8 @@ class CliProxyTest < CliTestCase
       assert_match "Stopping and removing load-balancer on lb.example.com, if running", output
       assert_match "docker container stop load-balancer", output
       assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-loadbalancer", output
-      assert_match "echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer", output
+      assert_match "docker run --name load-balancer", output
+      assert_match "ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run", output
     end
   end
 
@@ -594,7 +632,7 @@ class CliProxyTest < CliTestCase
 
     run_command("loadbalancer", "start", fixture: :with_loadbalancer).tap do |output|
       assert_match "docker login", output
-      assert_match "docker container start load-balancer || echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer", output
+      assert_match "docker container start load-balancer || docker run --name load-balancer", output
     end
   end
 
@@ -624,7 +662,7 @@ class CliProxyTest < CliTestCase
 
     run_command("loadbalancer", "deploy", fixture: :with_loadbalancer).tap do |output|
       assert_match "Deploying to loadbalancer on lb.example.com with targets: 1.1.1.1, 1.1.1.2", output
-      assert_match "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --deploy-timeout=\"6s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\" --tls", output
+      assert_match "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --tls --deploy-timeout=\"6s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"", output
     end
   end
 
@@ -663,7 +701,7 @@ class CliProxyTest < CliTestCase
       assert_match "docker container start kamal-proxy || echo", output
       # Loadbalancer boots on 1.1.1.1 with kamal-proxy name and proxy volume mounts
       assert_match "Starting loadbalancer on 1.1.1.1", output
-      assert_match "docker container start kamal-proxy || echo ghcr.io/mhenrixon/kamal-proxy", output
+      assert_match "docker container start kamal-proxy || docker run --name kamal-proxy", output
       # Check that loadbalancer uses proxy-compatible config
       assert_match "kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
       assert_match ".kamal/proxy/apps-config:/home/kamal-proxy/.apps-config", output
@@ -783,9 +821,10 @@ class CliProxyTest < CliTestCase
       .returns("app\nother-app")
 
     run_command("reboot", "-y", fixture: :with_loadbalancer).tap do |output|
-      # The container is replaced, but the state volume is re-mounted, never removed.
+      # The container is replaced, but the state volume is re-mounted, never
+      # removed - at the path kamal-proxy actually reads its state from.
       assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-loadbalancer", output
-      assert_match "--volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer", output
+      assert_match "--volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy", output
       assert_no_match(/docker volume rm/, output)
 
       # And the persisted service list is reported back after the restart.

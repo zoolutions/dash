@@ -1,0 +1,25 @@
+service: app
+image: dhh/app
+servers:
+  web:
+    - "1.1.1.1"
+    - "1.1.1.2"
+registry:
+  username: user
+  password: pw
+builder:
+  arch: amd64
+proxy:
+  hosts:
+    - app.example.com
+  loadbalancer: lb.example.com
+  ssl: true
+  run:
+    acme:
+      email: admin@example.com
+      dns_provider: cloudflare
+      credentials:
+        - CF_API_TOKEN
+
+readiness_delay: 0
+deploy_timeout: 6

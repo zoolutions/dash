@@ -64,6 +64,14 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
         on(KAMAL.config.proxy.effective_loadbalancer) do |host|
           info "Starting loadbalancer on #{host}..."
           execute *KAMAL.registry.login
+
+          # The load balancer terminates TLS, so it issues certificates too -
+          # its host needs the acme credentials just like the proxy hosts do.
+          if (lb_run = KAMAL.loadbalancer_config.run).acme.credentials?
+            execute *KAMAL.loadbalancer.ensure_proxy_directory
+            upload! lb_run.secrets_io, lb_run.secrets_path, mode: "0600"
+          end
+
           execute *KAMAL.loadbalancer.ensure_apps_config_directory
           Kamal::Cli::Proxy::LoadbalancerClaim.new(host, self).claim_run_config
           execute *KAMAL.loadbalancer.start_or_run
@@ -189,6 +197,14 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
             info "Stopping and removing #{KAMAL.loadbalancer.container_name} on #{host}, if running..."
             execute *KAMAL.loadbalancer.stop, raise_on_non_zero_exit: false
             execute *KAMAL.loadbalancer.remove_container
+
+            # Same as boot: the replacement container's --env-file must find
+            # current credentials, not whatever an earlier boot left behind.
+            if (lb_run = KAMAL.loadbalancer_config.run).acme.credentials?
+              execute *KAMAL.loadbalancer.ensure_proxy_directory
+              upload! lb_run.secrets_io, lb_run.secrets_path, mode: "0600"
+            end
+
             execute *KAMAL.loadbalancer.ensure_apps_config_directory
 
             Kamal::Cli::Proxy::LoadbalancerClaim.new(host, self).claim_run_config(replace: true)

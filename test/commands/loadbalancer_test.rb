@@ -12,24 +12,66 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     }
   end
 
+  # The load balancer is a kamal-proxy container, so it boots with the proxy's
+  # full run surface: state volume at the path kamal-proxy actually reads,
+  # apps-config mount, and the explicit run command.
   test "run" do
     assert_equal \
-      "echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --publish 80:80 --publish 443:443 --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
+      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "run honors proxy.run.publish false and options" do
     @config[:proxy]["run"] = { "publish" => false, "options" => { "label" => [ "traefik.enable=true" ] } }
     assert_equal \
-      "echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --log-opt max-size=10m --label \"traefik.enable=true\" --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
+      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m --label \"traefik.enable=true\" ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "run honors custom publish ports" do
     @config[:proxy]["run"] = { "http_port" => 8080, "https_port" => 8443 }
     assert_equal \
-      "echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --publish 8080:80 --publish 8443:443 --log-opt max-size=10m --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
+      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 8080:80 --publish 8443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
+  end
+
+  # B3 of the layering work: the edge terminates TLS and owns the cache, so it
+  # must be able to issue certificates (acme) and reach the cache store — both
+  # ride in the run command and the env file, which the LB never got before.
+  test "run carries the kamal-proxy run command surface to the load balancer" do
+    @config[:proxy]["run"] = {
+      "metrics_port" => 9090,
+      "cache" => { "store" => "redis://cache.example.com:6379/0" },
+      "acme" => { "email" => "admin@example.com", "credentials" => [ "CF_API_TOKEN" ] }
+    }
+
+    command = new_command.run.join(" ")
+
+    assert_match "--expose=9090", command
+    assert_match "--env-file .kamal/proxy/acme.env", command
+    assert_match "kamal-proxy run --metrics-port \"9090\" --recheck-targets-on-restore --cache-store \"redis://cache.example.com:6379/0\" --acme-email=\"admin@example.com\"", command
+  end
+
+  test "run on a proxy host keeps the shared container name and proxy config volume" do
+    @config[:proxy]["loadbalancer"] = "1.1.1.1"
+
+    command = new_command.run.join(" ")
+
+    assert_match "docker run --name kamal-proxy", command
+    assert_match "--label org.opencontainers.image.title=kamal-proxy", command
+    assert_match "--volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", command
+    assert_match "--volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config", command
+  end
+
+  # The digest must move when anything the container was booted with moves —
+  # including the run command and the acme credential names, which ride in an
+  # env file rather than the argv (same composition as the proxy's own digest).
+  test "run config digest tracks the run command and acme credential names" do
+    default_digest = new_loadbalancer_config.run_config_digest
+
+    @config[:proxy]["run"] = { "acme" => { "email" => "admin@example.com", "credentials" => [ "CF_API_TOKEN" ] } }
+
+    assert_not_equal default_digest, new_loadbalancer_config.run_config_digest
   end
 
   test "start" do
@@ -46,34 +88,34 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
 
   test "start_or_run" do
     assert_equal \
-      "docker container start load-balancer || echo ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} | xargs docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --publish 80:80 --publish 443:443 --volume kamal-loadbalancer-config:/home/kamal-loadbalancer/.config/kamal-loadbalancer",
+      "docker container start load-balancer || docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.start_or_run.join(" ")
   end
 
   test "deploy with targets" do
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\"",
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
   end
 
   test "deploy with targets and ssl" do
     @config[:proxy]["ssl"] = true
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\" --tls",
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
   end
 
   test "deploy with multiple hosts" do
     @config[:proxy]["hosts"] = [ "app1.example.com", "app2.example.com" ]
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app1.example.com\" --host=\"app2.example.com\"",
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80\" --host=\"app1.example.com\" --host=\"app2.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(targets: [ "1.1.1.1" ]).join(" ")
   end
 
   test "deploy uses app_port for targets" do
     @config[:proxy]["app_port"] = 3000
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:3000,1.1.1.2:3000\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\"",
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:3000,1.1.1.2:3000\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
   end
 
@@ -82,7 +124,7 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     @config[:proxy]["response_timeout"] = 10
     @config[:proxy]["path_prefix"] = "/api"
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --health-check-interval=\"2s\" --health-check-timeout=\"5s\" --health-check-path=\"/healthz\" --target-timeout=\"10s\" --buffer-requests --buffer-responses --path-prefix=\"/api\" --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\"",
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --health-check-interval=\"2s\" --health-check-timeout=\"5s\" --health-check-path=\"/healthz\" --target-timeout=\"10s\" --buffer-requests --buffer-responses --path-prefix=\"/api\" --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(targets: [ "1.1.1.1" ]).join(" ")
   end
 
@@ -93,7 +135,7 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     @config[:proxy]["basic_auth"] = { "username" => "admin", "password" => "s3cr3t" }
 
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\" --basic-auth=\"admin:s3cr3t\"",
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --basic-auth=\"admin:s3cr3t\" --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
 
     config = Kamal::Configuration.new(@config, version: "123")
@@ -104,8 +146,68 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     @config[:proxy]["ssl"] = true
     @config[:proxy]["tls_domains"] = { "source" => "/api/v1/kamal/domains", "interval" => 300, "batch_size" => 5 }
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --host=\"app.example.com\" --tls --tls-domains-source=\"/api/v1/kamal/domains\" --tls-domains-interval=\"300s\" --tls-domains-batch-size=\"5\"",
+      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --tls-domains-source=\"/api/v1/kamal/domains\" --tls-domains-interval=\"300s\" --tls-domains-batch-size=\"5\"",
       new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
+  end
+
+  # One LB-topology test per re-homed option group — the layering contract in
+  # Kamal::Configuration::Proxy::DEPLOY_OPTION_DISPOSITIONS made these edge
+  # concerns, so the load balancer re-adds what the per-app deploy strips.
+  test "deploy re-adds session affinity, canonical host, redirects and cache at the load balancer" do
+    @config[:proxy]["session_affinity"] = { "enabled" => true, "cookie" => "_kamal_affinity" }
+    @config[:proxy]["canonical_host"] = "app.example.com"
+    @config[:proxy]["redirects"] = [ { "from" => "/old", "to" => "/new", "status" => 302 } ]
+    @config[:proxy]["cache"] = { "enabled" => true, "max_ttl" => 300 }
+
+    command = new_command.deploy(targets: [ "1.1.1.1" ])
+
+    assert_includes command, "--session-affinity"
+    assert_includes command, "--session-affinity-cookie=\"_kamal_affinity\""
+    assert_includes command, "--canonical-host=\"app.example.com\""
+    assert_includes command, "--redirect=\"/old=/new;status=302\""
+    assert_includes command, "--cache"
+    assert_includes command, "--cache-max-ttl=\"300s\""
+  end
+
+  test "deploy strips sleep and compress at the load balancer" do
+    @config[:proxy]["sleep"] = { "after" => 300 }
+    @config[:proxy]["compress"] = true
+    @config[:proxy]["run"] = { "docker_socket" => "/var/run/docker.sock" }
+
+    command = new_command.deploy(targets: [ "1.1.1.1" ]).join(" ")
+
+    assert_no_match(/--sleep-after/, command)
+    assert_no_match(/--wake-timeout/, command)
+    assert_no_match(/--compress/, command)
+  end
+
+  test "deploy re-adds read routing at the load balancer" do
+    @config[:proxy]["read_targets"] = [ "1.1.1.2" ]
+    @config[:proxy]["read_target_websockets"] = true
+    @config[:proxy]["writer_affinity_timeout"] = 30
+
+    command = new_command.deploy(targets: [ "1.1.1.1" ])
+
+    assert_includes command, "--read-target=\"1.1.1.2\""
+    assert_includes command, "--read-target-websockets"
+    assert_includes command, "--writer-affinity-timeout=\"30s\""
+  end
+
+  test "deploy applies target pool tuning at both layers deliberately" do
+    @config[:proxy]["target"] = { "max_conns" => 100 }
+
+    assert_includes new_command.deploy(targets: [ "1.1.1.1" ]), "--target-max-conns=\"100\""
+    assert_includes new_config.proxy.deploy_options.keys, :"target-max-conns"
+  end
+
+  test "deploy strips headers and rewrites at the load balancer" do
+    @config[:proxy]["headers"] = { "request" => { "add" => { "X-Request-Source" => "kamal" } } }
+    @config[:proxy]["rewrites"] = [ { "from" => "/api/(.*)", "to" => "/v2/$1" } ]
+
+    command = new_command.deploy(targets: [ "1.1.1.1" ]).join(" ")
+
+    assert_no_match(/--add-request-header/, command)
+    assert_no_match(/--rewrite/, command)
   end
 
   test "domains" do
