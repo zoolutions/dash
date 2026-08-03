@@ -610,6 +610,82 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  # Cache admin surfaces on the layer that owns the cache: the loadbalancer
+  # when load balancing (cache policy is edge-only), else the proxy hosts.
+  test "cache stats" do
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :exec, "kamal-proxy", "kamal-proxy", :cache, :stats)
+      .returns("Response cache (per node): 12 entries").twice
+
+    run_command("cache", "stats").tap do |output|
+      assert_match "12 entries", output
+    end
+  end
+
+  test "cache stats passes count and json through" do
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :exec, "kamal-proxy", "kamal-proxy", :cache, :stats, "--count", "--json")
+      .returns("{}").twice
+
+    run_command("cache", "stats", "--count", "--json").tap do |output|
+      assert_match "{}", output
+    end
+  end
+
+  test "cache stats with loadbalancer asks the loadbalancer" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :exec, "load-balancer", "kamal-proxy", :cache, :stats)
+      .returns("Response cache (shared): 40 entries")
+
+    run_command("cache", "stats", fixture: :with_loadbalancer).tap do |output|
+      assert_match "Loadbalancer Host: lb.example.com", output
+      assert_match "40 entries", output
+    end
+  end
+
+  # Without a loadbalancer, each proxied role registered its own service, so
+  # purge walks them per host.
+  test "cache purge purges each proxied role service" do
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :exec, "kamal-proxy", "kamal-proxy", :cache, :purge, "app-web")
+      .returns("Purged 3 cached responses").twice
+
+    run_command("cache", "purge").tap do |output|
+      assert_match "Purged 3 cached responses", output
+    end
+  end
+
+  test "cache purge passes the path prefix through" do
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :exec, "kamal-proxy", "kamal-proxy", :cache, :purge, "app-web", "--path-prefix", "\"/assets\"")
+      .returns("Purged 1 cached response").twice
+
+    run_command("cache", "purge", "--path-prefix", "/assets").tap do |output|
+      assert_match "Purged 1 cached response", output
+    end
+  end
+
+  test "cache purge with loadbalancer purges the bare service on the loadbalancer" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :exec, "load-balancer", "kamal-proxy", :cache, :purge, "app")
+      .returns("Purged 7 cached responses")
+
+    run_command("cache", "purge", fixture: :with_loadbalancer).tap do |output|
+      assert_match "Loadbalancer Host: lb.example.com", output
+      assert_match "Purged 7 cached responses", output
+    end
+  end
+
+  test "cache with an unknown subcommand" do
+    run_command("cache", "flush").tap do |output|
+      assert_match "Unknown cache subcommand: flush. Available: stats, purge", output
+    end
+  end
+
   test "domains list with loadbalancer" do
     Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
