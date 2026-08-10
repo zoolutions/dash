@@ -15,7 +15,7 @@ class CommandsProxyTest < ActiveSupport::TestCase
 
   test "run" do
     assert_equal \
-      "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config",
+      "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config",
       new_command.run.join(" ")
   end
 
@@ -23,7 +23,7 @@ class CommandsProxyTest < ActiveSupport::TestCase
     @config.delete(:proxy)
 
     assert_equal \
-      "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config",
+      "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config",
       new_command.run.join(" ")
   end
 
@@ -119,7 +119,7 @@ class CommandsProxyTest < ActiveSupport::TestCase
 
   test "read_image" do
     assert_equal \
-      "cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"",
+      "cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"",
       new_command.read_image.join(" ")
   end
 
@@ -168,7 +168,7 @@ class CommandsProxyTest < ActiveSupport::TestCase
   test "registry run config" do
     @config[:proxy] = { "run" => { "registry" => "registry:4443" } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m registry:4443/ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m registry:4443/ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
@@ -182,21 +182,21 @@ class CommandsProxyTest < ActiveSupport::TestCase
   test "image_version run config" do
     @config[:proxy] = { "run" => { "version" => "v1.2.3" } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:v1.2.3 kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:v1.2.3 kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "bind_ips run config" do
     @config[:proxy] = { "run" => { "bind_ips" => [ "0.0.0.0", "127.0.0.1" ] } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 0.0.0.0:80:80 --publish 0.0.0.0:443:443 --publish 127.0.0.1:80:80 --publish 127.0.0.1:443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 0.0.0.0:80:80 --publish 0.0.0.0:443:443 --publish 127.0.0.1:80:80 --publish 127.0.0.1:443:443 --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "log_max_size run config" do
     @config[:proxy] = { "run" => { "log_max_size" => "50m" } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=50m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=50m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
@@ -209,34 +209,34 @@ class CommandsProxyTest < ActiveSupport::TestCase
   test "debug run config" do
     @config[:proxy] = { "run" => { "debug" => true } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --debug --recheck-targets-on-restore",
+      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --debug --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "metrics_port run config" do
     @config[:proxy] = { "run" => { "metrics_port" => 9090 } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9090 ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --metrics-port \"9090\" --recheck-targets-on-restore",
+      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9090 ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --metrics-port \"9090\" --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "don't publish run config" do
     @config[:proxy] = { "run" => { "publish" => false } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "run with config digest label" do
     @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=abc123 --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=abc123 --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run(digest: "abc123").join(" ")
   end
 
   test "run with config digest label on legacy boot config path" do
     assert_equal \
-      "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=abc123 --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config",
+      "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=abc123 --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config",
       new_command.run(digest: "abc123").join(" ")
   end
 
@@ -256,13 +256,13 @@ class CommandsProxyTest < ActiveSupport::TestCase
   test "pull" do
     @config[:proxy] = { "run" => { "version" => "v1.2.3" } }
     assert_equal \
-      "docker pull ghcr.io/mhenrixon/kamal-proxy:v1.2.3",
+      "docker pull ghcr.io/zoolutions/kamal-proxy:v1.2.3",
       new_command.pull.join(" ")
   end
 
   test "pull on legacy boot config path" do
     assert_equal \
-      "docker pull $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\")",
+      "docker pull $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\")",
       new_command.pull.join(" ")
   end
 
@@ -323,7 +323,7 @@ class CommandsProxyTest < ActiveSupport::TestCase
   test "run with port_holder joins the holder namespace without publishing" do
     @config[:proxy] = { "run" => { "port_holder" => true } }
     assert_equal \
-      "docker run --name kamal-proxy --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port",
+      "docker run --name kamal-proxy --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port",
       new_command.run.join(" ")
   end
 
@@ -337,7 +337,7 @@ class CommandsProxyTest < ActiveSupport::TestCase
   test "run_holder" do
     @config[:proxy] = { "run" => { "port_holder" => true } }
     assert_equal \
-      "docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold",
+      "docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold",
       new_command.run_holder.join(" ")
   end
 
@@ -389,6 +389,90 @@ class CommandsProxyTest < ActiveSupport::TestCase
     assert_equal \
       "docker exec kamal-proxy-next kamal-proxy list",
       new_command.list(name: "kamal-proxy-next").join(" ")
+  end
+
+  # Certificate store transfer (kamal proxy export_certs / import_certs). The
+  # apps-config bind mount is the one container path that is also a host path,
+  # so exported archives travel through it.
+
+  test "export certs through the running proxy" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
+      new_command.export_certs.join(" ")
+  end
+
+  test "export certs offline via a one-off container" do
+    @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
+
+    assert_equal \
+      "docker run --rm --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy " \
+      "--volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config " \
+      "ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} " \
+      "kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
+      new_command.export_certs_offline.join(" ")
+  end
+
+  test "export certs offline falls back to the boot config image without a run config" do
+    assert_equal \
+      "docker run --rm --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy " \
+      "--volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config " \
+      "$(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"):" \
+      "$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") " \
+      "kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
+      new_command.export_certs_offline.join(" ")
+  end
+
+  # The source streams through stdin into the one-off container: a bind mount
+  # would need host permissions the container user cannot be guaranteed to
+  # have, and the store must be written as the image's own user.
+  test "import certs from a traefik acme.json" do
+    @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
+
+    assert_equal \
+      "docker run --rm --interactive --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy " \
+      "ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} " \
+      "sh -c 'cat > /tmp/kamal-cert-import && kamal-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\"' " \
+      "< .kamal/proxy/certs-import",
+      new_command.import_certs(traefik_acme: true).join(" ")
+  end
+
+  test "import certs with a resolver" do
+    @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
+
+    assert_match "kamal-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\" --resolver=\"letsencrypt\"",
+      new_command.import_certs(traefik_acme: true, resolver: "letsencrypt").join(" ")
+  end
+
+  # An apostrophe in a resolver name must not break out of the single-quoted
+  # sh -c payload on the remote host - Base#shell escapes it as '\''.
+  test "import certs escapes an apostrophe in the resolver" do
+    @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
+
+    command = new_command.import_certs(traefik_acme: true, resolver: "le'x").join(" ")
+
+    assert_includes command, %q(--resolver="le'\\''x")
+    assert_not_includes command, %q(--resolver="le'x")
+  end
+
+  test "import certs restores an archive with force" do
+    @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
+
+    assert_match "kamal-proxy import certs --archive=\"/tmp/kamal-cert-import\" --force",
+      new_command.import_certs(force: true).join(" ")
+  end
+
+  test "import certs verifies an archive" do
+    @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
+
+    assert_match "kamal-proxy import certs --archive=\"/tmp/kamal-cert-import\" --verify",
+      new_command.import_certs(verify: true).join(" ")
+  end
+
+  test "cert transfer paths and cleanup" do
+    assert_equal ".kamal/proxy/apps-config/certs-export.tar.gz", new_command.certs_archive_host_path
+    assert_equal ".kamal/proxy/certs-import", new_command.certs_import_host_path
+    assert_equal "rm .kamal/proxy/apps-config/certs-export.tar.gz", new_command.remove_certs_archive.join(" ")
+    assert_equal "rm .kamal/proxy/certs-import", new_command.remove_certs_import.join(" ")
   end
 
   private

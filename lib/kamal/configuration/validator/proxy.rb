@@ -32,6 +32,10 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
         validate_ssl_domains! config["ssl_domains"]
       end
 
+      if config["redirects_source"]
+        validate_redirects_source! config["redirects_source"]
+      end
+
       if config["basic_auth"].is_a?(Hash)
         validate_basic_auth! config["basic_auth"]
       end
@@ -109,6 +113,25 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
       end
     end
 
+    # Same source shape as ssl_domains. The interval minimum is kamal-proxy's
+    # own (MinRedirectsInterval, 10s) - it rejects a smaller one after the SSH
+    # round trip, so catch it here at config time.
+    def validate_redirects_source!(redirects_source)
+      with_context("redirects_source") do
+        source = redirects_source["source"]
+
+        if source.blank?
+          error "Missing source setting (required when redirects_source is set)"
+        elsif !valid_ssl_domains_source?(source)
+          error "source must be a path starting with '/' or an http(s) URL"
+        end
+
+        if (interval = redirects_source["interval"]) && (!interval.is_a?(Integer) || interval < 10)
+          error "interval must be an integer of at least 10 seconds"
+        end
+      end
+    end
+
     # kamal-proxy only logs a warning for a DNS provider it does not recognise
     # and then carries on with no provider at all, so the symptom is a
     # certificate that never issues rather than a failed boot. Catch it here,
@@ -122,12 +145,43 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
 
           provider = acme["dns_provider"]
 
-          if provider.present? && !Kamal::Configuration::Proxy::Acme::SUPPORTED_DNS_PROVIDERS.include?(provider.to_s.downcase)
+          if provider.is_a?(Hash)
+            validate_dns_provider_zones! provider
+          elsif provider.present? && !supported_dns_provider?(provider)
             error "unsupported dns_provider '#{provider}'. " \
               "Supported providers: #{Kamal::Configuration::Proxy::Acme::DNS_PROVIDERS.join(", ")}"
           end
         end
       end
+    end
+
+    # The hash form maps zones to providers, with `default` covering unmatched
+    # zones. Wire format is repeatable zone=provider entries cut at the first
+    # '=', so a zone carrying one would silently build a different entry.
+    def validate_dns_provider_zones!(provider)
+      error "dns_provider cannot be an empty hash - map zones to providers, or use the string form" if provider.empty?
+
+      provider.each do |zone, zone_provider|
+        if zone.to_s.include?("=")
+          error "dns_provider zone '#{zone}' cannot contain '=' - " \
+            "the zone=provider wire format cuts at the first '=' and would silently build a different entry"
+        end
+
+        # A malformed zone key would emit an entry no zone ever matches, and the
+        # symptom is a certificate that never issues - a long way from here.
+        unless zone.is_a?(String) && zone.present? && !zone.match?(/\s/)
+          error "dns_provider zone '#{zone}' must be a non-empty string without whitespace"
+        end
+
+        unless zone_provider.is_a?(String) && supported_dns_provider?(zone_provider)
+          error "unsupported dns_provider '#{zone_provider}' for '#{zone}'. " \
+            "Supported providers: #{Kamal::Configuration::Proxy::Acme::DNS_PROVIDERS.join(", ")}"
+        end
+      end
+    end
+
+    def supported_dns_provider?(provider)
+      Kamal::Configuration::Proxy::Acme::SUPPORTED_DNS_PROVIDERS.include?(provider.to_s.downcase)
     end
 
     # The whole TLS surface lives in the one `ssl` hash: certificate material,
@@ -409,6 +463,15 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
         return true
       end
 
+      # A string or a zone→provider hash; the docs example can only show one
+      # shape, and zone names are the operator's to choose, so the example-driven
+      # unknown-key check would reject every real config. validate_acme! does the
+      # semantic checking (provider names, zone shapes).
+      if key.to_s == "dns_provider"
+        validate_type! value, String, Hash
+        return true
+      end
+
       return false unless key.to_s == "rate_limit"
 
       validate_type! value, Hash
@@ -429,13 +492,26 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
     # otherwise surface only once the deploy has reached a host.
     def validate_access_control!
       allow_ips = Array(config["allow_ips"])
+      deny_ips = Array(config["deny_ips"])
       client_ip = config["client_ip"] || {}
       rate_limit = config["rate_limit"] || {}
       trusted_proxies = Array(client_ip["trusted_proxies"])
       rate_limited = rate_limit["requests"].present?
 
       with_context("allow_ips") { allow_ips.each { |entry| validate_ip_entry! entry } }
+      with_context("deny_ips") { deny_ips.each { |entry| validate_ip_entry! entry } }
       with_context("rate_limit") { with_context("exempt") { Array(rate_limit["exempt"]).each { |entry| validate_ip_entry! entry } } }
+
+      # The patterns are deliberately not compiled - Go's RE2 and Ruby's Onigmo
+      # differ at the edges, same as redirects/rewrites - so only the shape is
+      # checked: a non-string or blank entry can never match anything.
+      with_context("deny_user_agents") do
+        Array(config["deny_user_agents"]).each do |pattern|
+          unless pattern.is_a?(String) && pattern.present?
+            error "'#{pattern}' is not a user agent pattern - each entry must be a non-empty RE2 pattern string"
+          end
+        end
+      end
 
       with_context("client_ip") do
         with_context("trusted_proxies") do
@@ -451,8 +527,8 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
           end
         end
 
-        if trusted_proxies.any? && allow_ips.empty? && !rate_limited
-          error "trusted_proxies has no effect without allow_ips or rate_limit"
+        if trusted_proxies.any? && allow_ips.empty? && deny_ips.empty? && !rate_limited
+          error "trusted_proxies has no effect without allow_ips, deny_ips or rate_limit"
         end
 
         # Unconditional: even without allow_ips/rate_limit, kamal-proxy rewrites
@@ -475,10 +551,10 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
 
       # kamal-proxy serves the health check path without an address check and
       # without a rate limit so deploys keep working, which makes '/' a hole
-      # straight through both features.
-      if (allow_ips.any? || rate_limited) && config.dig("healthcheck", "path") == "/"
+      # straight through all three features.
+      if (allow_ips.any? || deny_ips.any? || rate_limited) && config.dig("healthcheck", "path") == "/"
         with_context("healthcheck") do
-          error "path cannot be '/' when allow_ips or rate_limit is set, " \
+          error "path cannot be '/' when allow_ips, deny_ips or rate_limit is set, " \
             "as that path is served without an address check or a rate limit"
         end
       end

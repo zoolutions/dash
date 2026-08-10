@@ -83,7 +83,7 @@ gh pr view <PR_NUMBER> --json mergeable,mergeStateStatus,baseRefName
    - **`lib/kamal/version.rb`**: take the BASE's side (`dash`'s). The fork version is only ever written by `bin/release-dash` at release time on `dash` — a feature branch never bumps it on purpose; a bump on the branch is accidental.
    - **`Gemfile.lock`** (tracked at the repo root): take either side, then run `bundle install` and commit the settled result. Never hand-merge a lockfile. (CI deletes it before the test matrix, but the committed file must still be consistent.)
    - **Upstream-owned files** (`kamal.gemspec`, `bin/release`): these must stay byte-identical to upstream — resolve to what `origin/main` (the upstream mirror) has (`git show origin/main:kamal.gemspec`); never hand-merge fork content into them. If a dependency change is involved, mirror it into `dash.gemspec` by hand and check with `diff kamal.gemspec dash.gemspec`.
-   - **`lib/kamal/configuration/proxy/run.rb`**: keep the `ghcr.io/mhenrixon` repository; a `MINIMUM_VERSION` conflict is a release-ordering question (proxy image first, gem second) — resolve per `.claude/rules/upstream-sync.md` and flag it in the report.
+   - **`lib/kamal/configuration/proxy/run.rb`**: keep the `ghcr.io/zoolutions` repository; a `MINIMUM_VERSION` conflict is a release-ordering question (proxy image first, gem second) — resolve per `.claude/rules/upstream-sync.md` and flag it in the report.
    - **`test/cli/proxy_test.rb`, `test/commands/proxy_test.rb`**: keep the ghcr org and the `#{...MINIMUM_VERSION}` interpolation; adopt the other side's new assertions around them.
    - **`test/integration/docker/deployer/setup.sh`**: a shell script — there is no Ruby interpolation here. Keep the ghcr image and set its literal tag equal to `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` (per the Conflict playbook in `.claude/rules/upstream-sync.md`).
    - **`.github/workflows/ci.yml`**: keep the `dash` entry under push branches.
@@ -118,7 +118,7 @@ gh pr view <PR_NUMBER> --json mergeable,mergeStateStatus,baseRefName
 3. **Diagnose root cause per failure.** Common categories on this repo:
    - **Rubocop** (`rubocop-rails-omakase`) — style violation, fastest to fix
    - **Unit test failure** — check first whether it's one of the two known Apple-Silicon-only `test/commands/builder_test.rb` failures (`.claude/rules/testing.md`); if so, confirm it also fails on a clean checkout of the PR's base and note it as pre-existing, don't "fix" the assertion
-   - **Integration test failure** — needs Docker + the published proxy image at `ghcr.io/mhenrixon/kamal-proxy:$MINIMUM_VERSION`; if the image tag named by `MINIMUM_VERSION` isn't published yet, that's an environment/ordering issue, not a code bug — see `.claude/rules/upstream-sync.md` release ordering
+   - **Integration test failure** — needs Docker + the published proxy image at `ghcr.io/zoolutions/kamal-proxy:$MINIMUM_VERSION`; if the image tag named by `MINIMUM_VERSION` isn't published yet, that's an environment/ordering issue, not a code bug — see `.claude/rules/upstream-sync.md` release ordering
    - **actionlint / zizmor** — workflow YAML issue in `.github/workflows/*`
    - **Multi-host fixture** — a new/changed fixture under `test/fixtures/` with a primary role that has >1 host must set `loadbalancer: false` under `proxy:`, or the loadbalancer auto-activates and the Docker-in-Docker harness can't resolve inner VM hostnames
 4. **Fix locally, cheapest first**: rubocop → unit tests → integration/build issues.

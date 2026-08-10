@@ -5,7 +5,7 @@ class CliProxyTest < CliTestCase
     run_command("boot").tap do |output|
       assert_match "docker login", output
       assert_match "mkdir -p .kamal/proxy/apps-config", output
-      assert_match "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
+      assert_match "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
     end
   end
 
@@ -13,8 +13,8 @@ class CliProxyTest < CliTestCase
     run_command("boot", fixture: :with_proxy_run_config).tap do |output|
       assert_match "docker login", output
       assert_match "mkdir -p .kamal/proxy/apps-config", output
-      assert_match_with_digest "docker container start kamal-proxy || docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9090 --cpus \"1.5\" registry:4443/ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --debug --metrics-port \"9090\" --recheck-targets-on-restore on 1.1.1.1", output
-      assert_match_with_digest "docker container start kamal-proxy || docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9190 ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --metrics-port \"9190\" --recheck-targets-on-restore on 1.1.1.3", output
+      assert_match_with_digest "docker container start kamal-proxy || docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9090 --cpus \"1.5\" registry:4443/ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --debug --metrics-port \"9090\" --recheck-targets-on-restore on 1.1.1.1", output
+      assert_match_with_digest "docker container start kamal-proxy || docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9190 ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --metrics-port \"9190\" --recheck-targets-on-restore on 1.1.1.3", output
     end
   end
 
@@ -110,7 +110,7 @@ class CliProxyTest < CliTestCase
       assert_match "kamal-proxy configuration changed, rebooting on 1.1.1.1", output
       assert_match "kamal-proxy configuration changed, rebooting on 1.1.1.2", output
       %w[ 1.1.1.1 1.1.1.2 ].each do |host|
-        assert_match "docker pull $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") on #{host}", output
+        assert_match "docker pull $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") on #{host}", output
         assert_match "docker container stop --time 40 kamal-proxy on #{host}", output
         assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-proxy on #{host}", output
         assert_match "--label org.kamal.proxy-config-digest=#{Kamal::Configuration::Proxy::Run.digest("")}", output
@@ -142,7 +142,7 @@ class CliProxyTest < CliTestCase
 
     run_command("boot", fixture: :with_proxy_port_holder).tap do |output|
       assert_match "Handing off kamal-proxy on 1.1.1.1 to a new generation (zero downtime)...", output
-      assert_match_with_digest "docker run --name kamal-proxy-next --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port on 1.1.1.1", output
+      assert_match_with_digest "docker run --name kamal-proxy-next --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port on 1.1.1.1", output
       assert_match "docker update --restart=no kamal-proxy on 1.1.1.1", output
       assert_match "docker exec kamal-proxy kamal-proxy drain --drain-timeout=30s on 1.1.1.1", output
       assert_match "docker wait kamal-proxy on 1.1.1.1", output
@@ -168,8 +168,8 @@ class CliProxyTest < CliTestCase
       assert_match "Migrating kamal-proxy on 1.1.1.1 to the port-holder architecture (brief gap)...", output
       assert_match "docker container stop --time 40 kamal-proxy on 1.1.1.1", output
       assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-proxy on 1.1.1.1", output
-      assert_match "docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold on 1.1.1.1", output
-      assert_match_with_digest "docker run --name kamal-proxy --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port on 1.1.1.1", output
+      assert_match "docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold on 1.1.1.1", output
+      assert_match_with_digest "docker run --name kamal-proxy --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port on 1.1.1.1", output
     end
   end
 
@@ -180,7 +180,7 @@ class CliProxyTest < CliTestCase
       .returns(Kamal::Configuration::Proxy::Run::MINIMUM_VERSION)
 
     run_command("boot", fixture: :with_proxy_port_holder).tap do |output|
-      assert_match "docker container start kamal-proxy-net || docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold on 1.1.1.1", output
+      assert_match "docker container start kamal-proxy-net || docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold on 1.1.1.1", output
       assert_match "docker container start kamal-proxy || docker run --name kamal-proxy --network container:kamal-proxy-net", output
     end
   end
@@ -218,7 +218,7 @@ class CliProxyTest < CliTestCase
     exception = assert_raises do
       run_command("boot").tap do |output|
         assert_match "docker login", output
-        assert_match "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
+        assert_match "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
       end
     end
 
@@ -237,7 +237,7 @@ class CliProxyTest < CliTestCase
 
     run_command("boot").tap do |output|
       assert_match "docker login", output
-      assert_match "docker container start kamal-proxy || echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
+      assert_match "docker container start kamal-proxy || echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
     end
   ensure
     Thread.report_on_exception = false
@@ -246,11 +246,11 @@ class CliProxyTest < CliTestCase
   test "reboot" do
     run_command("reboot", "-y").tap do |output|
       %w[ 1.1.1.1 1.1.1.2 ].each do |host|
-        assert_match "docker pull $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") on #{host}", output
+        assert_match "docker pull $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") on #{host}", output
         assert_match "docker container stop --time 40 kamal-proxy on #{host}", output
         assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-proxy on #{host}", output
         assert_match "mkdir -p .kamal/proxy/apps-config on #{host}", output
-        assert_match "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=#{Kamal::Configuration::Proxy::Run.digest("")} --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config on #{host}", output
+        assert_match "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=#{Kamal::Configuration::Proxy::Run.digest("")} --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config on #{host}", output
         assert_match "docker exec kamal-proxy kamal-proxy list on #{host}", output
       end
     end
@@ -377,7 +377,7 @@ class CliProxyTest < CliTestCase
       assert_match "/usr/bin/env mkdir -p .kamal", output
       assert_match "docker network create kamal", output
       assert_match "docker login -u [REDACTED] -p [REDACTED]", output
-      assert_match "docker container start kamal-proxy || echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
+      assert_match "docker container start kamal-proxy || echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
       assert_match "/usr/bin/env mkdir -p .kamal", output
       assert_match %r{docker rename app-web-latest app-web-latest_replaced_.*}, output
       assert_match "/usr/bin/env mkdir -p .kamal/apps/app/env/roles", output
@@ -516,7 +516,7 @@ class CliProxyTest < CliTestCase
       %w[ 1.1.1.1 1.1.1.2 ].each do |host|
         assert_match "Running /usr/bin/env mkdir -p .kamal/proxy on #{host}", output
         assert_match "Running /usr/bin/env rm .kamal/proxy/options on #{host}", output
-        assert_match "Uploading \"myreg/ghcr.io/mhenrixon/kamal-proxy\" to .kamal/proxy/image on #{host}", output
+        assert_match "Uploading \"myreg/ghcr.io/zoolutions/kamal-proxy\" to .kamal/proxy/image on #{host}", output
         assert_match "Running /usr/bin/env rm .kamal/proxy/image_version on #{host}", output
         assert_match "Running /usr/bin/env rm .kamal/proxy/run_command on #{host}", output
       end
@@ -572,13 +572,13 @@ class CliProxyTest < CliTestCase
 
   test "boot_config get" do
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:echo, "$(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\")")
-      .returns("--publish 80:80 --publish 8443:443 --label=foo=bar ghcr.io/mhenrixon/kamal-proxy:v1.0.0")
+      .with(:echo, "$(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/kamal-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\")")
+      .returns("--publish 80:80 --publish 8443:443 --label=foo=bar ghcr.io/zoolutions/kamal-proxy:v1.0.0")
       .twice
 
     run_command("boot_config", "get").tap do |output|
-      assert_match "Host 1.1.1.1: --publish 80:80 --publish 8443:443 --label=foo=bar ghcr.io/mhenrixon/kamal-proxy:v1.0.0", output
-      assert_match "Host 1.1.1.2: --publish 80:80 --publish 8443:443 --label=foo=bar ghcr.io/mhenrixon/kamal-proxy:v1.0.0", output
+      assert_match "Host 1.1.1.1: --publish 80:80 --publish 8443:443 --label=foo=bar ghcr.io/zoolutions/kamal-proxy:v1.0.0", output
+      assert_match "Host 1.1.1.2: --publish 80:80 --publish 8443:443 --label=foo=bar ghcr.io/zoolutions/kamal-proxy:v1.0.0", output
     end
   end
 
@@ -734,7 +734,7 @@ class CliProxyTest < CliTestCase
       # Check loadbalancer is started
       assert_match "Starting loadbalancer on lb.example.com", output
       assert_match "docker container start load-balancer || docker run --name load-balancer", output
-      assert_match "ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run", output
+      assert_match "ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run", output
     end
   end
 
@@ -815,7 +815,7 @@ class CliProxyTest < CliTestCase
       assert_match "docker container stop load-balancer", output
       assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-loadbalancer", output
       assert_match "docker run --name load-balancer", output
-      assert_match "ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run", output
+      assert_match "ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run", output
     end
   end
 
@@ -1135,7 +1135,145 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  # Certificate store transfer
+
+  test "export_certs downloads the archive from the running proxy" do
+    stub_cert_container_running "kamal-proxy"
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :exec, "kamal-proxy", "kamal-proxy", :export, :certs, "/home/kamal-proxy/.apps-config/certs-export.tar.gz")
+      .returns("Exported 3 certificates (5 domains)")
+    downloads = capture_downloads
+
+    run_command("export_certs", "certs.tar.gz").tap do |output|
+      assert_match "mkdir -p .kamal/proxy/apps-config", output
+      assert_match "Exported 3 certificates (5 domains)", output
+      assert_no_match(/docker login/, output)
+      assert_match "rm .kamal/proxy/apps-config/certs-export.tar.gz", output
+    end
+
+    assert_equal [ [ ".kamal/proxy/apps-config/certs-export.tar.gz", "certs.tar.gz" ] ], downloads
+  end
+
+  test "export_certs falls back to a one-off container when the proxy is stopped" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("docker run --rm --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy") && args.join(" ").include?("export certs") }
+      .returns("Exported 0 certificates (0 domains)")
+    downloads = capture_downloads
+
+    run_command("export_certs", "certs.tar.gz").tap do |output|
+      assert_match "docker login", output
+      assert_match "Exported 0 certificates (0 domains)", output
+    end
+
+    assert_equal [ [ ".kamal/proxy/apps-config/certs-export.tar.gz", "certs.tar.gz" ] ], downloads
+  end
+
+  test "export_certs targets the loadbalancer when load balancing" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_cert_container_running "load-balancer"
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :exec, "load-balancer", "kamal-proxy", :export, :certs, "/home/kamal-proxy/.apps-config/certs-export.tar.gz")
+      .returns("Exported 3 certificates (5 domains)")
+    downloads = capture_downloads
+
+    run_command("export_certs", "certs.tar.gz", fixture: :with_loadbalancer).tap do |output|
+      assert_match "mkdir -p .kamal/proxy/apps-config on lb.example.com", output
+      assert_match "Exported 3 certificates (5 domains)", output
+    end
+
+    assert_equal [ [ ".kamal/proxy/apps-config/certs-export.tar.gz", "certs.tar.gz" ] ], downloads
+  end
+
+  test "import_certs stages the source and runs the one-off importer" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("sh -c 'cat > /tmp/kamal-cert-import && kamal-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\"' < .kamal/proxy/certs-import") }
+      .returns("Imported: 3")
+    uploads = capture_file_uploads
+
+    run_command("import_certs", "--traefik-acme", "acme.json").tap do |output|
+      assert_match "mkdir -p .kamal/proxy", output
+      assert_match "docker login", output
+      assert_match "Imported: 3", output
+      assert_match "rm .kamal/proxy/certs-import", output
+    end
+
+    assert_equal [ [ "acme.json", ".kamal/proxy/certs-import", "0600" ] ], uploads
+  end
+
+  test "import_certs refuses to run while the proxy is running" do
+    stub_cert_container_running "kamal-proxy"
+
+    assert_raises(SSHKit::Runner::ExecuteError) do
+      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--archive", "certs.tar.gz", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+    end
+  end
+
+  test "import_certs verify runs against a running proxy" do
+    stub_cert_container_running "kamal-proxy"
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("--archive=\"/tmp/kamal-cert-import\" --verify") }
+      .returns("Verified 3 certificates")
+    capture_file_uploads
+
+    run_command("import_certs", "--archive", "certs.tar.gz", "--verify").tap do |output|
+      assert_match "Verified 3 certificates", output
+    end
+  end
+
+  test "import_certs requires exactly one source" do
+    assert_raises(ArgumentError) do
+      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+    end
+
+    assert_raises(ArgumentError) do
+      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--traefik-acme", "a", "--archive", "b", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+    end
+  end
+
+  test "import_certs rejects contradictory flags" do
+    # resolver is a Traefik-import concern, force/verify are archive concerns.
+    assert_raises(ArgumentError) do
+      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--archive", "a", "--resolver", "le", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+    end
+
+    assert_raises(ArgumentError) do
+      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--traefik-acme", "a", "--force", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+    end
+
+    assert_raises(ArgumentError) do
+      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--archive", "a", "--force", "--verify", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+    end
+  end
+
   private
+    def stub_cert_container_running(name)
+      SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("")
+      SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+        .with(:docker, :container, :ls, "--filter", "'name=^#{name}$'", "--quiet", raise_on_non_zero_exit: false)
+        .returns("abc123")
+    end
+
+    def capture_downloads
+      [].tap do |downloads|
+        SSHKit::Backend::Printer.any_instance.stubs(:download!).with do |remote, local|
+          downloads << [ remote, local ]
+          true
+        end
+      end
+    end
+
+    # Unlike capture_uploads, the source is a local file path, not an IO.
+    def capture_file_uploads
+      [].tap do |uploads|
+        SSHKit::Backend::Printer.any_instance.stubs(:upload!).with do |local, path, **options|
+          uploads << [ local, path, options[:mode] ]
+          true
+        end
+      end
+    end
+
     # Records what upload! was handed rather than what the printer logged: the
     # mode is the point, and the printer does not print it.
     def capture_uploads

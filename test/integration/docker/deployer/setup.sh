@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# Fail loudly at the line that broke: without this, a failed seed pull below
+# exits 0 (the script ends with rm -f) and the miss surfaces much later, deep
+# inside an unrelated deploy, as "manifest unknown" from registry:4443.
+set -e
+
+# Onto stdout, all of it: the harness's failure message only carries stdout
+# (integration_test.rb#docker_compose discards the stderred capture), so an
+# error printed to stderr here is an error nobody sees.
+exec 2>&1
+
 install_kamal() {
   cd /kamal && gem build kamal.gemspec -o /tmp/kamal.gem && gem install /tmp/kamal.gem
 }
@@ -22,7 +32,7 @@ if [ -z "$minimum_version" ]; then
   exit 1
 fi
 
-proxy_image="ghcr.io/mhenrixon/kamal-proxy:${minimum_version}"
+proxy_image="ghcr.io/zoolutions/kamal-proxy:${minimum_version}"
 
 docker pull "$proxy_image"
 docker tag "$proxy_image" "registry:4443/${proxy_image}"

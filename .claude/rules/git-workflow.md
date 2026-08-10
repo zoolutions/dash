@@ -88,7 +88,7 @@ Two builder tests are known-failing on Apple Silicon only (host-arch dependent) 
 
 ## Release Ordering — Hard Constraint
 
-**Proxy image before gem, always.** `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` must name a tag already published at `ghcr.io/mhenrixon/kamal-proxy` before `bin/release-dash` runs — integration tests and `kamal proxy boot` pull it.
+**Proxy image before gem, always.** `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` must name a tag already published at `ghcr.io/zoolutions/kamal-proxy` before `bin/release-dash` runs — integration tests and `kamal proxy boot` pull it.
 
 ```bash
 # 1. ../kamal-proxy, on dash

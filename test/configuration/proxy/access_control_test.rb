@@ -118,7 +118,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
       configuration "client_ip" => { "trusted_proxies" => [ "10.0.0.0/8" ] }
     end
 
-    assert_equal "proxy/client_ip: trusted_proxies has no effect without allow_ips or rate_limit", error.message
+    assert_equal "proxy/client_ip: trusted_proxies has no effect without allow_ips, deny_ips or rate_limit", error.message
   end
 
   test "a client_ip header without trusted_proxies is rejected" do
@@ -172,7 +172,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
       configuration "allow_ips" => [ "10.0.0.0/8" ], "healthcheck" => { "path" => "/" }
     end
 
-    assert_equal "proxy/healthcheck: path cannot be '/' when allow_ips or rate_limit is set, " \
+    assert_equal "proxy/healthcheck: path cannot be '/' when allow_ips, deny_ips or rate_limit is set, " \
       "as that path is served without an address check or a rate limit", error.message
   end
 

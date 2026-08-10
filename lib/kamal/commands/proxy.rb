@@ -1,4 +1,6 @@
 class Kamal::Commands::Proxy < Kamal::Commands::Base
+  include Kamal::Commands::Proxy::CertTransfer
+
   delegate :argumentize, :optionize, to: Kamal::Utils
   attr_reader :proxy_run_config
 
@@ -230,6 +232,20 @@ class Kamal::Commands::Proxy < Kamal::Commands::Base
   private
     def container_name
       config.proxy_boot.container_name
+    end
+
+    def cert_store_volume_args
+      [ "--volume", "kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy" ]
+    end
+
+    # Same fallback as #pull: without a run config the image comes from the
+    # legacy boot config files on the host.
+    def one_off_image
+      if proxy_run_config
+        [ proxy_run_config.image ]
+      else
+        [ "#{substitute(read_image)}:#{substitute(read_image_version)}" ]
+      end
     end
 
     def config_digest_label_args(digest)

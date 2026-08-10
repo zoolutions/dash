@@ -102,7 +102,7 @@ Look for:
 - `NoMethodError: undefined method` -> API change in `Kamal::Commands`/`Kamal::Configuration`
 - `Mocha::ExpectationError` -> mock/stub no longer matches the call site
 - `expected: X, got: Y` on a proxy version string -> check whether the test hardcoded a proxy tag instead of interpolating `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION`
-- Integration test failure pulling `ghcr.io/mhenrixon/kamal-proxy:<tag>` -> the tag isn't published yet (see Known/Expected Failures below), not a code bug
+- Integration test failure pulling `ghcr.io/zoolutions/kamal-proxy:<tag>` -> the tag isn't published yet (see Known/Expected Failures below), not a code bug
 
 ### golangci-lint / go test failures (proxy)
 
@@ -179,7 +179,7 @@ If there are still pending checks, report which checks are running and what was 
 | Failure | Cause | Action |
 |---|---|---|
 | `test/commands/builder_test.rb` (2 tests) fail locally, pass in CI | Apple-Silicon-only: host-arch-dependent buildx assertions | Flag as expected on Apple Silicon; do not alter assertions |
-| Integration suite fails pulling `ghcr.io/mhenrixon/kamal-proxy:<MINIMUM_VERSION>` | Tag not yet published to ghcr.io, or `MINIMUM_VERSION` was bumped without a matching proxy release | Check `docker buildx imagetools inspect ghcr.io/mhenrixon/kamal-proxy:<tag>`; if unpublished, this is a release-ordering issue, not a code bug — see `.claude/rules/upstream-sync.md` |
+| Integration suite fails pulling `ghcr.io/zoolutions/kamal-proxy:<MINIMUM_VERSION>` | Tag not yet published to ghcr.io, or `MINIMUM_VERSION` was bumped without a matching proxy release | Check `docker buildx imagetools inspect ghcr.io/zoolutions/kamal-proxy:<tag>`; if unpublished, this is a release-ordering issue, not a code bug — see `.claude/rules/upstream-sync.md` |
 | Any check failing on a PR whose base is `main` | `main` must stay a pristine fast-forward mirror of upstream | Flag it; the PR should retarget `dash` |
 
 ---

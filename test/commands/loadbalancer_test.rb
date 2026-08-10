@@ -17,21 +17,21 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
   # apps-config mount, and the explicit run command.
   test "run" do
     assert_equal \
-      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "run honors proxy.run.publish false and options" do
     @config[:proxy]["run"] = { "publish" => false, "options" => { "label" => [ "traefik.enable=true" ] } }
     assert_equal \
-      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m --label \"traefik.enable=true\" ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m --label \"traefik.enable=true\" ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "run honors custom publish ports" do
     @config[:proxy]["run"] = { "http_port" => 8080, "https_port" => 8443 }
     assert_equal \
-      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 8080:80 --publish 8443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 8080:80 --publish 8443:443 --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
@@ -105,7 +105,7 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
 
   test "start_or_run" do
     assert_equal \
-      "docker container start load-balancer || docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker container start load-balancer || docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.start_or_run.join(" ")
   end
 
@@ -422,6 +422,47 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     assert_equal \
       "rm -r .kamal/loadbalancer",
       new_command.remove_directory.join(" ")
+  end
+
+  # Certificate store transfer: the loadbalancer terminates TLS, so on a
+  # load-balanced fleet the certificate estate lives in its config volume.
+
+  test "export certs through the running loadbalancer" do
+    assert_equal \
+      "docker exec load-balancer kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
+      new_command.export_certs.join(" ")
+  end
+
+  test "export certs offline via a one-off container" do
+    assert_equal \
+      "docker run --rm --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy " \
+      "--volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config " \
+      "ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} " \
+      "kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
+      new_command.export_certs_offline.join(" ")
+  end
+
+  # A loadbalancer sharing a proxy host shares the kamal-proxy container and
+  # its config volume, so the transfer must target those.
+  test "cert transfer targets the shared volume on a proxy host" do
+    @config[:proxy]["loadbalancer"] = "1.1.1.1"
+
+    assert_match "docker exec kamal-proxy kamal-proxy export certs", new_command.export_certs.join(" ")
+    assert_match "--volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", new_command.export_certs_offline.join(" ")
+  end
+
+  test "import certs from a traefik acme.json" do
+    assert_equal \
+      "docker run --rm --interactive --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy " \
+      "ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} " \
+      "sh -c 'cat > /tmp/kamal-cert-import && kamal-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\"' " \
+      "< .kamal/proxy/certs-import",
+      new_command.import_certs(traefik_acme: true).join(" ")
+  end
+
+  test "import certs restores an archive" do
+    assert_match "kamal-proxy import certs --archive=\"/tmp/kamal-cert-import\"",
+      new_command.import_certs.join(" ")
   end
 
   private

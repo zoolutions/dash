@@ -72,14 +72,14 @@ end
 
 ## Interpolate MINIMUM_VERSION — Never Hardcode Proxy Versions
 
-Fork-specific: proxy image tags are fork-owned (`ghcr.io/mhenrixon/kamal-proxy:v0.9.2.1`) and change independently of the gem. Tests must reference `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION`, never a literal version string:
+Fork-specific: proxy image tags are fork-owned (`ghcr.io/zoolutions/kamal-proxy:v0.9.2.1`) and change independently of the gem. Tests must reference `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION`, never a literal version string:
 
 ```ruby
 # Correct
-assert_match %r{ghcr\.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}}, cmd
+assert_match %r{ghcr\.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}}, cmd
 
 # Wrong — breaks every time the proxy fork releases
-assert_match %r{ghcr\.io/mhenrixon/kamal-proxy:v0\.9\.2\.1}, cmd
+assert_match %r{ghcr\.io/zoolutions/kamal-proxy:v0\.9\.2\.1}, cmd
 ```
 
 See `.claude/rules/upstream-sync.md` for why this constant moves and how releases are ordered (proxy image before gem).
@@ -89,7 +89,7 @@ See `.claude/rules/upstream-sync.md` for why this constant moves and how release
 | | Unit (`test/**` minus `test/integration`) | Integration (`test/integration/**`) |
 |---|---|---|
 | Needs Docker | No | Yes — Docker-in-Docker deployer VMs |
-| Needs proxy image | No | Yes — pulls `ghcr.io/mhenrixon/kamal-proxy:$MINIMUM_VERSION`; fails if unpublished |
+| Needs proxy image | No | Yes — pulls `ghcr.io/zoolutions/kamal-proxy:$MINIMUM_VERSION`; fails if unpublished |
 | Speed | Fast, run constantly | Slow, run before pushing `dash` / releasing |
 | Command | `bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'` | `bin/test` (runs everything, unit + integration) |
 

@@ -58,7 +58,7 @@ Investigation tells you what the codebase says; this phase finds what the REQUES
 
 - Develop 2-3 candidate approaches with real tradeoffs. Pick one and say why; record why the others lost.
 - The chosen design must respect project invariants: Thor CLI commands stay thin and delegate to `Kamal::Commands::*` builders; configuration parsing/validation stays in `Kamal::Configuration`; remote execution stays behind SSHKit; the loadbalancer auto-activates for any primary role with >1 web host (don't special-case around that without updating the validator); `Kamal::Utils.older_version?`/`Gem::Version` semantics govern proxy version comparisons — never suffix tags.
-- Decide the test strategy: minitest + mocha, unit tests under `test/**` (excluding `test/integration`), integration tests only when the change touches real deploy behavior (needs Docker + a published `ghcr.io/mhenrixon/kamal-proxy` image at `MINIMUM_VERSION`). Two builder tests are known-failing on Apple Silicon only — don't plan a fix for those unless that's the task.
+- Decide the test strategy: minitest + mocha, unit tests under `test/**` (excluding `test/integration`), integration tests only when the change touches real deploy behavior (needs Docker + a published `ghcr.io/zoolutions/kamal-proxy` image at `MINIMUM_VERSION`). Two builder tests are known-failing on Apple Silicon only — don't plan a fix for those unless that's the task.
 - If the change requires a new `MINIMUM_VERSION`, the plan must sequence proxy-repo work before gem-repo work (release ordering is a hard constraint — see `.claude/rules/upstream-sync.md` → Release procedure) and interpolate the version in test expectations rather than hardcoding it.
 
 ## Phase 4 — Emit the plan artifact

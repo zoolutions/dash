@@ -6,7 +6,7 @@ mhenrixon's maintained fork of [kamal](https://github.com/basecamp/kamal) — de
 
 - **Ruby**: 3.2–4.0 (CI matrix), Thor CLI, SSHKit + net-ssh, Zeitwerk
 - **Gem**: `dash`, built from `dash.gemspec` (`kamal.gemspec` is upstream's — untouched)
-- **Proxy**: ghcr.io/mhenrixon/kamal-proxy (fork of basecamp/kamal-proxy, sibling repo)
+- **Proxy**: ghcr.io/zoolutions/kamal-proxy (fork of basecamp/kamal-proxy, sibling repo)
 - **Testing**: minitest + mocha; integration tests run real deploys in Docker
 - **Linting**: rubocop-rails-omakase
 
@@ -61,11 +61,11 @@ Layer 0: SSHKit                    (remote execution)
 |---|---|
 | `dash.gemspec`, `bin/dash`, `bin/release-dash` | fork-owned new files |
 | `Gemfile`, `gemfiles/rails_edge.gemfile` | `gemspec name: "dash"` (bare `gemspec` errors with two gemspecs) |
-| `lib/kamal/configuration/proxy/run.rb` | `MINIMUM_VERSION` = fork tag; default repository `ghcr.io/mhenrixon/kamal-proxy` |
-| `lib/kamal/configuration/proxy/boot.rb` | `repository_name` = `ghcr.io/mhenrixon` (legacy boot path) |
+| `lib/kamal/configuration/proxy/run.rb` | `MINIMUM_VERSION` = fork tag; default repository `ghcr.io/zoolutions/kamal-proxy` |
+| `lib/kamal/configuration/proxy/boot.rb` | `repository_name` = `ghcr.io/zoolutions` (legacy boot path) |
 | `lib/kamal/configuration/docs/proxy.yml` | documented default |
 | `test/**` | proxy image org + `#{MINIMUM_VERSION}` interpolation; integration `setup.sh` seeds the ghcr image |
-| `.github/workflows/*` | CI on `dash`; CLI image -> ghcr.io/mhenrixon/dash |
+| `.github/workflows/*` | CI on `dash`; CLI image -> ghcr.io/zoolutions/dash |
 
 Features (loadbalancing, …) live on their own branches and merge into `dash` — see `.claude/rules/upstream-sync.md`.
 
@@ -78,7 +78,7 @@ Features (loadbalancing, …) live on their own branches and merge into `dash` �
 ## Testing
 
 - Unit: everything under `test/` except `test/integration` — no Docker needed. Two builder tests fail on Apple Silicon (host-arch dependent; they pass in CI and on pristine main).
-- Integration: real deploys against Docker-in-Docker VMs; pulls `ghcr.io/mhenrixon/kamal-proxy:$MINIMUM_VERSION` — the tag must be published or the suite fails.
+- Integration: real deploys against Docker-in-Docker VMs; pulls `ghcr.io/zoolutions/kamal-proxy:$MINIMUM_VERSION` — the tag must be published or the suite fails.
 - CI: rubocop + actionlint/zizmor + Ruby 3.2–4.0 matrix, on `main` and `dash` pushes.
 
 ## Slash Commands

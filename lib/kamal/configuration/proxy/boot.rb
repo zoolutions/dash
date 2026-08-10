@@ -30,7 +30,7 @@ class Kamal::Configuration::Proxy::Boot
   end
 
   def repository_name
-    "ghcr.io/mhenrixon"
+    "ghcr.io/zoolutions"
   end
 
   def image_name

@@ -74,7 +74,7 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
     config = Kamal::Configuration.new(base_deploy)
 
     assert_equal Kamal::Configuration::Proxy::Run.digest(
-      "ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}",
+      "ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}",
       "kamal-proxy run --recheck-targets-on-restore",
       *Kamal::Configuration::Proxy::Run.new(config, run_config: {}).docker_options_args
     ), Kamal::Configuration::Proxy::Run.new(config, run_config: {}).config_digest
@@ -110,6 +110,87 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
     assert validated_config("email" => "admin@example.com", "dns_provider" => "route53")
     assert validated_config("email" => "admin@example.com", "dns_provider" => "r53")
     assert validated_config("email" => "admin@example.com", "dns_provider" => "CloudFlare")
+  end
+
+  # Per-zone DNS-01 providers: the hash form pins zones to the DNS host that
+  # serves them, `default` covers unmatched zones. Wire format is repeatable
+  # --acme-dns-provider entries — zone=provider pairs plus one bare default.
+  test "a dns_provider hash becomes repeatable zone=provider flags with the default last" do
+    run = run_config "email" => "admin@example.com", "dns_provider" => {
+      "platform.example" => "cloudflare", "legacy.example" => "hetzner", "default" => "route53"
+    }
+
+    assert_equal "kamal-proxy run --recheck-targets-on-restore " \
+      "--acme-email=\"admin@example.com\" " \
+      "--acme-dns-provider=\"platform.example=cloudflare\" " \
+      "--acme-dns-provider=\"legacy.example=hetzner\" " \
+      "--acme-dns-provider=\"route53\"",
+      run.run_command
+  end
+
+  test "a dns_provider hash without a default emits only zone entries" do
+    run = run_config "email" => "admin@example.com", "dns_provider" => { "platform.example" => "cloudflare" }
+
+    assert_match %(--acme-dns-provider="platform.example=cloudflare"), run.run_command
+    assert_no_match(/--acme-dns-provider="cloudflare"/, run.run_command)
+  end
+
+  test "an unknown provider in a dns_provider hash fails validation naming the zone" do
+    error = assert_raises(Kamal::ConfigurationError) do
+      validated_config "email" => "admin@example.com", "dns_provider" => {
+        "platform.example" => "loopia", "default" => "hetzner"
+      }
+    end
+
+    assert_equal "proxy/run/acme: unsupported dns_provider 'loopia' for 'platform.example'. " \
+      "Supported providers: #{Kamal::Configuration::Proxy::Acme::DNS_PROVIDERS.join(", ")}", error.message
+  end
+
+  test "provider aliases pass validation in a dns_provider hash" do
+    assert validated_config("email" => "admin@example.com", "dns_provider" => {
+      "platform.example" => "cf", "default" => "r53"
+    })
+  end
+
+  # The wire format cuts zone=provider at the first '=', so an '=' in a zone
+  # would silently build an entry for a different zone.
+  test "a zone containing an equals sign is rejected" do
+    error = assert_raises(Kamal::ConfigurationError) do
+      validated_config "email" => "admin@example.com", "dns_provider" => { "bad=zone.example" => "cloudflare" }
+    end
+
+    assert_match "cannot contain '='", error.message
+  end
+
+  test "an empty dns_provider hash is rejected" do
+    assert_raises(Kamal::ConfigurationError) do
+      validated_config "email" => "admin@example.com", "dns_provider" => {}
+    end
+  end
+
+  # A malformed zone key would emit an --acme-dns-provider entry no zone ever
+  # matches, so the misconfiguration surfaces as certificates that never issue.
+  test "a non-string or whitespace zone key is rejected" do
+    [ 123, "", "zone with spaces.example" ].each do |zone|
+      error = assert_raises(Kamal::ConfigurationError, "expected zone #{zone.inspect} to be rejected") do
+        validated_config "email" => "admin@example.com", "dns_provider" => { zone => "cloudflare" }
+      end
+
+      assert_match "must be a non-empty string without whitespace", error.message
+    end
+  end
+
+  test "a non-string provider in a dns_provider hash is rejected" do
+    assert_raises(Kamal::ConfigurationError) do
+      validated_config "email" => "admin@example.com", "dns_provider" => { "platform.example" => true }
+    end
+  end
+
+  test "config_digest changes when a zone mapping changes" do
+    one = run_config "email" => "admin@example.com", "dns_provider" => { "a.example" => "cloudflare", "default" => "hetzner" }
+    two = run_config "email" => "admin@example.com", "dns_provider" => { "a.example" => "route53", "default" => "hetzner" }
+
+    assert_not_equal one.config_digest, two.config_digest
   end
 
   test "acme requires an email" do

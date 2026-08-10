@@ -51,6 +51,6 @@ Use direct tools when:
 ## Repo-Specific Notes
 
 - Two repos, one workflow: gem work here, proxy work in `../kamal-proxy` — never assume a single-repo change covers a proxy version bump. Cross-reference `../kamal-proxy/CLAUDE.md`.
-- Unit-test-only exploration is fine without Docker; verifying integration behavior requires the full `bin/test` (Docker + published `ghcr.io/mhenrixon/kamal-proxy:$MINIMUM_VERSION`) — don't dispatch an agent to "run integration tests" unless that's actually available.
+- Unit-test-only exploration is fine without Docker; verifying integration behavior requires the full `bin/test` (Docker + published `ghcr.io/zoolutions/kamal-proxy:$MINIMUM_VERSION`) — don't dispatch an agent to "run integration tests" unless that's actually available.
 - Two builder tests are Apple-Silicon-only failures (host-arch dependent, pass in CI) — don't let an agent chase them as regressions.
 - Before dispatching a Plan agent on anything touching `main`, remind it: `main` is fast-forward-only, never commit there.

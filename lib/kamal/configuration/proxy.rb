@@ -51,6 +51,8 @@ class Kamal::Configuration::Proxy
     # request (its peer is the LB) and one limiter would count the whole
     # fleet as a single client.
     "allow-ip": :edge,
+    "deny-ip": :edge,
+    "deny-user-agent": :edge,
     "trusted-proxy": :edge,
     "client-ip-header": :edge,
     "rate-limit": :edge,
@@ -69,9 +71,12 @@ class Kamal::Configuration::Proxy
     "session-affinity-cookie": :edge,
 
     # --- Edge: redirectURLIfNeeded consults r.TLS only, so behind the LB a
-    # per-app redirect emits http:// Locations to HTTPS clients.
+    # per-app redirect emits http:// Locations to HTTPS clients. The dynamic
+    # redirect map answers where clients connect, for the same reason.
     "canonical-host": :edge,
     redirect: :edge,
+    "redirects-source": :edge,
+    "redirects-interval": :edge,
 
     # --- Edge: one response cache, at the edge — two layers of cache would
     # double the storage and let the inner cache serve entries the edge
@@ -499,6 +504,10 @@ class Kamal::Configuration::Proxy
         "remove-response-header": headers_config.dig("response", "remove").presence,
         redirect: path_rules("redirects"),
         rewrite: path_rules("rewrites"),
+        # The dynamic map is consulted before the static redirect rules above -
+        # they compose, the rules running when the map misses.
+        "redirects-source": proxy_config.dig("redirects_source", "source"),
+        "redirects-interval": seconds_duration(proxy_config.dig("redirects_source", "interval")),
         "canonical-host": proxy_config["canonical_host"],
         "intercept-errors": proxy_config["intercept_errors"].presence
       }.compact
@@ -532,6 +541,10 @@ class Kamal::Configuration::Proxy
 
       {
         "allow-ip": proxy_config["allow_ips"].presence,
+        # Checked before the allow list on the proxy side - an address on both
+        # lists is denied. UA patterns run after the IP rules.
+        "deny-ip": proxy_config["deny_ips"].presence,
+        "deny-user-agent": proxy_config["deny_user_agents"].presence,
         "trusted-proxy": client_ip["trusted_proxies"].presence,
         "client-ip-header": client_ip["header"],
         "rate-limit": rate_limit["requests"],

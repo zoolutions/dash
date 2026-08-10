@@ -60,10 +60,25 @@ class Kamal::Configuration::Proxy::Acme
   def run_command_options
     {
       "acme-email": acme_config["email"],
-      "acme-dns-provider": acme_config["dns_provider"],
+      "acme-dns-provider": dns_provider_entries,
       "acme-directory": acme_config["directory"],
       "acme-prefer-wildcard": acme_config["prefer_wildcard"],
       "acme-http-fallback": acme_config["http_fallback"]
     }.compact
   end
+
+  private
+    # The hash form pins zones to the DNS host that serves them; `default`
+    # covers unmatched zones. kamal-proxy takes repeatable --acme-dns-provider
+    # entries — zone=provider pairs plus at most one bare default — so the hash
+    # becomes an array and Utils.optionize repeats the flag. The string form
+    # passes through untouched and keeps meaning what it always has.
+    def dns_provider_entries
+      provider = acme_config["dns_provider"]
+      return provider unless provider.is_a?(Hash)
+
+      zones, default = provider.partition { |zone, _| zone != "default" }
+
+      [ *zones.map { |zone, zone_provider| "#{zone}=#{zone_provider}" }, *default.map(&:last) ]
+    end
 end

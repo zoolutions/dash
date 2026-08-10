@@ -1,5 +1,5 @@
 class Kamal::Configuration::Proxy::Run
-  MINIMUM_VERSION = "v1.0.0.1"
+  MINIMUM_VERSION = "v1.0.0.3"
   DEFAULT_HTTP_PORT = 80
   DEFAULT_HTTPS_PORT = 443
   DEFAULT_LOG_MAX_SIZE = "10m"
@@ -95,7 +95,7 @@ class Kamal::Configuration::Proxy::Run
   end
 
   def repository
-    run_config.fetch("repository", "ghcr.io/mhenrixon/kamal-proxy")
+    run_config.fetch("repository", "ghcr.io/zoolutions/kamal-proxy")
   end
 
   def image

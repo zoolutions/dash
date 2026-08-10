@@ -1,4 +1,6 @@
 class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
+  include Kamal::Commands::Proxy::CertTransfer
+
   delegate :argumentize, :optionize, to: Kamal::Utils
 
   attr_reader :loadbalancer_config
@@ -63,8 +65,8 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
     docker :inspect, container_name, "--format", "'{{ index .Config.Labels \"#{Kamal::Commands::Proxy::CONFIG_DIGEST_LABEL}\" }}'"
   end
 
-  def container_id
-    container_id_for(container_name: container_name)
+  def container_id(only_running: false)
+    container_id_for(container_name: container_name, only_running: only_running)
   end
 
   def info
@@ -168,5 +170,15 @@ class Kamal::Commands::Loadbalancer < Kamal::Commands::Base
       else
         [ "--volume", "kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy" ]
       end
+    end
+
+    # The certificate store lives in whichever config volume this loadbalancer
+    # actually mounts — the shared kamal-proxy one on a proxy host.
+    def cert_store_volume_args
+      config_volume
+    end
+
+    def one_off_image
+      [ loadbalancer_config.run.image ]
     end
 end

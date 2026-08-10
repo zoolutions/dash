@@ -313,6 +313,33 @@ proxy:
     - from: /api/(.*)
       to: /v2/$1
 
+  # Dynamic redirect map
+  #
+  # Fetch a host-scoped redirect map from the application itself, so redirects
+  # ship with a content change instead of a deploy. `source` is a path resolved
+  # against this service, or an absolute http(s) URL. The app publishes
+  # `{"hosts": {...}}` entries — per-host `redirect_to`, path rules and
+  # trailing-slash policy — and the proxy answers matching requests before they
+  # reach the app.
+  #
+  # The map composes with the static `redirects` above: the map is consulted
+  # first, and the static rules run when it misses.
+  #
+  # `interval` is the poll interval in seconds (proxy default 300, minimum 10).
+  #
+  # Authentication tokens live in the PROXY's environment, not the app's: polls
+  # send `KAMAL_PROXY_REDIRECTS_TOKEN` as a bearer token when set, and
+  # `POST /.kamal-proxy/redirects/refresh` nudges an immediate re-poll when
+  # authenticated with `KAMAL_PROXY_REFRESH_TOKEN`. Set both via
+  # `proxy.run.options.env`, next to `KAMAL_PROXY_DOMAINS_TOKEN` — never as
+  # deploy flags, which leak into process listings and audit logs.
+  #
+  # When a loadbalancer is configured the map answers at the loadbalancer, same
+  # as `ssl_domains` and `canonical_host` — the per-host proxies never see it.
+  redirects_source:
+    source: /api/v1/proxy/redirects
+    interval: 300
+
   # Canonical host
   #
   # Redirect every request to this host, to force apex or www one way.
@@ -459,6 +486,25 @@ proxy:
   allow_ips:
     - 10.0.0.0/8
     - 192.168.0.0/16
+
+  # IP deny list
+  #
+  # Refuse this service to these addresses and ranges with a 403. Checked before
+  # `allow_ips`: an address on both lists is denied. Denied clients never spend
+  # rate-limit budget. Combine with `client_ip` above when behind a CDN, or the
+  # list is matched against the CDN's addresses rather than your visitors'.
+  deny_ips:
+    - 203.0.113.0/24
+    - 198.51.100.7
+
+  # User-agent deny list
+  #
+  # Refuse requests whose full User-Agent matches one of these RE2 patterns,
+  # checked after the IP rules. A missing User-Agent only matches an explicit
+  # '^$' pattern. Patterns are matched by kamal-proxy (Go RE2), so kamal checks
+  # only their shape, not their syntax.
+  deny_user_agents:
+    - 'BadBot/.*'
   #
   # ### Notes
   # - The health check path is served without an address check and without a rate
@@ -786,9 +832,9 @@ proxy:
                                    # `repository` to a host-less path (e.g.
                                    # myfork/kamal-proxy) - the default repository
                                    # below already embeds its ghcr.io host
-    repository: ghcr.io/mhenrixon/kamal-proxy # Container repository for the
+    repository: ghcr.io/zoolutions/kamal-proxy # Container repository for the
                                    # kamal-proxy image (this is the default)
-    version: v1.0.0.1              # Version tag of the kamal-proxy image to use.
+    version: v1.0.0.3              # Version tag of the kamal-proxy image to use.
                                    # Defaults to the minimum version this gem
                                    # requires - only pin it to roll forward early,
                                    # never below the default
@@ -809,6 +855,12 @@ proxy:
     # at `auto` to let the proxy pick from the credentials it can see. An
     # unsupported name is rejected here, at config time - kamal-proxy would only
     # log a warning and then never issue a certificate.
+    #
+    # A plain string (`dns_provider: cloudflare`) uses one provider for every
+    # zone. The hash form pins zones to the DNS host that actually serves them,
+    # with `default` covering unmatched zones - for estates whose domains are
+    # spread across registrars. Each provider's API credentials must be present
+    # under `credentials` for its challenges to succeed.
     #
     # kamal-proxy also accepts short aliases for the canonical names - `cf`
     # (cloudflare), `do` (digitalocean), `gcp`/`google`/`googledns` (gcloud),
@@ -837,7 +889,10 @@ proxy:
     # `kamal proxy reboot` yourself after a rotation.
     acme:
       email: admin@example.com
-      dns_provider: cloudflare
+      dns_provider:
+        platform.example: cloudflare
+        legacy.example: hetzner
+        default: route53
       prefer_wildcard: true
       http_fallback: false
       directory: https://acme-staging-v02.api.letsencrypt.org/directory
