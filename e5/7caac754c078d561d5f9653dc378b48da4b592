@@ -1,0 +1,71 @@
+test/cli/proxy_test.rb
+  s_f6257c1cb618c0::t_098ec6eee2aad7 8,16-17,113,145,171-172,183,221,240,249,253,380,519,575-576,580-581,737,818
+test/configuration/proxy/acme_test.rb
+  s_f6257c1cb618c0::t_098ec6eee2aad7 77
+bin/sync-proxy-flags
+  s_f6257c1cb618c0::t_098ec6eee2aad7 67
+.github/workflows/docker-publish.yml
+  s_f6257c1cb618c0::t_098ec6eee2aad7 58-59
+.claude/rules/agents.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 54
+CLAUDE.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 9,64-65,68,81
+bin/release-dash
+  s_f6257c1cb618c0::t_098ec6eee2aad7 13
+.claude/commands/tdd.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 128
+lib/kamal/configuration/proxy/run.rb
+  s_f6257c1cb618c0::t_098ec6eee2aad7 98
+  s_f6257c1cb618c0::t_4f53167288680f 2
+test/commands/proxy_test.rb
+  s_f6257c1cb618c0::t_098ec6eee2aad7 18,26,122,171,185,192,199,212,219,226,233,239,259,265,326,340,410,419,433
+test/integration/docker/deployer/setup.sh
+  s_f6257c1cb618c0::t_098ec6eee2aad7 25
+.claude/commands/github-review-failures.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 105,182
+.claude/rules/testing.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 75,92
+.claude/commands/finish-prs.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 78,152
+.claude/commands/lfg.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 72,122
+lib/kamal/configuration/docs/proxy.yml
+  s_f6257c1cb618c0::t_098ec6eee2aad7 835
+  s_f6257c1cb618c0::t_d07c0970956c35 837
+test/fixtures/kamal_proxy_flags.yml
+  s_f6257c1cb618c0::t_a68be432f8dc8e 5
+.claude/commands/review-pr.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 43
+.claude/commands/security.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 63,112,123,145
+.claude/commands/plan.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 61
+.claude/rules/git-workflow.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 91
+.claude/rules/upstream-sync.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 31,40,45
+.claude/commands/github-review-pr.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 86,121
+test/commands/loadbalancer_test.rb
+  s_f6257c1cb618c0::t_098ec6eee2aad7 20,27,34,108,440,457
+.claude/rules/coding-style.md
+  s_f6257c1cb618c0::t_098ec6eee2aad7 93,119
+lib/kamal/configuration/proxy/boot.rb
+  s_f6257c1cb618c0::t_098ec6eee2aad7 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "e57caac754c078d561d5f9653dc378b48da4b592",
+  "prompts": {},
+  "sessions": {
+    "s_f6257c1cb618c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73722a2b-78b8-473b-9a61-e8c1c5cbba87",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
