@@ -1,0 +1,19 @@
+test/integration/docker/deployer/setup.sh
+  s_f6257c1cb618c0::t_65e7eceeed3430 3-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "75ab6d91eadd315c0dfd2e4e5114f2d5d95bc03f",
+  "prompts": {},
+  "sessions": {
+    "s_f6257c1cb618c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73722a2b-78b8-473b-9a61-e8c1c5cbba87",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
