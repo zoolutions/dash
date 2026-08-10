@@ -5,6 +5,11 @@
 # inside an unrelated deploy, as "manifest unknown" from registry:4443.
 set -e
 
+# Onto stdout, all of it: the harness's failure message only carries stdout
+# (integration_test.rb#docker_compose discards the stderred capture), so an
+# error printed to stderr here is an error nobody sees.
+exec 2>&1
+
 install_kamal() {
   cd /kamal && gem build kamal.gemspec -o /tmp/kamal.gem && gem install /tmp/kamal.gem
 }
