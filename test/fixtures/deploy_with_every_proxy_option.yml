@@ -103,6 +103,9 @@ proxy:
     - from: /old
       to: /new
       status: 302
+  redirects_source:
+    source: /api/v1/proxy/redirects
+    interval: 300
   rewrites:
     - from: /api/(.*)
       to: /v2/$1
@@ -114,6 +117,10 @@ proxy:
   # do anything, and client_ip.header needs trusted_proxies.
   allow_ips:
     - 10.0.0.0/8
+  deny_ips:
+    - 203.0.113.0/24
+  deny_user_agents:
+    - 'BadBot/.*'
   client_ip:
     header: CF-Connecting-IP
     trusted_proxies:
@@ -178,7 +185,11 @@ proxy:
       not-a-real-kamal-proxy-flag: value
     acme:
       email: admin@example.com
-      dns_provider: cloudflare
+      # The hash form (per-zone DNS-01 providers); the string shorthand is
+      # covered in test/configuration/proxy/acme_test.rb.
+      dns_provider:
+        platform.example: cloudflare
+        default: hetzner
       directory: https://acme-staging-v02.api.letsencrypt.org/directory
       # true renders as a bare flag, false as --flag=false; cover both shapes.
       prefer_wildcard: true

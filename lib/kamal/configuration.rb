@@ -531,27 +531,38 @@ class Kamal::Configuration
       true
     end
 
-    # A rate limiter is only as correct as the address it keys on. `forward_headers:
-    # true` says something sits in front of the proxy, and without `trusted_proxies`
-    # kamal-proxy keys on that something's address rather than the client's — so the
-    # limiter throttles the whole world as one client, or nobody at all. Warn rather
-    # than raise: the config is legal, just almost certainly not what was meant.
+    # Rate limiting and IP deny rules are only as correct as the address they key
+    # on. `forward_headers: true` says something sits in front of the proxy, and
+    # without `trusted_proxies` kamal-proxy keys on that something's address
+    # rather than the client's — so the limiter throttles the whole world as one
+    # client (or nobody), and a deny list denies nobody it was written for. Warn
+    # rather than raise: the config is legal, just almost certainly not what was
+    # meant. (deny_user_agents is absent here on purpose — a User-Agent match
+    # never keys on the client address.)
     def ensure_rate_limit_can_identify_clients
-      offenders = roles.select do |role|
-        next false unless role.running_proxy?
+      offenders = roles.filter_map do |role|
+        next unless role.running_proxy?
 
         proxy_config = role.proxy.proxy_config
-        proxy_config.dig("rate_limit", "requests").present? &&
-          proxy_config["forward_headers"] &&
+        next unless proxy_config["forward_headers"] &&
           Array(proxy_config.dig("client_ip", "trusted_proxies")).empty?
+
+        features = []
+        features << "rate_limit" if proxy_config.dig("rate_limit", "requests").present?
+        features << "deny_ips" if proxy_config["deny_ips"].present?
+
+        [ role.name, features ] if features.any?
       end
 
       return true if offenders.empty?
 
-      warn "Role(s) #{offenders.map(&:name).join(", ")}: rate_limit is set with forward_headers, " \
-        "but no proxy/client_ip/trusted_proxies. kamal-proxy will key the limiter on the address of " \
-        "whatever sits in front of it, not on the client's — so it throttles every visitor as one " \
-        "client, or none of them. Declare the proxies in front with `client_ip: trusted_proxies:`."
+      offenders.each do |role_name, features|
+        warn "Role #{role_name}: #{features.join(" and ")} is set with forward_headers, " \
+          "but no proxy/client_ip/trusted_proxies. kamal-proxy will key on the address of " \
+          "whatever sits in front of it, not on the client's — so the rules apply to every " \
+          "visitor as one client, or to none of them. Declare the proxies in front with " \
+          "`client_ip: trusted_proxies:`."
+      end
 
       true
     end
