@@ -1,0 +1,34 @@
+.claude/rules/testing.md
+  s_f6257c1cb618c0::t_ad7fd9e4ed7a76 82
+  s_f6257c1cb618c0::t_a0637a4e290f95 79
+lib/kamal/commands/proxy/cert_transfer.rb
+  s_f6257c1cb618c0::t_7900dab343cd81 40-43,47,50
+test/commands/proxy_test.rb
+  s_f6257c1cb618c0::t_61f4682f96ee66 453-454
+  s_f6257c1cb618c0::t_b7581794a03105 446-452,455-456
+lib/kamal/cli/proxy.rb
+  s_f6257c1cb618c0::t_a4529eec39f656 571-572,574
+  s_f6257c1cb618c0::t_dea47ad4c3ea1c 511-515,517-518,520-528,530-536
+test/configuration/proxy/acme_test.rb
+  s_f6257c1cb618c0::t_65b610b554dfc0 171-182
+lib/kamal/configuration/validator/proxy.rb
+  s_f6257c1cb618c0::t_a919e05f1c5efc 170-175
+test/integration/main_test.rb
+  s_f6257c1cb618c0::t_430cbc676dbc13 49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "43d03ede1f51b7fd2e44c6cde356e6b89127f514",
+  "prompts": {},
+  "sessions": {
+    "s_f6257c1cb618c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73722a2b-78b8-473b-9a61-e8c1c5cbba87",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
