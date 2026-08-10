@@ -125,7 +125,7 @@ bundle exec rubocop --parallel
 
 ### Step 8: Full Suite Before Pushing
 
-Only when the change touches deploy/proxy/boot flow — needs Docker and the published proxy image (`ghcr.io/mhenrixon/kamal-proxy:$MINIMUM_VERSION`):
+Only when the change touches deploy/proxy/boot flow — needs Docker and the published proxy image (`ghcr.io/zoolutions/kamal-proxy:$MINIMUM_VERSION`):
 
 ```bash
 bin/test

@@ -55,5 +55,5 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/mhenrixon/dash:latest
-            ghcr.io/mhenrixon/dash:${{ steps.version-tag.outputs.value }}
+            ghcr.io/zoolutions/dash:latest
+            ghcr.io/zoolutions/dash:${{ steps.version-tag.outputs.value }}

@@ -69,7 +69,7 @@ Create a TaskCreate todo list with specific implementation steps.
 2. Read existing patterns in similar CLI commands under `lib/kamal/cli/`
 3. Understand dependencies and integration points across the layer cake (`lib/kamal/commander.rb`, `lib/kamal/commands/`, `lib/kamal/configuration/`)
 4. Check existing test coverage under `test/` (mirrors `lib/` structure; skip `test/integration` unless the change is deploy-path-sensitive)
-5. If touching proxy behavior, review `lib/kamal/configuration/proxy/` — `run.rb` owns `MINIMUM_VERSION` and the fork's default `ghcr.io/mhenrixon/kamal-proxy` repository
+5. If touching proxy behavior, review `lib/kamal/configuration/proxy/` — `run.rb` owns `MINIMUM_VERSION` and the fork's default `ghcr.io/zoolutions/kamal-proxy` repository
 6. If touching multi-host or load balancing, review `lib/kamal/commands/loadbalancer.rb` and the `loadbalancer:` validation in `lib/kamal/configuration/validator/proxy.rb` — the dash-only loadbalancer auto-activates for any primary role with >1 web host
 7. Check `ROADMAP.md` for whether this item is already scoped (evidence-linked anchors, R1-R5 sequencing) — align implementation with the anchor's stated fix location
 
@@ -119,7 +119,7 @@ Write the MINIMUM code to make the test pass. Follow project patterns:
 | Add a `v*` git tag | Use `dash-v<version>` (gem) or coordinate with proxy's `v<base>.<n>` (image) |
 | Skip Thor command conventions | Follow existing `lib/kamal/cli/*.rb` patterns (options, hooks, `Kamal::Cli::Base`) |
 | Bypass `Kamal::Commander` for target/config resolution | Route through `KAMAL` singleton (`Kamal::Commander`) |
-| Reference upstream proxy repository defaults | Default to `ghcr.io/mhenrixon/kamal-proxy` per `lib/kamal/configuration/proxy/run.rb` |
+| Reference upstream proxy repository defaults | Default to `ghcr.io/zoolutions/kamal-proxy` per `lib/kamal/configuration/proxy/run.rb` |
 | Add a multi-host integration fixture without opting out | Set `loadbalancer: false` under `proxy:` — the dind harness can't resolve inner VM hostnames |
 
 ### 4.3: Refactor

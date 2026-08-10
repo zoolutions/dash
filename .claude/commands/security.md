@@ -60,7 +60,7 @@ docker :login, server,
 ### Docker Registry / GHCR Credentials
 
 - `Kamal::Commands::Registry#login` skips entirely when `registry_config.local?` — verify no code path logs in with empty/default credentials
-- Fork-specific: `ghcr.io/mhenrixon` pulls (`lib/kamal/configuration/proxy/run.rb`, `boot.rb`) use the same registry credential path as the app image — a credential leak here exposes the proxy image pull, not just the app
+- Fork-specific: `ghcr.io/zoolutions` pulls (`lib/kamal/configuration/proxy/run.rb`, `boot.rb`) use the same registry credential path as the app image — a credential leak here exposes the proxy image pull, not just the app
 - Never persist `docker login` credentials to a file the deploy user doesn't control; `docker logout` (`Kamal::Commands::Registry#logout`) must run in `ensure`/ensure-equivalent blocks for any new command that logs in
 
 ### Error Page Upload — Path Traversal
@@ -109,7 +109,7 @@ ERROR_PAGES_GLOB = "{4??.html,5??.html}"
 - [ ] Proxy: request/response buffers are size-capped, not unbounded
 - [ ] Proxy: hop-by-hop headers stripped before backend forwarding
 - [ ] Proxy: error pages render via `html/template` (escaped), never `text/template`
-- [ ] Fork-owned defaults (`MINIMUM_VERSION`, `ghcr.io/mhenrixon` repository) unchanged unless the sync runbook calls for it
+- [ ] Fork-owned defaults (`MINIMUM_VERSION`, `ghcr.io/zoolutions` repository) unchanged unless the sync runbook calls for it
 
 ## Security Tools
 
@@ -120,7 +120,7 @@ bundle exec rubocop --parallel
 # Gem: unit tests (no Docker required)
 bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'
 
-# Gem: full suite incl. integration (needs Docker + published ghcr.io/mhenrixon/kamal-proxy:$MINIMUM_VERSION)
+# Gem: full suite incl. integration (needs Docker + published ghcr.io/zoolutions/kamal-proxy:$MINIMUM_VERSION)
 bin/test
 
 # Gem: audit shell-escaping coverage in command builders
@@ -142,7 +142,7 @@ go vet ./...
 | `text/template` for proxy error pages | `html/template` — auto-escapes, already in use |
 | Unbounded request/response buffering | Size-capped buffer pool (`proxy_buffer_pool.go`) |
 | ACME solver answering any domain's challenge | Validate the challenge is for the domain being issued |
-| Editing `MINIMUM_VERSION` or `ghcr.io/mhenrixon` defaults casually | Follow `.claude/rules/upstream-sync.md` — proxy image ships before the gem references it |
+| Editing `MINIMUM_VERSION` or `ghcr.io/zoolutions` defaults casually | Follow `.claude/rules/upstream-sync.md` — proxy image ships before the gem references it |
 | Committing a fix straight to `main` | `main` is fast-forward-only; branch off `dash`, PR into `dash` |
 
 ## Handoff

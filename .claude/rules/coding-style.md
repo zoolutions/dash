@@ -90,7 +90,7 @@ These are on top of the general rules above — see `CLAUDE.md` and `.claude/rul
 
 - **Never edit `kamal.gemspec`, `bin/release`, or other upstream-owned files** — the fork's equivalents are `dash.gemspec` and `bin/release-dash`. Upstream files must stay byte-identical so syncs never conflict.
 - **Interpolate `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` in tests** — never hardcode a proxy tag like `"v0.9.2.1"` in an assertion; see `test/commands/proxy_test.rb`.
-- **New code that touches the proxy image org** uses `ghcr.io/mhenrixon/kamal-proxy` (via `Proxy::Run#repository` / `Proxy::Boot#repository_name`), not `basecamp/kamal-proxy`.
+- **New code that touches the proxy image org** uses `ghcr.io/zoolutions/kamal-proxy` (via `Proxy::Run#repository` / `Proxy::Boot#repository_name`), not `basecamp/kamal-proxy`.
 - **Loadbalancer-only code** (`Kamal::Cli::Proxy#loadbalancer`, `KAMAL.loadbalancer`, `Configuration::Proxy#load_balancing?`) is fork-owned — keep it isolated behind `load_balancing?` checks so it degrades cleanly when unset, since it auto-activates when the primary role has >1 host.
 
 ## Testing (Minitest + Mocha, not RSpec)
@@ -116,7 +116,7 @@ end
   ```bash
   bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'
   ```
-- Integration tests (`test/integration`) run real deploys in Docker and need `ghcr.io/mhenrixon/kamal-proxy:$MINIMUM_VERSION` published first. Run the full suite with `bin/test`.
+- Integration tests (`test/integration`) run real deploys in Docker and need `ghcr.io/zoolutions/kamal-proxy:$MINIMUM_VERSION` published first. Run the full suite with `bin/test`.
 - Two builder tests are known-failing on Apple Silicon only (host-arch dependent) — don't chase them locally, they pass in CI.
 
 ## Code Quality Checklist

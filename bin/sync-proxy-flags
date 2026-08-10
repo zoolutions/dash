@@ -64,7 +64,7 @@ invocation =
   if (index = ARGV.index("--binary"))
     [ ARGV.fetch(index + 1) { abort "--binary needs a path" } ]
   else
-    image = "ghcr.io/mhenrixon/kamal-proxy:#{version}"
+    image = "ghcr.io/zoolutions/kamal-proxy:#{version}"
     warn "Pulling #{image}..."
     run!("docker", "pull", "--quiet", image)
     [ "docker", "run", "--rm", image, "kamal-proxy" ]

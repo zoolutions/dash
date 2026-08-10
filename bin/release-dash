@@ -10,7 +10,7 @@
 #
 # Ordering rule: the proxy image tag named by
 # Kamal::Configuration::Proxy::Run::MINIMUM_VERSION must already exist at
-# ghcr.io/mhenrixon/kamal-proxy before releasing the gem.
+# ghcr.io/zoolutions/kamal-proxy before releasing the gem.
 
 set -euo pipefail
 

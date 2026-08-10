@@ -40,7 +40,7 @@ Business logic in Cli::* Thor command       -> Push logic down into Commander/Co
 Direct shell interpolation in Commands::*    -> Build args as arrays, let SSHKit/Docker quote them
 Raw ENV reads scattered in Configuration     -> Route through Kamal::Configuration::Env / config accessors
 Hardcoded proxy image tag                    -> Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
-Hardcoded ghcr.io/mhenrixon repo string       -> Proxy::Run#repository default / config override
+Hardcoded ghcr.io/zoolutions repo string       -> Proxy::Run#repository default / config override
 New CLI option without Thor `desc`/`option`  -> Follow existing Cli::* option declarations
 Missing `--parallel`-unsafe rubocop offense  -> Run `bundle exec rubocop --parallel` clean
 Test hits Docker/network without being under -> Belongs in test/integration, not test/ (unit run

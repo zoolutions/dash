@@ -22,7 +22,7 @@ if [ -z "$minimum_version" ]; then
   exit 1
 fi
 
-proxy_image="ghcr.io/mhenrixon/kamal-proxy:${minimum_version}"
+proxy_image="ghcr.io/zoolutions/kamal-proxy:${minimum_version}"
 
 docker pull "$proxy_image"
 docker tag "$proxy_image" "registry:4443/${proxy_image}"

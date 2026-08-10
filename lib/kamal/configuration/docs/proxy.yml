@@ -832,9 +832,9 @@ proxy:
                                    # `repository` to a host-less path (e.g.
                                    # myfork/kamal-proxy) - the default repository
                                    # below already embeds its ghcr.io host
-    repository: ghcr.io/mhenrixon/kamal-proxy # Container repository for the
+    repository: ghcr.io/zoolutions/kamal-proxy # Container repository for the
                                    # kamal-proxy image (this is the default)
-    version: v1.0.0.2              # Version tag of the kamal-proxy image to use.
+    version: v1.0.0.3              # Version tag of the kamal-proxy image to use.
                                    # Defaults to the minimum version this gem
                                    # requires - only pin it to roll forward early,
                                    # never below the default

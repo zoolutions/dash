@@ -28,7 +28,7 @@ git checkout dash && git merge feat/loadbalancing && <tests> && git push
 | `lib/kamal/version.rb` | keep ours — from 3.0.0 the fork declares its own major, so upstream's version never lands here; `bin/release-dash` is the only writer |
 | `Gemfile.lock` | take either side, run `bundle install`, commit the result |
 | `lib/kamal/configuration/proxy/run.rb` (`MINIMUM_VERSION`) | upstream bumped their proxy: release the proxy fork first (`v<new-base>.1`), then set that tag here |
-| `lib/kamal/configuration/proxy/run.rb` (repository) / `boot.rb` (`repository_name`) | keep `ghcr.io/mhenrixon` |
+| `lib/kamal/configuration/proxy/run.rb` (repository) / `boot.rb` (`repository_name`) | keep `ghcr.io/zoolutions` |
 | `test/cli/proxy_test.rb`, `test/commands/proxy_test.rb` | keep the ghcr org and the `#{...MINIMUM_VERSION}` interpolation; adopt upstream's new assertions around them |
 | `test/integration/docker/deployer/setup.sh` | keep the ghcr image; its tag must equal `MINIMUM_VERSION` |
 | `dash.gemspec` | never conflicts (fork-owned) — but run `diff kamal.gemspec dash.gemspec` after every sync and mirror upstream dependency changes by hand |
@@ -37,12 +37,12 @@ git checkout dash && git merge feat/loadbalancing && <tests> && git push
 
 ## Release procedure
 
-Order is a hard constraint: **proxy image first, gem second** — integration tests and `kamal proxy boot` pull `ghcr.io/mhenrixon/kamal-proxy:$MINIMUM_VERSION`.
+Order is a hard constraint: **proxy image first, gem second** — integration tests and `kamal proxy boot` pull `ghcr.io/zoolutions/kamal-proxy:$MINIMUM_VERSION`.
 
 ```bash
 # 1. ../kamal-proxy, on dash (only when MINIMUM_VERSION moves or proxy features changed):
 script/release-dash v0.9.2.1
-docker buildx imagetools inspect ghcr.io/mhenrixon/kamal-proxy:v0.9.2.1   # amd64+arm64 present
+docker buildx imagetools inspect ghcr.io/zoolutions/kamal-proxy:v0.9.2.1   # amd64+arm64 present
 
 # 2. this repo, on dash:
 #    ensure Kamal::Configuration::Proxy::Run::MINIMUM_VERSION == that tag
