@@ -168,6 +168,18 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
     end
   end
 
+  # A malformed zone key would emit an --acme-dns-provider entry no zone ever
+  # matches, so the misconfiguration surfaces as certificates that never issue.
+  test "a non-string or whitespace zone key is rejected" do
+    [ 123, "", "zone with spaces.example" ].each do |zone|
+      error = assert_raises(Kamal::ConfigurationError, "expected zone #{zone.inspect} to be rejected") do
+        validated_config "email" => "admin@example.com", "dns_provider" => { zone => "cloudflare" }
+      end
+
+      assert_match "must be a non-empty string without whitespace", error.message
+    end
+  end
+
   test "a non-string provider in a dns_provider hash is rejected" do
     assert_raises(Kamal::ConfigurationError) do
       validated_config "email" => "admin@example.com", "dns_provider" => { "platform.example" => true }

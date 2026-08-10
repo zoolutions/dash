@@ -508,24 +508,32 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
   def export_certs(local_path)
     load_balancing = KAMAL.config.proxy.load_balancing?
 
-    on(cert_store_host) do |host|
-      execute *KAMAL.auditor.record("Exported the proxy certificate store"), verbosity: :debug
+    # Under the deploy lock: a concurrent deploy could boot or reboot the
+    # proxy mid-export, and the offline read below would archive a torn store.
+    modify(lock: true) do
+      on(cert_store_host) do |host|
+        execute *KAMAL.auditor.record("Exported the proxy certificate store"), verbosity: :debug
 
-      commands = load_balancing ? KAMAL.loadbalancer : KAMAL.proxy(host)
-      execute *commands.ensure_apps_config_directory
+        commands = load_balancing ? KAMAL.loadbalancer : KAMAL.proxy(host)
+        execute *commands.ensure_apps_config_directory
 
-      # Running: export through the container's RPC socket, under the proxy's
-      # certificate write lock. Stopped: read the data directory offline with a
-      # one-off container - which may first need the image.
-      if capture_with_info(*commands.container_id(only_running: true), raise_on_non_zero_exit: false).strip.present?
-        puts capture_with_info(*commands.export_certs)
-      else
-        execute *KAMAL.registry.login
-        puts capture_with_info(*commands.export_certs_offline)
+        # Running: export through the container's RPC socket, under the proxy's
+        # certificate write lock. Stopped: read the data directory offline with a
+        # one-off container - which may first need the image.
+        if capture_with_info(*commands.container_id(only_running: true), raise_on_non_zero_exit: false).strip.present?
+          puts capture_with_info(*commands.export_certs)
+        else
+          execute *KAMAL.registry.login
+          puts capture_with_info(*commands.export_certs_offline)
+        end
+
+        # The archive holds private keys; it must not outlive a failed download.
+        begin
+          download! commands.certs_archive_host_path, local_path
+        ensure
+          execute *commands.remove_certs_archive, raise_on_non_zero_exit: false
+        end
       end
-
-      download! commands.certs_archive_host_path, local_path
-      execute *commands.remove_certs_archive, raise_on_non_zero_exit: false
     end
   end
 
@@ -559,9 +567,11 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
         execute *KAMAL.auditor.record("Imported certificates into the proxy certificate store"), verbosity: :debug
         execute *KAMAL.registry.login
         execute *commands.ensure_proxy_directory
-        upload! source, commands.certs_import_host_path, mode: "0600"
 
+        # upload! inside the ensure's reach: a failed or partial upload must
+        # not leave certificate material behind on the host either.
         begin
+          upload! source, commands.certs_import_host_path, mode: "0600"
           puts capture_with_info(*commands.import_certs(
             traefik_acme: traefik_acme, resolver: resolver, force: force, verify: verify))
         ensure

@@ -76,10 +76,10 @@ Fork-specific: proxy image tags are fork-owned (`ghcr.io/zoolutions/kamal-proxy:
 
 ```ruby
 # Correct
-assert_match %r{ghcr\.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}}, cmd
+assert_match %r{ghcr\.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}}, cmd
 
 # Wrong — breaks every time the proxy fork releases
-assert_match %r{ghcr\.io/mhenrixon/kamal-proxy:v0\.9\.2\.1}, cmd
+assert_match %r{ghcr\.io/zoolutions/kamal-proxy:v0\.9\.2\.1}, cmd
 ```
 
 See `.claude/rules/upstream-sync.md` for why this constant moves and how releases are ordered (proxy image before gem).

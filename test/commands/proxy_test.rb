@@ -443,6 +443,17 @@ class CommandsProxyTest < ActiveSupport::TestCase
       new_command.import_certs(traefik_acme: true, resolver: "letsencrypt").join(" ")
   end
 
+  # An apostrophe in a resolver name must not break out of the single-quoted
+  # sh -c payload on the remote host - Base#shell escapes it as '\''.
+  test "import certs escapes an apostrophe in the resolver" do
+    @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
+
+    command = new_command.import_certs(traefik_acme: true, resolver: "le'x").join(" ")
+
+    assert_includes command, %q(--resolver="le'\\''x")
+    assert_not_includes command, %q(--resolver="le'x")
+  end
+
   test "import certs restores an archive with force" do
     @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
 

@@ -167,6 +167,12 @@ class Kamal::Configuration::Validator::Proxy < Kamal::Configuration::Validator
             "the zone=provider wire format cuts at the first '=' and would silently build a different entry"
         end
 
+        # A malformed zone key would emit an entry no zone ever matches, and the
+        # symptom is a certificate that never issues - a long way from here.
+        unless zone.is_a?(String) && zone.present? && !zone.match?(/\s/)
+          error "dns_provider zone '#{zone}' must be a non-empty string without whitespace"
+        end
+
         unless zone_provider.is_a?(String) && supported_dns_provider?(zone_provider)
           error "unsupported dns_provider '#{zone_provider}' for '#{zone}'. " \
             "Supported providers: #{Kamal::Configuration::Proxy::Acme::DNS_PROVIDERS.join(", ")}"

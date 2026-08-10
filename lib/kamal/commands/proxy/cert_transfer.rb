@@ -37,14 +37,17 @@ module Kamal::Commands::Proxy::CertTransfer
   # through stdin.
   def import_certs(traefik_acme: false, resolver: nil, force: false, verify: false)
     source_flag = traefik_acme ? "traefik-acme" : "archive"
-    import_command = [
+    # Base#shell single-quotes the payload and escapes embedded apostrophes -
+    # without that, an apostrophe in a resolver name would end the quoting and
+    # run whatever follows on the target host.
+    import_command = shell [
       "cat > #{CONTAINER_IMPORT_PATH} &&",
       "kamal-proxy import certs",
       *optionize({ source_flag => CONTAINER_IMPORT_PATH, resolver: resolver, force: force || nil, verify: verify || nil }.compact, with: "=")
-    ].join(" ")
+    ]
 
     [
-      *docker(:run, "--rm", "--interactive", *cert_store_volume_args, *one_off_image, "sh", "-c", "'#{import_command}'"),
+      *docker(:run, "--rm", "--interactive", *cert_store_volume_args, *one_off_image, *import_command),
       "<", certs_import_host_path
     ]
   end
