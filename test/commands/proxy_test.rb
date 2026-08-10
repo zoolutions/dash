@@ -391,6 +391,79 @@ class CommandsProxyTest < ActiveSupport::TestCase
       new_command.list(name: "kamal-proxy-next").join(" ")
   end
 
+  # Certificate store transfer (kamal proxy export_certs / import_certs). The
+  # apps-config bind mount is the one container path that is also a host path,
+  # so exported archives travel through it.
+
+  test "export certs through the running proxy" do
+    assert_equal \
+      "docker exec kamal-proxy kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
+      new_command.export_certs.join(" ")
+  end
+
+  test "export certs offline via a one-off container" do
+    @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
+
+    assert_equal \
+      "docker run --rm --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy " \
+      "--volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config " \
+      "ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} " \
+      "kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
+      new_command.export_certs_offline.join(" ")
+  end
+
+  test "export certs offline falls back to the boot config image without a run config" do
+    assert_equal \
+      "docker run --rm --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy " \
+      "--volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config " \
+      "$(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/mhenrixon/kamal-proxy\"):" \
+      "$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") " \
+      "kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
+      new_command.export_certs_offline.join(" ")
+  end
+
+  # The source streams through stdin into the one-off container: a bind mount
+  # would need host permissions the container user cannot be guaranteed to
+  # have, and the store must be written as the image's own user.
+  test "import certs from a traefik acme.json" do
+    @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
+
+    assert_equal \
+      "docker run --rm --interactive --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy " \
+      "ghcr.io/mhenrixon/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} " \
+      "sh -c 'cat > /tmp/kamal-cert-import && kamal-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\"' " \
+      "< .kamal/proxy/certs-import",
+      new_command.import_certs(traefik_acme: true).join(" ")
+  end
+
+  test "import certs with a resolver" do
+    @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
+
+    assert_match "kamal-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\" --resolver=\"letsencrypt\"",
+      new_command.import_certs(traefik_acme: true, resolver: "letsencrypt").join(" ")
+  end
+
+  test "import certs restores an archive with force" do
+    @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
+
+    assert_match "kamal-proxy import certs --archive=\"/tmp/kamal-cert-import\" --force",
+      new_command.import_certs(force: true).join(" ")
+  end
+
+  test "import certs verifies an archive" do
+    @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
+
+    assert_match "kamal-proxy import certs --archive=\"/tmp/kamal-cert-import\" --verify",
+      new_command.import_certs(verify: true).join(" ")
+  end
+
+  test "cert transfer paths and cleanup" do
+    assert_equal ".kamal/proxy/apps-config/certs-export.tar.gz", new_command.certs_archive_host_path
+    assert_equal ".kamal/proxy/certs-import", new_command.certs_import_host_path
+    assert_equal "rm .kamal/proxy/apps-config/certs-export.tar.gz", new_command.remove_certs_archive.join(" ")
+    assert_equal "rm .kamal/proxy/certs-import", new_command.remove_certs_import.join(" ")
+  end
+
   private
     def new_command
       Kamal::Commands::Proxy.new(Kamal::Configuration.new(@config, version: "123"), host: "1.1.1.1")

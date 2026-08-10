@@ -1135,7 +1135,145 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  # Certificate store transfer
+
+  test "export_certs downloads the archive from the running proxy" do
+    stub_cert_container_running "kamal-proxy"
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :exec, "kamal-proxy", "kamal-proxy", :export, :certs, "/home/kamal-proxy/.apps-config/certs-export.tar.gz")
+      .returns("Exported 3 certificates (5 domains)")
+    downloads = capture_downloads
+
+    run_command("export_certs", "certs.tar.gz").tap do |output|
+      assert_match "mkdir -p .kamal/proxy/apps-config", output
+      assert_match "Exported 3 certificates (5 domains)", output
+      assert_no_match(/docker login/, output)
+      assert_match "rm .kamal/proxy/apps-config/certs-export.tar.gz", output
+    end
+
+    assert_equal [ [ ".kamal/proxy/apps-config/certs-export.tar.gz", "certs.tar.gz" ] ], downloads
+  end
+
+  test "export_certs falls back to a one-off container when the proxy is stopped" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("docker run --rm --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy") && args.join(" ").include?("export certs") }
+      .returns("Exported 0 certificates (0 domains)")
+    downloads = capture_downloads
+
+    run_command("export_certs", "certs.tar.gz").tap do |output|
+      assert_match "docker login", output
+      assert_match "Exported 0 certificates (0 domains)", output
+    end
+
+    assert_equal [ [ ".kamal/proxy/apps-config/certs-export.tar.gz", "certs.tar.gz" ] ], downloads
+  end
+
+  test "export_certs targets the loadbalancer when load balancing" do
+    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_cert_container_running "load-balancer"
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with(:docker, :exec, "load-balancer", "kamal-proxy", :export, :certs, "/home/kamal-proxy/.apps-config/certs-export.tar.gz")
+      .returns("Exported 3 certificates (5 domains)")
+    downloads = capture_downloads
+
+    run_command("export_certs", "certs.tar.gz", fixture: :with_loadbalancer).tap do |output|
+      assert_match "mkdir -p .kamal/proxy/apps-config on lb.example.com", output
+      assert_match "Exported 3 certificates (5 domains)", output
+    end
+
+    assert_equal [ [ ".kamal/proxy/apps-config/certs-export.tar.gz", "certs.tar.gz" ] ], downloads
+  end
+
+  test "import_certs stages the source and runs the one-off importer" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("sh -c 'cat > /tmp/kamal-cert-import && kamal-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\"' < .kamal/proxy/certs-import") }
+      .returns("Imported: 3")
+    uploads = capture_file_uploads
+
+    run_command("import_certs", "--traefik-acme", "acme.json").tap do |output|
+      assert_match "mkdir -p .kamal/proxy", output
+      assert_match "docker login", output
+      assert_match "Imported: 3", output
+      assert_match "rm .kamal/proxy/certs-import", output
+    end
+
+    assert_equal [ [ "acme.json", ".kamal/proxy/certs-import", "0600" ] ], uploads
+  end
+
+  test "import_certs refuses to run while the proxy is running" do
+    stub_cert_container_running "kamal-proxy"
+
+    assert_raises(SSHKit::Runner::ExecuteError) do
+      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--archive", "certs.tar.gz", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+    end
+  end
+
+  test "import_certs verify runs against a running proxy" do
+    stub_cert_container_running "kamal-proxy"
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("--archive=\"/tmp/kamal-cert-import\" --verify") }
+      .returns("Verified 3 certificates")
+    capture_file_uploads
+
+    run_command("import_certs", "--archive", "certs.tar.gz", "--verify").tap do |output|
+      assert_match "Verified 3 certificates", output
+    end
+  end
+
+  test "import_certs requires exactly one source" do
+    assert_raises(ArgumentError) do
+      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+    end
+
+    assert_raises(ArgumentError) do
+      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--traefik-acme", "a", "--archive", "b", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+    end
+  end
+
+  test "import_certs rejects contradictory flags" do
+    # resolver is a Traefik-import concern, force/verify are archive concerns.
+    assert_raises(ArgumentError) do
+      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--archive", "a", "--resolver", "le", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+    end
+
+    assert_raises(ArgumentError) do
+      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--traefik-acme", "a", "--force", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+    end
+
+    assert_raises(ArgumentError) do
+      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--archive", "a", "--force", "--verify", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+    end
+  end
+
   private
+    def stub_cert_container_running(name)
+      SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("")
+      SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+        .with(:docker, :container, :ls, "--filter", "'name=^#{name}$'", "--quiet", raise_on_non_zero_exit: false)
+        .returns("abc123")
+    end
+
+    def capture_downloads
+      [].tap do |downloads|
+        SSHKit::Backend::Printer.any_instance.stubs(:download!).with do |remote, local|
+          downloads << [ remote, local ]
+          true
+        end
+      end
+    end
+
+    # Unlike capture_uploads, the source is a local file path, not an IO.
+    def capture_file_uploads
+      [].tap do |uploads|
+        SSHKit::Backend::Printer.any_instance.stubs(:upload!).with do |local, path, **options|
+          uploads << [ local, path, options[:mode] ]
+          true
+        end
+      end
+    end
+
     # Records what upload! was handed rather than what the printer logged: the
     # mode is the point, and the printer does not print it.
     def capture_uploads

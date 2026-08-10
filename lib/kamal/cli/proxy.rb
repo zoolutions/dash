@@ -504,6 +504,73 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
     end
   end
 
+  desc "export_certs LOCAL_PATH", "Export the TLS certificate store to a local archive (contains private keys)"
+  def export_certs(local_path)
+    load_balancing = KAMAL.config.proxy.load_balancing?
+
+    on(cert_store_host) do |host|
+      execute *KAMAL.auditor.record("Exported the proxy certificate store"), verbosity: :debug
+
+      commands = load_balancing ? KAMAL.loadbalancer : KAMAL.proxy(host)
+      execute *commands.ensure_apps_config_directory
+
+      # Running: export through the container's RPC socket, under the proxy's
+      # certificate write lock. Stopped: read the data directory offline with a
+      # one-off container - which may first need the image.
+      if capture_with_info(*commands.container_id(only_running: true), raise_on_non_zero_exit: false).strip.present?
+        puts capture_with_info(*commands.export_certs)
+      else
+        execute *KAMAL.registry.login
+        puts capture_with_info(*commands.export_certs_offline)
+      end
+
+      download! commands.certs_archive_host_path, local_path
+      execute *commands.remove_certs_archive, raise_on_non_zero_exit: false
+    end
+  end
+
+  desc "import_certs", "Import certificates into the TLS certificate store from a Traefik acme.json or an exported archive"
+  option :traefik_acme, type: :string, default: nil, desc: "Local path of a Traefik acme.json to import from"
+  option :archive, type: :string, default: nil, desc: "Local path of an archive written by kamal proxy export_certs"
+  option :resolver, type: :string, default: nil, desc: "Import only this Traefik resolver's certificates (default: all, last writer wins per domain)"
+  option :force, type: :boolean, default: false, desc: "Overwrite a non-empty certificate store when restoring an archive"
+  option :verify, type: :boolean, default: false, desc: "Only verify the archive: report domains and expiries without touching the store"
+  def import_certs
+    validate_import_certs_options!
+    source = options[:traefik_acme] || options[:archive]
+    traefik_acme, resolver = options[:traefik_acme].present?, options[:resolver]
+    force, verify = options[:force], options[:verify]
+    load_balancing = KAMAL.config.proxy.load_balancing?
+
+    modify(lock: true) do
+      on(cert_store_host) do |host|
+        commands = load_balancing ? KAMAL.loadbalancer : KAMAL.proxy(host)
+
+        # kamal-proxy import runs offline against the data directory - importing
+        # under a live proxy risks a torn store. --verify only reads the archive.
+        unless verify
+          if capture_with_info(*commands.container_id(only_running: true), raise_on_non_zero_exit: false).strip.present?
+            raise "Cannot import certificates while the #{load_balancing ? "loadbalancer" : "proxy"} " \
+              "is running on #{host} - stop it first " \
+              "(kamal proxy #{load_balancing ? "loadbalancer stop" : "stop"}), import, then start it again"
+          end
+        end
+
+        execute *KAMAL.auditor.record("Imported certificates into the proxy certificate store"), verbosity: :debug
+        execute *KAMAL.registry.login
+        execute *commands.ensure_proxy_directory
+        upload! source, commands.certs_import_host_path, mode: "0600"
+
+        begin
+          puts capture_with_info(*commands.import_certs(
+            traefik_acme: traefik_acme, resolver: resolver, force: force, verify: verify))
+        ensure
+          execute *commands.remove_certs_import, raise_on_non_zero_exit: false
+        end
+      end
+    end
+  end
+
   desc "remove_container", "Remove proxy container from servers", hide: true
   def remove_container
     modify(lock: true) do
@@ -556,6 +623,33 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
   end
 
   private
+    # The host that owns TLS, and so the certificate store: the loadbalancer
+    # host when load balancing (TLS terminates at the edge), else the primary
+    # host - the same host `loadbalancer: true` would resolve to.
+    def cert_store_host
+      KAMAL.config.proxy.load_balancing? ? KAMAL.config.proxy.effective_loadbalancer : KAMAL.primary_host
+    end
+
+    # Mirrors kamal-proxy's own flag groups (import.go), so a contradictory
+    # invocation fails before anything is uploaded.
+    def validate_import_certs_options!
+      if options[:traefik_acme].present? == options[:archive].present?
+        raise ArgumentError, "Specify exactly one of --traefik-acme or --archive"
+      end
+
+      if options[:resolver].present? && options[:archive].present?
+        raise ArgumentError, "--resolver only applies to a Traefik import"
+      end
+
+      if options[:traefik_acme].present? && (options[:force] || options[:verify])
+        raise ArgumentError, "--force and --verify only apply to an archive"
+      end
+
+      if options[:force] && options[:verify]
+        raise ArgumentError, "--verify does not touch the store, so it cannot be combined with --force"
+      end
+    end
+
     # A shared load balancer tier is the exact case this guard exists for, so it
     # has to cover the load balancer host too - `remove_container` and
     # `remove_image` both act on it.
