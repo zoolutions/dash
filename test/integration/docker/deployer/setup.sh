@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Fail loudly at the line that broke: without this, a failed seed pull below
+# exits 0 (the script ends with rm -f) and the miss surfaces much later, deep
+# inside an unrelated deploy, as "manifest unknown" from registry:4443.
+set -e
+
 install_kamal() {
   cd /kamal && gem build kamal.gemspec -o /tmp/kamal.gem && gem install /tmp/kamal.gem
 }
