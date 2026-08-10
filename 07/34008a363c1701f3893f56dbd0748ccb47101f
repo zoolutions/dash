@@ -1,0 +1,42 @@
+test/fixtures/deploy_with_every_proxy_option.yml
+  s_f6257c1cb618c0::t_4c290fc93ce298 120-123
+  s_f6257c1cb618c0::t_d591bf8a8f9155 106-108
+  s_f6257c1cb618c0::t_cc06ad3414a4be 188-192
+lib/kamal/configuration/validator/proxy.rb
+  s_f6257c1cb618c0::t_5d79db8b210f7d 524-525
+  s_f6257c1cb618c0::t_1ad66b8b694c58 489,496,499-508
+  s_f6257c1cb618c0::t_74b439ef12bdc0 460-468
+  s_f6257c1cb618c0::t_69123e19b03aab 148-150,158-178
+  s_f6257c1cb618c0::t_94489ac2b931f1 35-38
+  s_f6257c1cb618c0::t_a487f170ae5809 116-134
+  s_f6257c1cb618c0::t_f00cdc8465959d 548-549,551
+lib/kamal/configuration/proxy.rb
+  s_f6257c1cb618c0::t_adac3c8b230fdd 74-75,78-79
+  s_f6257c1cb618c0::t_e7c02d7e831bb8 54-55
+  s_f6257c1cb618c0::t_f2e41d6f1bd4de 507-510
+  s_f6257c1cb618c0::t_b86d157d769013 544-547
+test/configuration/proxy/redirects_source_test.rb
+  s_f6257c1cb618c0::t_7834f43d1a2959 1-90
+lib/kamal/configuration/docs/proxy.yml
+  s_f6257c1cb618c0::t_7b98a1f7681159 859-864
+  s_f6257c1cb618c0::t_6847c67139ea16 316-342
+  s_f6257c1cb618c0::t_989aadd54b8da1 837
+  s_f6257c1cb618c0::t_aa045ea37f523f 892-895
+  s_f6257c1cb618c0::t_6f7d9efa3ddc53 489-507
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0734008a363c1701f3893f56dbd0748ccb47101f",
+  "prompts": {},
+  "sessions": {
+    "s_f6257c1cb618c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73722a2b-78b8-473b-9a61-e8c1c5cbba87",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
