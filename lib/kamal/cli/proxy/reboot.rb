@@ -38,6 +38,7 @@ class Kamal::Cli::Proxy::Reboot
     def replace_container
       execute *proxy.ensure_proxy_directory
       execute *proxy.ensure_apps_config_directory
+      sync_proxy_secrets
 
       if proxy.port_holder?
         replace_generation
@@ -46,18 +47,26 @@ class Kamal::Cli::Proxy::Reboot
       end
     end
 
-    # Phase 1 replacement: stop the old container, start the new one. Brief gap.
-    def stop_and_replace
-      info "Stopping and removing kamal-proxy on #{host}, if running..."
-      execute *proxy.stop(timeout: KAMAL.config.drain_timeout + 10), raise_on_non_zero_exit: false
-      execute *proxy.remove_container
-
+    # Every replacement path below launches a container that reads
+    # --env-file at docker run, so the secrets must be on disk before ANY
+    # generation starts. This used to live inside stop_and_replace only, and
+    # the port-holder paths launched their generation without it — a
+    # port-holder reboot on a host without the file died with
+    # "open .kamal/proxy/secrets.env: no such file or directory".
+    def sync_proxy_secrets
       if (run_config = proxy.proxy_run_config)&.secrets?
         upload! run_config.secrets_io, run_config.secrets_path, mode: "0600"
       else
         # A host keeps no secrets it no longer needs.
         execute *proxy.remove_proxy_secrets_file, raise_on_non_zero_exit: false
       end
+    end
+
+    # Phase 1 replacement: stop the old container, start the new one. Brief gap.
+    def stop_and_replace
+      info "Stopping and removing kamal-proxy on #{host}, if running..."
+      execute *proxy.stop(timeout: KAMAL.config.drain_timeout + 10), raise_on_non_zero_exit: false
+      execute *proxy.remove_container
 
       execute *proxy.run(digest: drift.expected_digest)
     end

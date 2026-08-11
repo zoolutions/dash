@@ -1,0 +1,22 @@
+service: app
+image: dhh/app
+servers:
+  web:
+    - "1.1.1.1"
+registry:
+  username: user
+  password: pw
+builder:
+  arch: amd64
+proxy:
+  host: example.com
+  ssl: true
+  run:
+    port_holder: true
+    acme:
+      email: admin@example.com
+      dns_provider: cloudflare
+      prefer_wildcard: true
+      http_fallback: false
+      credentials:
+        - CF_API_TOKEN
