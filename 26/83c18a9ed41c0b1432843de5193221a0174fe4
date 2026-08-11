@@ -1,0 +1,21 @@
+test/cli/proxy_test.rb
+  s_5178cbd54913b6::t_83250794d51387 52-64
+lib/kamal/cli/proxy/reboot.rb
+  s_5178cbd54913b6::t_712322ad653388 41,50-56,63-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2683c18a9ed41c0b1432843de5193221a0174fe4",
+  "prompts": {},
+  "sessions": {
+    "s_5178cbd54913b6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c0c13fd1-6996-4e72-8c4b-11f2f6a9cccf",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
