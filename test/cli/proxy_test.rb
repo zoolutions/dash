@@ -49,6 +49,23 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  # Regression: the port-holder replacement paths start a generation that
+  # reads --env-file at docker run, but only the legacy stop_and_replace path
+  # uploaded the secrets file — a port-holder reboot on a fresh host died with
+  # "open .kamal/proxy/secrets.env: no such file or directory".
+  test "port-holder reboot uploads the acme credentials before starting the new generation" do
+    with_test_secrets("secrets" => "CF_API_TOKEN=zone-rewriting-token") do
+      uploads = capture_uploads
+
+      run_command("reboot", "-y", fixture: :with_proxy_acme_port_holder).tap do |output|
+        assert_match "--env-file .kamal/proxy/secrets.env", output
+        assert_no_match(/zone-rewriting-token/, output)
+      end
+
+      assert_equal [ [ "CF_API_TOKEN=zone-rewriting-token\n", ".kamal/proxy/secrets.env", "0600" ] ], uploads
+    end
+  end
+
   test "boot delivers the cache store through the secrets env file, never printing the URL" do
     uploads = capture_uploads
 
