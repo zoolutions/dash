@@ -834,7 +834,7 @@ proxy:
                                    # below already embeds its ghcr.io host
     repository: ghcr.io/zoolutions/kamal-proxy # Container repository for the
                                    # kamal-proxy image (this is the default)
-    version: v1.0.0.3              # Version tag of the kamal-proxy image to use.
+    version: v1.0.0.4              # Version tag of the kamal-proxy image to use.
                                    # Defaults to the minimum version this gem
                                    # requires - only pin it to roll forward early,
                                    # never below the default
