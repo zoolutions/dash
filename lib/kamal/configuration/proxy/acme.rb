@@ -13,7 +13,7 @@ class Kamal::Configuration::Proxy::Acme
   # step with the proxy by test/proxy_flag_coverage_test.rb, which compares this
   # list against the manifest bin/sync-proxy-flags generates from the image.
   DNS_PROVIDERS = %w[
-    auto cloudflare digitalocean gcloud godaddy hetzner namecheap route53 vultr
+    auto cloudflare digitalocean gcloud godaddy hetzner namecheap none route53 vultr
   ].freeze
 
   # Short forms kamal-proxy's ParseProviderName accepts but does not advertise,

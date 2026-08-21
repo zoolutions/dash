@@ -55,7 +55,9 @@ def dns_providers_for(invocation)
   advertised = help[/--acme-dns-provider\b[^(]*\(([^)]*)\)/, 1] or
     abort "could not find the provider list in --acme-dns-provider's usage text"
 
-  advertised.split(",").map(&:strip).sort
+  # v1.0.0.5 prefixes the list with a label ("one of: cloudflare, ..."); strip
+  # it so only names survive. Older images without the label pass through.
+  advertised.sub(/\A[^:]*:\s*/, "").split(",").map(&:strip).sort
 end
 
 version = MINIMUM_VERSION
