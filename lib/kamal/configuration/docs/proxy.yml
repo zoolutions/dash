@@ -834,7 +834,7 @@ proxy:
                                    # below already embeds its ghcr.io host
     repository: ghcr.io/zoolutions/kamal-proxy # Container repository for the
                                    # kamal-proxy image (this is the default)
-    version: v1.0.0.4              # Version tag of the kamal-proxy image to use.
+    version: v1.0.0.5              # Version tag of the kamal-proxy image to use.
                                    # Defaults to the minimum version this gem
                                    # requires - only pin it to roll forward early,
                                    # never below the default
@@ -851,10 +851,14 @@ proxy:
     # These are proxy-wide, not per-app: every service on this proxy shares the
     # ACME account and the DNS provider.
     #
-    # `dns_provider` names the provider that answers DNS-01 challenges. Leave it
-    # at `auto` to let the proxy pick from the credentials it can see. An
-    # unsupported name is rejected here, at config time - kamal-proxy would only
-    # log a warning and then never issue a certificate.
+    # `dns_provider` names the provider that answers DNS-01 challenges. DNS-01
+    # activates only when this is set (proxy v1.0.0.5+): unset means HTTP-01
+    # only, so credentials visible in the proxy's environment can never arm
+    # DNS-01 on their own. `auto` is an explicit opt-in that picks the provider
+    # from the credentials it can see and logs at boot which one it armed;
+    # `none` says "no DNS-01" explicitly. An unsupported name is rejected here,
+    # at config time - kamal-proxy would only log a warning and then never
+    # issue a certificate.
     #
     # A plain string (`dns_provider: cloudflare`) uses one provider for every
     # zone. The hash form pins zones to the DNS host that actually serves them,
@@ -878,7 +882,7 @@ proxy:
     #
     # `credentials` names entries in `.kamal/secrets` to pass to the proxy
     # container as environment variables - the API credentials your DNS provider
-    # needs (`CF_API_TOKEN`, `LOOPIA_API_USER`, ...). Name them exactly as the
+    # needs (`CF_DNS_API_TOKEN`, `LOOPIA_API_USER`, ...). Name them exactly as the
     # provider expects them, since the name is what reaches the container.
     #
     # They are written to a 0600 env file on the proxy host and passed with
@@ -897,7 +901,7 @@ proxy:
       http_fallback: false
       directory: https://acme-staging-v02.api.letsencrypt.org/directory
       credentials:
-        - CF_API_TOKEN
+        - CF_DNS_API_TOKEN
     # Logging and tracing
     #
     # `log_format` is the shape of every line the proxy writes, the access log
