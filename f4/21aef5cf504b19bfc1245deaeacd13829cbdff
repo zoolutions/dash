@@ -1,0 +1,28 @@
+bin/sync-proxy-flags
+  s_7b4c4eb718c5fe::t_53ff3e7dabaeb2 58-60
+lib/kamal/configuration/docs/proxy.yml
+  s_7b4c4eb718c5fe::t_de5888b430802b 837
+  s_7b4c4eb718c5fe::t_dd4b3f49ee5b9d 904
+  s_7b4c4eb718c5fe::t_db67278066c79f 885
+  s_7b4c4eb718c5fe::t_5f0410fb0924f7 854-861
+lib/kamal/configuration/proxy/run.rb
+  s_7b4c4eb718c5fe::t_13f3379d4f7391 2
+lib/kamal/configuration/proxy/acme.rb
+  s_7b4c4eb718c5fe::t_9962155dd43c0e 16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f421aef5cf504b19bfc1245deaeacd13829cbdff",
+  "prompts": {},
+  "sessions": {
+    "s_7b4c4eb718c5fe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "282da557-0d7d-4d78-83c7-4d8ef49a3150",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
