@@ -1,7 +1,7 @@
 class Kamal::Cli::Proxy < Kamal::Cli::Base
   desc "boot", "Boot proxy on servers"
   def boot
-    modify(lock: true) do
+    modify(lock: true, server_lock: true) do
       on(KAMAL.hosts) do |host|
         execute *KAMAL.docker.create_network
       rescue SSHKit::Command::Failed => e
@@ -215,7 +215,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
   option :confirmed, aliases: "-y", type: :boolean, default: false, desc: "Proceed without confirmation question"
   def reboot
     confirming "This will cause a brief outage on each host. Are you sure?" do
-      modify(lock: true) do
+      modify(lock: true, server_lock: true) do
         # Skip proxy on loadbalancer host - it will be handled by loadbalancer reboot
         proxy_hosts = KAMAL.proxy_hosts
         if KAMAL.config.proxy.loadbalancer_on_proxy_host?
@@ -292,7 +292,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
 
   desc "start", "Start existing proxy container on servers"
   def start
-    modify(lock: true) do
+    modify(lock: true, server_lock: true) do
       on(KAMAL.proxy_hosts) do |host|
         execute *KAMAL.auditor.record("Started proxy"), verbosity: :debug
         execute *KAMAL.proxy(host).start
@@ -309,7 +309,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
 
   desc "stop", "Stop existing proxy container on servers"
   def stop
-    modify(lock: true) do
+    modify(lock: true, server_lock: true) do
       on(KAMAL.proxy_hosts) do |host|
         execute *KAMAL.auditor.record("Stopped proxy"), verbosity: :debug
         execute *KAMAL.proxy(host).stop, raise_on_non_zero_exit: false
@@ -329,7 +329,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
 
   desc "restart", "Restart existing proxy container on servers"
   def restart
-    modify(lock: true) do
+    modify(lock: true, server_lock: true) do
       stop
       start
     end
@@ -377,7 +377,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
   desc "remove", "Remove proxy container and image from servers"
   option :force, type: :boolean, default: false, desc: "Force removing proxy when apps are still installed"
   def remove
-    modify(lock: true) do
+    modify(lock: true, server_lock: true) do
       if removal_allowed?(options[:force])
         stop
         remove_container
@@ -510,7 +510,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
 
     # Under the deploy lock: a concurrent deploy could boot or reboot the
     # proxy mid-export, and the offline read below would archive a torn store.
-    modify(lock: true) do
+    modify(lock: true, server_lock: true) do
       on(cert_store_host) do |host|
         execute *KAMAL.auditor.record("Exported the proxy certificate store"), verbosity: :debug
 
@@ -550,7 +550,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
     force, verify = options[:force], options[:verify]
     load_balancing = KAMAL.config.proxy.load_balancing?
 
-    modify(lock: true) do
+    modify(lock: true, server_lock: true) do
       on(cert_store_host) do |host|
         commands = load_balancing ? KAMAL.loadbalancer : KAMAL.proxy(host)
 
@@ -583,7 +583,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
 
   desc "remove_container", "Remove proxy container from servers", hide: true
   def remove_container
-    modify(lock: true) do
+    modify(lock: true, server_lock: true) do
       on(KAMAL.proxy_hosts) do
         execute *KAMAL.auditor.record("Removed proxy container"), verbosity: :debug
         execute *KAMAL.proxy(host).remove_container
@@ -600,7 +600,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
 
   desc "remove_image", "Remove proxy image from servers", hide: true
   def remove_image
-    modify(lock: true) do
+    modify(lock: true, server_lock: true) do
       on(KAMAL.proxy_hosts) do
         execute *KAMAL.auditor.record("Removed proxy image"), verbosity: :debug
         execute *KAMAL.proxy(host).remove_image
@@ -617,7 +617,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
 
   desc "remove_proxy_directory", "Remove the proxy directory from servers", hide: true
   def remove_proxy_directory
-    modify(lock: true) do
+    modify(lock: true, server_lock: true) do
       on(KAMAL.proxy_hosts) do
         execute *KAMAL.proxy(host).remove_proxy_directory, raise_on_non_zero_exit: false
       end

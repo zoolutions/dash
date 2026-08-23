@@ -125,9 +125,13 @@ module Kamal::Cli
         puts "  Finished all in #{sprintf("%.1f seconds", runtime)}"
       end
 
-      def modify(lock: false)
+      # Deploy lock outside, server lock inside. Every caller acquires in that
+      # order, and deploy locks are unique per destination, so no cycle forms.
+      def modify(lock: false, server_lock: false)
         KAMAL.modify(command: command, subcommand: subcommand) do
-          lock ? with_lock { yield } : yield
+          guarded = -> { server_lock ? with_server_lock { yield } : yield }
+
+          lock ? with_lock(&guarded) : guarded.call
         end
       end
 
@@ -140,6 +144,95 @@ module Kamal::Cli
       # command echoing that would otherwise corrupt the byte stream.
       def with_raw_output(raw, &block)
         raw ? KAMAL.with_verbosity(:error, &block) : block.call
+      end
+
+      # kamal-proxy is one container per host, shared by every destination
+      # deployed there, but the deploy lock is per-destination — so two
+      # destinations deploying at once take different locks and both mutate the
+      # same proxy. Anything touching the proxy takes this lock as well.
+      def with_server_lock
+        if KAMAL.holding_server_lock?
+          yield
+        else
+          acquire_server_lock
+
+          begin
+            yield
+          ensure
+            release_server_lock
+          end
+        end
+      end
+
+      # Always waits rather than failing: the guarded work is short, and
+      # aborting the second destination would defeat running them in parallel.
+      #
+      # Hosts are taken one at a time and rolled back on contention. Taking them
+      # in one `on(hosts)` sweep would leave the locks we did win in place, and
+      # every retry would then collide with itself and wait out the timeout.
+      def acquire_server_lock
+        ensure_run_directory
+
+        timeout = KAMAL.lock_wait_timeout
+        interval = KAMAL.lock_wait_interval
+        deadline = Time.now + timeout
+        details_shown = false
+
+        say "Acquiring the server lock...", :magenta
+
+        loop do
+          held = []
+
+          begin
+            server_lock_hosts.each do |host|
+              execute_lock_acquire(AUTOMATIC_DEPLOY_LOCK_MESSAGE, lock: KAMAL.server_lock, hosts: host)
+              held << host
+            end
+
+            break
+          rescue LockHeldError
+            release_server_lock_on(held)
+
+            unless details_shown
+              say "Server lock is held by:", :magenta
+              puts capture_lock_status(lock: KAMAL.server_lock, hosts: server_lock_hosts.first)
+              details_shown = true
+            end
+
+            remaining = (deadline - Time.now).to_i
+            if remaining <= 0
+              say "Timed out after #{timeout}s waiting for the server lock", :red
+              raise LockError, "Timed out waiting for server lock"
+            end
+
+            say "Waiting #{interval}s for the server lock (#{remaining}s remaining)...", :magenta
+            sleep [ interval, remaining ].min
+          end
+        end
+
+        KAMAL.holding_server_lock = true
+      end
+
+      def release_server_lock
+        say "Releasing the server lock...", :magenta
+        release_server_lock_on(server_lock_hosts)
+
+        KAMAL.holding_server_lock = false
+      end
+
+      # Only ever called with hosts this process actually locked, so a missing
+      # directory means someone already cleaned up, not that we may delete
+      # another deploy's lock.
+      def release_server_lock_on(hosts)
+        Array(hosts).each do |host|
+          execute_lock_release(lock: KAMAL.server_lock, hosts: host)
+        rescue LockMissingError
+          nil
+        end
+      end
+
+      def server_lock_hosts
+        KAMAL.proxy_hosts.presence || KAMAL.hosts
       end
 
       def with_lock
@@ -239,23 +332,23 @@ module Kamal::Cli
         raise LockError, "Deploy lock found. Run 'kamal lock help' for more information"
       end
 
-      def execute_lock_acquire(message)
-        on(KAMAL.primary_host) { execute *KAMAL.lock.acquire(message, KAMAL.config.version), verbosity: :debug }
+      def execute_lock_acquire(message, lock: KAMAL.lock, hosts: KAMAL.primary_host)
+        on(hosts) { execute *lock.acquire(message, KAMAL.config.version), verbosity: :debug }
       rescue SSHKit::Runner::ExecuteError => e
         raise LockHeldError if e.message =~ /cannot create directory/
         raise
       end
 
-      def execute_lock_release
-        on(KAMAL.primary_host) { execute *KAMAL.lock.release, verbosity: :debug }
+      def execute_lock_release(lock: KAMAL.lock, hosts: KAMAL.primary_host)
+        on(hosts) { execute *lock.release, verbosity: :debug }
       rescue SSHKit::Runner::ExecuteError => e
         raise LockMissingError if e.message =~ /No such file or directory/
         raise
       end
 
-      def capture_lock_status
+      def capture_lock_status(lock: KAMAL.lock, hosts: KAMAL.primary_host)
         status = nil
-        on(KAMAL.primary_host) { status = capture_with_debug(*KAMAL.lock.status) }
+        on(hosts) { status = capture_with_debug(*lock.status) }
         status
       rescue SSHKit::Runner::ExecuteError => e
         raise LockMissingError if e.message =~ /No such file or directory/
