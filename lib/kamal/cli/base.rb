@@ -180,6 +180,8 @@ module Kamal::Cli
 
         say "Acquiring the server lock...", :magenta
 
+        retried_after_release = false
+
         loop do
           held = []
 
@@ -194,9 +196,24 @@ module Kamal::Cli
             release_server_lock_on(held)
 
             unless details_shown
-              say "Server lock is held by:", :magenta
-              puts capture_lock_status(lock: KAMAL.server_lock, hosts: server_lock_hosts.first)
-              details_shown = true
+              # The holder can release between our failed mkdir and this read.
+              # That means the lock is free, not that anything went wrong, so
+              # it must never escape as LockMissingError and fail the deploy.
+              status = begin
+                capture_lock_status(lock: KAMAL.server_lock, hosts: server_lock_hosts.first)
+              rescue LockMissingError
+                nil
+              end
+
+              if status
+                say "Server lock is held by:", :magenta
+                puts status
+                details_shown = true
+              elsif !retried_after_release
+                # Gone already — take one immediate run at it before backing off.
+                retried_after_release = true
+                next
+              end
             end
 
             remaining = (deadline - Time.now).to_i
