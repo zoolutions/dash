@@ -16,6 +16,25 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  test "a server lock released while its status is read is retried, not fatal" do
+    # Deploy lock acquires, then the server lock is contended, then it frees up.
+    Kamal::Cli::Proxy.any_instance.stubs(:execute_lock_acquire)
+      .returns(true)
+      .then.raises(Kamal::Cli::Base::LockHeldError)
+      .then.returns(true)
+
+    # The holder released between our failed mkdir and this read.
+    Kamal::Cli::Proxy.any_instance.stubs(:capture_lock_status)
+      .raises(Kamal::Cli::Base::LockMissingError)
+
+    run_command("boot").tap do |output|
+      assert_match "Acquiring the server lock...", output
+      # Nothing to show, so it retried straight away instead of blowing up.
+      refute_match "Server lock is held by:", output
+      assert_match "Releasing the server lock...", output
+    end
+  end
+
   test "boot with run config" do
     run_command("boot", fixture: :with_proxy_run_config).tap do |output|
       assert_match "docker login", output
