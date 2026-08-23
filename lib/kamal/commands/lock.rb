@@ -3,6 +3,21 @@ require "time"
 require "base64"
 
 class Kamal::Commands::Lock < Kamal::Commands::Base
+  # The deploy lock is scoped to service+destination, so two destinations can
+  # deploy at once. Server-scoped resources — above all the single kamal-proxy
+  # container a host runs for every destination on it — need a lock that every
+  # destination contends for, hence :server.
+  SCOPES = %i[ destination server ].freeze
+
+  attr_reader :scope
+
+  def initialize(config, scope: :destination)
+    raise ArgumentError, "Unknown lock scope: #{scope}" unless SCOPES.include?(scope)
+
+    super(config)
+    @scope = scope
+  end
+
   def acquire(message, version)
     combine \
       [ :mkdir, lock_dir ],
@@ -45,9 +60,16 @@ class Kamal::Commands::Lock < Kamal::Commands::Base
     end
 
     def lock_dir
-      dir_name = [ "lock", config.service, config.destination ].compact.join("-")
+      File.join(config.run_directory, lock_dir_name)
+    end
 
-      File.join(config.run_directory, dir_name)
+    # A server-scoped lock deliberately carries neither service nor destination:
+    # every deploy reaching this host must collide on the same directory.
+    def lock_dir_name
+      case scope
+      when :server      then "lock-server"
+      when :destination then [ "lock", config.service, config.destination ].compact.join("-")
+      end
     end
 
     def lock_details_file

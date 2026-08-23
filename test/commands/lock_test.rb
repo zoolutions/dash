@@ -36,8 +36,41 @@ class CommandsLockTest < ActiveSupport::TestCase
       new_command.release.join(" ")
   end
 
+  test "server-scoped lock omits service and destination so every deploy collides" do
+    assert_equal \
+      "stat .kamal/lock-server > /dev/null && cat .kamal/lock-server/details | base64 -d",
+      new_command(scope: :server).status.join(" ")
+  end
+
+  test "server-scoped acquire and release target the shared directory" do
+    assert_match \
+      %r{mkdir \.kamal/lock-server && echo ".*" > \.kamal/lock-server/details}m,
+      new_command(scope: :server).acquire("Hello", "123").join(" ")
+
+    assert_match \
+      "rm .kamal/lock-server/details && rm -r .kamal/lock-server",
+      new_command(scope: :server).release.join(" ")
+  end
+
+  test "a second destination shares the server lock but not the deploy lock" do
+    other = Kamal::Configuration.new(@config, version: "123", destination: "staging")
+
+    assert_equal \
+      Kamal::Commands::Lock.new(other, scope: :server).acquire("Hi", "1").first(2),
+      new_command(scope: :server).acquire("Hi", "1").first(2)
+
+    refute_equal \
+      Kamal::Commands::Lock.new(other).acquire("Hi", "1").first(2),
+      new_command.acquire("Hi", "1").first(2)
+  end
+
+  test "unknown scope is rejected" do
+    assert_raises(ArgumentError) { new_command(scope: :galaxy) }
+  end
+
   private
-    def new_command
-      Kamal::Commands::Lock.new(Kamal::Configuration.new(@config, version: "123", destination: "production"))
+    def new_command(scope: :destination)
+      Kamal::Commands::Lock.new(
+        Kamal::Configuration.new(@config, version: "123", destination: "production"), scope: scope)
     end
 end

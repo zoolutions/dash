@@ -5,7 +5,7 @@ require "active_support/broadcast_logger"
 require "active_support/notifications"
 
 class Kamal::Commander
-  attr_accessor :verbosity, :holding_lock, :connected, :logging, :lock_wait, :lock_wait_timeout, :lock_wait_interval
+  attr_accessor :verbosity, :holding_lock, :holding_server_lock, :connected, :logging, :lock_wait, :lock_wait_timeout, :lock_wait_interval
   attr_reader :specific_roles, :specific_hosts
   delegate :hosts, :roles, :primary_host, :primary_role, :roles_on, :app_hosts, :proxy_hosts, :accessory_hosts, to: :specifics
 
@@ -16,6 +16,7 @@ class Kamal::Commander
   def reset
     self.verbosity = :info
     self.holding_lock = ENV["KAMAL_LOCK"] == "true"
+    self.holding_server_lock = ENV["KAMAL_SERVER_LOCK"] == "true"
     self.connected = false
     self.logging = false
     self.lock_wait = false
@@ -109,6 +110,12 @@ class Kamal::Commander
     @commands[:lock] ||= Kamal::Commands::Lock.new(config)
   end
 
+  # Guards the kamal-proxy container, which a host runs once for every
+  # destination deployed onto it. Every destination contends for this one.
+  def server_lock
+    @commands[:server_lock] ||= Kamal::Commands::Lock.new(config, scope: :server)
+  end
+
   def proxy(host)
     Kamal::Commands::Proxy.new(config, host: host)
   end
@@ -172,6 +179,10 @@ class Kamal::Commander
 
   def log(line)
     output_logger << "#{line}\n" if logging
+  end
+
+  def holding_server_lock?
+    self.holding_server_lock
   end
 
   def holding_lock?

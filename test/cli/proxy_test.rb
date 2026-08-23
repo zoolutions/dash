@@ -9,6 +9,13 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  test "boot takes the server lock so concurrent destinations serialise on the shared proxy" do
+    run_command("boot").tap do |output|
+      assert_match "Acquiring the server lock...", output
+      assert_match "Releasing the server lock...", output
+    end
+  end
+
   test "boot with run config" do
     run_command("boot", fixture: :with_proxy_run_config).tap do |output|
       assert_match "docker login", output
