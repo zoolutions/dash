@@ -7,3 +7,9 @@ git "https://github.com/rails/rails.git" do
 end
 
 gemspec path: "../"
+
+group :development do
+  gem "debug"
+  gem "minitest", "< 6"
+  gem "mocha"
+end
