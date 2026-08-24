@@ -1,0 +1,21 @@
+Gemfile
+  s_7707b2ebb4d99f::t_7f0cbbb47c7e2d 6-12
+gemfiles/rails_edge.gemfile
+  s_7707b2ebb4d99f::t_a14a10adb58bf6 10-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "a5758ed31afe846fe1b830b72f0b10b4befc7708",
+  "prompts": {},
+  "sessions": {
+    "s_7707b2ebb4d99f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7da0d1d7-8a5e-4535-becc-5d372ca86d14",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
