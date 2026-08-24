@@ -27,7 +27,12 @@ permissions:
 
 jobs:
   deploy:
-    uses: zoolutions/docs-kit/.github/workflows/deploy.yml@main
+    # Pinned to a docs-kit main commit (2026-08-24) — this repo's zizmor gate
+    # hash-pins every action ref. Bump the SHA to pick up fleet deploy changes.
+    # secrets: inherit is deliberate and stays: DEPLOY_HOST/DEPLOY_DOMAIN are
+    # `docs`-environment secrets that only resolve inside the called workflow's
+    # `environment: docs` job — explicit named passing cannot see them.
+    uses: zoolutions/docs-kit/.github/workflows/deploy.yml@7d0ef07c87c3ed1fab6e972e4aad8dd7b0eacdce # zizmor: ignore[secrets-inherit]
     with:
       image: zoolutions/dash
       service: dash

@@ -28,6 +28,13 @@ defaults:
   run:
     working-directory: docs
 
+# Bundler 4 defaults to frozen mode in CI, which rejects the docs bundle's
+# path gem (`gem "dash", path: ".."`) because its gemspec is re-evaluated per
+# checkout. Unfreeze — the lockfile still pins every other gem (the docs
+# Dockerfile makes the same call for the same reason).
+env:
+  BUNDLE_FROZEN: "false"
+
 jobs:
   docs:
     runs-on: ubuntu-latest
