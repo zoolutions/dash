@@ -1,0 +1,209 @@
+lib/kamal/cli/doctor/host_checks.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 44,99,130,133,137
+README.md
+  s_7707b2ebb4d99f::t_e33d3f4842286d 1,3,5,7,9-29,33
+.claude/commands/github-review-comments.md
+  s_7707b2ebb4d99f::t_bb5861113d48a7 10,37,47,121,177,187
+  s_7707b2ebb4d99f::t_05c61a429cc344 117
+  s_7707b2ebb4d99f::t_3dec065da607ef 118
+  s_7707b2ebb4d99f::t_93bfdf8d4b6252 100,189
+  s_7707b2ebb4d99f::t_2d9697e39246f2 265
+test/commands/loadbalancer_test.rb
+  s_7707b2ebb4d99f::t_1d37179b54b616 20,27,34,108,440,457
+.claude/commands/github-review-pr.md
+  s_7707b2ebb4d99f::t_522941c5c39425 213
+  s_7707b2ebb4d99f::t_bb5861113d48a7 80
+  s_7707b2ebb4d99f::t_93bfdf8d4b6252 85
+  s_7707b2ebb4d99f::t_3dec065da607ef 58
+  s_7707b2ebb4d99f::t_05c61a429cc344 56,83
+  s_7707b2ebb4d99f::t_1713d474738709 178
+test/fixtures/kamal_proxy_flags.yml
+  s_7707b2ebb4d99f::t_b224be37845a4a 5
+.claude/commands/lfg.md
+  s_7707b2ebb4d99f::t_3978e22d338313 5
+  s_7707b2ebb4d99f::t_3dec065da607ef 82
+  s_7707b2ebb4d99f::t_1713d474738709 96,217
+  s_7707b2ebb4d99f::t_6b99aa91ddb7f9 118,311
+  s_7707b2ebb4d99f::t_bb5861113d48a7 10,14,17-18,20,251,280,312,323
+.claude/rules/coding-style.md
+  s_7707b2ebb4d99f::t_30b6e228a20efe 134
+  s_7707b2ebb4d99f::t_e3f802081509f2 91,93,119
+lib/kamal/configuration/docs/accessory.yml
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 9-10,43,86,160,163
+test/proxy_flag_coverage_test.rb
+  s_7707b2ebb4d99f::t_08dc65296c6597 24
+  s_7707b2ebb4d99f::t_46071e6429e225 38,60
+test/integration/docker/deployer/setup.sh
+  s_7707b2ebb4d99f::t_1d37179b54b616 35
+  s_7707b2ebb4d99f::t_191b2dd0ce46c7 13-14,17
+lib/kamal/configuration/docs/proxy.yml
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 74,76,84,99,101,107,113,684,686,693-694,893,1043
+  s_7707b2ebb4d99f::t_e3324c955dd118 80,158,261,453,504,512,795,1038
+  s_7707b2ebb4d99f::t_1d37179b54b616 835
+  s_7707b2ebb4d99f::t_45384d387ed3bf 837
+test/configuration/proxy/acme_test.rb
+  s_7707b2ebb4d99f::t_1d37179b54b616 77
+Rakefile
+  s_7707b2ebb4d99f::t_ecf3a0b2b26c3d 1-154
+lib/kamal/configuration/docs/role.yml
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 18
+test/commands/proxy_test.rb
+  s_7707b2ebb4d99f::t_1d37179b54b616 18,26,122,171,185,192,199,212,219,226,233,239,259,265,326,340,410,419,433
+  s_7707b2ebb4d99f::t_08dc65296c6597 394
+lib/kamal/configuration/docs/servers.yml
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 14,22
+lib/kamal/configuration/docs/configuration.yml
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 8,47,53,59,179,185,191,197,203,209,215,221,227
+  s_7707b2ebb4d99f::t_e3324c955dd118 174
+lib/kamal/secrets/adapters/enpass.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 7,10
+lib/kamal/cli/templates/secrets
+  s_7707b2ebb4d99f::t_e3324c955dd118 16,20-22
+lib/kamal/cli/base.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 320,349
+lib/kamal/cli/proxy/drift.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 16
+lib/kamal/configuration/proxy/boot.rb
+  s_7707b2ebb4d99f::t_306a64f78bc375 37,44-45
+lib/kamal/commands/proxy/cert_transfer.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 2
+.claude/commands/security.md
+  s_7707b2ebb4d99f::t_bb5861113d48a7 146
+bin/sync-proxy-flags
+  s_7707b2ebb4d99f::t_46071e6429e225 69
+lib/kamal/cli/proxy.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 36,55,117,319,542,563,685
+test/configuration/proxy/cache_test.rb
+  s_7707b2ebb4d99f::t_08dc65296c6597 104
+.claude/commands/finish-prs.md
+  s_7707b2ebb4d99f::t_2d9697e39246f2 78
+  s_7707b2ebb4d99f::t_bb5861113d48a7 10,22,39,47,73,136,151
+  s_7707b2ebb4d99f::t_05c61a429cc344 91
+.claude/rules/performance.md
+  s_7707b2ebb4d99f::t_2334bb2bc30b51 17,51,57-58
+lib/kamal/cli/server.rb
+  s_7707b2ebb4d99f::t_240f96e14684a5 37
+.claude/rules/upstream-sync.md
+  s_7707b2ebb4d99f::t_dbfe6c82aabd8b 1-28
+.claude/commands/review-pr.md
+  s_7707b2ebb4d99f::t_bb5861113d48a7 4,14
+  s_7707b2ebb4d99f::t_3978e22d338313 57
+  s_7707b2ebb4d99f::t_05c61a429cc344 25,27-28,30,32,87,101,108,120
+  s_7707b2ebb4d99f::t_c2d45968404d93 26
+.claude/commands/github-review-failures.md
+  s_7707b2ebb4d99f::t_93bfdf8d4b6252 192
+  s_7707b2ebb4d99f::t_522941c5c39425 161
+  s_7707b2ebb4d99f::t_bb5861113d48a7 12
+test/configuration/proxy/tls_test.rb
+  s_7707b2ebb4d99f::t_08dc65296c6597 52
+test/cli/main_test.rb
+  s_7707b2ebb4d99f::t_002fb3adb581a3 667
+  s_7707b2ebb4d99f::t_45384d387ed3bf 664-666,681
+lib/kamal/configuration/proxy.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 290
+lib/kamal.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 15
+lib/kamal/configuration/proxy/run.rb
+  s_7707b2ebb4d99f::t_1d37179b54b616 2,98
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 40,204
+lib/kamal/cli/app.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 197
+.claude/rules/testing.md
+  s_7707b2ebb4d99f::t_2334bb2bc30b51 31,93,115
+  s_7707b2ebb4d99f::t_8ef6e0aa690797 75,79,82,92,96
+ROADMAP.md
+  s_7707b2ebb4d99f::t_b56261f9434a16 3
+test/integration/integration_test.rb
+  s_7707b2ebb4d99f::t_f7bd1bab691947 102
+.claude/commands/architect.md
+  s_7707b2ebb4d99f::t_bb5861113d48a7 89
+  s_7707b2ebb4d99f::t_30b6e228a20efe 14,19,104
+CLAUDE.md
+  s_7707b2ebb4d99f::t_68a2575cbf0761 3,8-9,17-23,27-29,37-39,45,55,57,59-61,63,67-78,82-85,91,96-97,101,108-109,111-112
+.claude/commands/tdd.md
+  s_7707b2ebb4d99f::t_6b99aa91ddb7f9 31,180,192
+lib/kamal/configuration/role.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 82
+test/secrets/dotenv_inline_command_substitution_test.rb
+  s_7707b2ebb4d99f::t_08dc65296c6597 4-6,23
+  s_7707b2ebb4d99f::t_321b2d927afd00 10
+Gemfile
+  s_7707b2ebb4d99f::t_5f94b41397ca4b 4
+lib/kamal/configuration.rb
+  s_7707b2ebb4d99f::t_240f96e14684a5 454
+.claude/rules/striving-for-excellence.md
+  s_7707b2ebb4d99f::t_30b6e228a20efe 48
+.claude/rules/git-workflow.md
+  s_7707b2ebb4d99f::t_665fcc5ba73f34 3,9-10,12,45,48,50,68,75,77,79-80,82-84,88,91-92,94,96,101-104
+lib/kamal/cli/registry.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 33,44
+lib/kamal/cli/main.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 123
+  s_7707b2ebb4d99f::t_81ff2e528990ee 184
+  s_7707b2ebb4d99f::t_240f96e14684a5 154,268
+  s_7707b2ebb4d99f::t_8f6cc011ea3c16 211-212,214,216-217,219
+test/cli/proxy_test.rb
+  s_7707b2ebb4d99f::t_7a9bce0b44ee4f 574,609
+  s_7707b2ebb4d99f::t_08dc65296c6597 168,268,369,381,987,1059,1066,1141
+  s_7707b2ebb4d99f::t_1d37179b54b616 8,42-43,156,188,214-215,226,264,283,292,296,423,562,618-619,623-624,780,861
+test/cli/doctor_test.rb
+  s_7707b2ebb4d99f::t_45384d387ed3bf 25
+  s_7707b2ebb4d99f::t_08dc65296c6597 136
+lib/kamal/secrets/dotenv/inline_command_substitution.rb
+  s_7707b2ebb4d99f::t_c8564be2cb093d 32-34
+lib/kamal/configuration/docs/registry.yml
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 63
+gemfiles/rails_edge.gemfile
+  s_7707b2ebb4d99f::t_5f94b41397ca4b 9
+lib/kamal/cli/proxy/loadbalancer_claim.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 1,32,46
+.claude/commands/plan.md
+  s_7707b2ebb4d99f::t_bb5861113d48a7 2,14,28,96
+  s_7707b2ebb4d99f::t_6b99aa91ddb7f9 29,90
+lib/kamal/configuration/docs/alias.yml
+  s_7707b2ebb4d99f::t_e3324c955dd118 17
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 8
+lib/kamal/cli/templates/deploy.yml
+  s_7707b2ebb4d99f::t_679d2f7b738f33 52-53
+test/configuration/proxy_test.rb
+  s_7707b2ebb4d99f::t_08dc65296c6597 213,215
+test/eager_requires_test.rb
+  s_7707b2ebb4d99f::t_08dc65296c6597 8
+.claude/rules/agents.md
+  s_7707b2ebb4d99f::t_30b6e228a20efe 49
+  s_7707b2ebb4d99f::t_2334bb2bc30b51 18
+lib/kamal/cli/proxy/loadbalancer_reboot.rb
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 2
+Dockerfile
+  s_7707b2ebb4d99f::t_ec1c70f09ae304 6-7,10,12-13,26-27,37-38
+test/cli/registry_test.rb
+  s_7707b2ebb4d99f::t_08dc65296c6597 125,132
+lib/kamal/configuration/ssh.rb
+  s_7707b2ebb4d99f::t_240f96e14684a5 46
+dash.gemspec
+  s_7707b2ebb4d99f::t_636cb87a403245 7-8,11-17,19
+lib/kamal/configuration/docs/env.yml
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 37,39-40,65,67-68,90
+.github/workflows/release.yml
+  s_7707b2ebb4d99f::t_aa8bcc05541193 1-176
+lib/kamal/configuration/docs/boot.yml
+  s_7707b2ebb4d99f::t_82b2c3da582ed3 9
+.claude/commands/debug-flaky.md
+  s_7707b2ebb4d99f::t_bb5861113d48a7 14,41,105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "042c146d1fdda56b2287eeece1524ea5ca268c21",
+  "prompts": {},
+  "sessions": {
+    "s_7707b2ebb4d99f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7da0d1d7-8a5e-4535-becc-5d372ca86d14",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
