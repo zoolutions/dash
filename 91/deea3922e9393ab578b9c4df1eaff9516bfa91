@@ -1,0 +1,23 @@
+test/integration/main_test.rb
+  s_7707b2ebb4d99f::t_0ced395ce6028e 49
+test/integration/lock_test.rb
+  s_7707b2ebb4d99f::t_904c6f41b63443 11
+test/integration/app_test.rb
+  s_7707b2ebb4d99f::t_904c6f41b63443 15,54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "91deea3922e9393ab578b9c4df1eaff9516bfa91",
+  "prompts": {},
+  "sessions": {
+    "s_7707b2ebb4d99f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7da0d1d7-8a5e-4535-becc-5d372ca86d14",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
