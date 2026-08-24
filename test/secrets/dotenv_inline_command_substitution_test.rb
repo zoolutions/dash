@@ -1,7 +1,13 @@
 require "test_helper"
 
 class SecretsInlineCommandSubstitution < SecretAdapterTestCase
-  test "inlines kamal secrets commands" do
+  test "inlines dash secrets commands" do
+    Kamal::Cli::Main.expects(:start).with { |command| command == [ "secrets", "fetch", "...", "--inline" ] }.returns("results")
+    substituted = Kamal::Secrets::Dotenv::InlineCommandSubstitution.call("FOO=$(dash secrets fetch ...)", nil, overwrite: false)
+    assert_equal "FOO=results", substituted
+  end
+
+  test "inlines legacy kamal secrets commands" do
     Kamal::Cli::Main.expects(:start).with { |command| command == [ "secrets", "fetch", "...", "--inline" ] }.returns("results")
     substituted = Kamal::Secrets::Dotenv::InlineCommandSubstitution.call("FOO=$(kamal secrets fetch ...)", nil, overwrite: false)
     assert_equal "FOO=results", substituted
@@ -14,7 +20,7 @@ class SecretsInlineCommandSubstitution < SecretAdapterTestCase
   end
 
   test "handles escaped parentheses in command arguments" do
-    command_with_escaped_parens = 'kamal secrets extract KEY1 \{\"KEY1\":\"pass\)word\"\}'
+    command_with_escaped_parens = 'dash secrets extract KEY1 \{\"KEY1\":\"pass\)word\"\}'
     Kamal::Cli::Main.expects(:start).with { |cmd|
       cmd.first(3) == [ "secrets", "extract", "KEY1" ] &&
       cmd[3] == '{"KEY1":"pass)word"}'  # shellsplit should unescape

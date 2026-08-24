@@ -12,7 +12,7 @@ class AppTest < IntegrationTest
 
     kamal :app, :start
 
-    # kamal app start does not wait
+    # dash app start does not wait
     wait_for_app_to_be_up
 
     output = kamal :app, :boot, "--verbose", capture: true
@@ -51,7 +51,7 @@ class AppTest < IntegrationTest
     binary = "head -c 512 /dev/zero"
     expected_md5 = deployer_exec(%(sh -c "#{binary} | md5sum"), capture: true)[/\h{32}/]
     piped_md5 = deployer_exec(
-      %(sh -c "kamal app exec --reuse --raw --primary '#{binary}' | md5sum"),
+      %(sh -c "dash app exec --reuse --raw --primary '#{binary}' | md5sum"),
       capture: true
     )[/\h{32}/]
     assert_equal expected_md5, piped_md5

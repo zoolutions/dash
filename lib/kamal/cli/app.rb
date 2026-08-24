@@ -194,7 +194,7 @@ class Kamal::Cli::App < Kamal::Cli::Base
             puts_by_host host, "Stopping stale container for role #{role} with version #{version}", quiet: quiet
             execute *app.stop(version: version), raise_on_non_zero_exit: false
           else
-            puts_by_host host,  "Detected stale container for role #{role} with version #{version} (use `kamal app stale_containers --stop` to stop)", quiet: quiet
+            puts_by_host host,  "Detected stale container for role #{role} with version #{version} (use `dash app stale_containers --stop` to stop)", quiet: quiet
           end
         end
       end

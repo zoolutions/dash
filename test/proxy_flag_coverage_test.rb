@@ -21,7 +21,7 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
   # Flags that are not deploy.yml's business — a decision, not a backlog.
   NEVER_EXPOSED = {
     "deploy" => {
-      "force" => "CLI-level concern (kamal proxy deploy), not operator config",
+      "force" => "CLI-level concern (dash proxy deploy), not operator config",
       "tls-acme-cache-path" => "cut for 3.0 (#93 D4) - kamal-proxy's default already persists ACME assets in the kamal-proxy-config volume, so the knob only offered ways to break that",
       "scope-cookie-paths" => "cut for 3.0 (#93 D4) - niche cookie-path rewriting under path_prefix; re-expose post-3.0 if someone asks for it"
     },
@@ -35,7 +35,7 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
     }
   }.freeze
 
-  # Flags an R7 issue will expose (mhenrixon/kamal#13). This is a backlog, not a
+  # Flags an R7 issue will expose (zoolutions/dash#13). This is a backlog, not a
   # decision: when an issue lands, delete its entry here and add the key to
   # test/fixtures/deploy_with_every_proxy_option.yml. The flag then has to show up
   # in the generated command or this test fails — which is the point. The waiver
@@ -57,7 +57,7 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
 
   WAIVED = NEVER_EXPOSED.to_h { |subcommand, never|
     backlog = R7_BACKLOG.fetch(subcommand).flat_map { |issue, flags|
-      flags.map { |flag| [ flag, "R7 backlog — mhenrixon/kamal##{issue}" ] }
+      flags.map { |flag| [ flag, "R7 backlog — zoolutions/dash##{issue}" ] }
     }.to_h
 
     [ subcommand, never.merge(backlog) ]

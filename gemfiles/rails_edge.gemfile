@@ -6,4 +6,4 @@ git "https://github.com/rails/rails.git" do
   gem "activesupport"
 end
 
-gemspec name: "dash", path: "../"
+gemspec path: "../"

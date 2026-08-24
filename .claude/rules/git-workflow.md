@@ -1,18 +1,15 @@
 # Git Workflow Rules
 
-Fork-specific. See `CLAUDE.md` for architecture/tooling and `.claude/rules/upstream-sync.md` for the sync/release runbook — this file does not duplicate either.
+Post-clean-break (2026-08, zoolutions/dash#115): there is no upstream, no mirror branch, no fork tag grammar. See `.claude/rules/upstream-sync.md` for the historical note.
 
 ## Branch Model
 
 | Branch | Role | Rule |
 |---|---|---|
-| `main` | Mirror of `basecamp/kamal` | Fast-forward only — **NEVER** commit here |
-| `dash` | Integration + release branch | Fork identity + merged features; PRs target this |
-| `feat/*` | Feature branches | Root off `dash` (always), merge **forward** into `dash` |
+| `main` | The branch — default, protected, releases cut from here | Lands via PR; never force-push |
+| `feat/*`, `fix/*`, ... | Feature branches | Root off `main`, PR back into `main` |
 
-**ALWAYS** root a feature branch off `dash`, never off `main`. `dash` is where the fork's features, fixes and toolkit live, so a `dash`-rooted branch builds on the real codebase, gets the `.claude/` toolkit for free, and merges back without replaying fork identity. Upstreaming stays possible from a `dash`-rooted branch — see "Upstreaming a feature" in `.claude/rules/upstream-sync.md` — it just extracts the feature's own diff instead of relying on the branch point.
-
-**NEVER** rebase a published branch (`main`, `dash`, or a shared `feat/*`) — history is shared, merge forward instead.
+**NEVER** rebase a published branch — history is shared, merge forward instead.
 
 ## Commit Messages
 
@@ -45,12 +42,12 @@ Refs #123
 
 ## PR Workflow
 
-1. Branch off `dash`, never off `main`
+1. Branch off `main`
 2. Make focused, atomic commits
 3. Run the pre-commit checklist before every push
-4. Open the PR against `dash` (never `main`)
+4. Open the PR against `main` (`--repo zoolutions/dash`)
 5. Request review
-6. Merge `dash` → your feature branch whenever `dash` moves, then merge the branch back into `dash` — never rebase
+6. Merge `main` → your feature branch whenever `main` moves, then merge the branch back — never rebase
 
 ## PR and Issue Bodies
 
@@ -68,45 +65,42 @@ bundle exec rubocop --parallel        # Style
 bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'  # Unit tests (no Docker)
 ```
 
-Before pushing `dash` or opening a PR into it, run the full suite (needs Docker + the proxy image published at `MINIMUM_VERSION`):
+Before pushing `main`-bound work or opening a PR, run the full suite (needs Docker + the proxy image published at `MINIMUM_VERSION`):
 ```bash
 bin/test
 ```
 
 Two builder tests are known-failing on Apple Silicon only (host-arch dependent) — they pass in CI. Don't chase them locally.
 
-## Tags — Never Plain `v*`
+## Tags & Releases
 
-| What | Grammar | Example | Push |
+| What | Grammar | Example | How |
 |---|---|---|---|
-| Gem (this repo) | `dash-v<semver>` (own major from 3.0.0) | `dash-v3.0.0` | `git push origin tag dash-v3.0.0` |
-| Proxy image (kamal-proxy) | `v<upstream-base>.<n>` | `v0.9.2.1` | `git push origin tag v0.9.2.1` |
+| Gem (this repo) | `v<semver>` | `v3.2.0` | `rake release[3.2.0]` |
+| Proxy image (dash-proxy) | `v<base>.<n>` or plain `v<semver>` | `v1.0.0.6` | `script/release-dash` in ../kamal-proxy |
 
-- **NEVER** a bare `v<version>` tag — upstream owns that namespace on both repos
-- **NEVER** `-suffix` versions (e.g. `v0.9.2-dash.1`) — `Gem::Version` parses `-` as a prerelease, sorts it BELOW the base, and breaks `kamal proxy boot`'s version check
-- **NEVER** `git push --tags` — it would push fetched upstream tags into the fork's remote; push one tag at a time
+- **NEVER** `-suffix` versions (e.g. `v1.0.0-rc1`) — `Gem::Version` parses `-` as a prerelease, which sorts OLDER than the base and hard-fails `dash proxy boot`'s minimum-version check
+- **NEVER** `git push --tags` — push single tags; `rake release` handles the gem tag via `gh release create`
+- Historical `dash-v*` gem tags and the fork-era grammar are frozen history — don't create new ones
 
 ## Release Ordering — Hard Constraint
 
-**Proxy image before gem, always.** `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` must name a tag already published at `ghcr.io/zoolutions/kamal-proxy` before `bin/release-dash` runs — integration tests and `kamal proxy boot` pull it.
+**Proxy image before gem, always.** `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` must name a tag already published at `ghcr.io/zoolutions/dash-proxy` before the gem releases — integration tests and `dash proxy boot` pull it. `rake release` enforces this with a pullability gate.
 
 ```bash
-# 1. ../kamal-proxy, on dash
-script/release-dash v0.9.2.1
+# 1. ../kamal-proxy, on main (only when MINIMUM_VERSION moves or proxy features changed)
+script/release-dash v1.0.0.6
 
-# 2. this repo, on dash — confirm MINIMUM_VERSION matches, then:
+# 2. this repo, on main — confirm MINIMUM_VERSION matches, then:
 bin/test
-bin/release-dash 3.0.0
+rake release[3.2.0]     # bump + commit + push + GitHub release; CI trusted-publishes to RubyGems
 ```
-
-Full procedure, conflict playbook, and sync runbook: `.claude/rules/upstream-sync.md`.
 
 ## Rules
 
-- **NEVER** commit directly to `main`
-- **NEVER** root a feature branch off `main` — always off `dash`
-- **NEVER** force push to `main` or `dash`
-- **NEVER** edit `kamal.gemspec` or `bin/release` — upstream-owned, kept byte-identical so syncs never conflict
-- **ALWAYS** run rubocop + unit tests before pushing; run `bin/test` before merging into `dash`
+- **NEVER** push directly to `main` — everything lands via PR (admin bypass is for migrations, not routine)
+- **NEVER** force push to `main`
+- **NEVER** root a feature branch off anything but `main`
+- **ALWAYS** run rubocop + unit tests before pushing; run `bin/test` before merging into `main`
 - **ALWAYS** write meaningful commit messages — explain WHY
 - Keep commits small and focused, one logical change per commit

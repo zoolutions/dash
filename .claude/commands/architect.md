@@ -11,12 +11,12 @@ You are now in **Architect Mode** — coordinating development across dash's lay
 
 ## Why This Skill Exists
 
-Dash spans a Thor CLI layer cake in this repo, and a separate cmd -> rpc -> server layer cake in `../kamal-proxy`. Without coordination, developers touch `Cli` without `Configuration`, add a proxy flag with no gem-side plumbing, or release the gem before the proxy image exists (`bin/release-dash` will produce an unbootable `MINIMUM_VERSION`). See `CLAUDE.md` for the fork identity table and `.claude/rules/upstream-sync.md` for release ordering.
+Dash spans a Thor CLI layer cake in this repo, and a separate cmd -> rpc -> server layer cake in `../kamal-proxy`. Without coordination, developers touch `Cli` without `Configuration`, add a proxy flag with no gem-side plumbing, or release the gem before the proxy image exists (`rake release` gates on the published proxy image). See `CLAUDE.md` for the fork identity table and `.claude/rules/git-workflow.md` for release ordering.
 
 ## Dash Architecture Layers (this repo)
 
 ```
-Layer 5: bin/kamal, bin/dash       identical entry points -> Kamal::Cli::Main
+Layer 5: bin/dash                  entry point -> Kamal::Cli::Main
 Layer 4: Kamal::Cli::*             lib/kamal/cli/ (Thor commands: app, accessory, build, proxy, registry, secrets, server, main)
 Layer 3: Kamal::Commander          lib/kamal/commander.rb (KAMAL singleton, target/role resolution)
 Layer 2: Kamal::Commands::*        lib/kamal/commands/ (docker command builders: app, proxy, loadbalancer, builder, registry)
@@ -86,7 +86,7 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 | Shell out directly from `Cli` | Route through `Commands::*` builders |
 | Release gem before proxy image | Proxy image first — `MINIMUM_VERSION` must be pullable from ghcr.io |
 | Hardcode proxy version in tests | Interpolate `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` |
-| Commit to `main` | Feature branches root off `dash`, merge back into `dash` |
+| Commit to `main` | Feature branches root off `main`, merge back into `main` |
 | Skip tests | TDD — minitest + mocha first, at every layer touched |
 | Chase Apple-Silicon builder test failures as regressions | Known host-arch-dependent; pass in CI |
 
@@ -101,7 +101,7 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 - [ ] `bundle exec rubocop --parallel` passes
 - [ ] `bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'` passes (unit)
 - [ ] `bin/test` passes if the change is integration-relevant (needs Docker + published proxy image)
-- [ ] Release ordering respected if this ships a version bump: proxy image before `bin/release-dash`
+- [ ] Release ordering respected if this ships a version bump: proxy image before `rake release`
 
 ## Handoff
 

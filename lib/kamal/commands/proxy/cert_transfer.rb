@@ -1,5 +1,5 @@
 # Certificate store transfer, shared by the proxy and loadbalancer command
-# builders (kamal proxy export_certs / import_certs).
+# builders (dash proxy export_certs / import_certs).
 #
 # Archives leave through the apps-config bind mount — the one container path
 # that is also a host path — and arrive through stdin into a one-off container:

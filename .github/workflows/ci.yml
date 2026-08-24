@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - dash
+
   pull_request:
   workflow_dispatch:
 

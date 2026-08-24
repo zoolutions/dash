@@ -14,7 +14,7 @@ imply a delta you didn't capture.
 ## Gem (this repo): no hot-path bench harness — say so
 
 There is no `bench/` or `rake bench:*` here, and none should be invented for
-this PR. `dash` runs once per `kamal deploy`/`kamal app boot` invocation and is
+this PR. `dash` runs once per `dash deploy`/`dash app boot` invocation and is
 bounded by SSH round-trips and Docker daemon calls, not by Ruby CPU time —
 shaving milliseconds off command-string construction is not a task that pays
 for itself.
@@ -48,14 +48,14 @@ present — summary for cross-repo awareness:
 make bench   # go test -bench=. -benchmem -run=^# ./...
 ```
 
-Any PR touching those files in `kamal-proxy` needs a baseline-on-`dash`,
+Any PR touching those files in `kamal-proxy` needs a baseline-on-`main`,
 change, re-bench, both numbers reported — same rule as the gem, just with an
 actual harness to run.
 
 ## Always Do
 
-1. **Baseline first** on whichever repo you're in — `dash` HEAD for the gem,
-   `dash` HEAD for the proxy — before editing.
+1. **Baseline first** on whichever repo you're in — `main` HEAD for the gem,
+   `main` HEAD for the proxy — before editing.
 2. **Say which repo** a perf claim is about. "Faster" in the gem means fewer
    SSH round-trips or less config re-parsing; "faster" in the proxy means
    lower per-request latency or fewer allocations under `make bench`.

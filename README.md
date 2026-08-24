@@ -1,13 +1,33 @@
-# Kamal: Deploy web apps anywhere
+# dash: Deploy web apps anywhere
 
-From bare metal to cloud VMs, deploy web apps anywhere with zero downtime. Kamal uses [kamal-proxy](https://github.com/basecamp/kamal-proxy) to seamlessly switch requests between containers. Works seamlessly across multiple servers, using SSHKit to execute commands. Originally built for Rails apps, Kamal will work with any type of web app that can be containerized with Docker.
+From bare metal to cloud VMs, deploy web apps anywhere with zero downtime. dash uses [dash-proxy](https://github.com/zoolutions/dash-proxy) to seamlessly switch requests between containers, load-balance across multiple hosts, batch SAN certificates, and issue wildcard certs via DNS-01. Works across multiple servers, using SSHKit to execute commands. Originally built for Rails apps, dash works with any type of web app that can be containerized with Docker.
 
-➡️ See [kamal-deploy.org](https://kamal-deploy.org) for documentation on [installation](https://kamal-deploy.org/docs/installation), [configuration](https://kamal-deploy.org/docs/configuration), and [commands](https://kamal-deploy.org/docs/commands).
+dash began as a fork of [basecamp/kamal](https://github.com/basecamp/kamal) and made a clean break in 2026 — it ships the features upstream wouldn't merge (proxy load balancing, readiness gates, response caching, traffic shaping, and more) and moves at its own pace. Existing kamal deployments upgrade in place: the on-server artifacts (`.kamal/` directory, `kamal-proxy` container, `KAMAL_*` secrets) are unchanged.
 
-## Contributing to the documentation
+## Installation
 
-Please help us improve Kamal's documentation on [the basecamp/kamal-site repository](https://github.com/basecamp/kamal-site).
+```bash
+gem install dash
+dash init
+```
+
+Or in a Gemfile-managed app:
+
+```bash
+bundle add dash
+bundle binstubs dash
+bin/dash init
+```
+
+Configure your deployment in `config/deploy.yml`, then:
+
+```bash
+dash setup     # first deploy: bootstraps Docker, boots the proxy, deploys
+dash deploy    # every deploy after that
+```
+
+`dash docs` prints the full, always-current configuration reference. Upstream kamal's docs at [kamal-deploy.org](https://kamal-deploy.org) still cover the shared basics.
 
 ## License
 
-Kamal is released under the [MIT License](https://opensource.org/licenses/MIT).
+dash is released under the [MIT License](https://opensource.org/licenses/MIT), preserving the license of the kamal codebase it descends from.

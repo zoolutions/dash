@@ -122,14 +122,14 @@ class CliRegistryTest < CliTestCase
     error = assert_raises(RuntimeError) do
       run_command("login", fixture: :with_local_registry)
     end
-    assert_match /Cannot use login command with a local registry. Use `kamal registry setup` instead./, error.message
+    assert_match /Cannot use login command with a local registry. Use `dash registry setup` instead./, error.message
   end
 
   test "logout with local registry raises error" do
     error = assert_raises(RuntimeError) do
       run_command("logout", fixture: :with_local_registry)
     end
-    assert_match /Cannot use logout command with a local registry. Use `kamal registry remove` instead./, error.message
+    assert_match /Cannot use logout command with a local registry. Use `dash registry remove` instead./, error.message
   end
 
   private

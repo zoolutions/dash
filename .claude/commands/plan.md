@@ -1,5 +1,5 @@
 ---
-description: "Investigates the codebase, designs a solution, and produces a durable plan artifact — a GitHub issue on mhenrixon/kamal (or mhenrixon/kamal-proxy) or a plan markdown under docs/plans/. Read-only: never edits code. Use before handing work to an implementation session."
+description: "Investigates the codebase, designs a solution, and produces a durable plan artifact — a GitHub issue on zoolutions/dash (or zoolutions/dash-proxy) or a plan markdown under docs/plans/. Read-only: never edits code. Use before handing work to an implementation session."
 model: fable
 argument-hint: "issue <feature or problem> | md <feature or problem> | <feature or problem>"
 allowed-tools: Bash(gh issue create:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh search:*), Bash(gh label list:*), Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(date:*), Read, Grep, Glob, Write, Agent, AskUserQuestion
@@ -11,7 +11,7 @@ You are the planning specialist. This command runs on the most capable model del
 
 ## Which repo
 
-This command runs from whichever repo you're in — `mhenrixon/kamal` (the `dash` gem, Ruby) or `mhenrixon/kamal-proxy` (Go). Detect it from `git remote -v` / the working directory and target `gh issue create --repo` accordingly. Never assume; the two repos have different toolchains and both are in play for cross-repo work (see Release ordering below).
+This command runs from whichever repo you're in — `zoolutions/dash` (the `dash` gem, Ruby) or `zoolutions/dash-proxy` (Go). Detect it from `git remote -v` / the working directory and target `gh issue create --repo` accordingly. Never assume; the two repos have different toolchains and both are in play for cross-repo work (see Release ordering below).
 
 ## Output mode from $ARGUMENTS
 
@@ -25,8 +25,8 @@ This command runs from whichever repo you're in — `mhenrixon/kamal` (the `dash
 
 - **Read-only for source code.** Never edit `lib/`, `test/`, gemspecs, or workflow files. Never commit, never create branches. The only file you may `Write` is a new plan markdown under `docs/plans/`.
 - **Never reproduce secrets** (SSH keys, registry tokens, `KAMAL_REGISTRY_PASSWORD`, ACME credentials) in the plan, even redacted, if encountered while reading `deploy.yml` fixtures or config.
-- **Dedupe before creating an issue**: `gh issue list --repo mhenrixon/kamal --search "<keywords>"` (or `--repo mhenrixon/kamal-proxy`) — if an existing issue covers this, extend it in your summary instead of duplicating. Also check `ROADMAP.md` — the item may already be scoped there under an R1–R5 release bucket.
-- **Respect the fork boundary.** Never plan an edit to `kamal.gemspec`, `bin/release`, or other upstream-owned files (see `CLAUDE.md` → Critical Rules). Never plan a plain `v*` tag — fork tags are `dash-v<version>` (gem) or `v<upstream-base>.<n>` (proxy image).
+- **Dedupe before creating an issue**: `gh issue list --repo zoolutions/dash --search "<keywords>"` (or `--repo zoolutions/dash-proxy`) — if an existing issue covers this, extend it in your summary instead of duplicating. Also check `ROADMAP.md` — the item may already be scoped there under an R1–R5 release bucket.
+- **Respect the staged-rename boundary.** Never plan renames of frozen server artifacts (`.kamal/`, `kamal-proxy` container, `KAMAL_*` env, image title label) without a rolling-upgrade bridge (see `CLAUDE.md` → Staged rename). Gem tags are plain `vX.Y.Z` via `rake release`; proxy image tags `v<base>.<n>`; never `-suffix` tags.
 
 ## Phase 1 — Investigate
 
@@ -87,13 +87,13 @@ Use this structure for the issue body or markdown file. Every section is load-be
 - `bin/test` — full suite incl. integration, only if the change touches deploy/proxy behavior (needs Docker + published proxy image)
 
 ## Out of scope
-<Explicit boundaries — the adjacent things an eager executor must NOT do. Always include: no edits to kamal.gemspec/bin/release, no commits to main, no plain v* tags.>
+<Explicit boundaries — the adjacent things an eager executor must NOT do. Always include: no direct pushes to main, no manual version.rb bumps, no frozen-artifact renames.>
 
 ## Execution
 Hand this issue (or file path) to a fresh implementation session on the `sonnet` tier.
 ```
 
-For GitHub issues: create with `gh issue create --repo mhenrixon/kamal --title "..." --body-file <tmpfile>` (swap repo for `mhenrixon/kamal-proxy` as appropriate). Write the body to a temp file first; do not use inline heredoc with `gh issue create --body` (code fences get mangled by shell interpolation).
+For GitHub issues: create with `gh issue create --repo zoolutions/dash --title "..." --body-file <tmpfile>` (swap repo for `zoolutions/dash-proxy` as appropriate). Write the body to a temp file first; do not use inline heredoc with `gh issue create --body` (code fences get mangled by shell interpolation).
 
 For markdown files: Write to `docs/plans/YYYY-MM-DD-<slug>.md`. Leave it uncommitted — committing is the user's call.
 

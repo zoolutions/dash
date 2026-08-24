@@ -1,5 +1,5 @@
 # Replaces the loadbalancer container with one booted from the current
-# configuration. Shared by `kamal proxy reboot` and the drift-detected reboot
+# configuration. Shared by `dash proxy reboot` and the drift-detected reboot
 # on boot - the same sequence either way, so the two paths cannot diverge.
 #
 # Unlike the proxy hosts' port-holder handoff this is stop -> run: the

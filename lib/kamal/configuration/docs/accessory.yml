@@ -6,8 +6,8 @@
 # Accessories are managed separately from the main service — they are not updated
 # when you deploy, and they do not have zero-downtime deployments.
 #
-# Run `kamal accessory boot <accessory>` to boot an accessory.
-# See `kamal accessory --help` for more information.
+# Run `dash accessory boot <accessory>` to boot an accessory.
+# See `dash accessory --help` for more information.
 
 # Configuring accessories
 #
@@ -40,7 +40,7 @@ accessories:
     #   <<: *specific-registry
     # ```
     #
-    # See kamal docs registry for more information:
+    # See dash docs registry for more information:
     registry:
       ...
 
@@ -83,7 +83,7 @@ accessories:
 
     # Environment variables
     #
-    # See kamal docs env for more information:
+    # See dash docs env for more information:
     env:
       ...
 
@@ -157,10 +157,10 @@ accessories:
     #
     # You can run your accessory behind the Kamal proxy for hostname-based
     # routing and automatic SSL. The block accepts the same schema as the
-    # app-level `proxy:` (see `kamal docs proxy`), though root-only keys such as
+    # app-level `proxy:` (see `dash docs proxy`), though root-only keys such as
     # `loadbalancer` and `reboot_on_deploy` have no effect inside an accessory.
     # Declaring a proxy here makes the accessory's hosts proxy hosts:
-    # `kamal proxy boot` (and `kamal deploy`) will run kamal-proxy on them
+    # `dash proxy boot` (and `dash deploy`) will run kamal-proxy on them
     # automatically.
     #
     # Accessories are never load balanced. The loadbalancer fans the app's own

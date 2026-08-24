@@ -13,7 +13,7 @@ class Kamal::Cli::Proxy::Drift
 
   # A proxy container has drifted when it was started with a different config
   # digest than the one the current configuration produces. Containers booted
-  # by older kamal versions carry no digest label and count as drifted, so
+  # by older dash versions carry no digest label and count as drifted, so
   # they converge on the first deploy after upgrading.
   def drifted?
     return @drifted if defined?(@drifted)

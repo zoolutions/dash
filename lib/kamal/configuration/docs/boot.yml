@@ -6,7 +6,7 @@
 #
 # This is a whole-deploy setting: `limit` slices the combined host list of every role, so it cannot
 # hold one role back while another keeps booting. To pace a single role's hosts, set `boot` on that
-# role instead (see kamal docs role).
+# role instead (see dash docs role).
 
 boot:
 

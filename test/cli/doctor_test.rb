@@ -22,7 +22,7 @@ class CliDoctorTest < CliTestCase
       assert_match "OK 1.1.1.1: connected", output
       assert_match "OK 1.1.1.1: docker is installed and running", output
       assert_match "OK 1.1.1.1: logged in to Docker Hub", output
-      assert_match "kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} manifest is fetchable", output
+      assert_match "dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} manifest is fetchable", output
       assert_match "OK 1.1.1.1: not running (will be started on deploy)", output
       assert_match "OK 1.1.1.1: ports 80/443 free", output
       assert_match "OK app.example.com: resolves to 1.1.1.1", output
@@ -133,7 +133,7 @@ class CliDoctorTest < CliTestCase
 
     exception = assert_raises(Kamal::Cli::DoctorError) { run_command("doctor", fixture: "deploy_with_doctor_socket") }
     assert_includes exception.message, "no /var/run/docker.sock mount"
-    assert_includes exception.message, "kamal proxy reboot"
+    assert_includes exception.message, "dash proxy reboot"
   end
 
   # Without sleep nothing hangs yet, so a missing mount is drift, not breakage.

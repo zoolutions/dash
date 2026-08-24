@@ -5,7 +5,7 @@ class EagerRequiresTest < ActiveSupport::TestCase
   # `on(KAMAL.proxy_hosts)` — one SSHKit thread per host, all reaching for the
   # constant at once. If `digest` is only autoloaded on first reference, those
   # threads race the extension's class hierarchy and one loses with
-  # "Digest::Base cannot be directly inherited in Ruby", failing `kamal proxy boot`
+  # "Digest::Base cannot be directly inherited in Ruby", failing `dash proxy boot`
   # on a random host. Intermittent, so no ordinary test catches it.
   #
   # This has to run in a subprocess: the test suite pulls in `digest` through

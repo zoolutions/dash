@@ -5,7 +5,7 @@
 # For example, for a Rails app, you might open a console with:
 #
 # ```shell
-# kamal app exec -i --reuse "bin/rails console"
+# dash app exec -i --reuse "bin/rails console"
 # ```
 #
 # By defining an alias, like this:
@@ -14,7 +14,7 @@ aliases:
 # You can now open the console with:
 #
 # ```shell
-# kamal console
+# dash console
 # ```
 
 # Configuring aliases

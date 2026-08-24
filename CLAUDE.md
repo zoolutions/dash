@@ -1,12 +1,12 @@
 # dash
 
-mhenrixon's maintained fork of [kamal](https://github.com/basecamp/kamal) — deploy web apps anywhere, plus the features upstream won't merge (proxy load balancing). Published on rubygems.org as `dash`; the executable is still `kamal` (with `dash` as an alias) and the Ruby namespace is still `Kamal::`.
+**dash** (`zoolutions/dash`) — deploy web apps anywhere. Began as a fork of [basecamp/kamal](https://github.com/basecamp/kamal); made a clean break in 2026-08 (issue #115) and now moves independently — no upstream remote, no sync, no contributions back. Published on rubygems.org as `dash`; the executable is `dash`. The Ruby namespace is still `Kamal::` and on-server artifacts (`.kamal/`, `kamal-proxy` container, `KAMAL_*` env vars) keep their names until the staged renames ship (see Staged rename below).
 
 ## Tech Stack
 
 - **Ruby**: 3.2–4.0 (CI matrix), Thor CLI, SSHKit + net-ssh, Zeitwerk
-- **Gem**: `dash`, built from `dash.gemspec` (`kamal.gemspec` is upstream's — untouched)
-- **Proxy**: ghcr.io/zoolutions/kamal-proxy (fork of basecamp/kamal-proxy, sibling repo)
+- **Gem**: `dash`, built from `dash.gemspec`
+- **Proxy**: ghcr.io/zoolutions/dash-proxy (sibling repo `../kamal-proxy` → `zoolutions/dash-proxy`)
 - **Testing**: minitest + mocha; integration tests run real deploys in Docker
 - **Linting**: rubocop-rails-omakase
 
@@ -14,21 +14,19 @@ mhenrixon's maintained fork of [kamal](https://github.com/basecamp/kamal) — de
 
 ### Never Do
 
-1. **NO commits on `main`** — it is a fast-forward-only mirror of basecamp/kamal
-2. **NO edits to `kamal.gemspec` or `bin/release`** — upstream files kept pristine so syncs never conflict; the fork owns `dash.gemspec` and `bin/release-dash`
-3. **NO `v*` git tags** — upstream owns that namespace; fork gem tags are `dash-v<version>` (own semver major from 3.0.0)
-4. **NO `git push --tags`** — it would push fetched upstream tags to the fork; push single tags (`git push origin tag dash-v3.0.0`)
-5. **NO suffix proxy versions** like `v0.9.2-dash.1` — Gem::Version parses `-` as a prerelease, which sorts OLDER than the base and hard-fails `kamal proxy boot`
-6. **NO gem release before the proxy image exists** — the tag named by `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` must be pullable from ghcr.io first
-7. **NO rebasing published branches** — merge forward; history is shared
-8. **NO feature branches rooted off `main`** — always root off `dash`
+1. **NO pushing directly to `main`** — everything lands via PR (ruleset-enforced; admin bypass is for migrations, not routine)
+2. **NO upstream syncs** — the fork network is left; basecamp code arrives only by deliberate cherry-pick, never via an `upstream` remote
+3. **NO `-suffix` versions** like `v1.0.0-rc1` for the proxy — `Gem::Version` parses `-` as a prerelease, which sorts OLDER than the base and hard-fails `dash proxy boot`
+4. **NO gem release before the proxy image exists** — the tag named by `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` must be pullable from `ghcr.io/zoolutions/dash-proxy` first (`rake release` gates on this)
+5. **NO `git push --tags`** — single-tag pushes only; `rake release` creates the gem tag via `gh release create`
+6. **NO rebasing published branches** — merge forward; history is shared
+7. **NO renaming server artifacts yet** — `.kamal/`, the `kamal-proxy` container name, `KAMAL_*` env vars, the image title label, and the `Kamal::` namespace wait for the staged renames with a rolling-upgrade bridge
 
 ### Always Do
 
-1. **Branch features off `dash`** — always; merge `dash` forward into them, then merge them back into `dash`
-2. **Mirror `kamal.gemspec` dependency changes into `dash.gemspec`** after every sync (`diff kamal.gemspec dash.gemspec`)
-3. **Interpolate `MINIMUM_VERSION` in test expectations** — never hardcode proxy versions
-4. **Run unit tests + rubocop before pushing `dash`**
+1. **Branch features off `main`**, PR back into `main`
+2. **Interpolate `MINIMUM_VERSION` in test expectations** — never hardcode proxy versions
+3. **Run unit tests + rubocop before pushing**; `bin/test` before merging
 
 ## Commands
 
@@ -36,14 +34,15 @@ mhenrixon's maintained fork of [kamal](https://github.com/basecamp/kamal) — de
 bin/test                              # Full suite (integration needs Docker + published proxy image)
 bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'  # Unit tests only
 bundle exec rubocop --parallel        # Lint
-bin/release-dash 3.0.0                # Release the dash gem (proxy image must exist first)
-git fetch upstream --tags --prune     # Start of every sync
+rake release[3.2.0]                   # Release: version bump + tag v3.2.0 + GitHub release; CI trusted-publishes to RubyGems (Sigstore)
+rake verify                           # Build the gem and list its contents
+bin/sync-proxy-flags                  # Refresh the proxy flag manifest when MINIMUM_VERSION moves
 ```
 
 ## Architecture
 
 ```
-Layer 5: bin/kamal, bin/dash       (identical entry points -> Kamal::Cli::Main)
+Layer 5: bin/dash                  (entry point -> Kamal::Cli::Main)
 Layer 4: Kamal::Cli::*             lib/kamal/cli (Thor commands, hooks)
 Layer 3: Kamal::Commander          lib/kamal/commander.rb (KAMAL singleton, target resolution)
 Layer 2: Kamal::Commands::*        lib/kamal/commands (docker command builders)
@@ -53,69 +52,61 @@ Layer 0: SSHKit                    (remote execution)
 
 ## The mental model
 
-> `main` is basecamp's; `dash` is ours. A dash release is the `dash` branch plus a published proxy image whose tag equals `MINIMUM_VERSION`. Everything the fork changes fits in ~10 files — everything else must stay byte-identical to upstream.
+> `main` is the branch; a dash release is `main` plus a published dash-proxy image whose tag equals `MINIMUM_VERSION`. Proxy image first, gem second — always.
 
-## Fork identity (divergence from upstream)
+## Release flow
 
-| File | Change |
-|---|---|
-| `dash.gemspec`, `bin/dash`, `bin/release-dash` | fork-owned new files |
-| `Gemfile`, `gemfiles/rails_edge.gemfile` | `gemspec name: "dash"` (bare `gemspec` errors with two gemspecs) |
-| `lib/kamal/configuration/proxy/run.rb` | `MINIMUM_VERSION` = fork tag; default repository `ghcr.io/zoolutions/kamal-proxy` |
-| `lib/kamal/configuration/proxy/boot.rb` | `repository_name` = `ghcr.io/zoolutions` (legacy boot path) |
-| `lib/kamal/configuration/docs/proxy.yml` | documented default |
-| `test/**` | proxy image org + `#{MINIMUM_VERSION}` interpolation; integration `setup.sh` seeds the ghcr image |
-| `.github/workflows/*` | CI on `dash`; CLI image -> ghcr.io/zoolutions/dash |
+1. If the proxy changed or `MINIMUM_VERSION` must move: in `../kamal-proxy`, `script/release-dash v1.0.0.X` → CI publishes `ghcr.io/zoolutions/dash-proxy:v1.0.0.X` (multi-arch, must be PUBLIC); set `MINIMUM_VERSION` here and run `bin/sync-proxy-flags`.
+2. `bin/test` (full suite).
+3. `rake release[X.Y.Z]` — gates on the proxy image, bumps `lib/kamal/version.rb` + the `Gemfile.lock` pin, commits, pushes `main`, creates the `vX.Y.Z` GitHub release. The `release.yml` workflow then tests, builds, Sigstore-signs, and trusted-publishes to RubyGems (environment `rubygems`).
 
-Features (loadbalancing, …) live on their own branches and merge into `dash` — see `.claude/rules/upstream-sync.md`.
+Gem tags are plain `vX.Y.Z` (own semver, 3.x line). Historical `dash-v*` tags are frozen. Proxy tags stay `v<base>.<n>` (or plain semver).
 
 ## Proxy image contract
 
-- kamal reads the running proxy version FROM THE IMAGE TAG (`docker inspect kamal-proxy --format '{{.Config.Image}}'`) and compares it with `Gem::Version` (`Kamal::Utils.older_version?`).
-- Fork tags are four-segment `v<upstream-base>.<counter>` (e.g. `v0.9.2.1`): sorts above the base, below the next upstream release, never collides with upstream git tags.
-- The image must carry the label `org.opencontainers.image.title=kamal-proxy` — `kamal proxy remove` prunes by it.
+- dash reads the running proxy version FROM THE IMAGE TAG (`docker inspect kamal-proxy --format '{{.Config.Image}}'`) and compares it with `Gem::Version` (`Kamal::Utils.older_version?`). Only the tag is compared, so old `kamal-proxy`-image containers upgrade cleanly to `dash-proxy` images.
+- The image must carry the label `org.opencontainers.image.title=kamal-proxy` — `dash proxy remove` prunes by it (label rename waits for the bridge).
+- Defaults live in `lib/kamal/configuration/proxy/run.rb` (`MINIMUM_VERSION`, repository `ghcr.io/zoolutions/dash-proxy`) and `lib/kamal/configuration/proxy/boot.rb` (legacy boot path).
+- The old `ghcr.io/zoolutions/kamal-proxy` package stays published — gem versions < 3.2.0 pull it.
+
+## Staged rename (issue #115 stages 2–3)
+
+| Stage | Scope | Status |
+|---|---|---|
+| 1 | CLI executable + user-facing text + docs (`dash` only) | DONE (3.2.0) |
+| 2 | Ruby namespace `Kamal::` → `Dash::`, `lib/kamal` → `lib/dash` | follow-up issue |
+| 3 | Server artifacts: `.kamal/` → `.dash/`, `KAMAL_*` → `DASH_*`, container + label names — with a rolling-upgrade bridge | follow-up issue |
 
 ## Testing
 
-- Unit: everything under `test/` except `test/integration` — no Docker needed. Two builder tests fail on Apple Silicon (host-arch dependent; they pass in CI and on pristine main).
-- Integration: real deploys against Docker-in-Docker VMs; pulls `ghcr.io/zoolutions/kamal-proxy:$MINIMUM_VERSION` — the tag must be published or the suite fails.
-- CI: rubocop + actionlint/zizmor + Ruby 3.2–4.0 matrix, on `main` and `dash` pushes.
+- Unit: everything under `test/` except `test/integration` — no Docker needed. Two builder tests fail on Apple Silicon (host-arch dependent; they pass in CI).
+- Integration: real deploys against Docker-in-Docker VMs; pulls `ghcr.io/zoolutions/dash-proxy:$MINIMUM_VERSION` — the tag must be published or the suite fails.
+- CI: rubocop + actionlint/zizmor + Ruby 3.2–4.0 matrix on `main`.
+- Multi-host fixtures with a >1-host primary role need `loadbalancer: false` under `proxy:` — the loadbalancer auto-activates and the dind harness can't support it.
 
 ## Slash Commands
 
 | Command | Purpose |
 |---------|---------|
-| `/lfg` | Full autonomous workflow: branch off `dash` → understand → plan → TDD → verify → PR into `dash` |
+| `/lfg` | Full autonomous workflow: branch off `main` → understand → plan → TDD → verify → PR into `main` |
 | `/plan` | Read-only planning → GitHub issue or `docs/plans/` markdown (execute with `/lfg`) |
 | `/architect` | Coordinate multi-layer work across the Thor CLI → Commander → Commands → Configuration cake |
 | `/tdd` | Enforce RED → GREEN → REFACTOR with Minitest + Mocha |
 | `/security` | Audit SSH command construction, secret handling, shell escaping, error-page paths |
-| `/perf` | Baseline vs `main` in a worktree — command construction only (kamal has no bench suite) |
-| `/review-pr` | Review a PR for pattern + fork-constraint compliance |
+| `/perf` | Baseline vs `main` in a worktree — command construction only (dash has no bench suite) |
+| `/review-pr` | Review a PR for pattern + project-constraint compliance |
 | `/github-review-pr` | Full PR pass: fix CI failures, then process review comments |
 | `/github-review-failures` | Diagnose + fix CI failures until green |
 | `/github-review-comments` | Process unresolved PR review comments |
-| `/finish-prs` | Drive a set of open dash PRs to merge-ready, one at a time |
+| `/finish-prs` | Drive a set of open PRs to merge-ready, one at a time |
 | `/debug-flaky` | Root-cause an intermittent test failure — evidence → repro → stress-proofed fix; never skip/retry |
 
 Commands pin a model tier via frontmatter aliases (`sonnet` implementation, `opus` orchestration/security/review, `fable` read-only planning) so they track the latest model per tier.
 
-### Toolkit availability on feature branches
-
-This toolkit (CLAUDE.md, `.claude/`) is committed on `dash`. Because feature branches always root off `dash`, they inherit it — slash commands load with no extra step.
-
-If you ever land on a `main`-rooted branch (an old branch, or a `pr/<feature>` branch created for upstreaming), the toolkit is absent. Materialize it without committing it:
-
-```bash
-git restore --source=dash --worktree -- .claude CLAUDE.md
-```
-
-The files appear as untracked — **never commit them on a `main`-rooted branch**; they would pollute the upstream diff. `git clean` them before opening an upstream PR.
-
 ## More Documentation
 
-- `ROADMAP.md` — evidence-linked improvement roadmap (releases R1-R5, cross-repo sequencing)
-- `.claude/rules/` — coding-style, git-workflow, testing, agents, performance, striving-for-excellence, upstream-sync
+- `ROADMAP.md` — evidence-linked improvement roadmap
+- `.claude/rules/` — coding-style, git-workflow, testing, agents, performance, striving-for-excellence, upstream-sync (historical)
 - `.claude/commands/` — the slash commands above
-- Proxy fork: `../kamal-proxy/CLAUDE.md` — cross-repo release ordering
-- Upstream docs: https://kamal-deploy.org
+- Proxy repo: `../kamal-proxy/CLAUDE.md` — cross-repo release ordering
+- Upstream kamal docs (shared basics): https://kamal-deploy.org

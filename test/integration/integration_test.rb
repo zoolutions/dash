@@ -99,7 +99,7 @@ class IntegrationTest < ActiveSupport::TestCase
     end
 
     def kamal(*commands, **options)
-      deployer_exec(:kamal, *commands, **options)
+      deployer_exec(:dash, *commands, **options)
     end
 
     def assert_app_is_down

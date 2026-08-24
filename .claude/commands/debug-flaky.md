@@ -11,7 +11,7 @@ You are root-causing an intermittent test failure. The deliverable is the **mech
 
 ## Phase 0: Parse the input
 
-- **Actions run URL/ID** (`https://github.com/mhenrixon/kamal/actions/runs/<RUN_ID>` or a bare run id) → start at Phase 1.
+- **Actions run URL/ID** (`https://github.com/zoolutions/dash/actions/runs/<RUN_ID>` or a bare run id) → start at Phase 1.
 - **PR number** → `gh pr checks <N>` to find the failed run, then Phase 1.
 - **Test path** (a locally observed flake) → skip to Phase 2 with what the user told you.
 
@@ -38,7 +38,7 @@ From the failing job's full log (`--log` if `--log-failed` is too thin), extract
 
 1. Read `docs/flaky-tests.md` if it exists — if the test (or its pattern) has an entry, start from the recorded recipe.
 2. `git log --oneline --grep="flak" --grep="orphan" --grep="race" -i -20` — this repo (and upstream) has a history of flake-hardening commits (SSHKit eviction-thread kills, storage-driver switches, compose retry logic). The mechanism you're chasing may have precedent.
-3. `gh issue list --repo mhenrixon/kamal --label flaky-test --state all --search "<test filename>"` — check for open/closed history.
+3. `gh issue list --repo zoolutions/dash --label flaky-test --state all --search "<test filename>"` — check for open/closed history.
 4. If a matching open issue exists, work under it; otherwise you'll create one in Phase 8 only if the fix doesn't ship immediately.
 
 ## Phase 3: Is it actually flaky? (do this BEFORE any flake taxonomy)
@@ -102,7 +102,7 @@ Hard rules: no `skip`, no retry-wrapping the assertion, no `sleep`, no assertion
 ## Phase 8: Record
 
 1. Append a dated entry to `docs/flaky-tests.md` (create it if missing): test, signature class, root cause (the one sentence), fix, reproduction recipe. Prune entries whose tests no longer exist.
-2. Issues: if the fix ships now, reference and close any open `flaky-test` issue in the PR (`Closes #N`). If the flake can't be fixed now, create one: `gh issue create --repo mhenrixon/kamal --label flaky-test` with the evidence and recipe (create the label first if it doesn't exist).
+2. Issues: if the fix ships now, reference and close any open `flaky-test` issue in the PR (`Closes #N`). If the flake can't be fixed now, create one: `gh issue create --repo zoolutions/dash --label flaky-test` with the evidence and recipe (create the label first if it doesn't exist).
 3. If the investigation exposed something systemic (CI dind config, shared test helpers, upstream-sync interaction), file it as its own issue — don't bury it in the memory file.
 
 Now begin with Phase 0 for: $ARGUMENTS

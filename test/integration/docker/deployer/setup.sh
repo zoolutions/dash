@@ -10,11 +10,11 @@ set -e
 # error printed to stderr here is an error nobody sees.
 exec 2>&1
 
-install_kamal() {
-  cd /kamal && gem build kamal.gemspec -o /tmp/kamal.gem && gem install /tmp/kamal.gem
+install_dash() {
+  cd /kamal && gem build dash.gemspec -o /tmp/dash.gem && gem install /tmp/dash.gem
 }
 
-install_kamal
+install_dash
 
 # Seed the private registry with the proxy image (pulled directly from ghcr.io,
 # which bypasses the hub_cache mirror) so the proxy.run.registry option stays
@@ -32,7 +32,7 @@ if [ -z "$minimum_version" ]; then
   exit 1
 fi
 
-proxy_image="ghcr.io/zoolutions/kamal-proxy:${minimum_version}"
+proxy_image="ghcr.io/zoolutions/dash-proxy:${minimum_version}"
 
 docker pull "$proxy_image"
 docker tag "$proxy_image" "registry:4443/${proxy_image}"

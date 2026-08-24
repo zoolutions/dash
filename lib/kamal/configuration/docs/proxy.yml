@@ -71,17 +71,17 @@ proxy:
   # for multi-host primary roles.
   loadbalancer: lb.example.com
 
-  # Sharing one loadbalancer between several kamal apps
+  # Sharing one loadbalancer between several dash apps
   #
-  # More than one kamal app may point `loadbalancer:` at the same host. Each app
+  # More than one dash app may point `loadbalancer:` at the same host. Each app
   # registers its own service on the shared kamal-proxy and keeps its own
   # deploy.yml; the load balancer multiplexes them by hostname.
   #
-  # The rules kamal enforces for that topology:
+  # The rules dash enforces for that topology:
   #
   # * Service state survives a reboot. kamal-proxy persists its services in the
   #   `kamal-loadbalancer-config` volume (or `kamal-proxy-config` when the
-  #   loadbalancer shares a proxy host), and `kamal proxy reboot` only replaces
+  #   loadbalancer shares a proxy host), and `dash proxy reboot` only replaces
   #   the container. Rebooting from app A does not drop app B's routes — the
   #   surviving service list is printed after the restart.
   #
@@ -96,21 +96,21 @@ proxy:
   #   same container, so the first app to boot records its run configuration in
   #   `.kamal/loadbalancer/run_config`. Another app booting with a different
   #   `proxy/run` fails; the same app changing its own gets the usual drift
-  #   warning and applies it on `kamal proxy reboot`.
+  #   warning and applies it on `dash proxy reboot`.
   #
-  # * `kamal proxy remove` refuses while other apps are installed on the
+  # * `dash proxy remove` refuses while other apps are installed on the
   #   loadbalancer host, exactly as it does for a proxy host. Use `--force` to
   #   override, which removes the shared loadbalancer for every app on it.
 
   # Automatic proxy reboot on deploy
   #
-  # When `kamal deploy` detects that the running kamal-proxy container was
+  # When `dash deploy` detects that the running kamal-proxy container was
   # started with a different image, version or run options than the current
   # configuration, it reboots the proxy automatically — one host at a time —
   # before booting the app.
   #
   # Set to false to opt out. Kamal will then print a warning when drift is
-  # detected and leave the proxy untouched until you run `kamal proxy reboot`.
+  # detected and leave the proxy untouched until you run `dash proxy reboot`.
   #
   # Root-level `proxy` setting only; ignored inside role-specific proxy blocks.
   #
@@ -155,7 +155,7 @@ proxy:
   # in an incoming handshake. A path is resolved against a healthy app target; an
   # absolute http(s) URL is called directly. Answer 2xx to approve. On-demand TLS
   # replaces the static hostname list, so it cannot be combined with
-  # `host`/`hosts`, with `certificate_pem`, or with `ssl_domains` — kamal rejects
+  # `host`/`hosts`, with `certificate_pem`, or with `ssl_domains` — dash rejects
   # those at config time, because kamal-proxy would reject the deploy and there
   # is no sensible winner to pick.
   #
@@ -258,7 +258,7 @@ proxy:
   # whitespace trimmed. A value may contain colons — a CSP naming a scheme or a
   # port survives intact.
   #
-  # Two things kamal rejects rather than letting them fail late: a value with a
+  # Two things dash rejects rather than letting them fail late: a value with a
   # newline or carriage return in it (that is response splitting, and shell
   # escaping would silently turn it into a literal backslash-n), and a *request*
   # rule naming `Host` — Go carries the host outside the header map, so the rule
@@ -450,7 +450,7 @@ proxy:
   # `header` names the header carrying the original client IP (`CF-Connecting-IP`
   # behind Cloudflare, `True-Client-IP` behind some others); kamal-proxy reads it
   # instead of `X-Forwarded-For`. It is only honoured when `trusted_proxies` is
-  # set, because otherwise it is just something the client wrote — kamal rejects
+  # set, because otherwise it is just something the client wrote — dash rejects
   # that combination rather than appearing to honour it.
   #
   # Addresses and ranges are plain IPv4/IPv6 or CIDR. Write IPv4 as IPv4, not as
@@ -501,7 +501,7 @@ proxy:
   #
   # Refuse requests whose full User-Agent matches one of these RE2 patterns,
   # checked after the IP rules. A missing User-Agent only matches an explicit
-  # '^$' pattern. Patterns are matched by kamal-proxy (Go RE2), so kamal checks
+  # '^$' pattern. Patterns are matched by kamal-proxy (Go RE2), so dash checks
   # only their shape, not their syntax.
   deny_user_agents:
     - 'BadBot/.*'
@@ -509,7 +509,7 @@ proxy:
   # ### Notes
   # - The health check path is served without an address check and without a rate
   #   limit, so it stays reachable during a deploy. That means it cannot be `/` —
-  #   kamal rejects `healthcheck: path: /` while either feature is on, because it
+  #   dash rejects `healthcheck: path: /` while either feature is on, because it
   #   would leave the whole service open. The default `/up` is fine.
   # - When a loadbalancer is configured, all of this moves to the loadbalancer:
   #   the per-host proxies see the loadbalancer as their peer, so an allow list
@@ -681,17 +681,17 @@ proxy:
   #
   # ### Administering it
   #
-  # `kamal proxy cache stats` reports what the cache is holding (add `--count`
+  # `dash proxy cache stats` reports what the cache is holding (add `--count`
   # to measure entries and bytes per service, `--json` for the raw report),
-  # and `kamal proxy cache purge` drops this app's cached responses
+  # and `dash proxy cache purge` drops this app's cached responses
   # (`--path-prefix /assets` to narrow it). Both run on the layer that owns
   # the cache - the loadbalancer when load balancing, else each proxy host.
   #
   # ### When it is not caching
   #
   # A cache that quietly stores nothing is the usual first surprise. Start with
-  # `kamal proxy cache stats`; kamal-proxy also explains every refusal — check
-  # `kamal proxy logs` for the reason, and the `cache_refusals_total` metric
+  # `dash proxy cache stats`; kamal-proxy also explains every refusal — check
+  # `dash proxy logs` for the reason, and the `cache_refusals_total` metric
   # (by `reason`) if you run with `metrics_port`.
   # The common reasons are a missing `Cache-Control: public, max-age=...` on the
   # app's response, a `Set-Cookie` header, a body over `max_body`, and
@@ -792,7 +792,7 @@ proxy:
   #
   # Stopping and starting containers means talking to the runtime, so the proxy
   # must have been booted with `run/docker_socket` set. That is a boot-time
-  # prerequisite for a deploy-time setting, so kamal checks it while reading this
+  # prerequisite for a deploy-time setting, so dash checks it while reading this
   # file rather than letting the first request hang.
   #
   # Setting `run/docker_socket` also mounts that socket into the proxy container
@@ -832,9 +832,9 @@ proxy:
                                    # `repository` to a host-less path (e.g.
                                    # myfork/kamal-proxy) - the default repository
                                    # below already embeds its ghcr.io host
-    repository: ghcr.io/zoolutions/kamal-proxy # Container repository for the
+    repository: ghcr.io/zoolutions/dash-proxy # Container repository for the
                                    # kamal-proxy image (this is the default)
-    version: v1.0.0.5              # Version tag of the kamal-proxy image to use.
+    version: v1.0.0.6              # Version tag of the kamal-proxy image to use.
                                    # Defaults to the minimum version this gem
                                    # requires - only pin it to roll forward early,
                                    # never below the default
@@ -890,7 +890,7 @@ proxy:
     # zone, and `docker run --env` would leave it in process listings and audit
     # logs. Adding or renaming one changes the proxy's config digest, so the next
     # deploy reboots the proxy to pick it up; rotating a value does not, so run
-    # `kamal proxy reboot` yourself after a rotation.
+    # `dash proxy reboot` yourself after a rotation.
     acme:
       email: admin@example.com
       dns_provider:
@@ -1035,12 +1035,12 @@ proxy:
     # `rediss://` URL that every proxy pointed at it shares, so one fetch warms
     # the whole fleet.
     #
-    # The URL never appears on the proxy's command line: kamal delivers it as
+    # The URL never appears on the proxy's command line: dash delivers it as
     # `CACHE_STORE` in a 0600 env file on the host (alongside any ACME
     # credentials), so a password in the URL stays out of process listings and
     # kamal's audit log. The trade-off, same as the ACME credentials: changing
     # only the URL's *value* does not move the drift digest — run
-    # `kamal proxy reboot` after rotating it.
+    # `dash proxy reboot` after rotating it.
     #
     # `store_timeout` only matters with a shared store, in seconds: how long
     # the store may take to answer before the request goes to the app instead —

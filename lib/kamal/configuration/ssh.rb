@@ -43,7 +43,7 @@ class Kamal::Configuration::Ssh
       if secrets.key?(k)
         secrets[k]
       else
-        warn "Inline key_data usage is deprecated and will be removed in Kamal 3. Please store your key_data in a secret."
+        warn "Inline key_data usage is deprecated and will be removed in a future dash release. Please store your key_data in a secret."
         k
       end
     end

@@ -210,9 +210,9 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     end
   end
 
-  # The docs YAML doubles as the validation schema and as `kamal docs proxy` output.
+  # The docs YAML doubles as the validation schema and as `dash docs proxy` output.
   # Guard the documented run defaults against drifting from the code's actual
-  # defaults (a stale `version:` below MINIMUM_VERSION breaks `kamal proxy boot`
+  # defaults (a stale `version:` below MINIMUM_VERSION breaks `dash proxy boot`
   # for anyone who copies the example).
   test "docs example run version matches the pinned minimum version" do
     assert_equal Kamal::Configuration::Proxy::Run::MINIMUM_VERSION, proxy_docs_example.dig("run", "version")

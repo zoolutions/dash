@@ -11,7 +11,7 @@ servers:
 
 # Tagging servers
 #
-# Servers can be tagged, with the tags used to add custom env variables (see kamal docs env).
+# Servers can be tagged, with the tags used to add custom env variables (see dash docs env).
 servers:
   - 172.0.0.1
   - 172.0.0.2: experiments
@@ -19,7 +19,7 @@ servers:
 
 # Roles
 #
-# For more complex deployments (e.g., if you are running job hosts), you can specify roles and configure each separately (see kamal docs role):
+# For more complex deployments (e.g., if you are running job hosts), you can specify roles and configure each separately (see dash docs role):
 servers:
   web:
     ...

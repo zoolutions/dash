@@ -53,9 +53,9 @@ Non-negotiables that apply to every fix in both phases below:
 | Rule | Why |
 |---|---|
 | `baseRefName` must be `dash`, never `main` | `main` is a fast-forward-only mirror of `basecamp/kamal` — no commits, ever |
-| Never edit `kamal.gemspec` or `bin/release` | upstream-owned, kept byte-identical so syncs don't conflict; the fork owns `dash.gemspec` / `bin/release-dash` |
+| Never rename frozen server artifacts (`.kamal/`, `kamal-proxy` container, `KAMAL_*`) | they wait for the staged rename bridge — see CLAUDE.md |
 | Never hardcode a proxy version in a test | interpolate `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` — see `.claude/rules/testing.md` |
-| Never `git push --tags` or a bare `v*` tag | fork tags are `dash-v<version>` (gem) / `v<base>.<n>` (proxy image); push one tag at a time |
+| Never `git push --tags` | gem tags are plain `vX.Y.Z` via `rake release`; proxy tags `v<base>.<n>`; push one tag at a time |
 | Never rebase `main`, `dash`, or a shared `feat/*` | merge forward only, history is shared |
 
 ---
@@ -77,12 +77,12 @@ gh pr view <PR_NUMBER> --json mergeable,mergeStateStatus,baseRefName
 ### Resolution procedure
 
 1. Check out the PR's branch (`gh pr checkout <PR_NUMBER>`) with a clean tree (`git status`). Stash nothing — if the tree is dirty, stop and ask the user.
-2. `git fetch origin <base>` then **`git merge origin/<base>`** — MERGE, never rebase. The branch is shared (it has a PR); a rebase would require a force-push, and `.claude/rules/git-workflow.md` forbids rebasing published branches. The base is normally `dash`, and `feat/*` branches root off `dash`, so merging it forward is routine — it does not compromise a later upstream PR, which extracts the feature's own diff (`git diff dash...feat/<feature>`, see `.claude/rules/upstream-sync.md`).
+2. `git fetch origin <base>` then **`git merge origin/<base>`** — MERGE, never rebase. The branch is shared (it has a PR); a rebase would require a force-push, and `.claude/rules/git-workflow.md` forbids rebasing published branches. The base is normally `dash`, and `feat/*` branches root off `main`, so merging it forward is routine — it does not compromise a later upstream PR, which extracts the feature's own diff (`git diff dash...feat/<feature>`, see `.claude/rules/upstream-sync.md`).
 3. `git rerere` is enabled on this repo — previously-seen conflicts auto-replay their recorded resolutions. Review what rerere staged before trusting it (`git diff --staged`); a replayed resolution from a different context can be wrong.
 4. Resolve every conflicted file **semantically** — read both sides and produce the version that preserves BOTH changes' intent. Never blanket `--ours`/`--theirs` a source file. The authoritative per-file table is the **Conflict playbook in `.claude/rules/upstream-sync.md`** — apply it with these PR-context readings:
-   - **`lib/kamal/version.rb`**: take the BASE's side (`dash`'s). The fork version is only ever written by `bin/release-dash` at release time on `dash` — a feature branch never bumps it on purpose; a bump on the branch is accidental.
+   - **`lib/kamal/version.rb`**: take the BASE's side (`main`'s). The version is only ever written by `rake release` at release time on `main` — a feature branch never bumps it on purpose; a bump on the branch is accidental.
    - **`Gemfile.lock`** (tracked at the repo root): take either side, then run `bundle install` and commit the settled result. Never hand-merge a lockfile. (CI deletes it before the test matrix, but the committed file must still be consistent.)
-   - **Upstream-owned files** (`kamal.gemspec`, `bin/release`): these must stay byte-identical to upstream — resolve to what `origin/main` (the upstream mirror) has (`git show origin/main:kamal.gemspec`); never hand-merge fork content into them. If a dependency change is involved, mirror it into `dash.gemspec` by hand and check with `diff kamal.gemspec dash.gemspec`.
+   - **`dash.gemspec`**: resolve dependency conflicts by keeping both sides' intent — it is the only gemspec since the 2026-08 clean break.
    - **`lib/kamal/configuration/proxy/run.rb`**: keep the `ghcr.io/zoolutions` repository; a `MINIMUM_VERSION` conflict is a release-ordering question (proxy image first, gem second) — resolve per `.claude/rules/upstream-sync.md` and flag it in the report.
    - **`test/cli/proxy_test.rb`, `test/commands/proxy_test.rb`**: keep the ghcr org and the `#{...MINIMUM_VERSION}` interpolation; adopt the other side's new assertions around them.
    - **`test/integration/docker/deployer/setup.sh`**: a shell script — there is no Ruby interpolation here. Keep the ghcr image and set its literal tag equal to `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` (per the Conflict playbook in `.claude/rules/upstream-sync.md`).
@@ -175,7 +175,7 @@ If failures persist that trace to this branch's changes, **do not proceed to Pha
 5. **Commit all fixes together** with a clear conventional-commit message; push.
 6. **Reply to every thread**:
    - Accepted fix → reply with the commit SHA.
-   - Rejected suggestion → reply with technical reasoning (cite the fork rule if one applies, e.g. "keeps `kamal.gemspec` byte-identical to upstream per `.claude/rules/git-workflow.md`").
+   - Rejected suggestion → reply with technical reasoning (cite the project rule if one applies, e.g. "the kamal-proxy container name is frozen until the staged rename bridge per CLAUDE.md").
    ```bash
    gh api graphql -f query='mutation($id:ID!,$body:String!){ addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$id, body:$body}) { comment { id } } }' -f id=<THREAD_ID> -f body="Fixed in <SHA>."
    ```
@@ -210,4 +210,4 @@ Before reporting, re-check mergeability once more (`gh pr view <PR> --json merge
 - **A new CI failure appearing during Phase B** (e.g. a comment fix breaks a test) means looping back to Phase A before continuing comment work. Likewise, **a new conflict appearing mid-pass** (the base moved) means looping back to Phase A0. These loop-backs are the only allowed reverse directions.
 - **If the PR merges cleanly, has no failures and no unresolved comments**, report "PR is clean" and stop.
 - **Base branch must be `dash`.** If `gh pr view` shows `baseRefName: main`, stop and flag it — that PR is misdirected and needs retargeting before any review work.
-- **Never let a comment fix touch `kamal.gemspec`, `bin/release`, or introduce a `v*`/hardcoded-proxy-version tag or literal** — these are the fork's hard constraints regardless of what the reviewer asked for; push back citing `.claude/rules/git-workflow.md` instead of complying.
+- **Never let a comment fix rename a frozen server artifact, introduce a `dash-v*`/suffix tag, or hardcode a proxy-version literal** — these are hard constraints regardless of what the reviewer asked for; push back citing `.claude/rules/git-workflow.md` instead of complying.

@@ -1,5 +1,5 @@
 class Kamal::Configuration::Proxy::Run
-  MINIMUM_VERSION = "v1.0.0.5"
+  MINIMUM_VERSION = "v1.0.0.6"
   DEFAULT_HTTP_PORT = 80
   DEFAULT_HTTPS_PORT = 443
   DEFAULT_LOG_MAX_SIZE = "10m"
@@ -37,7 +37,7 @@ class Kamal::Configuration::Proxy::Run
   # running. The values deliberately stay out — the digest is published as a
   # docker label, and hashing secret material into a world-readable label buys
   # an offline guessing target for nothing. Rotating a credential's value or
-  # the store URL still needs an explicit `kamal proxy reboot`.
+  # the store URL still needs an explicit `dash proxy reboot`.
   def config_digest
     self.class.digest(image, run_command, *docker_options_args, *secret_names)
   end
@@ -95,7 +95,7 @@ class Kamal::Configuration::Proxy::Run
   end
 
   def repository
-    run_config.fetch("repository", "ghcr.io/zoolutions/kamal-proxy")
+    run_config.fetch("repository", "ghcr.io/zoolutions/dash-proxy")
   end
 
   def image
@@ -201,7 +201,7 @@ class Kamal::Configuration::Proxy::Run
   # Where the proxy's secrets land on the host - the ACME DNS credentials and
   # the cache store URL, which may embed one. Under the proxy's own directory
   # rather than the app's env directory, because the container is host-scoped
-  # and shared by every app on the host - and so `kamal proxy remove` takes
+  # and shared by every app on the host - and so `dash proxy remove` takes
   # the secrets with it.
   def secrets_path
     File.join host_directory, SECRETS_FILENAME

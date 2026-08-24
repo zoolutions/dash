@@ -12,7 +12,7 @@ require "uri"
 # so the first reference happens in several SSHKit threads at once. Digest defines
 # SHA256 lazily — `Digest.const_missing(:SHA256)` runs `require "digest/sha2"`, and
 # that path is not mutex-guarded — so the threads race it and one loses with
-# "Digest::Base cannot be directly inherited in Ruby", failing `kamal proxy boot`
+# "Digest::Base cannot be directly inherited in Ruby", failing `dash proxy boot`
 # on a random host.
 #
 # Requiring "digest" alone does NOT fix this: it defines the module but leaves

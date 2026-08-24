@@ -34,7 +34,7 @@ class Kamal::Cli::Server < Kamal::Cli::Base
     end
   end
 
-  desc "bootstrap", "Set up Docker to run Kamal apps"
+  desc "bootstrap", "Set up Docker to run dash apps"
   def bootstrap
     modify(lock: true) do
       missing = []
