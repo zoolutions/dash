@@ -105,6 +105,7 @@ Commands pin a model tier via frontmatter aliases (`sonnet` implementation, `opu
 
 ## More Documentation
 
+- `docs/` — the documentation site: a self-contained docs-kit Rails app (own bundle, RSpec, CI job `docs-ci.yml`), deployed to https://dash.zoolutions.llc by `deploy-docs.yml` on each release. The Configuration pages are GENERATED from `lib/kamal/configuration/docs/*.yml` (parsed by `docs/app/models/config_doc.rb`); a new doc YAML fails `docs/spec/config_docs_spec.rb` until registered in `docs/app/models/doc.rb`.
 - `ROADMAP.md` — evidence-linked improvement roadmap
 - `.claude/rules/` — coding-style, git-workflow, testing, agents, performance, striving-for-excellence, upstream-sync (historical)
 - `.claude/commands/` — the slash commands above

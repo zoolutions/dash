@@ -1,2 +1,9 @@
 inherit_gem:
   rubocop-rails-omakase: rubocop.yml
+
+# The docs site (docs/) is a self-contained nested Rails app with its own
+# bundle, its own .rubocop.yml (docs-kit cops + rubocop-rspec), and its own CI
+# job — exclude it here so gem-level runs never lint it with the wrong config.
+AllCops:
+  Exclude:
+    - "docs/**/*"
