@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Generated Configuration page for lib/kamal/configuration/docs/builder.yml —
+# Generated Configuration page for lib/dash/configuration/docs/builder.yml —
 # content parsed by ConfigDoc, rendered by ConfigPage.
 class Views::Docs::Pages::Config::Builder < Views::Docs::Pages::ConfigPage
   config_doc "builder"

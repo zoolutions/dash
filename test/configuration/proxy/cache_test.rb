@@ -88,7 +88,7 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
 
   test "acme credentials and the cache store share one secrets env file" do
     with_test_secrets("secrets" => "CF_API_TOKEN=zone-rewriting-token") do
-      config = Kamal::Configuration.new(@deploy.merge(proxy: { "run" => {
+      config = Dash::Configuration.new(@deploy.merge(proxy: { "run" => {
         "acme" => { "email" => "admin@example.com", "credentials" => [ "CF_API_TOKEN" ] },
         "cache" => { "store" => "redis://cache.example.com:6379/0" }
       } }))
@@ -111,14 +111,14 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
   # Validation
 
   test "policy keys without enabled are a config error" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "cache" => { "max_ttl" => 300 } }
+    error = assert_raises(Dash::ConfigurationError) { configuration "cache" => { "max_ttl" => 300 } }
 
     assert_equal "proxy/cache: max_ttl has no effect without enabled: true - " \
       "kamal-proxy ignores the cache policy entirely when --cache is absent", error.message
   end
 
   test "enabled false with policy keys is the same error" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "cache" => { "enabled" => false, "vary_cookies" => [ "locale" ] }
     end
 
@@ -127,7 +127,7 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
   end
 
   test "an unsupported store fails at config time" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "run" => { "cache" => { "store" => "memcached://cache.example.com" } }
     end
 
@@ -142,7 +142,7 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
 
   private
     def configuration(proxy_config)
-      Kamal::Configuration.new @deploy.merge(proxy: proxy_config)
+      Dash::Configuration.new @deploy.merge(proxy: proxy_config)
     end
 
     def deploy_options(cache_config)
@@ -150,9 +150,9 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
     end
 
     def run_config(cache_config)
-      config = Kamal::Configuration.new(@deploy)
+      config = Dash::Configuration.new(@deploy)
       run = cache_config.present? ? { "cache" => cache_config } : {}
 
-      Kamal::Configuration::Proxy::Run.new(config, run_config: run)
+      Dash::Configuration::Proxy::Run.new(config, run_config: run)
     end
 end

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Generated Configuration page for lib/kamal/configuration/docs/registry.yml —
+# Generated Configuration page for lib/dash/configuration/docs/registry.yml —
 # content parsed by ConfigDoc, rendered by ConfigPage.
 class Views::Docs::Pages::Config::Registry < Views::Docs::Pages::ConfigPage
   config_doc "registry"

@@ -19,11 +19,11 @@ class CliModifyTest < CliTestCase
   end
 
   test "modify enables logging" do
-    assert_not KAMAL.logging
+    assert_not DASH.logging
 
     run_modify { }
 
-    assert KAMAL.logging
+    assert DASH.logging
   end
 
   test "nested modify only instruments outermost" do
@@ -41,7 +41,7 @@ class CliModifyTest < CliTestCase
   test "modify depth resets after completion" do
     run_modify { }
 
-    assert_equal 0, KAMAL.instance_variable_get(:@modify_depth)
+    assert_equal 0, DASH.instance_variable_get(:@modify_depth)
   end
 
   test "modify depth resets after error" do
@@ -49,12 +49,12 @@ class CliModifyTest < CliTestCase
       run_modify { raise "boom" }
     end
 
-    assert_equal 0, KAMAL.instance_variable_get(:@modify_depth)
+    assert_equal 0, DASH.instance_variable_get(:@modify_depth)
   end
 
   test "output logger close called only on outermost modify" do
     close_count = 0
-    KAMAL.send(:output_logger).define_singleton_method(:close) { close_count += 1 }
+    DASH.send(:output_logger).define_singleton_method(:close) { close_count += 1 }
 
     run_modify do |base|
       base.send(:modify, lock: false) { }
@@ -65,7 +65,7 @@ class CliModifyTest < CliTestCase
 
   private
     def run_modify(&block)
-      base = Kamal::Cli::Main.new([], { "config_file" => "test/fixtures/deploy_simple.yml", "skip_hooks" => true })
+      base = Dash::Cli::Main.new([], { "config_file" => "test/fixtures/deploy_simple.yml", "skip_hooks" => true })
       base.stubs(:command).returns("deploy")
       base.stubs(:subcommand).returns(nil)
       base.send(:modify) do

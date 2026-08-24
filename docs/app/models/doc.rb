@@ -13,7 +13,7 @@
 # DocsKit::Registry for the shared all/from_slug/grouped/nav_items API.
 #
 # The Configuration group is GENERATED: one page per commented-YAML doc in
-# ../lib/kamal/configuration/docs (the same files `dash docs` prints), rendered
+# ../lib/dash/configuration/docs (the same files `dash docs` prints), rendered
 # through ConfigDoc + Views::Docs::Pages::ConfigPage. The drift spec
 # (spec/config_docs_spec.rb) fails when a doc YAML has no page here or a page
 # here has no YAML.
@@ -36,7 +36,7 @@ class Doc
   page "Response caching",         group: "Proxy", slug: "caching", view: "Caching"
   page "Traffic shaping",          group: "Proxy", slug: "traffic-shaping", view: "TrafficShaping"
 
-  # Configuration — generated from lib/kamal/configuration/docs/*.yml
+  # Configuration — generated from lib/dash/configuration/docs/*.yml
   page "deploy.yml",       group: "Configuration", slug: "configuration", view: "Config::Configuration"
   page "Servers",          group: "Configuration", slug: "servers", view: "Config::Servers"
   page "Roles",            group: "Configuration", slug: "role", view: "Config::Role"

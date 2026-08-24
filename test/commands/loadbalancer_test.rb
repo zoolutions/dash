@@ -17,21 +17,21 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
   # apps-config mount, and the explicit run command.
   test "run" do
     assert_equal \
-      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "run honors proxy.run.publish false and options" do
     @config[:proxy]["run"] = { "publish" => false, "options" => { "label" => [ "traefik.enable=true" ] } }
     assert_equal \
-      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m --label \"traefik.enable=true\" ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m --label \"traefik.enable=true\" ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "run honors custom publish ports" do
     @config[:proxy]["run"] = { "http_port" => 8080, "https_port" => 8443 }
     assert_equal \
-      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 8080:80 --publish 8443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 8080:80 --publish 8443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
@@ -105,7 +105,7 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
 
   test "start_or_run" do
     assert_equal \
-      "docker container start load-balancer || docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker container start load-balancer || docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
       new_command.start_or_run.join(" ")
   end
 
@@ -168,9 +168,9 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
       command.join(" ")
 
     # Printed output redacts the credential, here as on the per-app deploy.
-    assert_includes Kamal::Utils.redacted(command), "--basic-auth=[REDACTED]"
+    assert_includes Dash::Utils.redacted(command), "--basic-auth=[REDACTED]"
 
-    config = Kamal::Configuration.new(@config, version: "123")
+    config = Dash::Configuration.new(@config, version: "123")
     assert_not_includes config.proxy.deploy_options.keys, :"basic-auth"
   end
 
@@ -183,7 +183,7 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
   end
 
   # One LB-topology test per re-homed option group — the layering contract in
-  # Kamal::Configuration::Proxy::DEPLOY_OPTION_DISPOSITIONS made these edge
+  # Dash::Configuration::Proxy::DEPLOY_OPTION_DISPOSITIONS made these edge
   # concerns, so the load balancer re-adds what the per-app deploy strips.
   test "deploy re-adds session affinity, canonical host, redirects and cache at the load balancer" do
     @config[:proxy]["session_affinity"] = { "enabled" => true, "cookie" => "_kamal_affinity" }
@@ -437,7 +437,7 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     assert_equal \
       "docker run --rm --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy " \
       "--volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config " \
-      "ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} " \
+      "ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} " \
       "kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
       new_command.export_certs_offline.join(" ")
   end
@@ -454,7 +454,7 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
   test "import certs from a traefik acme.json" do
     assert_equal \
       "docker run --rm --interactive --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy " \
-      "ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} " \
+      "ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} " \
       "sh -c 'cat > /tmp/kamal-cert-import && kamal-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\"' " \
       "< .kamal/proxy/certs-import",
       new_command.import_certs(traefik_acme: true).join(" ")
@@ -467,20 +467,20 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
 
   private
     def new_command
-      Kamal::Commands::Loadbalancer.new(new_config, loadbalancer_config: new_loadbalancer_config)
+      Dash::Commands::Loadbalancer.new(new_config, loadbalancer_config: new_loadbalancer_config)
     end
 
     def new_config(destination: nil)
-      Kamal::Configuration.new(@config, destination: destination, version: "123")
+      Dash::Configuration.new(@config, destination: destination, version: "123")
     end
 
     def digest_label
-      "--label #{Kamal::Commands::Proxy::CONFIG_DIGEST_LABEL}=#{new_loadbalancer_config.run_config_digest}"
+      "--label #{Dash::Commands::Proxy::CONFIG_DIGEST_LABEL}=#{new_loadbalancer_config.run_config_digest}"
     end
 
     def new_loadbalancer_config(destination: nil)
       config = new_config(destination: destination)
-      Kamal::Configuration::Loadbalancer.new(
+      Dash::Configuration::Loadbalancer.new(
         config: config,
         proxy_config: config.proxy.proxy_config,
         secrets: config.secrets

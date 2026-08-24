@@ -50,7 +50,7 @@ class ConfigurationProxyDenyListTest < ActiveSupport::TestCase
   # rejects would match nothing at runtime while looking configured.
   test "an invalid deny_ips entry is rejected" do
     [ "not-an-ip", "203.0.113.0/24%eth0", "::ffff:203.0.113.7" ].each do |entry|
-      assert_raises(Kamal::ConfigurationError, "expected #{entry.inspect} to be rejected") do
+      assert_raises(Dash::ConfigurationError, "expected #{entry.inspect} to be rejected") do
         configuration "deny_ips" => [ entry ]
       end
     end
@@ -59,7 +59,7 @@ class ConfigurationProxyDenyListTest < ActiveSupport::TestCase
   # The pattern is deliberately not compiled - Go's RE2 and Ruby's Onigmo
   # disagree at the edges, same as redirects/rewrites. Only the shape is checked.
   test "a blank deny_user_agents entry is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "deny_user_agents" => [ "" ]
     end
 
@@ -67,13 +67,13 @@ class ConfigurationProxyDenyListTest < ActiveSupport::TestCase
   end
 
   test "deny_user_agents must be an array of strings" do
-    assert_raises(Kamal::ConfigurationError) { configuration "deny_user_agents" => [ 42 ] }
+    assert_raises(Dash::ConfigurationError) { configuration "deny_user_agents" => [ 42 ] }
   end
 
   # kamal-proxy serves the health check path without any of the address checks,
   # so a root health path would leave the whole service open to denied clients.
   test "a root healthcheck path is rejected alongside deny_ips" do
-    assert_raises(Kamal::ConfigurationError) do
+    assert_raises(Dash::ConfigurationError) do
       configuration "deny_ips" => [ "203.0.113.0/24" ], "healthcheck" => { "path" => "/" }
     end
   end
@@ -82,7 +82,7 @@ class ConfigurationProxyDenyListTest < ActiveSupport::TestCase
   # behind a fronting proxy without trusted_proxies they check the wrong one.
   test "deny_ips behind a proxy without trusted_proxies warns" do
     out = stderred do
-      Kamal::Configuration.new @deploy.merge(
+      Dash::Configuration.new @deploy.merge(
         proxy: { "forward_headers" => true, "deny_ips" => [ "203.0.113.0/24" ] }
       )
     end
@@ -93,7 +93,7 @@ class ConfigurationProxyDenyListTest < ActiveSupport::TestCase
 
   test "no warning once trusted_proxies is declared" do
     out = stderred do
-      Kamal::Configuration.new @deploy.merge(
+      Dash::Configuration.new @deploy.merge(
         proxy: {
           "forward_headers" => true,
           "deny_ips" => [ "203.0.113.0/24" ],
@@ -108,7 +108,7 @@ class ConfigurationProxyDenyListTest < ActiveSupport::TestCase
   # A user-agent match never keys on the client address, so it needs no warning.
   test "deny_user_agents alone does not warn" do
     out = stderred do
-      Kamal::Configuration.new @deploy.merge(
+      Dash::Configuration.new @deploy.merge(
         proxy: { "forward_headers" => true, "deny_user_agents" => [ "BadBot/.*" ] }
       )
     end
@@ -118,7 +118,7 @@ class ConfigurationProxyDenyListTest < ActiveSupport::TestCase
 
   private
     def configuration(proxy_config)
-      Kamal::Configuration.new @deploy.merge(proxy: proxy_config)
+      Dash::Configuration.new @deploy.merge(proxy: proxy_config)
     end
 
     def deploy_options(proxy_config)

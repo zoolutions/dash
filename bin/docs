@@ -31,7 +31,7 @@ DOCS = {
   "ssh" => "SSH",
   "sshkit" => "SSHKit"
 }
-DOCS_PATH = "lib/kamal/configuration/docs"
+DOCS_PATH = "lib/dash/configuration/docs"
 
 class DocWriter
   attr_reader :from_file, :to_file, :key, :heading, :body, :output, :in_yaml

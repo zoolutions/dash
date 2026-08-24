@@ -2,7 +2,7 @@
 
 The ten `proxy:` keys most apps ever need. The full reference — six tiers,
 from these essentials down to the proxy container's own runtime — lives in
-[`lib/kamal/configuration/docs/proxy.yml`](../lib/kamal/configuration/docs/proxy.yml),
+[`lib/dash/configuration/docs/proxy.yml`](../lib/dash/configuration/docs/proxy.yml),
 which is also the validation schema: any key that file doesn't show is a key
 kamal rejects.
 

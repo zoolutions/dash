@@ -1,7 +1,7 @@
 ---
 description: "Use when implementing any feature or fixing any bug -- enforces RED-GREEN-REFACTOR: write failing test first, implement minimum code to pass, then refactor."
 model: sonnet
-argument-hint: "[file-or-class, e.g. lib/kamal/configuration/proxy/run.rb]"
+argument-hint: "[file-or-class, e.g. lib/dash/configuration/proxy/run.rb]"
 allowed-tools: Read, Write, Edit, Bash(bundle exec ruby*), Bash(bundle exec rubocop*), Bash(bin/test*), Bash(git diff*), Bash(git status*)
 ---
 
@@ -22,13 +22,13 @@ REPEAT:   Next scenario
 
 ## When to Use
 
-- Implementing new Thor commands (`Kamal::Cli::*`) or `Kamal::Commands::*` builders
-- Adding Configuration objects or options under `lib/kamal/configuration/`
+- Implementing new Thor commands (`Dash::Cli::*`) or `Dash::Commands::*` builders
+- Adding Configuration objects or options under `lib/dash/configuration/`
 - Fixing bugs — write the test that reproduces the bug FIRST
-- Touching the loadbalancer auto-activation path (`lib/kamal/configuration/proxy/`)
+- Touching the loadbalancer auto-activation path (`lib/dash/configuration/proxy/`)
 - Refactoring anything in the layer cake (see `CLAUDE.md` Architecture)
 
-**NOT for**: `lib/kamal/version.rb` — only `rake release` writes it.
+**NOT for**: `lib/dash/version.rb` — only `rake release` writes it.
 
 ## Workflow
 
@@ -48,10 +48,10 @@ class ConfigurationProxyRunTest < ActiveSupport::TestCase
 
   test "run objects with identical config are equal" do
     deploy = base_deploy.deep_merge(proxy: { "run" => { "log_max_size" => "50m" } })
-    config = Kamal::Configuration.new(deploy)
+    config = Dash::Configuration.new(deploy)
 
-    run_a = Kamal::Configuration::Proxy::Run.new(config, run_config: { "log_max_size" => "50m" })
-    run_b = Kamal::Configuration::Proxy::Run.new(config, run_config: { "log_max_size" => "50m" })
+    run_a = Dash::Configuration::Proxy::Run.new(config, run_config: { "log_max_size" => "50m" })
+    run_b = Dash::Configuration::Proxy::Run.new(config, run_config: { "log_max_size" => "50m" })
 
     assert_equal run_a, run_b
   end
@@ -59,7 +59,7 @@ class ConfigurationProxyRunTest < ActiveSupport::TestCase
   test "raises when log_max_size is not a valid docker size" do
     deploy = base_deploy.deep_merge(proxy: { "run" => { "log_max_size" => "bogus" } })
 
-    assert_raises(Kamal::ConfigurationError) { Kamal::Configuration.new(deploy) }
+    assert_raises(Dash::ConfigurationError) { Dash::Configuration.new(deploy) }
   end
 
   private
@@ -91,7 +91,7 @@ bundle exec ruby -Itest test/configuration/proxy/run_test.rb
 
 ### Step 3: Implement Minimal Code (GREEN)
 
-Write the minimum code in the target class to make the test pass — e.g. add a guard clause in `Kamal::Configuration::Proxy::Run#log_max_size`, not a whole new abstraction.
+Write the minimum code in the target class to make the test pass — e.g. add a guard clause in `Dash::Configuration::Proxy::Run#log_max_size`, not a whole new abstraction.
 
 ### Step 4: Run Tests — Verify PASS
 
@@ -138,17 +138,17 @@ Two builder tests are known-failing on Apple Silicon only (host-arch dependent);
 | Code Type | Minimum Coverage |
 |-----------|------------------|
 | All code | 80% |
-| `Kamal::Configuration::*` (deploy.yml validation) | 100% |
-| `Kamal::Commands::*` (docker command builders) | 100% |
-| `Kamal::Cli::*` (Thor commands, hooks) | 100% |
-| Proxy defaults (`lib/kamal/configuration/proxy/`) | 100% |
+| `Dash::Configuration::*` (deploy.yml validation) | 100% |
+| `Dash::Commands::*` (docker command builders) | 100% |
+| `Dash::Cli::*` (Thor commands, hooks) | 100% |
+| Proxy defaults (`lib/dash/configuration/proxy/`) | 100% |
 
 ## Test Types to Include
 
 ### Unit Tests (Configuration, Commands, Utils)
 - Happy path scenarios
 - Edge cases (nil values, missing hosts, malformed `deploy.yml` fragments)
-- Error conditions (`Kamal::ConfigurationError`)
+- Error conditions (`Dash::ConfigurationError`)
 
 ### CLI Tests (`test/cli/*_test.rb`)
 - Thor command invocation and option parsing
@@ -167,7 +167,7 @@ Two builder tests are known-failing on Apple Silicon only (host-arch dependent);
 - Run tests and verify they FAIL before implementing
 - Write MINIMAL code to make tests pass
 - Refactor only after tests are green
-- Interpolate `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` in assertions — never hardcode a proxy tag (see `CLAUDE.md` Critical Rules #3)
+- Interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` in assertions — never hardcode a proxy tag (see `CLAUDE.md` Critical Rules #3)
 - Use `AnyClass.any_instance.stubs(:method)` for boundaries you don't own (network, threads, `sleep`) — mirror `test/otel_shipper_test.rb`
 
 **DON'T:**
@@ -176,7 +176,7 @@ Two builder tests are known-failing on Apple Silicon only (host-arch dependent);
 - Write too much code at once
 - Ignore failing tests
 - Test private/implementation details — test the public behavior of the Configuration/Command object
-- Skip testing error paths (`Kamal::ConfigurationError`, `SSHKit::Runner::ExecuteError`)
+- Skip testing error paths (`Dash::ConfigurationError`, `SSHKit::Runner::ExecuteError`)
 - Rename a frozen server artifact to make a test pass — fix the actual bug instead (see CLAUDE.md staged-rename table)
 
 ## Checklist

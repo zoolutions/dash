@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Generated Configuration page for lib/kamal/configuration/docs/sshkit.yml —
+# Generated Configuration page for lib/dash/configuration/docs/sshkit.yml —
 # content parsed by ConfigDoc, rendered by ConfigPage.
 class Views::Docs::Pages::Config::Sshkit < Views::Docs::Pages::ConfigPage
   config_doc "sshkit"

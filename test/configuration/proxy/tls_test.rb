@@ -40,7 +40,7 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
   end
 
   test "client_ca_pem is role-scoped like the server certificate" do
-    config = Kamal::Configuration.new @deploy.merge(
+    config = Dash::Configuration.new @deploy.merge(
       servers: { "web" => { "hosts" => [ "1.1.1.1" ] } },
       proxy: { "ssl" => { "client_ca_pem" => "CLIENT_CA_PEM" }, "host" => "example.com" }
     )
@@ -65,7 +65,7 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
     with_test_secrets("secrets" => "CLIENT_CA_PEM=") do
       proxy = configuration("ssl" => { "client_ca_pem" => "CLIENT_CA_PEM" }, "host" => "example.com").proxy
 
-      error = assert_raises(Kamal::ConfigurationError) { proxy.client_ca_pem_content }
+      error = assert_raises(Dash::ConfigurationError) { proxy.client_ca_pem_content }
       assert_equal "proxy/ssl: client_ca_pem secret 'CLIENT_CA_PEM' is empty", error.message
     end
   end
@@ -77,7 +77,7 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
   # kamal-proxy hard-rejects each of these combinations rather than picking a
   # winner, so the gem fails at config time with the same rules.
   test "on_demand_url cannot be combined with hosts" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "host" => "example.com", "ssl" => { "on_demand_url" => "/ask" }
     end
 
@@ -87,7 +87,7 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
 
   test "on_demand_url cannot be combined with a custom certificate" do
     with_test_secrets("secrets" => "CERT_PEM=certificate\nKEY_PEM=private_key") do
-      error = assert_raises(Kamal::ConfigurationError) do
+      error = assert_raises(Dash::ConfigurationError) do
         configuration "ssl" => { "certificate_pem" => "CERT_PEM", "private_key_pem" => "KEY_PEM", "on_demand_url" => "/ask" }
       end
 
@@ -96,7 +96,7 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
   end
 
   test "on_demand_url cannot be combined with ssl_domains" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "ssl_domains" => { "source" => "/domains" }, "ssl" => { "on_demand_url" => "/ask" }
     end
 
@@ -105,7 +105,7 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
   end
 
   test "on_demand_url must be a path or an http(s) URL" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "ssl" => { "on_demand_url" => "app.example.com/ask" }
     end
 
@@ -129,13 +129,13 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
 
     assert_not config.proxy.deploy_options.key?(:"tls-client-ca-path")
 
-    loadbalancer = Kamal::Configuration::Loadbalancer.new config: config, proxy_config: proxy_config, secrets: config.secrets
+    loadbalancer = Dash::Configuration::Loadbalancer.new config: config, proxy_config: proxy_config, secrets: config.secrets
     assert_equal "/home/kamal-proxy/.apps-config/app/tls/client-ca.pem", loadbalancer.deploy_options[:"tls-client-ca-path"]
   end
 
   private
     def configuration(proxy_config)
-      Kamal::Configuration.new @deploy.merge(proxy: proxy_config)
+      Dash::Configuration.new @deploy.merge(proxy: proxy_config)
     end
 
     def proxy_options(proxy_config)

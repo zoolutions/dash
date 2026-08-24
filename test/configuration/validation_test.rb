@@ -102,7 +102,7 @@ class ConfigurationValidationTest < ActiveSupport::TestCase
   end
 
   test "local registry with remote builder requires ssh url" do
-    remote_arch = Kamal::Utils.docker_arch == "arm64" ? "amd64" : "arm64"
+    remote_arch = Dash::Utils.docker_arch == "arm64" ? "amd64" : "arm64"
 
     assert_error "Local registry with remote builder requires an SSH URL (e.g., ssh://user@host)",
       registry: { "server" => "localhost:5000" },
@@ -110,7 +110,7 @@ class ConfigurationValidationTest < ActiveSupport::TestCase
 
     # Should not raise error with SSH URL
     assert_nothing_raised do
-      Kamal::Configuration.new({
+      Dash::Configuration.new({
         service: "app",
         image: "app",
         registry: { "server" => "localhost:5000" },
@@ -130,8 +130,8 @@ class ConfigurationValidationTest < ActiveSupport::TestCase
         servers: [ "1.1.1.1" ]
       }
 
-      error = assert_raises Kamal::ConfigurationError do
-        Kamal::Configuration.new(valid_config.merge(invalid_config))
+      error = assert_raises Dash::ConfigurationError do
+        Dash::Configuration.new(valid_config.merge(invalid_config))
       end
 
       assert_equal message, error.message

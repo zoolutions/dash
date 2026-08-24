@@ -1,8 +1,8 @@
 require "test_helper"
 
 class EagerRequiresTest < ActiveSupport::TestCase
-  # Kamal::Configuration::Proxy::Run.digest calls Digest::SHA256 from inside
-  # `on(KAMAL.proxy_hosts)` — one SSHKit thread per host, all reaching for the
+  # Dash::Configuration::Proxy::Run.digest calls Digest::SHA256 from inside
+  # `on(DASH.proxy_hosts)` — one SSHKit thread per host, all reaching for the
   # constant at once. If `digest` is only autoloaded on first reference, those
   # threads race the extension's class hierarchy and one loses with
   # "Digest::Base cannot be directly inherited in Ruby", failing `dash proxy boot`
@@ -10,14 +10,14 @@ class EagerRequiresTest < ActiveSupport::TestCase
   #
   # This has to run in a subprocess: the test suite pulls in `digest` through
   # other paths (test/sshkit_patch_drift_test.rb requires it outright), so an
-  # in-process `defined?(Digest)` would pass whether or not lib/kamal.rb requires
+  # in-process `defined?(Digest)` would pass whether or not lib/dash.rb requires
   # it — exactly the false green this test exists to prevent.
   test "requiring kamal loads digest, so SSHKit threads cannot race its autoload" do
-    loaded = sh_ruby 'require "kamal"; print defined?(Digest::SHA256) ? "loaded" : "missing"'
+    loaded = sh_ruby 'require "dash"; print defined?(Digest::SHA256) ? "loaded" : "missing"'
 
     assert_equal "loaded", loaded,
-      "lib/kamal.rb no longer requires \"digest\". Kamal::Configuration::Proxy::Run.digest " \
-      "is called concurrently from Kamal::Cli::Proxy#boot, and a lazy autoload there fails " \
+      "lib/dash.rb no longer requires \"digest\". Dash::Configuration::Proxy::Run.digest " \
+      "is called concurrently from Dash::Cli::Proxy#boot, and a lazy autoload there fails " \
       "intermittently with \"Digest::Base cannot be directly inherited in Ruby\"."
   end
 

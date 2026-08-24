@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Parses the gem's commented-YAML configuration docs — the same files `dash docs`
-# prints (lib/kamal/configuration/docs/*.yml) — into renderable nodes, so the
+# prints (lib/dash/configuration/docs/*.yml) — into renderable nodes, so the
 # Configuration pages are generated from the single source of truth and can
 # never drift from what the CLI shows.
 #
@@ -21,7 +21,7 @@
 # page lead. Parsed once per file and memoized for the process's lifetime — the
 # YAMLs only change with a gem checkout, never at runtime.
 class ConfigDoc
-  DOCS_DIR = Rails.root.join("../lib/kamal/configuration/docs")
+  DOCS_DIR = Rails.root.join("../lib/dash/configuration/docs")
 
   DIVIDER      = /\A\s*#\s*=+\s*\z/
   COMMENT      = /\A\s*#/

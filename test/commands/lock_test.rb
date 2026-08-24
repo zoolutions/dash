@@ -21,7 +21,7 @@ class CommandsLockTest < ActiveSupport::TestCase
   end
 
   test "acquire encodes non-ASCII lock details for shell" do
-    Kamal::Git.stubs(:user_name).returns("Сергей Федоров")
+    Dash::Git.stubs(:user_name).returns("Сергей Федоров")
 
     command = new_command.acquire("Hello", "123").join(" ")
     encoded_details = command.match(/echo "(.*)" > \.kamal\/lock-app-production\/details/m)[1]
@@ -53,14 +53,14 @@ class CommandsLockTest < ActiveSupport::TestCase
   end
 
   test "a second destination shares the server lock but not the deploy lock" do
-    other = Kamal::Configuration.new(@config, version: "123", destination: "staging")
+    other = Dash::Configuration.new(@config, version: "123", destination: "staging")
 
     assert_equal \
-      Kamal::Commands::Lock.new(other, scope: :server).acquire("Hi", "1").first(2),
+      Dash::Commands::Lock.new(other, scope: :server).acquire("Hi", "1").first(2),
       new_command(scope: :server).acquire("Hi", "1").first(2)
 
     refute_equal \
-      Kamal::Commands::Lock.new(other).acquire("Hi", "1").first(2),
+      Dash::Commands::Lock.new(other).acquire("Hi", "1").first(2),
       new_command.acquire("Hi", "1").first(2)
   end
 
@@ -70,7 +70,7 @@ class CommandsLockTest < ActiveSupport::TestCase
 
   private
     def new_command(scope: :destination)
-      Kamal::Commands::Lock.new(
-        Kamal::Configuration.new(@config, version: "123", destination: "production"), scope: scope)
+      Dash::Commands::Lock.new(
+        Dash::Configuration.new(@config, version: "123", destination: "production"), scope: scope)
     end
 end

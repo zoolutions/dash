@@ -6,7 +6,7 @@
 # `dash docs <section>` prints.
 class Views::Docs::Pages::ConfigPage < DocsUI::Page
   class << self
-    # `config_doc "proxy"` binds the page to lib/kamal/configuration/docs/proxy.yml
+    # `config_doc "proxy"` binds the page to lib/dash/configuration/docs/proxy.yml
     # and derives title + eyebrow (both still overridable with the standard
     # Page DSL, called before config_doc).
     def config_doc(slug = nil)
@@ -46,7 +46,7 @@ class Views::Docs::Pages::ConfigPage < DocsUI::Page
   def provenance
     DocsUI::Callout(:note) do
       plain "Generated from the gem's "
-      code { "lib/kamal/configuration/docs/#{doc.slug}.yml" }
+      code { "lib/dash/configuration/docs/#{doc.slug}.yml" }
       plain " — the same reference "
       code { "dash docs #{doc.slug unless doc.slug == 'configuration'}".strip }
       plain " prints in your terminal, so this page always matches your installed version."

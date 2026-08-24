@@ -23,10 +23,10 @@ What still counts as "in scope" for this repo:
 
 | Concern | Where | What to avoid |
 |---|---|---|
-| Command construction | `lib/kamal/commands/*.rb` (`docker.rb`, `app.rb`, `builder.rb`) | building the same `SSHKit::Command` args in a loop instead of once |
-| Config resolution | `lib/kamal/configuration/*.rb` | re-parsing `deploy.yml` or re-walking roles per host instead of memoizing |
-| Host fan-out | `Kamal::Commander`, `lib/kamal/cli/*.rb` | serial SSH where SSHKit's parallel host execution already applies |
-| Loadbalancer activation | `lib/kamal/configuration/proxy/` (dash-only, auto-activates for >1 web host) | adding config lookups per-request — this is deploy-time only, never in the proxy's data path |
+| Command construction | `lib/dash/commands/*.rb` (`docker.rb`, `app.rb`, `builder.rb`) | building the same `SSHKit::Command` args in a loop instead of once |
+| Config resolution | `lib/dash/configuration/*.rb` | re-parsing `deploy.yml` or re-walking roles per host instead of memoizing |
+| Host fan-out | `Dash::Commander`, `lib/dash/cli/*.rb` | serial SSH where SSHKit's parallel host execution already applies |
+| Loadbalancer activation | `lib/dash/configuration/proxy/` (dash-only, auto-activates for >1 web host) | adding config lookups per-request — this is deploy-time only, never in the proxy's data path |
 
 None of these have a bench script. If you touch one, reason about it in the
 PR description (loop bound, N+1 SSH call, etc.) — don't invent a `Benchmark.bm`
@@ -60,7 +60,7 @@ actual harness to run.
    SSH round-trips or less config re-parsing; "faster" in the proxy means
    lower per-request latency or fewer allocations under `make bench`.
 3. **Prefer SSHKit's built-in parallelism** over hand-rolled threading when
-   fanning out across hosts — see `Kamal::Commander` for the existing pattern.
+   fanning out across hosts — see `Dash::Commander` for the existing pattern.
 4. **Keep loadbalancer auto-activation cheap** — it's evaluated at deploy/config
    time (`>1 web host`), not per-request; don't let it grow into something that
    needs to be.
@@ -73,7 +73,7 @@ actual harness to run.
    if there's no hot path, the honest answer is "no bench, reasoned about the
    loop/call count instead."
 3. **Never optimize gem-side Ruby at the expense of readability** — the
-   command-builder layer (`lib/kamal/commands/`) is read far more often than
+   command-builder layer (`lib/dash/commands/`) is read far more often than
    it's profiled; three clear lines beat a clever one-liner for zero measured gain.
 4. **Never trade a correctness invariant for speed** in either repo — proxy
    routing correctness and the gem's config validation are not negotiable.

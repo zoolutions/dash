@@ -8,7 +8,7 @@ class ConfigurationOutputTest < ActiveSupport::TestCase
       builder: { "arch" => "amd64" },
       servers: [ "1.1.1.1" ]
     }
-    Kamal::OtelShipper.any_instance.stubs(:start_flush_thread)
+    Dash::OtelShipper.any_instance.stubs(:start_flush_thread)
   end
 
   teardown do
@@ -16,27 +16,27 @@ class ConfigurationOutputTest < ActiveSupport::TestCase
   end
 
   test "disabled by default" do
-    @config = Kamal::Configuration.new(@deploy)
+    @config = Dash::Configuration.new(@deploy)
     assert_not @config.output.enabled?
     assert_empty @config.output.loggers
   end
 
   test "enabled with otel endpoint" do
     @deploy[:output] = { "otel" => { "endpoint" => "http://otel-gateway:4318" } }
-    @config = Kamal::Configuration.new(@deploy)
+    @config = Dash::Configuration.new(@deploy)
 
     assert @config.output.enabled?
     assert_equal 1, @config.output.loggers.length
-    assert_kind_of Kamal::Output::OtelLogger, @config.output.loggers.first
+    assert_kind_of Dash::Output::OtelLogger, @config.output.loggers.first
   end
 
   test "enabled with file path" do
     @deploy[:output] = { "file" => { "path" => "/var/log/kamal/" } }
-    @config = Kamal::Configuration.new(@deploy)
+    @config = Dash::Configuration.new(@deploy)
 
     assert @config.output.enabled?
     assert_equal 1, @config.output.loggers.length
-    assert_kind_of Kamal::Output::FileLogger, @config.output.loggers.first
+    assert_kind_of Dash::Output::FileLogger, @config.output.loggers.first
   end
 
   test "enabled with both otel and file" do
@@ -44,7 +44,7 @@ class ConfigurationOutputTest < ActiveSupport::TestCase
       "otel" => { "endpoint" => "http://otel-gateway:4318" },
       "file" => { "path" => "/var/log/kamal/" }
     }
-    @config = Kamal::Configuration.new(@deploy)
+    @config = Dash::Configuration.new(@deploy)
 
     assert @config.output.enabled?
     assert_equal 2, @config.output.loggers.length
@@ -52,7 +52,7 @@ class ConfigurationOutputTest < ActiveSupport::TestCase
 
   test "empty output section is not enabled" do
     @deploy[:output] = {}
-    @config = Kamal::Configuration.new(@deploy)
+    @config = Dash::Configuration.new(@deploy)
 
     assert_not @config.output.enabled?
     assert_empty @config.output.loggers
@@ -62,7 +62,7 @@ class ConfigurationOutputTest < ActiveSupport::TestCase
     @deploy[:output] = { "otel" => {} }
 
     assert_raises(ArgumentError, "OTel endpoint is required") do
-      Kamal::Configuration.new(@deploy)
+      Dash::Configuration.new(@deploy)
     end
   end
 
@@ -70,7 +70,7 @@ class ConfigurationOutputTest < ActiveSupport::TestCase
     @deploy[:output] = { "file" => {} }
 
     assert_raises(ArgumentError, "file path is required") do
-      Kamal::Configuration.new(@deploy)
+      Dash::Configuration.new(@deploy)
     end
   end
 end

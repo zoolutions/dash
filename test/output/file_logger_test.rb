@@ -4,7 +4,7 @@ require "tmpdir"
 class OutputFileLoggerTest < ActiveSupport::TestCase
   setup do
     @dir = Dir.mktmpdir
-    @logger = Kamal::Output::FileLogger.new(path: @dir)
+    @logger = Dash::Output::FileLogger.new(path: @dir)
     @original_stdout, $stdout = $stdout, StringIO.new
   end
 

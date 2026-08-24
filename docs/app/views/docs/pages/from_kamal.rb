@@ -43,7 +43,7 @@ class Views::Docs::Pages::FromKamal < DocsUI::Page
       DocsUI::Table(
         [ "Artifact", "Status" ],
         [
-          [ [ :code, "config/deploy.yml" ], [ :md, "Unchanged — dash's config is a superset of kamal 2.x; every dash-only key is optional." ] ],
+          [ [ :code, "config/deploy.yml" ], [ :md, "Keys unchanged — dash's config is a superset of kamal 2.x; every dash-only key is optional. ERB that calls into the gem needs `Kamal::` renamed to `Dash::` (see below)." ] ],
           [ [ :code, ".kamal/secrets" ], [ :md, "Unchanged — same location, same dotenv format." ] ],
           [ [ :md, "`.kamal/` on the servers" ], [ :md, "Unchanged — locks, audit log, and hooks live where they always did." ] ],
           [ [ :md, "`kamal-proxy` container" ], [ :md, "Same container name; dash manages the one kamal booted." ] ],
@@ -98,6 +98,14 @@ class Views::Docs::Pages::FromKamal < DocsUI::Page
         - **Version lineage.** dash releases its own 3.x line; kamal version
           pins in scripts or Gemfiles don't translate. `dash upgrade` still
           exists for legacy Kamal 1.x → 2.0 server layouts.
+        - **The Ruby namespace is `Dash::`.** The gem's constants renamed from
+          `Kamal::` to `Dash::` — the servers are untouched, but Ruby that names
+          them is not. The common case is ERB in `deploy.yml`:
+          `<%= Kamal::Utils.docker_arch %>` becomes
+          `<%= Dash::Utils.docker_arch %>`. Same for anything that requires the
+          gem directly (`require "kamal"` → `require "dash"`). There is no
+          compatibility alias — a stale reference raises `NameError` at config
+          load, before dash touches a server.
       MD
     end
   end

@@ -26,7 +26,7 @@ Review PR for pattern compliance, fork-constraint violations, and issues. Be con
 | Frozen server-artifact names touched | Renames of `.kamal/`, the `kamal-proxy` container, `KAMAL_*` env vars, or the image title label | These wait for the staged rename bridge — see `CLAUDE.md` |
 | Tag grammar (if PR touches release scripts/docs) | New `dash-v*` tags or `-suffix` prerelease tags | Gem tags are plain `vX.Y.Z` via `rake release`; `dash-v*` is frozen history |
 | `git push --tags` in any script/workflow | Bulk tag pushes | Always push single tags; `rake release` handles gem tags via `gh release create` |
-| Proxy version literals | Hardcoded `"v0.9.2.1"` (or similar) in tests/specs instead of interpolating `MINIMUM_VERSION` | `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` is the single source of truth |
+| Proxy version literals | Hardcoded `"v0.9.2.1"` (or similar) in tests/specs instead of interpolating `MINIMUM_VERSION` | `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` is the single source of truth |
 | Proxy version suffix | `-dash.N` style suffix on a proxy tag | `Gem::Version` parses `-` as a prerelease, sorts OLDER than base, breaks `dash proxy boot` |
 | Release ordering | Gem release/version bump referencing an unpublished proxy tag | Proxy image must exist on ghcr.io BEFORE the gem release that names it in `MINIMUM_VERSION` |
 | Rebase of `main` | Force-push / rebase on a published branch | History is shared; merge forward only, never rebase |
@@ -38,14 +38,14 @@ Review PR for pattern compliance, fork-constraint violations, and issues. Be con
 # WRONG -> RIGHT
 Business logic in Cli::* Thor command       -> Push logic down into Commander/Commands/Configuration
 Direct shell interpolation in Commands::*    -> Build args as arrays, let SSHKit/Docker quote them
-Raw ENV reads scattered in Configuration     -> Route through Kamal::Configuration::Env / config accessors
-Hardcoded proxy image tag                    -> Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
+Raw ENV reads scattered in Configuration     -> Route through Dash::Configuration::Env / config accessors
+Hardcoded proxy image tag                    -> Dash::Configuration::Proxy::Run::MINIMUM_VERSION
 Hardcoded ghcr.io/zoolutions repo string       -> Proxy::Run#repository default / config override
 New CLI option without Thor `desc`/`option`  -> Follow existing Cli::* option declarations
 Missing `--parallel`-unsafe rubocop offense  -> Run `bundle exec rubocop --parallel` clean
 Test hits Docker/network without being under -> Belongs in test/integration, not test/ (unit run
   test/integration                              excludes integration via grep_v)
-rescue => nil / swallowed SSHKit errors      -> Surface via existing error classes (Kamal::Cli::Base rescues)
+rescue => nil / swallowed SSHKit errors      -> Surface via existing error classes (Dash::Cli::Base rescues)
 Duplicated logic across Cli/Commands/Config  -> Push to the correct single layer (see architecture)
 ```
 
@@ -55,10 +55,10 @@ Match each changed file to its layer — logic living at the wrong layer is the 
 
 ```
 Layer 5: bin/dash                  entry point only
-Layer 4: lib/kamal/cli/*           Thor commands, option parsing, hooks — thin
-Layer 3: lib/kamal/commander.rb    KAMAL singleton, target resolution
-Layer 2: lib/kamal/commands/*      docker/shell command builders (return argv arrays)
-Layer 1: lib/kamal/configuration/* deploy.yml -> objects, validation, defaults
+Layer 4: lib/dash/cli/*           Thor commands, option parsing, hooks — thin
+Layer 3: lib/dash/commander.rb    DASH singleton, target resolution
+Layer 2: lib/dash/commands/*      docker/shell command builders (return argv arrays)
+Layer 1: lib/dash/configuration/* deploy.yml -> objects, validation, defaults
 Layer 0: SSHKit                    remote execution (don't hand-roll ssh/scp)
 ```
 
@@ -79,8 +79,8 @@ Two builder tests are known-failing on Apple Silicon only (host-arch dependent) 
 
 | File | Reason |
 |------|--------|
-| lib/kamal/commands/proxy.rb | Docker arg construction, verify shell-safety |
-| lib/kamal/configuration/proxy/run.rb | MINIMUM_VERSION / repository default touched |
+| lib/dash/commands/proxy.rb | Docker arg construction, verify shell-safety |
+| lib/dash/configuration/proxy/run.rb | MINIMUM_VERSION / repository default touched |
 
 ## Fork Constraint Violations
 
@@ -89,8 +89,8 @@ Two builder tests are known-failing on Apple Silicon only (host-arch dependent) 
 
 ## Critical Issues
 
-- `lib/kamal/cli/proxy.rb:45` - Business logic belongs in Commander, not the Thor command
-- `lib/kamal/commands/app.rb:12` - Shell interpolation instead of argv array
+- `lib/dash/cli/proxy.rb:45` - Business logic belongs in Commander, not the Thor command
+- `lib/dash/commands/app.rb:12` - Shell interpolation instead of argv array
 
 ## Suggestions (non-blocking)
 

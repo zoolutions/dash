@@ -116,7 +116,7 @@ For each unresolved comment, read the full body and categorise it:
 | "Just commit this fix to `main`" | `main` is a fast-forward-only mirror of `basecamp/kamal` -- never commit there |
 | "Rename `.kamal/` / the `kamal-proxy` container / `KAMAL_*` env vars" | Frozen server artifacts — they wait for the staged rename bridge (see CLAUDE.md) |
 | "Tag this `dash-v3.2.0`" | Gem tags are plain `vX.Y.Z` via `rake release`; `dash-v*` is frozen history |
-| "Hardcode the proxy version string in the test" | Must interpolate `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` -- see `.claude/rules/testing.md` |
+| "Hardcode the proxy version string in the test" | Must interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` -- see `.claude/rules/testing.md` |
 | "Use a `-dash.1` style suffix for the proxy tag" | `Gem::Version` parses `-` as a prerelease marker, sorts BELOW the base, breaks `kamal proxy boot`'s version check |
 | "Rebase your branch onto `dash`" | Feature branches root off `main` and merge it forward; never rebase a published branch |
 | "This builder test failure needs fixing" | If it's one of the two known Apple-Silicon arch-dependent failures in `test/commands/builder_test.rb`, it's not a regression -- confirm via `.claude/rules/testing.md` before touching assertions |
@@ -128,7 +128,7 @@ For each unresolved comment, read the full body and categorise it:
 
 For all comments you've decided to accept:
 
-1. **Make the code changes** -- edit the relevant files under `lib/kamal/`
+1. **Make the code changes** -- edit the relevant files under `lib/dash/`
 2. **Run affected unit tests** to verify nothing breaks:
    ```bash
    bundle exec ruby -Itest <relevant_test_file>
@@ -141,7 +141,7 @@ For all comments you've decided to accept:
    ```bash
    bundle exec rubocop --parallel
    ```
-5. If the fix touches `lib/kamal/configuration/proxy/**`, `Kamal::Commander`, or loadbalancer auto-activation logic, treat it as critical-path -- confirm coverage per `.claude/rules/testing.md` (100% required) before moving on.
+5. If the fix touches `lib/dash/configuration/proxy/**`, `Dash::Commander`, or loadbalancer auto-activation logic, treat it as critical-path -- confirm coverage per `.claude/rules/testing.md` (100% required) before moving on.
 6. If the fix touches anything integration-relevant (deploy fixtures, proxy boot, multi-host roles), also run the full suite before pushing:
    ```bash
    bin/test

@@ -37,7 +37,7 @@ class ConfigurationRoleHealthcheckTest < ActiveSupport::TestCase
   end
 
   test "port is required when there is no command" do
-    error = assert_raises Kamal::ConfigurationError do
+    error = assert_raises Dash::ConfigurationError do
       healthcheck(path: "/readyz")
     end
 
@@ -45,7 +45,7 @@ class ConfigurationRoleHealthcheckTest < ActiveSupport::TestCase
   end
 
   test "command may not contain a shell expansion" do
-    error = assert_raises Kamal::ConfigurationError do
+    error = assert_raises Dash::ConfigurationError do
       healthcheck(cmd: "curl -f http://localhost:${PORT}/up")
     end
 
@@ -71,7 +71,7 @@ class ConfigurationRoleHealthcheckTest < ActiveSupport::TestCase
   test "exec cannot be combined with keys that only configure docker's healthcheck" do
     { cmd: "pgrep -f bin/jobs", port: 7434, path: "/readyz", interval: 5, timeout: 3,
       retries: 3, start_period: 60, start_interval: 1 }.each do |key, value|
-      error = assert_raises Kamal::ConfigurationError, "expected #{key} to conflict with exec" do
+      error = assert_raises Dash::ConfigurationError, "expected #{key} to conflict with exec" do
         healthcheck(exec: "bin/ready-check", key => value)
       end
 
@@ -83,7 +83,7 @@ class ConfigurationRoleHealthcheckTest < ActiveSupport::TestCase
 
   private
     def healthcheck(**healthcheck_config)
-      Kamal::Configuration::Role::Healthcheck.new \
+      Dash::Configuration::Role::Healthcheck.new \
         healthcheck_config: healthcheck_config.transform_keys(&:to_s), context: "servers/workers/healthcheck"
     end
 end

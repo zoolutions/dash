@@ -1,0 +1,2 @@
+module Dash::Commands
+end

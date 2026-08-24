@@ -85,7 +85,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
       }
     }
 
-    @config = Kamal::Configuration.new(@deploy)
+    @config = Dash::Configuration.new(@deploy)
   end
 
   test "service name" do
@@ -132,7 +132,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
 
   test "tagged accessory picks up hosts of a top-level servers array" do
     @deploy[:servers] = [ { "1.1.1.1" => "writer" }, { "1.1.1.2" => "reader" }, "1.1.1.3" ]
-    config = Kamal::Configuration.new(@deploy)
+    config = Dash::Configuration.new(@deploy)
 
     assert_equal [ "1.1.1.1" ], config.accessory(:logger).hosts
     assert_equal [ "1.1.1.1", "1.1.1.2" ], config.accessory(:proxy).hosts
@@ -140,7 +140,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
 
   test "tags match whole tags, not substrings" do
     @deploy[:accessories]["logger"]["tag"] = "write"
-    config = Kamal::Configuration.new(@deploy)
+    config = Dash::Configuration.new(@deploy)
 
     assert_equal [], config.accessory(:logger).hosts
   end
@@ -148,8 +148,8 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
   test "missing host" do
     @deploy[:accessories]["mysql"]["host"] = nil
 
-    assert_raises(Kamal::ConfigurationError) do
-      Kamal::Configuration.new(@deploy)
+    assert_raises(Dash::ConfigurationError) do
+      Dash::Configuration.new(@deploy)
     end
   end
 
@@ -157,8 +157,8 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
     @deploy[:accessories]["mysql"]["hosts"] = [ "mysql-db1" ]
     @deploy[:accessories]["mysql"]["roles"] = [ "db" ]
 
-    exception = assert_raises(Kamal::ConfigurationError) do
-      Kamal::Configuration.new(@deploy)
+    exception = assert_raises(Dash::ConfigurationError) do
+      Dash::Configuration.new(@deploy)
     end
     assert_equal "accessories/mysql: specify one of `host`, `hosts`, `role`, `roles`, `tag` or `tags`", exception.message
   end
@@ -174,7 +174,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
 
   test "env args" do
     with_test_secrets("secrets" => "MYSQL_ROOT_PASSWORD=secret123") do
-      config = Kamal::Configuration.new(@deploy)
+      config = Dash::Configuration.new(@deploy)
 
       assert_equal [ "--env", "MYSQL_ROOT_HOST=\"%\"", "--env-file", ".kamal/apps/app/env/accessories/mysql.env" ], config.accessory(:mysql).env_args.map(&:to_s)
       assert_equal "MYSQL_ROOT_PASSWORD=secret123\n", config.accessory(:mysql).secrets_io.string
@@ -190,7 +190,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
 
   test "volume args with docker named volume" do
     @deploy[:accessories]["redis"]["volumes"] = [ "redis_data:/data" ]
-    config = Kamal::Configuration.new(@deploy)
+    config = Dash::Configuration.new(@deploy)
     assert_equal [ "--volume", "redis_data:/data" ], config.accessory(:redis).volume_args
   end
 
@@ -199,7 +199,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
     @deploy[:accessories]["mysql"]["files"] << "test/fixtures/files/structure.sql.erb:/docker-entrypoint-initdb.d/structure.sql"
 
     with_test_secrets("secrets" => "MYSQL_ROOT_PASSWORD=secret123\nSECRET_VAR=secret_env_value") do
-      @config = Kamal::Configuration.new(@deploy)
+      @config = Dash::Configuration.new(@deploy)
 
       assert_match "This was dynamically expanded", @config.accessory(:mysql).files.keys[2].read
       assert_match "%", @config.accessory(:mysql).files.keys[2].read
@@ -221,7 +221,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
   test "directory with mount options" do
     @deploy[:accessories]["mysql"]["files"] = []
     @deploy[:accessories]["mysql"]["directories"] = [ "data:/var/lib/mysql:z" ]
-    config = Kamal::Configuration.new(@deploy)
+    config = Dash::Configuration.new(@deploy)
     assert_equal({ "$PWD/app-mysql/data" => { host_path: "app-mysql/data", container_path: "/var/lib/mysql", options: "z", mode: nil, owner: nil } }, config.accessory(:mysql).directories)
     assert_equal [ "--volume", "$PWD/app-mysql/data:/var/lib/mysql:z" ], config.accessory(:mysql).volume_args
   end
@@ -229,7 +229,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
   test "file with mount options" do
     @deploy[:accessories]["mysql"]["files"] = [ "config/mysql/my.cnf:/etc/mysql/my.cnf:ro,z" ]
     @deploy[:accessories]["mysql"]["directories"] = []
-    config = Kamal::Configuration.new(@deploy)
+    config = Dash::Configuration.new(@deploy)
     files = config.accessory(:mysql).files
     assert_equal "ro,z", files.values.first[:options]
     assert_equal [ "--volume", "$PWD/app-mysql/etc/mysql/my.cnf:/etc/mysql/my.cnf:ro,z" ], config.accessory(:mysql).volume_args
@@ -238,7 +238,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
   test "file with string format has default mode" do
     @deploy[:accessories]["mysql"]["files"] = [ "config/mysql/my.cnf:/etc/mysql/my.cnf" ]
     @deploy[:accessories]["mysql"]["directories"] = []
-    config = Kamal::Configuration.new(@deploy)
+    config = Dash::Configuration.new(@deploy)
     files = config.accessory(:mysql).files
     assert_equal "755", files.values.first[:mode]
     assert_nil files.values.first[:owner]
@@ -249,7 +249,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
       { "local" => "config/mysql/my.cnf", "remote" => "/etc/mysql/my.cnf", "mode" => "0600" }
     ]
     @deploy[:accessories]["mysql"]["directories"] = []
-    config = Kamal::Configuration.new(@deploy)
+    config = Dash::Configuration.new(@deploy)
     files = config.accessory(:mysql).files
     assert_equal "0600", files.values.first[:mode]
     assert_nil files.values.first[:owner]
@@ -260,7 +260,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
       { "local" => "config/mysql/my.cnf", "remote" => "/etc/mysql/my.cnf", "owner" => "mysql:mysql" }
     ]
     @deploy[:accessories]["mysql"]["directories"] = []
-    config = Kamal::Configuration.new(@deploy)
+    config = Dash::Configuration.new(@deploy)
     files = config.accessory(:mysql).files
     assert_equal "755", files.values.first[:mode]
     assert_equal "mysql:mysql", files.values.first[:owner]
@@ -271,7 +271,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
       { "local" => "config/mysql/my.cnf", "remote" => "/etc/mysql/my.cnf", "mode" => "0640", "owner" => "1000:1000", "options" => "Z" }
     ]
     @deploy[:accessories]["mysql"]["directories"] = []
-    config = Kamal::Configuration.new(@deploy)
+    config = Dash::Configuration.new(@deploy)
     files = config.accessory(:mysql).files
     file_config = files.values.first
     assert_equal "0640", file_config[:mode]
@@ -287,7 +287,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
     @deploy[:accessories]["mysql"]["directories"] = []
 
     with_test_secrets("secrets" => "MYSQL_ROOT_PASSWORD=secret123") do
-      config = Kamal::Configuration.new(@deploy)
+      config = Dash::Configuration.new(@deploy)
       files = config.accessory(:mysql).files
       assert_match "This was dynamically expanded", files.keys.first.read
     end
@@ -298,7 +298,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
     @deploy[:accessories]["mysql"]["directories"] = [
       { "local" => "data", "remote" => "/var/lib/mysql", "mode" => "0750" }
     ]
-    config = Kamal::Configuration.new(@deploy)
+    config = Dash::Configuration.new(@deploy)
     directories = config.accessory(:mysql).directories
     assert_equal "0750", directories.values.first[:mode]
     assert_nil directories.values.first[:owner]
@@ -309,7 +309,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
     @deploy[:accessories]["mysql"]["directories"] = [
       { "local" => "data", "remote" => "/var/lib/mysql", "owner" => "mysql:mysql" }
     ]
-    config = Kamal::Configuration.new(@deploy)
+    config = Dash::Configuration.new(@deploy)
     directories = config.accessory(:mysql).directories
     assert_nil directories.values.first[:mode]
     assert_equal "mysql:mysql", directories.values.first[:owner]
@@ -320,7 +320,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
     @deploy[:accessories]["mysql"]["directories"] = [
       { "local" => "data", "remote" => "/var/lib/mysql", "mode" => "0750", "owner" => "1000:1000", "options" => "z" }
     ]
-    config = Kamal::Configuration.new(@deploy)
+    config = Dash::Configuration.new(@deploy)
     directories = config.accessory(:mysql).directories
     dir_config = directories.values.first
     assert_equal "0750", dir_config[:mode]
@@ -335,7 +335,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
 
   test "restart policy" do
     @deploy[:accessories]["redis"]["options"]["restart"] = "always"
-    config = Kamal::Configuration.new(@deploy)
+    config = Dash::Configuration.new(@deploy)
 
     assert_equal "always", config.accessory(:redis).restart_policy
     assert_equal [ "--cpus", "\"4\"", "--memory", "\"2GB\"" ], config.accessory(:redis).option_args
@@ -360,7 +360,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
   end
 
   # The load balancer only ever fans the app's own service out to role targets
-  # (Kamal::Cli::Proxy#loadbalancer collects from config.roles), so an accessory
+  # (Dash::Cli::Proxy#loadbalancer collects from config.roles), so an accessory
   # is never behind it and must keep its own hostname routing and TLS.
   test "accessory proxy does not load balance even when the primary role is multi-host" do
     assert @config.proxy.load_balancing?, "expected the app proxy to auto-activate load balancing"
@@ -376,7 +376,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
       "ssl" => true,
       "basic_auth" => { "username" => "admin", "password" => "s3cr3t" }
     )
-    options = Kamal::Configuration.new(@deploy).accessory(:monitoring).proxy.deploy_options
+    options = Dash::Configuration.new(@deploy).accessory(:monitoring).proxy.deploy_options
 
     assert_equal [ "monitoring.example.com" ], options[:host]
     assert options[:tls]
@@ -388,7 +388,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
       "ssl" => true,
       "ssl_domains" => { "source" => "/api/v1/kamal/domains" }
     )
-    options = Kamal::Configuration.new(@deploy).accessory(:monitoring).proxy.deploy_options
+    options = Dash::Configuration.new(@deploy).accessory(:monitoring).proxy.deploy_options
 
     assert_equal "/api/v1/kamal/domains", options[:"tls-domains-source"]
   end
@@ -402,8 +402,8 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
   test "invalid boolean restart policy" do
     @deploy[:accessories]["mysql"]["options"] = { "restart" => false }
 
-    error = assert_raises Kamal::ConfigurationError do
-      Kamal::Configuration.new(@deploy)
+    error = assert_raises Dash::ConfigurationError do
+      Dash::Configuration.new(@deploy)
     end
 
     assert_equal %(accessories/mysql/options/restart: should be a string. Use "no" to disable restarts), error.message
@@ -412,8 +412,8 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
   test "health option with braced expansion is rejected" do
     @deploy[:accessories]["mysql"]["options"] = { "health-cmd" => "mysqladmin ping -h 127.0.0.1 -P ${MYSQL_PORT}" }
 
-    error = assert_raises Kamal::ConfigurationError do
-      Kamal::Configuration.new(@deploy)
+    error = assert_raises Dash::ConfigurationError do
+      Dash::Configuration.new(@deploy)
     end
 
     assert_match "accessories/mysql/options/health-cmd: cannot contain ${...}", error.message

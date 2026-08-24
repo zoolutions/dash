@@ -34,10 +34,10 @@ Protect this session's context: delegate mechanical exploration to cheaper subag
 
 1. Fan out Explore agents (`model: haiku`) for file discovery and naming-convention sweeps; use `model: sonnet` agents when a subsystem needs to be read and summarized. Launch independent explorations in parallel.
 2. Read the load-bearing files yourself — the ones the design decision actually hinges on. Don't design from subagent summaries alone.
-3. Walk the architecture layer cake in `CLAUDE.md` (`bin/kamal` → `Kamal::Cli::*` → `Kamal::Commander` → `Kamal::Commands::*` → `Kamal::Configuration` → SSHKit) and read the matching source files for the layer(s) this change touches — past decisions and gotchas live there.
+3. Walk the architecture layer cake in `CLAUDE.md` (`bin/kamal` → `Dash::Cli::*` → `Dash::Commander` → `Dash::Commands::*` → `Dash::Configuration` → SSHKit) and read the matching source files for the layer(s) this change touches — past decisions and gotchas live there.
 4. Check `ROADMAP.md` for the relevant release bucket (R1–R5) and cross-repo sequencing notes — don't re-derive scope that's already evidence-linked there.
 5. Check `git log` for recent related work; the design should extend it, not fight it.
-6. If the change touches proxy defaults or version pinning, read `lib/kamal/configuration/proxy/run.rb` (`MINIMUM_VERSION`, repository default) and `lib/kamal/configuration/proxy/boot.rb` — these are fork-identity files with a documented conflict resolution in `.claude/rules/upstream-sync.md`.
+6. If the change touches proxy defaults or version pinning, read `lib/dash/configuration/proxy/run.rb` (`MINIMUM_VERSION`, repository default) and `lib/dash/configuration/proxy/boot.rb` — these are fork-identity files with a documented conflict resolution in `.claude/rules/upstream-sync.md`.
 
 ## Phase 2 — Surface the unknowns (blindspot pass + interview)
 
@@ -57,7 +57,7 @@ Investigation tells you what the codebase says; this phase finds what the REQUES
 ## Phase 3 — Design
 
 - Develop 2-3 candidate approaches with real tradeoffs. Pick one and say why; record why the others lost.
-- The chosen design must respect project invariants: Thor CLI commands stay thin and delegate to `Kamal::Commands::*` builders; configuration parsing/validation stays in `Kamal::Configuration`; remote execution stays behind SSHKit; the loadbalancer auto-activates for any primary role with >1 web host (don't special-case around that without updating the validator); `Kamal::Utils.older_version?`/`Gem::Version` semantics govern proxy version comparisons — never suffix tags.
+- The chosen design must respect project invariants: Thor CLI commands stay thin and delegate to `Dash::Commands::*` builders; configuration parsing/validation stays in `Dash::Configuration`; remote execution stays behind SSHKit; the loadbalancer auto-activates for any primary role with >1 web host (don't special-case around that without updating the validator); `Dash::Utils.older_version?`/`Gem::Version` semantics govern proxy version comparisons — never suffix tags.
 - Decide the test strategy: minitest + mocha, unit tests under `test/**` (excluding `test/integration`), integration tests only when the change touches real deploy behavior (needs Docker + a published `ghcr.io/zoolutions/kamal-proxy` image at `MINIMUM_VERSION`). Two builder tests are known-failing on Apple Silicon only — don't plan a fix for those unless that's the task.
 - If the change requires a new `MINIMUM_VERSION`, the plan must sequence proxy-repo work before gem-repo work (release ordering is a hard constraint — see `.claude/rules/upstream-sync.md` → Release procedure) and interpolate the version in test expectations rather than hardcoding it.
 
@@ -72,7 +72,7 @@ Use this structure for the issue body or markdown file. Every section is load-be
 <What's wrong or missing, who it affects, what done looks like.>
 
 ## Context (read these first)
-<Bullet list: `lib/kamal/path/to/file.rb` — why it matters to this change. Include the relevant CLI, commander, commands, and configuration layers. Self-contained: no references to "as discussed" or this session.>
+<Bullet list: `lib/dash/path/to/file.rb` — why it matters to this change. Include the relevant CLI, commander, commands, and configuration layers. Self-contained: no references to "as discussed" or this session.>
 
 ## Decision
 <Chosen approach and rationale. Then: alternatives considered and why each was rejected. End with `Settled in interview:` bullets for every constraint the user confirmed in the interview phase — the executor must not re-litigate these.>

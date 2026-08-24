@@ -16,7 +16,7 @@ class ConfigurationEnvTagsTest < ActiveSupport::TestCase
       }
     }
 
-    @config = Kamal::Configuration.new(@deploy)
+    @config = Dash::Configuration.new(@deploy)
 
     @deploy_with_roles = @deploy.dup.merge({
       servers: {
@@ -38,7 +38,7 @@ class ConfigurationEnvTagsTest < ActiveSupport::TestCase
       }
     })
 
-    @config_with_roles = Kamal::Configuration.new(@deploy_with_roles)
+    @config_with_roles = Dash::Configuration.new(@deploy_with_roles)
   end
 
   test "tags" do
@@ -74,7 +74,7 @@ class ConfigurationEnvTagsTest < ActiveSupport::TestCase
       }
     }
 
-    config = Kamal::Configuration.new(deploy)
+    config = Dash::Configuration.new(deploy)
     assert_equal "second", config.role("web").env("1.1.1.1").clear["TYPE"]
   end
 
@@ -91,7 +91,7 @@ class ConfigurationEnvTagsTest < ActiveSupport::TestCase
         }
       }
 
-      config = Kamal::Configuration.new(deploy)
+      config = Dash::Configuration.new(deploy)
       assert_equal "PASSWORD=hello\n", config.role("web").env("1.1.1.1").secrets_io.string
     end
   end
@@ -109,7 +109,7 @@ class ConfigurationEnvTagsTest < ActiveSupport::TestCase
         }
       }
 
-      config = Kamal::Configuration.new(deploy)
+      config = Dash::Configuration.new(deploy)
       assert_equal "PASSWORD=aliased_hello\n", config.role("web").env("1.1.1.1").secrets_io.string
     end
   end
@@ -126,7 +126,7 @@ class ConfigurationEnvTagsTest < ActiveSupport::TestCase
       }
     }
 
-    config = Kamal::Configuration.new(deploy)
+    config = Dash::Configuration.new(deploy)
     assert_equal "bar", config.role("web").env("1.1.1.1").clear["FOO"]
   end
 end

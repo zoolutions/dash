@@ -140,7 +140,7 @@ class GcpSecretManagerAdapterTest < SecretAdapterTestCase
   private
     def run_command(*command, account: "default")
       stdouted do
-        Kamal::Cli::Secrets.start \
+        Dash::Cli::Secrets.start \
           [ *command,
             "-c", "test/fixtures/deploy_with_accessories.yml",
             "--adapter", "gcp_secret_manager",

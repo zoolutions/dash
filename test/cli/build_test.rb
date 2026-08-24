@@ -2,19 +2,19 @@ require_relative "cli_test_case"
 
 class CliBuildTest < CliTestCase
   test "deliver" do
-    Kamal::Cli::Build.any_instance.expects(:push)
-    Kamal::Cli::Build.any_instance.expects(:pull)
+    Dash::Cli::Build.any_instance.expects(:push)
+    Dash::Cli::Build.any_instance.expects(:pull)
 
     run_command("deliver")
   end
 
   test "push" do
     with_build_directory do |build_directory|
-      Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+      Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :"rev-parse", :HEAD)
-        .returns(Kamal::Git.revision)
+        .returns(Dash::Git.revision)
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :status, "--porcelain")
@@ -33,11 +33,11 @@ class CliBuildTest < CliTestCase
 
   test "push with remote builder checks both the builder and the remote context" do
     with_build_directory do |build_directory|
-      Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+      Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :"rev-parse", :HEAD)
-        .returns(Kamal::Git.revision)
+        .returns(Dash::Git.revision)
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :status, "--porcelain")
@@ -65,7 +65,7 @@ class CliBuildTest < CliTestCase
   end
 
   test "push with hybrid builder and local registry starts the local registry container" do
-    # `Kamal::Commands::Builder::Hybrid` inherits from `Remote`, so it has the
+    # `Dash::Commands::Builder::Hybrid` inherits from `Remote`, so it has the
     # same `login_to_registry_locally? => false` and would suffer from the
     # same regression as the pure-remote builder when combined with a local
     # registry.
@@ -77,11 +77,11 @@ class CliBuildTest < CliTestCase
 
   test "push --output=docker" do
     with_build_directory do |build_directory|
-      Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+      Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :"rev-parse", :HEAD)
-        .returns(Kamal::Git.revision)
+        .returns(Dash::Git.revision)
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :status, "--porcelain")
@@ -111,7 +111,7 @@ class CliBuildTest < CliTestCase
         .returns(true)
       SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:git, "-C", build_directory, :remote, "set-url", :origin, Dir.pwd)
       SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:git, "-C", build_directory, :fetch, :origin)
-      SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:git, "-C", build_directory, :reset, "--hard", Kamal::Git.revision)
+      SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:git, "-C", build_directory, :reset, "--hard", Dash::Git.revision)
       SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:git, "-C", build_directory, :clean, "-fdx")
       SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:git, "-C", build_directory, :submodule, :update, "--init")
       SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:git, "-C", build_directory, :gc, "--auto", "--quiet")
@@ -121,7 +121,7 @@ class CliBuildTest < CliTestCase
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :"rev-parse", :HEAD)
-        .returns(Kamal::Git.revision)
+        .returns(Dash::Git.revision)
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :status, "--porcelain")
@@ -135,7 +135,7 @@ class CliBuildTest < CliTestCase
   end
 
   test "push without clone" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
     run_command("push", "--verbose", fixture: :without_clone).tap do |output|
       assert_no_match /Cloning repo into build directory/, output
@@ -146,7 +146,7 @@ class CliBuildTest < CliTestCase
   end
 
   test "push with no-cache" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
     run_command("push", "--no-cache", "--verbose", fixture: :without_clone).tap do |output|
       assert_hook_ran "pre-build", output
@@ -174,7 +174,7 @@ class CliBuildTest < CliTestCase
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :"rev-parse", :HEAD)
-        .returns(Kamal::Git.revision)
+        .returns(Dash::Git.revision)
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :status, "--porcelain")
@@ -217,7 +217,7 @@ class CliBuildTest < CliTestCase
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :"rev-parse", :HEAD)
-        .returns(Kamal::Git.revision)
+        .returns(Dash::Git.revision)
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :status, "--porcelain")
@@ -256,7 +256,7 @@ class CliBuildTest < CliTestCase
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :"rev-parse", :HEAD)
-        .returns(Kamal::Git.revision)
+        .returns(Dash::Git.revision)
 
       SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
         .with(:git, "-C", anything, :status, "--porcelain")
@@ -277,14 +277,14 @@ class CliBuildTest < CliTestCase
       .with(:docker, "--version", "&&", :docker, :buildx, "version")
       .raises(SSHKit::Command::Failed.new("no buildx"))
 
-    Kamal::Commands::Builder.any_instance.stubs(:native_and_local?).returns(false)
-    assert_raises(Kamal::Cli::DependencyError) { run_command("push") }
+    Dash::Commands::Builder.any_instance.stubs(:native_and_local?).returns(false)
+    assert_raises(Dash::Cli::DependencyError) { run_command("push") }
   end
 
   test "push pre-build hook failure" do
     fail_hook("pre-build")
 
-    error = assert_raises(Kamal::Cli::HookError) { run_command("push") }
+    error = assert_raises(Dash::Cli::HookError) { run_command("push") }
     assert_equal "Hook `pre-build` failed:\nfailed", error.message
 
     assert @executions.none? { |args| args[0..2] == [ :docker, :build ] }
@@ -352,9 +352,9 @@ class CliBuildTest < CliTestCase
   test "create hybrid" do
     run_command("create", fixture: :with_hybrid_builder).tap do |output|
       assert_match "Running /usr/bin/env true on 1.1.1.5", output
-      assert_match "docker buildx create --platform linux/#{Kamal::Utils.docker_arch} --name kamal-hybrid-docker-container-ssh---app-1-1-1-5 --driver=docker-container", output
+      assert_match "docker buildx create --platform linux/#{Dash::Utils.docker_arch} --name kamal-hybrid-docker-container-ssh---app-1-1-1-5 --driver=docker-container", output
       assert_match "docker context create kamal-hybrid-docker-container-ssh---app-1-1-1-5-context --description 'kamal-hybrid-docker-container-ssh---app-1-1-1-5 host' --docker 'host=ssh://app@1.1.1.5'", output
-      assert_match "docker buildx create --platform linux/#{Kamal::Utils.docker_arch == "amd64" ? "arm64" : "amd64"} --append --name kamal-hybrid-docker-container-ssh---app-1-1-1-5 kamal-hybrid-docker-container-ssh---app-1-1-1-5-context", output
+      assert_match "docker buildx create --platform linux/#{Dash::Utils.docker_arch == "amd64" ? "arm64" : "amd64"} --append --name kamal-hybrid-docker-container-ssh---app-1-1-1-5 kamal-hybrid-docker-container-ssh---app-1-1-1-5-context", output
     end
   end
 
@@ -400,7 +400,7 @@ class CliBuildTest < CliTestCase
 
   test "dev" do
     with_build_directory do |build_directory|
-      Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+      Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
       run_command("dev", "--verbose").tap do |output|
         assert_no_match(/Cloning repo into build directory/, output)
@@ -412,7 +412,7 @@ class CliBuildTest < CliTestCase
 
   test "dev --output=local" do
     with_build_directory do |build_directory|
-      Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+      Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
       run_command("dev", "--output=local", "--verbose").tap do |output|
         assert_no_match(/Cloning repo into build directory/, output)
@@ -424,7 +424,7 @@ class CliBuildTest < CliTestCase
 
   test "dev with no-cache" do
     with_build_directory do |build_directory|
-      Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+      Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
       run_command("dev", "--no-cache", "--verbose").tap do |output|
         assert_no_match(/Cloning repo into build directory/, output)
@@ -452,7 +452,7 @@ class CliBuildTest < CliTestCase
     # Verify port forwarding is established for all app hosts
     port_forwarding_mock = mock("port_forwarding")
     port_forwarding_mock.expects(:forward).yields
-    Kamal::Cli::Build::PortForwarding.expects(:new)
+    Dash::Cli::Build::PortForwarding.expects(:new)
       .with([ "1.1.1.1", "1.1.1.2" ], 5000, has_entries(
         user: "root",
         port: 22,
@@ -478,19 +478,19 @@ class CliBuildTest < CliTestCase
   private
     def assert_local_registry_started_before_push(fixture:, remote_host:)
       with_build_directory do |build_directory|
-        Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+        Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
         # Stub the SSH reverse tunnel set up for the remote builder so the
         # test doesn't try to actually connect to the remote host.
         port_forwarding_mock = mock("port_forwarding")
         port_forwarding_mock.expects(:forward).yields
-        Kamal::Cli::Build::PortForwarding.expects(:new)
+        Dash::Cli::Build::PortForwarding.expects(:new)
           .with([ remote_host ], 5000, has_entries(keepalive: true, keepalive_interval: 30))
           .returns(port_forwarding_mock)
 
         SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
           .with(:git, "-C", anything, :"rev-parse", :HEAD)
-          .returns(Kamal::Git.revision)
+          .returns(Dash::Git.revision)
 
         SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
           .with(:git, "-C", anything, :status, "--porcelain")
@@ -518,7 +518,7 @@ class CliBuildTest < CliTestCase
     end
 
     def run_command(*command, fixture: :with_accessories)
-      stdouted { stderred { Kamal::Cli::Build.start([ *command, "-c", "test/fixtures/deploy_#{fixture}.yml" ]) } }
+      stdouted { stderred { Dash::Cli::Build.start([ *command, "-c", "test/fixtures/deploy_#{fixture}.yml" ]) } }
     end
 
     def stub_dependency_checks

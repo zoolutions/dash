@@ -131,7 +131,7 @@ class CommandsBuilderTest < ActiveSupport::TestCase
   test "missing dockerfile" do
     Pathname.any_instance.expects(:exist?).returns(false).once
     builder = new_builder_command(builder: { "dockerfile" => "Dockerfile.xyz" })
-    assert_raises(Kamal::Commands::Builder::Base::BuilderError) do
+    assert_raises(Dash::Commands::Builder::Base::BuilderError) do
       builder.target.build_options.join(" ")
     end
   end
@@ -228,7 +228,7 @@ class CommandsBuilderTest < ActiveSupport::TestCase
 
   test "clone path with spaces" do
     command = new_builder_command
-    Kamal::Git.stubs(:root).returns("/absolute/path with spaces")
+    Dash::Git.stubs(:root).returns("/absolute/path with spaces")
     clone_command = command.clone.join(" ")
     clone_reset_commands = command.clone_reset_steps.map { |a| a.join(" ") }
 
@@ -281,18 +281,18 @@ class CommandsBuilderTest < ActiveSupport::TestCase
 
   private
     def new_builder_command(additional_config = {})
-      Kamal::Configuration.new(@config.deep_merge(additional_config), version: "123").then do |config|
-        KAMAL.reset
-        KAMAL.stubs(:config).returns(config)
-        Kamal::Commands::Builder.new(config)
+      Dash::Configuration.new(@config.deep_merge(additional_config), version: "123").then do |config|
+        DASH.reset
+        DASH.stubs(:config).returns(config)
+        Dash::Commands::Builder.new(config)
       end
     end
 
     def local_arch
-      Kamal::Utils.docker_arch
+      Dash::Utils.docker_arch
     end
 
     def remote_arch
-      Kamal::Utils.docker_arch == "arm64" ? "amd64" : "arm64"
+      Dash::Utils.docker_arch == "arm64" ? "amd64" : "arm64"
     end
 end

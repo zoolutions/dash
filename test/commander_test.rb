@@ -6,7 +6,7 @@ class CommanderTest < ActiveSupport::TestCase
   end
 
   test "lazy configuration" do
-    assert_equal Kamal::Configuration, @kamal.config.class
+    assert_equal Dash::Configuration, @kamal.config.class
   end
 
   test "overwriting hosts" do
@@ -202,7 +202,7 @@ class CommanderTest < ActiveSupport::TestCase
 
   private
     def configure_with(variant)
-      @kamal = Kamal::Commander.new.tap do |kamal|
+      @kamal = Dash::Commander.new.tap do |kamal|
         kamal.configure config_file: Pathname.new(File.expand_path("fixtures/#{variant}.yml", __dir__))
       end
     end

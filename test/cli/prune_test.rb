@@ -2,8 +2,8 @@ require_relative "cli_test_case"
 
 class CliPruneTest < CliTestCase
   test "all" do
-    Kamal::Cli::Prune.any_instance.expects(:containers)
-    Kamal::Cli::Prune.any_instance.expects(:images)
+    Dash::Cli::Prune.any_instance.expects(:containers)
+    Dash::Cli::Prune.any_instance.expects(:images)
 
     run_command("all")
   end
@@ -38,6 +38,6 @@ class CliPruneTest < CliTestCase
 
   private
     def run_command(*command, config_file: "test/fixtures/deploy_with_accessories.yml")
-      stdouted { Kamal::Cli::Prune.start([ *command, "-c", config_file ]) }
+      stdouted { Dash::Cli::Prune.start([ *command, "-c", config_file ]) }
     end
 end

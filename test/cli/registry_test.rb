@@ -49,7 +49,7 @@ class CliRegistryTest < CliTestCase
       .with(:docker, "--version", "&&", :docker, :buildx, "version")
       .raises(SSHKit::Command::Failed.new("command not found"))
 
-    assert_raises(Kamal::Cli::DependencyError) { run_command("setup") }
+    assert_raises(Dash::Cli::DependencyError) { run_command("setup") }
   end
 
   test "allow remote login with no docker" do
@@ -134,6 +134,6 @@ class CliRegistryTest < CliTestCase
 
   private
     def run_command(*command, fixture: :with_accessories)
-      stdouted { Kamal::Cli::Registry.start([ *command, "-c", "test/fixtures/deploy_#{fixture}.yml" ]) }
+      stdouted { Dash::Cli::Registry.start([ *command, "-c", "test/fixtures/deploy_#{fixture}.yml" ]) }
     end
 end

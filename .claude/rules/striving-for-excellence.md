@@ -9,7 +9,7 @@ This document is the operational guide.
 The principle applies to wrongness *in the path* of the work you're already doing. Not wrongness in a file you'd have to detour to find.
 
 In path:
-- You're adding a flag to a `Kamal::Commands::*` builder and notice the sibling method hand-rolls the same docker arguments a shared helper already produces.
+- You're adding a flag to a `Dash::Commands::*` builder and notice the sibling method hand-rolls the same docker arguments a shared helper already produces.
 - You're adding a new caller of a config accessor and its API forces every caller to re-implement the same nil-handling.
 - You're fixing a bug and realize the surrounding code has a related bug the tests didn't catch.
 

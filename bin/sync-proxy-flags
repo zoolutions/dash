@@ -2,7 +2,7 @@
 # Regenerate test/fixtures/kamal_proxy_flags.yml — the flag manifest that
 # test/proxy_flag_coverage_test.rb checks the gem's deploy.yml surface against.
 #
-# Run this whenever Kamal::Configuration::Proxy::Run::MINIMUM_VERSION moves. The
+# Run this whenever Dash::Configuration::Proxy::Run::MINIMUM_VERSION moves. The
 # coverage test refuses to pass while the manifest names a different version, so
 # forgetting is loud rather than silent.
 #
@@ -19,7 +19,7 @@ require "open3"
 
 # Read the constant textually rather than requiring the file — proxy/run.rb pulls
 # in the whole Zeitwerk/ActiveSupport stack, which this script has no use for.
-RUN_CONFIG = File.expand_path("../lib/kamal/configuration/proxy/run.rb", __dir__)
+RUN_CONFIG = File.expand_path("../lib/dash/configuration/proxy/run.rb", __dir__)
 MINIMUM_VERSION = File.read(RUN_CONFIG)[/MINIMUM_VERSION\s*=\s*"([^"]+)"/, 1] or
   abort "could not read MINIMUM_VERSION from #{RUN_CONFIG}"
 

@@ -33,6 +33,6 @@ class CliLockTest < CliTestCase
 
   private
     def run_command(*command)
-      stdouted { Kamal::Cli::Lock.start([ *command, "-v", "-c", "test/fixtures/deploy_with_accessories.yml" ]) }
+      stdouted { Dash::Cli::Lock.start([ *command, "-v", "-c", "test/fixtures/deploy_with_accessories.yml" ]) }
     end
 end

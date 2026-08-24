@@ -8,7 +8,7 @@ class EnvFileTest < ActiveSupport::TestCase
     }
 
     assert_equal "foo=bar\nbaz=haz\n", \
-      Kamal::EnvFile.new(env).to_s
+      Dash::EnvFile.new(env).to_s
   end
 
   test "to_s won't escape '#'" do
@@ -18,7 +18,7 @@ class EnvFileTest < ActiveSupport::TestCase
     }
 
     assert_equal "foo=\#$foo\nbar=\#{bar}\n", \
-      Kamal::EnvFile.new(env).to_s
+      Dash::EnvFile.new(env).to_s
   end
 
   test "to_str won't escape chinese characters" do
@@ -27,7 +27,7 @@ class EnvFileTest < ActiveSupport::TestCase
     }
 
     assert_equal "foo=你好 means hello, \"欢迎\" means welcome, that's simple! 😃 {smile}\n",
-      Kamal::EnvFile.new(env).to_s
+      Dash::EnvFile.new(env).to_s
   end
 
   test "to_s won't escape japanese characters" do
@@ -36,7 +36,7 @@ class EnvFileTest < ActiveSupport::TestCase
     }
 
     assert_equal "foo=こんにちは means hello, \"ようこそ\" means welcome, that's simple! 😃 {smile}\n", \
-      Kamal::EnvFile.new(env).to_s
+      Dash::EnvFile.new(env).to_s
   end
 
   test "to_s won't escape korean characters" do
@@ -45,11 +45,11 @@ class EnvFileTest < ActiveSupport::TestCase
     }
 
     assert_equal "foo=안녕하세요 means hello, \"어서 오십시오\" means welcome, that's simple! 😃 {smile}\n", \
-      Kamal::EnvFile.new(env).to_s
+      Dash::EnvFile.new(env).to_s
   end
 
   test "to_s empty" do
-    assert_equal "\n", Kamal::EnvFile.new({}).to_s
+    assert_equal "\n", Dash::EnvFile.new({}).to_s
   end
 
   test "to_s escaped newline" do
@@ -58,7 +58,7 @@ class EnvFileTest < ActiveSupport::TestCase
     }
 
     assert_equal "foo=hello\\\\nthere\n", \
-      Kamal::EnvFile.new(env).to_s
+      Dash::EnvFile.new(env).to_s
   ensure
     ENV.delete "PASSWORD"
   end
@@ -69,7 +69,7 @@ class EnvFileTest < ActiveSupport::TestCase
     }
 
     assert_equal "foo=hello\\nthere\n", \
-      Kamal::EnvFile.new(env).to_s
+      Dash::EnvFile.new(env).to_s
   ensure
     ENV.delete "PASSWORD"
   end
@@ -81,6 +81,6 @@ class EnvFileTest < ActiveSupport::TestCase
     }
 
     assert_equal "foo=bar\nbaz=haz\n", \
-      StringIO.new(Kamal::EnvFile.new(env)).read
+      StringIO.new(Dash::EnvFile.new(env)).read
   end
 end

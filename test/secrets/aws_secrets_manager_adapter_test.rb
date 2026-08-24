@@ -297,7 +297,7 @@ class AwsSecretsManagerAdapterTest < SecretAdapterTestCase
                 "-c", "test/fixtures/deploy_with_accessories.yml",
                 "--adapter", "aws_secrets_manager" ]
         args += [ "--account", account ] if account
-        Kamal::Cli::Secrets.start(args)
+        Dash::Cli::Secrets.start(args)
       end
     end
 end

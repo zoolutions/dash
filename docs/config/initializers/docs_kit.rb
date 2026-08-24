@@ -23,10 +23,10 @@ Rails.application.config.to_prepare do
     c.themes = %w[dark light synthwave retro cyberpunk dracula night nord sunset]
 
     # The version badge in the sidebar header tracks the documented gem. A lambda
-    # (not a String) so it re-reads Kamal::VERSION on every reload — the dash
-    # path-gem is required as "kamal/version" (Gemfile), so only the constant is
+    # (not a String) so it re-reads Dash::VERSION on every reload — the dash
+    # path-gem is required as "dash/version" (Gemfile), so only the constant is
     # loaded; the CLI never boots inside the docs app.
-    c.version_badge = -> { "v#{Kamal::VERSION}" }
+    c.version_badge = -> { "v#{Dash::VERSION}" }
 
     # Code blocks: a light base with a dark override, so the highlight stays
     # readable when the switcher lands on a dark daisyUI theme. CSS-only scoping
