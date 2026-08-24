@@ -1,0 +1,21 @@
+dash.gemspec
+  s_7707b2ebb4d99f::t_30cc0ce5661220 22
+Gemfile.lock
+  ai_agent 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "9e47b629516dc8f79cde5facc9d7e3ac93434c2f",
+  "prompts": {},
+  "sessions": {
+    "s_7707b2ebb4d99f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7da0d1d7-8a5e-4535-becc-5d372ca86d14",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
