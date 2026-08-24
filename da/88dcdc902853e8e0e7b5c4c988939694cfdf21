@@ -1,0 +1,28 @@
+CLAUDE.md
+  s_6ba2d11f33cdd3::t_d3df57332938aa 108
+.rubocop.yml
+  s_6ba2d11f33cdd3::t_c6731b2d44b71c 3-9
+.github/workflows/docs-ci.yml
+  s_6ba2d11f33cdd3::t_eed47dea07ba81 36,41,51
+  s_6ba2d11f33cdd3::t_07c0a9c559f987 1-35,37-40,42-50,52-65
+.dockerignore
+  s_6ba2d11f33cdd3::t_60fec2c5af9b09 1-66
+.github/workflows/deploy-docs.yml
+  s_6ba2d11f33cdd3::t_bda0ead0d1d603 1-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "da88dcdc902853e8e0e7b5c4c988939694cfdf21",
+  "prompts": {},
+  "sessions": {
+    "s_6ba2d11f33cdd3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8a143eb5-357a-48bd-bea0-7df5959ce10d",
+        "model": "claude-fable-5"
+      },
+      "human_author": null
+    }
+  }
+}
