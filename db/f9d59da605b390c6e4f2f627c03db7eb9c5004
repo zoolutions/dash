@@ -1,0 +1,20 @@
+.github/workflows/release.yml
+  s_7707b2ebb4d99f::t_44c67643ae6ddc 25-26,30
+  ai_agent 105,124,150,163,167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "dbf9d59da605b390c6e4f2f627c03db7eb9c5004",
+  "prompts": {},
+  "sessions": {
+    "s_7707b2ebb4d99f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7da0d1d7-8a5e-4535-becc-5d372ca86d14",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
