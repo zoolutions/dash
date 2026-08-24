@@ -33,7 +33,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
           version = capture_with_info(*proxy.version).strip.presence
 
           if version && Kamal::Utils.older_version?(version, Kamal::Configuration::Proxy::Run::MINIMUM_VERSION)
-            raise "kamal-proxy version #{version} is too old, run `kamal proxy reboot` in order to update to at least #{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}"
+            raise "kamal-proxy version #{version} is too old, run `dash proxy reboot` in order to update to at least #{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}"
           end
 
           if (run_config = proxy.proxy_run_config)&.secrets?
@@ -52,7 +52,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
 
       if stale_hosts.any?
         say "kamal-proxy on #{stale_hosts.sort.join(", ")} is running with a configuration that no longer matches the deploy config. " \
-            "Automatic reboot is disabled (proxy: reboot_on_deploy: false) - run `kamal proxy reboot` to apply the new configuration.", :yellow
+            "Automatic reboot is disabled (proxy: reboot_on_deploy: false) - run `dash proxy reboot` to apply the new configuration.", :yellow
       end
 
       drifted_hosts.sort.each do |host|
@@ -114,7 +114,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
 
         if lb_stale.any?
           say "The loadbalancer on #{lb_stale.sort.join(", ")} is running with a configuration that no longer matches the deploy config. " \
-              "Automatic reboot is disabled (proxy: reboot_on_deploy: false) - run `kamal proxy reboot` to apply the new configuration.", :yellow
+              "Automatic reboot is disabled (proxy: reboot_on_deploy: false) - run `dash proxy reboot` to apply the new configuration.", :yellow
         end
 
         lb_drifted.sort.each do |host|
@@ -316,7 +316,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
       end
 
       # `docker container prune` only collects stopped containers, so leaving the
-      # loadbalancer running would also leave `kamal proxy remove` unable to
+      # loadbalancer running would also leave `dash proxy remove` unable to
       # remove it.
       if KAMAL.config.proxy.load_balancing?
         on(KAMAL.config.proxy.effective_loadbalancer) do
@@ -539,7 +539,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
 
   desc "import_certs", "Import certificates into the TLS certificate store from a Traefik acme.json or an exported archive"
   option :traefik_acme, type: :string, default: nil, desc: "Local path of a Traefik acme.json to import from"
-  option :archive, type: :string, default: nil, desc: "Local path of an archive written by kamal proxy export_certs"
+  option :archive, type: :string, default: nil, desc: "Local path of an archive written by dash proxy export_certs"
   option :resolver, type: :string, default: nil, desc: "Import only this Traefik resolver's certificates (default: all, last writer wins per domain)"
   option :force, type: :boolean, default: false, desc: "Overwrite a non-empty certificate store when restoring an archive"
   option :verify, type: :boolean, default: false, desc: "Only verify the archive: report domains and expiries without touching the store"
@@ -560,7 +560,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
           if capture_with_info(*commands.container_id(only_running: true), raise_on_non_zero_exit: false).strip.present?
             raise "Cannot import certificates while the #{load_balancing ? "loadbalancer" : "proxy"} " \
               "is running on #{host} - stop it first " \
-              "(kamal proxy #{load_balancing ? "loadbalancer stop" : "stop"}), import, then start it again"
+              "(dash proxy #{load_balancing ? "loadbalancer stop" : "stop"}), import, then start it again"
           end
         end
 
@@ -682,7 +682,7 @@ class Kamal::Cli::Proxy < Kamal::Cli::Base
       if force
         say "Forcing, so removing the proxy, even though other apps are installed", :magenta
       else
-        say "Not removing the proxy, as other apps are installed, ignore this check with kamal proxy remove --force", :magenta
+        say "Not removing the proxy, as other apps are installed, ignore this check with dash proxy remove --force", :magenta
       end
 
       force

@@ -2,22 +2,22 @@
 description: "Executes full autonomous engineering workflow with verification. Use when implementing complete features, tackling GitHub issues, or running end-to-end fork development cycles."
 model: opus
 argument-hint: "GitHub issue number/URL or feature description"
-allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(bundle exec:*), Bash(bin/test:*), Bash(bin/release-dash:*), Bash(git:*), Read, Write, Edit, Glob, Grep, Agent
+allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(bundle exec:*), Bash(bin/test:*), Bash(rake release:*), Bash(git:*), Read, Write, Edit, Glob, Grep, Agent
 ---
 
 # LFG - Full Autonomous Workflow
 
-Execute a complete engineering workflow with verification at each phase. This is a fork: `main` mirrors basecamp/kamal and is never committed to directly. All work happens on a feature branch rooted off `dash`, merged back into `dash`. See `CLAUDE.md` and `.claude/rules/upstream-sync.md` for the branch model and release ordering — do not duplicate them here.
+Execute a complete engineering workflow with verification at each phase. This is a fork: `main` mirrors basecamp/kamal and is never committed to directly. All work happens on a feature branch rooted off `main`, merged back into `main`. See `CLAUDE.md` and `.claude/rules/upstream-sync.md` for the branch model and release ordering — do not duplicate them here.
 
 ## Phase 0: Branch Setup
 
-**BEFORE any other work, prepare the git branch — always root off `dash`, never off `main`:**
+**BEFORE any other work, prepare the git branch — always root off `main`, never off `main`:**
 
 1. Check the current branch: `git branch --show-current`
-2. Switch to `dash` and sync it: `git checkout dash && git pull origin dash`
-3. Create feature branch off `dash`: `git checkout -b feat/{brief-description}` (or `issue-{number}-{brief-description}` if working a GitHub issue)
+2. Switch to `dash` and sync it: `git checkout main && git pull origin main`
+3. Create feature branch off `main`: `git checkout -b feat/{brief-description}` (or `issue-{number}-{brief-description}` if working a GitHub issue)
 
-Rooting off `dash` means the branch builds on the fork's real codebase — merged features, fork identity, and the `.claude/` toolkit are all present, so slash commands keep working and the branch merges back without replaying fork identity. The PR this workflow opens at the end targets `dash`, not `main`.
+Rooting off `main` means the branch builds on the fork's real codebase — merged features, fork identity, and the `.claude/` toolkit are all present, so slash commands keep working and the branch merges back without replaying fork identity. The PR this workflow opens at the end targets `dash`, not `main`.
 
 Upstreaming later is still possible from a `dash`-rooted branch — the "Upstreaming a feature" recipe in `upstream-sync.md` extracts the feature's own diff with `git diff dash...feat/<feature>`. Do not root off `main` to pre-empt that.
 
@@ -79,7 +79,7 @@ Create a TaskCreate todo list with specific implementation steps.
 
 1. List files to modify with specific changes
 2. List new files to create with purpose
-3. Identify whether this touches upstream-owned files (`kamal.gemspec`, `bin/release`, `lib/kamal/version.rb`) — if so, STOP; those must stay byte-identical to upstream, changes belong in the fork-owned equivalents (`dash.gemspec`, `bin/release-dash`)
+3. Identify whether this touches `lib/kamal/version.rb` (only `rake release` writes it) or frozen server-artifact names (`.kamal/`, `kamal-proxy` container, `KAMAL_*` env) — if so, STOP and check CLAUDE.md's staged-rename table
 4. Plan test coverage (TDD: tests FIRST), using minitest + mocha idioms already in `test/` — no RSpec
 5. Update task list with implementation steps
 6. Consider backwards compatibility with existing `deploy.yml` configs and the dash/upstream conflict playbook in `upstream-sync.md`
@@ -93,7 +93,7 @@ Create a TaskCreate todo list with specific implementation steps.
 The plan is the map; the codebase is the territory. The moment reality forces a choice the plan or issue didn't settle, log it in `implementation-notes.md` at the repo root — one line, at the moment it happens, not reconstructed later:
 
 - **Deviations** — the plan said X, you did Y, because Z
-- **Discoveries** — facts about the codebase the plan didn't know (an upstream-owned file in the path, a validator that no-ops, a fixture that needs `loadbalancer: false`)
+- **Discoveries** — facts about the codebase the plan didn't know (a frozen server-artifact name in the path, a validator that no-ops, a fixture that needs `loadbalancer: false`)
 - **Judgment calls** — choices the user might have made differently (defaults, `deploy.yml` key naming, scope cuts)
 
 Pick the conservative option and keep going. The log is how the user audits your judgment afterwards. Never commit the file: its contents move into the PR body (Phase 7), then the file is deleted.
@@ -115,7 +115,7 @@ Write the MINIMUM code to make the test pass. Follow project patterns:
 | Never Do | Always Do |
 |----------|-----------|
 | Hardcode a proxy version string in code or tests | Interpolate `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` |
-| Edit `kamal.gemspec` or `bin/release` | Edit `dash.gemspec` / `bin/release-dash` only |
+| Rename a frozen server artifact (`.kamal/`, `kamal-proxy` container, `KAMAL_*`) | Wait for the staged rename bridge — see CLAUDE.md |
 | Add a `v*` git tag | Use `dash-v<version>` (gem) or coordinate with proxy's `v<base>.<n>` (image) |
 | Skip Thor command conventions | Follow existing `lib/kamal/cli/*.rb` patterns (options, hooks, `Kamal::Cli::Base`) |
 | Bypass `Kamal::Commander` for target/config resolution | Route through `KAMAL` singleton (`Kamal::Commander`) |
@@ -214,7 +214,7 @@ Re-read the original requirements and verify:
 - "Have I addressed the ROOT CAUSE, not just the symptom?"
 - "Do my tests prove the issue is ACTUALLY fixed, not just suppressed?"
 - "Does this maintain backwards compatibility with existing `deploy.yml` configs?"
-- "Did I avoid touching upstream-owned files (`kamal.gemspec`, `bin/release`, `lib/kamal/version.rb`)?"
+- "Did I avoid bumping `lib/kamal/version.rb` (only `rake release` writes it) and renaming frozen server artifacts?"
 
 ---
 
@@ -248,7 +248,7 @@ PRs from this workflow target `dash`, not `main`:
 ```bash
 git push -u origin $(git branch --show-current)
 
-gh pr create --base dash --title "feat(scope): brief description" --body "$(cat <<'EOF'
+gh pr create --base main --title "feat(scope): brief description" --body "$(cat <<'EOF'
 ## Summary
 - Key change 1 touching `lib/kamal/commands/loadbalancer.rb`
 - Key change 2
@@ -277,7 +277,7 @@ cat > /tmp/pr-body.md << 'EOF'
 ## Summary
 ...any markdown...
 EOF
-gh pr create --base dash --title "..." --body-file /tmp/pr-body.md
+gh pr create --base main --title "..." --body-file /tmp/pr-body.md
 rm /tmp/pr-body.md
 ```
 
@@ -308,8 +308,8 @@ The tests prove the CODE is right; this phase keeps the USER's mental model righ
 - [ ] `bundle exec rubocop --parallel` passes
 - [ ] Unit test suite passes (full `bin/test` if proxy/deploy paths touched)
 - [ ] Backwards compatibility with existing `deploy.yml` maintained
-- [ ] No edits to upstream-owned files (`kamal.gemspec`, `bin/release`, `lib/kamal/version.rb`)
-- [ ] Branch rooted off `dash`, PR opened against `dash`
+- [ ] No manual bump of `lib/kamal/version.rb` (only `rake release` writes it), no frozen-artifact renames
+- [ ] Branch rooted off `main`, PR opened against `main`
 - [ ] PR body ends with `## Deviations & judgment calls` (from implementation-notes.md, since deleted)
 - [ ] Comprehension close-out delivered (decisions + three merge-gate questions)
 
@@ -320,6 +320,6 @@ The tests prove the CODE is right; this phase keeps the USER's mental model righ
 When complete:
 - All phases executed
 - Verification passed
-- PR created against `dash` and linked
+- PR created against `main` and linked
 
 Now, execute this workflow for the provided issue or feature.

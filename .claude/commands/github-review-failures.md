@@ -9,7 +9,7 @@ allowed-tools: Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr diff:*), Bas
 
 You are diagnosing and fixing CI failures on a `dash` (kamal fork) pull request. Work systematically: identify failures, read logs, diagnose root causes, fix locally, verify, push.
 
-Which repo is this? This command runs in whichever of the two fork repos the PR belongs to — the gem at `mhenrixon/kamal` (Ruby) or the proxy at `mhenrixon/kamal-proxy` (Go). Detect it from `git remote get-url origin` before proceeding; Phase 1's check table branches on it.
+Which repo is this? This command runs in whichever of the two fork repos the PR belongs to — the gem at `zoolutions/dash` (Ruby) or the proxy at `zoolutions/dash-proxy` (Go). Detect it from `git remote get-url origin` before proceeding; Phase 1's check table branches on it.
 
 ## Phase 0: Determine the PR Number
 
@@ -158,7 +158,7 @@ EOF
 git push
 ```
 
-If `dash.gemspec` diverged from `kamal.gemspec` while fixing a dependency-related failure, mirror the change by hand (`diff kamal.gemspec dash.gemspec`) — see CLAUDE.md.
+`dash.gemspec` is the only gemspec since the 2026-08 clean break — edit it directly for dependency-related failures.
 
 ---
 
@@ -189,7 +189,7 @@ If there are still pending checks, report which checks are running and what was 
 - **Read before fixing** — always read the actual failing code before attempting a fix
 - **Fix the root cause** — don't add `# rubocop:disable` or `//nolint` to bypass lint; fix the actual issue
 - **Don't fix unrelated failures** — if a test was already failing on `dash` before this PR, note it but don't fix it here
-- **Never edit upstream-owned files** to chase a fix — `kamal.gemspec`, `bin/release`, and anything not listed in CLAUDE.md's "Fork identity" table must stay byte-identical to upstream; if a fix seems to require touching one, the real fix is elsewhere
+- **Never rename frozen server artifacts** to chase a fix — `.kamal/`, the `kamal-proxy` container, `KAMAL_*` env vars, and the image title label wait for the staged rename bridge (CLAUDE.md); if a fix seems to require touching one, the real fix is elsewhere
 - **Flaky vs environmental** — a test that passes locally but fails in CI (or vice versa) may be one of the Known/Expected Failures above; check that table first
 - **Genuinely intermittent failures** — if a failure looks flaky (passed on re-run, fails only sometimes, only one matrix cell), hand off to `/debug-flaky` instead of adding workarounds; it owns the reproduction ladder and the knowledge base (`docs/flaky-tests.md`)
 - **Don't retry CI blindly** — diagnose first, fix, then push. Each push triggers a full CI run (and the gem matrix alone is 4 Ruby versions × 2 Gemfiles)

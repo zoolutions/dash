@@ -29,7 +29,9 @@ class Kamal::Secrets::Dotenv::InlineCommandSubstitution
           $LAST_MATCH_INFO[0][1..]
         else
           command = ::Dotenv::Substitutions::Variable.call(command, env)
-          if command =~ /\A\s*kamal\s*secrets\s+/
+          # Accept the legacy `kamal secrets` spelling too — secrets files
+          # written before the dash rename still use it.
+          if command =~ /\A\s*(dash|kamal)\s*secrets\s+/
             # Inline the command
             inline_secrets_command(command)
           else

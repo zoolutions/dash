@@ -4,12 +4,19 @@ Gem::Specification.new do |spec|
   spec.name        = "dash"
   spec.version     = Kamal::VERSION
   spec.authors     = [ "Mikael Henriksson" ]
-  spec.email       = "mikael@mhenrixon.com"
-  spec.homepage    = "https://github.com/mhenrixon/kamal"
+  spec.email       = "mikael@zoolutions.llc"
+  spec.homepage    = "https://github.com/zoolutions/dash"
   spec.summary     = "Deploy web apps in containers to servers running Docker with zero downtime."
   spec.license     = "MIT"
+
+  spec.metadata["homepage_uri"] = spec.homepage
+  spec.metadata["source_code_uri"] = "https://github.com/zoolutions/dash/tree/main"
+  spec.metadata["changelog_uri"] = "https://github.com/zoolutions/dash/releases"
+  spec.metadata["bug_tracker_uri"] = "https://github.com/zoolutions/dash/issues"
+  spec.metadata["rubygems_mfa_required"] = "true"
+
   spec.files = Dir["lib/**/*", "MIT-LICENSE", "README.md"]
-  spec.executables = %w[ kamal dash ]
+  spec.executables = %w[ dash ]
   spec.required_ruby_version = ">= 3.2"
 
   spec.add_dependency "activesupport", ">= 7.0"

@@ -49,7 +49,7 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
     assert_equal "/home/kamal-proxy/.apps-config/app/tls/web/client-ca.pem", config.role(:web).proxy.container_client_ca
   end
 
-  # Resolved at upload time, not config time - `kamal app logs` and `rollback`
+  # Resolved at upload time, not config time - `dash app logs` and `rollback`
   # must work on machines that do not hold the secret.
   test "client_ca_pem content is read from secrets at upload time" do
     with_test_secrets("secrets" => "CLIENT_CA_PEM=ca-bundle-content") do

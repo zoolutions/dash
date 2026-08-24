@@ -3,14 +3,14 @@ FROM ruby:3.4-alpine
 # Install docker/buildx-bin
 COPY --from=docker/buildx-bin /buildx /usr/libexec/docker/cli-plugins/docker-buildx
 
-# Set the working directory to /kamal
-WORKDIR /kamal
+# Set the working directory to /dash
+WORKDIR /dash
 
 # Copy the Gemfile, Gemfile.lock into the container
-COPY Gemfile Gemfile.lock kamal.gemspec ./
+COPY Gemfile Gemfile.lock dash.gemspec ./
 
-# Required in kamal.gemspec
-COPY lib/kamal/version.rb /kamal/lib/kamal/version.rb
+# Required in dash.gemspec
+COPY lib/kamal/version.rb /dash/lib/kamal/version.rb
 
 # Install system dependencies
 RUN apk add --no-cache build-base git docker-cli openssh-client-default yaml-dev \
@@ -23,8 +23,8 @@ RUN apk add --no-cache build-base git docker-cli openssh-client-default yaml-dev
 COPY . .
 
 # Install the gem locally from the project folder
-RUN gem build kamal.gemspec && \
-    gem install ./kamal-*.gem --no-document
+RUN gem build dash.gemspec && \
+    gem install ./dash-*.gem --no-document
 
 # Set the working directory to /workdir
 WORKDIR /workdir
@@ -34,5 +34,5 @@ WORKDIR /workdir
 RUN git config --global --add safe.directory '*'
 
 # Set the entrypoint to run the installed binary in /workdir
-# Example:  docker run -it -v "$PWD:/workdir" kamal init
-ENTRYPOINT ["kamal"]
+# Example:  docker run -it -v "$PWD:/workdir" dash init
+ENTRYPOINT ["dash"]

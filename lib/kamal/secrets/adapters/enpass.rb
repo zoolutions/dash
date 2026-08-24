@@ -4,10 +4,10 @@
 # Usage
 #
 # Fetch all password from FooBar item
-# `kamal secrets fetch --adapter enpass --from /Users/YOUR_USERNAME/Library/Containers/in.sinew.Enpass-Desktop/Data/Documents/Vaults/primary FooBar`
+# `dash secrets fetch --adapter enpass --from /Users/YOUR_USERNAME/Library/Containers/in.sinew.Enpass-Desktop/Data/Documents/Vaults/primary FooBar`
 #
 # Fetch only DB_PASSWORD from FooBar item
-# `kamal secrets fetch --adapter enpass --from /Users/YOUR_USERNAME/Library/Containers/in.sinew.Enpass-Desktop/Data/Documents/Vaults/primary FooBar/DB_PASSWORD`
+# `dash secrets fetch --adapter enpass --from /Users/YOUR_USERNAME/Library/Containers/in.sinew.Enpass-Desktop/Data/Documents/Vaults/primary FooBar/DB_PASSWORD`
 class Kamal::Secrets::Adapters::Enpass < Kamal::Secrets::Adapters::Base
   def requires_account?
     false

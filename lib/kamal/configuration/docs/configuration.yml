@@ -5,7 +5,7 @@
 # Destinations
 #
 # When running commands, you can specify a destination with the `-d` flag,
-# e.g., `kamal deploy -d staging`.
+# e.g., `dash deploy -d staging`.
 #
 # In this case, the configuration will also be read from `config/deploy.staging.yml`
 # and merged with the base configuration.
@@ -44,19 +44,19 @@ volumes:
 
 # Registry
 #
-# The Docker registry configuration, see kamal docs registry:
+# The Docker registry configuration, see dash docs registry:
 registry:
   ...
 
 # Servers
 #
-# The servers to deploy to, optionally with custom roles, see kamal docs servers:
+# The servers to deploy to, optionally with custom roles, see dash docs servers:
 servers:
   ...
 
 # Environment variables
 #
-# See kamal docs env:
+# See dash docs env:
 env:
   ...
 
@@ -171,59 +171,59 @@ stop_timeout: 30
 
 # Run directory
 #
-# Directory to store kamal runtime files in on the host, default `.kamal`:
+# Directory to store dash runtime files in on the host, default `.kamal`:
 run_directory: /etc/kamal
 
 # SSH options
 #
-# See kamal docs ssh:
+# See dash docs ssh:
 ssh:
   ...
 
 # Builder options
 #
-# See kamal docs builder:
+# See dash docs builder:
 builder:
   ...
 
 # Accessories
 #
-# Additional services to run in Docker, see kamal docs accessory:
+# Additional services to run in Docker, see dash docs accessory:
 accessories:
   ...
 
 # Proxy
 #
-# Configuration for kamal-proxy, see kamal docs proxy:
+# Configuration for kamal-proxy, see dash docs proxy:
 proxy:
   ...
 
 # SSHKit
 #
-# See kamal docs sshkit:
+# See dash docs sshkit:
 sshkit:
   ...
 
 # Boot options
 #
-# See kamal docs boot:
+# See dash docs boot:
 boot:
   ...
 
 # Logging
 #
-# Docker logging configuration, see kamal docs logging:
+# Docker logging configuration, see dash docs logging:
 logging:
   ...
 
 # Output
 #
-# Configure output loggers (OTel, file), see kamal docs output:
+# Configure output loggers (OTel, file), see dash docs output:
 output:
   ...
 
 # Aliases
 #
-# Alias configuration, see kamal docs alias:
+# Alias configuration, see dash docs alias:
 aliases:
   ...

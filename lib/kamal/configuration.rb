@@ -451,7 +451,7 @@ class Kamal::Configuration
       return true if offenders.empty?
 
       warn "Non-proxied role(s) #{offenders.map(&:name).join(", ")} have no healthcheck. " \
-        "Without one, Kamal accepts the container as ready #{readiness_delay}s after it merely starts " \
+        "Without one, dash accepts the container as ready #{readiness_delay}s after it merely starts " \
         "and then stops the previous container — traffic can be dropped. Add a `healthcheck:` block, " \
         "or opt out explicitly with `healthcheck: false`. This warning will become an error in a future release."
 

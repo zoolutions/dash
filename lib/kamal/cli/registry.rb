@@ -30,7 +30,7 @@ class Kamal::Cli::Registry < Kamal::Cli::Base
   option :skip_remote, aliases: "-R", type: :boolean, default: false, desc: "Skip remote login"
   def login
     if KAMAL.registry.local?
-      raise "Cannot use login command with a local registry. Use `kamal registry setup` instead."
+      raise "Cannot use login command with a local registry. Use `dash registry setup` instead."
     end
 
     setup
@@ -41,7 +41,7 @@ class Kamal::Cli::Registry < Kamal::Cli::Base
   option :skip_remote, aliases: "-R", type: :boolean, default: false, desc: "Skip remote login"
   def logout
     if KAMAL.registry.local?
-      raise "Cannot use logout command with a local registry. Use `kamal registry remove` instead."
+      raise "Cannot use logout command with a local registry. Use `dash registry remove` instead."
     end
 
     remove

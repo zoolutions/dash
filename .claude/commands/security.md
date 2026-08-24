@@ -143,7 +143,7 @@ go vet ./...
 | Unbounded request/response buffering | Size-capped buffer pool (`proxy_buffer_pool.go`) |
 | ACME solver answering any domain's challenge | Validate the challenge is for the domain being issued |
 | Editing `MINIMUM_VERSION` or `ghcr.io/zoolutions` defaults casually | Follow `.claude/rules/upstream-sync.md` — proxy image ships before the gem references it |
-| Committing a fix straight to `main` | `main` is fast-forward-only; branch off `dash`, PR into `dash` |
+| Committing a fix straight to `main` | `main` is fast-forward-only; branch off `main`, PR into `main` |
 
 ## Handoff
 

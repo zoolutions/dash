@@ -28,7 +28,7 @@ Follow RED -> GREEN -> REFACTOR:
 | `Kamal::Commander` | Unit test |
 | Proxy boot / loadbalancer activation | Unit test in `test/commands/proxy_test.rb`, `test/commands/loadbalancer_test.rb` |
 | Full deploy against real hosts | Integration test (`test/integration/**`) |
-| `bin/kamal` / `bin/dash` entry points | Not unit tested — covered by integration |
+| `bin/dash` entry point | Not unit tested — covered by integration |
 
 ## Minitest + Mocha Conventions (NOT RSpec)
 
@@ -72,14 +72,14 @@ end
 
 ## Interpolate MINIMUM_VERSION — Never Hardcode Proxy Versions
 
-Fork-specific: proxy image tags are fork-owned (`ghcr.io/zoolutions/kamal-proxy:v0.9.2.1`) and change independently of the gem. Tests must reference `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION`, never a literal version string:
+Fork-specific: proxy image tags are fork-owned (`ghcr.io/zoolutions/dash-proxy:v0.9.2.1`) and change independently of the gem. Tests must reference `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION`, never a literal version string:
 
 ```ruby
 # Correct
-assert_match %r{ghcr\.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}}, cmd
+assert_match %r{ghcr\.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}}, cmd
 
 # Wrong — breaks every time the proxy fork releases
-assert_match %r{ghcr\.io/zoolutions/kamal-proxy:v0\.9\.2\.1}, cmd
+assert_match %r{ghcr\.io/zoolutions/dash-proxy:v0\.9\.2\.1}, cmd
 ```
 
 See `.claude/rules/upstream-sync.md` for why this constant moves and how releases are ordered (proxy image before gem).
@@ -89,11 +89,11 @@ See `.claude/rules/upstream-sync.md` for why this constant moves and how release
 | | Unit (`test/**` minus `test/integration`) | Integration (`test/integration/**`) |
 |---|---|---|
 | Needs Docker | No | Yes — Docker-in-Docker deployer VMs |
-| Needs proxy image | No | Yes — pulls `ghcr.io/zoolutions/kamal-proxy:$MINIMUM_VERSION`; fails if unpublished |
-| Speed | Fast, run constantly | Slow, run before pushing `dash` / releasing |
+| Needs proxy image | No | Yes — pulls `ghcr.io/zoolutions/dash-proxy:$MINIMUM_VERSION`; fails if unpublished |
+| Speed | Fast, run constantly | Slow, run before pushing `main` / releasing |
 | Command | `bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'` | `bin/test` (runs everything, unit + integration) |
 
-Run unit tests continuously during TDD. Run `bin/test` (full suite) before pushing to `dash` and always before `bin/release-dash`, per `.claude/rules/upstream-sync.md`.
+Run unit tests continuously during TDD. Run `bin/test` (full suite) before pushing `main` and always before `rake release`, per `.claude/rules/upstream-sync.md`.
 
 ## Known Arch-Dependent Failures
 
@@ -112,7 +112,7 @@ If a deploy fixture under `test/fixtures/` gets a primary role with more than on
 - [ ] Tests written BEFORE implementation
 - [ ] Unit tests pass: `bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'`
 - [ ] `bundle exec rubocop --parallel` clean
-- [ ] Full suite passes before pushing `dash` or releasing: `bin/test`
+- [ ] Full suite passes before pushing `main` or releasing: `bin/test`
 - [ ] Any proxy version in an assertion is `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION`, not a literal
 - [ ] New multi-host fixtures set `loadbalancer: false` if not testing that feature
 - [ ] Builder-test failures checked against the two known Apple-Silicon cases before treating as a bug

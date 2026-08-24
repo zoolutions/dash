@@ -1,4 +1,4 @@
-# Ownership bookkeeping for a load balancer host that more than one kamal app
+# Ownership bookkeeping for a load balancer host that more than one dash app
 # may be deploying to. Kamal only ever sees one deploy.yml at a time, so the
 # other apps are visible solely through the files they left on the host.
 class Kamal::Cli::Proxy::LoadbalancerClaim
@@ -29,7 +29,7 @@ class Kamal::Cli::Proxy::LoadbalancerClaim
   # Every app sharing a load balancer boots the same container, so their
   # proxy/run configurations have to agree. A mismatch owned by another app is
   # an error; a mismatch owned by this app is ordinary drift, reported the same
-  # way the per-host proxy reports it and fixed by `kamal proxy reboot`.
+  # way the per-host proxy reports it and fixed by `dash proxy reboot`.
   def claim_run_config(replace: false)
     record = capture_with_info(*commands.read_run_config_record, raise_on_non_zero_exit: false).strip
 
@@ -43,7 +43,7 @@ class Kamal::Cli::Proxy::LoadbalancerClaim
                 "Apps sharing a load balancer must agree on proxy/run - align the configurations or use a different load balancer host."
         elsif !replace
           warn "The load balancer on #{host} is running with a configuration that no longer matches the deploy config - " \
-               "run `kamal proxy reboot` to apply the new configuration."
+               "run `dash proxy reboot` to apply the new configuration."
           return
         end
       end

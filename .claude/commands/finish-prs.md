@@ -7,7 +7,7 @@ allowed-tools: Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bas
 
 # Finish PRs (ordered merge-ready loop): $ARGUMENTS
 
-You are driving a set of open pull requests on `mhenrixon/kamal` (the `dash` gem) to **merge-ready** state, one at a time, in a defined order, minimizing the manual sync/CI back-and-forth that stacked or parallel PRs create.
+You are driving a set of open pull requests on `zoolutions/dash` (the `dash` gem) to **merge-ready** state, one at a time, in a defined order, minimizing the manual sync/CI back-and-forth that stacked or parallel PRs create.
 
 ## The fork constraints that shape this loop
 
@@ -19,7 +19,7 @@ This is a fork, and its branch model changes what "sync the PR" means. Read `.cl
 | **Never rebase a published branch** | Every branch here has a PR, so it is published. Sync with **`git merge origin/dash`**, never `git rebase`. There is therefore **no force-push anywhere in this command** — merge commits push cleanly. |
 | Merging a PR lands on `dash`, not `main` | `main` doesn't move when a PR merges, so the *upstream* base is stable. What each merge invalidates is the others' relationship to `dash` — that's what the re-sync in Phase 2a absorbs. |
 | `git rerere` is enabled | Previously-seen conflicts auto-replay their recorded resolutions. Always `git diff --staged` before trusting a replay — a resolution recorded in a different context can be wrong. |
-| `feat/*` branches root off `dash` | Merging `dash` forward into them is the normal, expected operation — it costs nothing and needs no note in the report. Upstreaming later extracts the feature's own diff (`git diff dash...feat/<feature>`, see `upstream-sync.md`), which already excludes everything `dash` contributed. |
+| `feat/*` branches root off `main` | Merging `dash` forward into them is the normal, expected operation — it costs nothing and needs no note in the report. Upstreaming later extracts the feature's own diff (`git diff dash...feat/<feature>`, see `upstream-sync.md`), which already excludes everything `dash` contributed. |
 
 **This command does NOT merge PRs itself** unless the user passed `automerge`. Default behavior: make each PR merge-ready, then pause and let the user merge; when a merge lands, re-sync the remaining PRs and continue.
 
@@ -36,7 +36,7 @@ This is a fork, and its branch model changes what "sync the PR" means. Read `.cl
 - Empty → auto-discover:
 
   ```bash
-  gh pr list --repo mhenrixon/kamal --author=@me --base dash --state=open --limit 100 \
+  gh pr list --repo zoolutions/dash --author=@me --base main --state=open --limit 100 \
     --json number,title,headRefName,baseRefName,createdAt
   ```
 
@@ -44,7 +44,7 @@ This is a fork, and its branch model changes what "sync the PR" means. Read `.cl
 
 **Verify every PR's base is `dash`.** Any PR based on `main` is a mistake in the fork model — surface it immediately and exclude it from the queue rather than processing it.
 
-**Order matters.** Each merge into `dash` invalidates the others' merge base against `dash`. Processing in a fixed order means you merge the base forward into each remaining PR exactly once per upstream merge, not repeatedly. If the user gave an explicit order, honor it exactly — they may know a dependency the metadata doesn't show (e.g. a proxy-side change that must land first).
+**Order matters.** Each merge into `main` invalidates the others' merge base against `main`. Processing in a fixed order means you merge the base forward into each remaining PR exactly once per upstream merge, not repeatedly. If the user gave an explicit order, honor it exactly — they may know a dependency the metadata doesn't show (e.g. a proxy-side change that must land first).
 
 Create a task list (TaskCreate) with one task per PR, in order, so progress is visible. Mark the current PR `in_progress`.
 
@@ -70,12 +70,12 @@ Process PRs strictly in order. For the current PR:
 ### 2a. Sync the branch onto the latest `dash`
 
 ```bash
-git fetch origin dash --quiet
+git fetch origin main --quiet
 cd <worktree>
 git merge origin/dash
 ```
 
-**Merge, never rebase.** If the merge conflicts, do NOT resolve it here — `/github-review-pr` Phase A0 owns conflict resolution and carries the per-file playbook (`lib/kamal/version.rb` → base's side; `Gemfile.lock` → take either side then `bundle install`; `kamal.gemspec` / `bin/release` → whatever `origin/main` has; `proxy/run.rb` → keep `ghcr.io/zoolutions` and treat a `MINIMUM_VERSION` conflict as a release-ordering question; new multi-host fixtures → `loadbalancer: false`). Abort the merge (`git merge --abort`), and let step 2d handle it — Phase A0 runs first inside that command by design.
+**Merge, never rebase.** If the merge conflicts, do NOT resolve it here — `/github-review-pr` Phase A0 owns conflict resolution and carries the per-file playbook (`lib/kamal/version.rb` → base's side; `Gemfile.lock` → take either side then `bundle install`; `proxy/run.rb` → keep `ghcr.io/zoolutions/dash-proxy` and treat a `MINIMUM_VERSION` conflict as a release-ordering question; new multi-host fixtures → `loadbalancer: false`). Abort the merge (`git merge --abort`), and let step 2d handle it — Phase A0 runs first inside that command by design.
 
 If the merge is clean, commit it (git's default merge message is fine) and continue.
 
@@ -88,7 +88,7 @@ bundle install     # re-derives the lockfile
 git add Gemfile.lock
 ```
 
-Never hand-merge a lockfile. Confirm the diff is only dependency resolution, not a `kamal (X.Y.Z)` version line you didn't expect — the fork version is written only by `bin/release-dash` on `dash`, so an unexpected bump on a feature branch is accidental and should be resolved to `dash`'s value.
+Never hand-merge a lockfile. Confirm the diff is only dependency resolution, not a `kamal (X.Y.Z)` version line you didn't expect — the version is written only by `rake release` on `main`, so an unexpected bump on a feature branch is accidental and should be resolved to `main`'s value.
 
 ### 2c. Push the synced branch
 
@@ -133,7 +133,7 @@ Mark the PR's task `completed` (merge-ready) — or `needs-user` via a metadata 
 
 ## Phase 3: Wait for the merge, then advance
 
-The loop is **gated on the target PR merging**, because each merge into `dash` is what the next PR needs to absorb.
+The loop is **gated on the target PR merging**, because each merge into `main` is what the next PR needs to absorb.
 
 - **automerge mode:** poll `gh pr view <PR> --json state --jq .state` until `MERGED`. Use `ScheduleWakeup` with a delay matched to CI duration (unit + rubocop run a few minutes; `bin/test` with integration is much longer — poll ~300s, or ~900s if integration ran) rather than a busy sleep. When merged, advance.
 - **default mode:** the user merges manually and will tell you (or you are re-invoked). On the next turn, re-check `gh pr view <PR> --json state`. If `MERGED`, advance to the next PR and repeat Phase 2 (its re-sync now picks up the just-merged changes). If not yet merged, report current status and stop — do not spin.
@@ -148,7 +148,7 @@ If the user merges a PR **out of the planned order**, adapt: drop it from the re
 
 Two fork-specific things worth surfacing once, at the end, rather than fixing mid-queue:
 
-- **Upstream drift.** If several PRs in the queue conflicted against `dash` in the same file, `main` may have moved and `dash` may be behind it. The durable fix is the routine sync in `.claude/rules/upstream-sync.md` (`git checkout main && git merge --ff-only upstream/main`, then `git checkout dash && git merge main`) — a commit to `dash`, so mention it, don't do it unprompted.
+- **Upstream drift.** If several PRs in the queue conflicted against `main` in the same file, `main` may have moved and `dash` may be behind it. The durable fix is the routine sync in `.claude/rules/upstream-sync.md` (`git checkout main && git merge --ff-only upstream/main`, then `git checkout main && git merge main`) — a commit to `dash`, so mention it, don't do it unprompted.
 - **Release ordering.** If any PR in the queue moves `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION`, the referenced `ghcr.io/zoolutions/kamal-proxy` tag must already be published — proxy image first, gem second. Flag it before the user merges, because merging a gem PR that names an unpublished proxy tag breaks integration tests on `dash`.
 
 ---

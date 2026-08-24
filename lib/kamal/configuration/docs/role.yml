@@ -15,7 +15,7 @@ servers:
   #
   # This can be a list of hosts if you don't need custom configuration for the role.
   #
-  # You can set tags on the hosts for custom env variables (see kamal docs env):
+  # You can set tags on the hosts for custom env variables (see dash docs env):
   web:
     - 172.1.0.1
     - 172.1.0.2: experiment1

@@ -287,7 +287,7 @@ class Kamal::Configuration::Proxy
     client_ca_pem.present?
   end
 
-  # Resolved at upload time, not config time, so `kamal app logs` and friends
+  # Resolved at upload time, not config time, so `dash app logs` and friends
   # work on machines without the secret. A blank secret raises like
   # basic_auth.password_secret - silently deploying without the client CA
   # would turn mTLS off.

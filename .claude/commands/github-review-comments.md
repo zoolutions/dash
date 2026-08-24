@@ -7,7 +7,7 @@ allowed-tools: Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Ba
 
 # Review GitHub PR Comments: $ARGUMENTS
 
-You are reviewing and responding to all unresolved review comments on a GitHub pull request against `mhenrixon/kamal` (gem published as `dash`). Apply technical rigour -- evaluate each comment against the actual codebase before accepting or rejecting it.
+You are reviewing and responding to all unresolved review comments on a GitHub pull request against `zoolutions/dash` (gem published as `dash`). Apply technical rigour -- evaluate each comment against the actual codebase before accepting or rejecting it.
 
 **Fork context**: this repo is a maintained fork (see `CLAUDE.md`, `.claude/rules/upstream-sync.md`). A reviewer suggestion may be technically correct in general but wrong here because it collides with a fork constraint. Check the constraints table below before implementing anything.
 
@@ -34,7 +34,7 @@ Once you have the PR number, confirm it and check the target branch:
 gh pr view <PR_NUMBER> --json title,state,url,baseRefName
 ```
 
-If `baseRefName` is `main`, stop and flag it -- PRs target `dash`, never `main` (see `.claude/rules/upstream-sync.md`). This command assumes a normal feature PR into `dash`; do not proceed against `main`.
+If `baseRefName` is `main`, stop and flag it -- PRs target `dash`, never `main` (see `.claude/rules/upstream-sync.md`). This command assumes a normal feature PR into `main`; do not proceed against `main`.
 
 ---
 
@@ -44,7 +44,7 @@ Retrieve all review comments and identify unresolved ones:
 
 ```bash
 # Get all review comments (not resolved)
-gh api "repos/mhenrixon/kamal/pulls/<PR_NUMBER>/comments" --paginate
+gh api "repos/zoolutions/dash/pulls/<PR_NUMBER>/comments" --paginate
 
 # Get all review threads to check resolution status
 gh api graphql -f query='
@@ -97,7 +97,7 @@ For each unresolved comment, read the full body and categorise it:
 | Valid style/consistency issue | Fix it |
 | Incorrect suggestion | Push back with technical reasoning |
 | Suggestion conflicts with fork architecture | Push back, reference the constraints table below |
-| Suggestion touches an upstream-owned file | Push back -- see "Fork constraints" |
+| Suggestion renames a frozen server artifact | Push back -- see "Fork constraints" |
 | Over-engineering / YAGNI | Push back, explain why it's unnecessary |
 | Unclear | Ask for clarification (do NOT implement) |
 
@@ -114,11 +114,11 @@ For each unresolved comment, read the full body and categorise it:
 | Reviewer suggestion | Why it's wrong here |
 |---|---|
 | "Just commit this fix to `main`" | `main` is a fast-forward-only mirror of `basecamp/kamal` -- never commit there |
-| "Edit `kamal.gemspec` / `bin/release`" | Upstream-owned, kept byte-identical so syncs never conflict; edit `dash.gemspec` / `bin/release-dash` instead |
-| "Tag this `v2.12.0.1`" | Bare `v*` tags belong to upstream; fork gem tags are `dash-v<version>` |
+| "Rename `.kamal/` / the `kamal-proxy` container / `KAMAL_*` env vars" | Frozen server artifacts — they wait for the staged rename bridge (see CLAUDE.md) |
+| "Tag this `dash-v3.2.0`" | Gem tags are plain `vX.Y.Z` via `rake release`; `dash-v*` is frozen history |
 | "Hardcode the proxy version string in the test" | Must interpolate `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` -- see `.claude/rules/testing.md` |
 | "Use a `-dash.1` style suffix for the proxy tag" | `Gem::Version` parses `-` as a prerelease marker, sorts BELOW the base, breaks `kamal proxy boot`'s version check |
-| "Rebase your branch onto `dash`" | Feature branches root off `dash` and merge it forward; never rebase a published branch |
+| "Rebase your branch onto `dash`" | Feature branches root off `main` and merge it forward; never rebase a published branch |
 | "This builder test failure needs fixing" | If it's one of the two known Apple-Silicon arch-dependent failures in `test/commands/builder_test.rb`, it's not a regression -- confirm via `.claude/rules/testing.md` before touching assertions |
 | "This multi-host fixture doesn't need `loadbalancer: false`" | The fork auto-activates the loadbalancer for any primary role with >1 web host; Docker-in-Docker integration VMs can't resolve each other's hostnames without it disabled |
 
@@ -174,7 +174,7 @@ For **each** unresolved thread, reply:
 Reply with what was fixed and the commit SHA:
 
 ```bash
-gh api "repos/mhenrixon/kamal/pulls/<PR>/comments/<COMMENT_ID>/replies" \
+gh api "repos/zoolutions/dash/pulls/<PR>/comments/<COMMENT_ID>/replies" \
   --method POST \
   -f 'body=Fixed in <SHA>. <Brief description of what changed>.'
 ```
@@ -184,9 +184,9 @@ gh api "repos/mhenrixon/kamal/pulls/<PR>/comments/<COMMENT_ID>/replies" \
 Reply with technical reasoning -- when the rejection is a fork constraint, cite it directly:
 
 ```bash
-gh api "repos/mhenrixon/kamal/pulls/<PR>/comments/<COMMENT_ID>/replies" \
+gh api "repos/zoolutions/dash/pulls/<PR>/comments/<COMMENT_ID>/replies" \
   --method POST \
-  -f 'body=<Technical explanation, e.g. "Not applying -- `kamal.gemspec` is upstream-owned and kept byte-identical so syncs never conflict (CLAUDE.md). The fork-owned equivalent is `dash.gemspec`.">'
+  -f 'body=<Technical explanation, e.g. "Not applying -- the kamal-proxy container name is frozen until the staged rename ships a rolling-upgrade bridge (CLAUDE.md).">'
 ```
 
 ### Resolving threads (via GraphQL):
@@ -262,7 +262,7 @@ When pushing back:
 - If a comment reveals a genuine bug you missed, fix it without defensiveness
 - If multiple comments suggest the same change, implement it once and reference the fix in all replies
 - Bot reviewers (CodeRabbit, etc.) sometimes suggest changes that conflict with fork conventions -- verify against `CLAUDE.md` and the constraints table above before accepting
-- Bot reviewers unfamiliar with the fork will frequently suggest editing `kamal.gemspec`, tagging `v*`, or fixing the arch-dependent builder tests -- these are the most common false positives; check the constraints table first
+- Bot reviewers will frequently suggest renaming frozen server artifacts, retagging with `dash-v*`, or fixing the arch-dependent builder tests -- these are the most common false positives; check the constraints table first
 - If a new round of review comments appears after your push (from re-review), report that to the user rather than entering an infinite loop
 
 Now begin by determining the PR number from `$ARGUMENTS` or the current branch.

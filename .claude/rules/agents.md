@@ -15,7 +15,7 @@ Use agents PROACTIVELY without waiting for user prompt:
 1. **New Thor command or config option** -> Plan agent first — it must touch `Cli`, `Configuration`, and matching `test/` files together
 2. **"Where does X happen" questions** -> Explore agent — walk `Kamal::Cli::* -> Commander -> Commands::* -> Configuration -> SSHKit`
 3. **Multi-file searches** -> Explore agent (not direct Glob/Grep) — e.g. every caller of `MINIMUM_VERSION`
-4. **Upstream sync conflicts / release sequencing** -> Plan agent — see `.claude/rules/upstream-sync.md` before touching `proxy/run.rb` or `dash.gemspec`
+4. **Release sequencing** -> Plan agent — see `.claude/rules/upstream-sync.md` (historical) before touching `proxy/run.rb` or `dash.gemspec`
 
 ## Parallel Execution
 
@@ -46,7 +46,7 @@ Use direct tools when:
 - Reading a specific known file path (e.g. `lib/kamal/configuration/proxy/run.rb`)
 - Simple pattern match in a known location
 - Single-file edits (a Thor command tweak, a test assertion fix)
-- Running `bin/test`, `bundle exec rubocop --parallel`, or `bin/release-dash`
+- Running `bin/test`, `bundle exec rubocop --parallel`, or `rake release`
 
 ## Repo-Specific Notes
 

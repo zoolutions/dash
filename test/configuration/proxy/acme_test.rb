@@ -74,7 +74,7 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
     config = Kamal::Configuration.new(base_deploy)
 
     assert_equal Kamal::Configuration::Proxy::Run.digest(
-      "ghcr.io/zoolutions/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}",
+      "ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}",
       "kamal-proxy run --recheck-targets-on-restore",
       *Kamal::Configuration::Proxy::Run.new(config, run_config: {}).docker_options_args
     ), Kamal::Configuration::Proxy::Run.new(config, run_config: {}).config_digest

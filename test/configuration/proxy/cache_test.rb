@@ -101,7 +101,7 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
   # Mirrors acme.credential_names: the digest is published as a world-readable
   # docker label, and hashing a URL that may embed a password would hand out an
   # offline guessing target. Presence moves the digest; rotating the URL's
-  # value needs an explicit `kamal proxy reboot`, same as an acme credential.
+  # value needs an explicit `dash proxy reboot`, same as an acme credential.
   test "config_digest tracks the store's presence, never its value" do
     assert_not_equal run_config({}).config_digest, run_config("store" => "memory").config_digest
     assert_equal run_config("store" => "memory").config_digest,

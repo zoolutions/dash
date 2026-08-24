@@ -79,7 +79,7 @@ class Kamal::Configuration::Role
   end
 
   # Kept out of option_args on purpose: Commands::App::Execution splats those into
-  # one-shot `kamal app exec` containers, which must not inherit a service healthcheck.
+  # one-shot `dash app exec` containers, which must not inherit a service healthcheck.
   def healthcheck_args
     healthcheck&.args || []
   end

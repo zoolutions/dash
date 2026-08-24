@@ -661,10 +661,10 @@ class CliMainTest < CliTestCase
       run_command("init", "--bundle").tap do |output|
         assert_match "Created configuration file in config/deploy.yml", output
         assert_match "Created .kamal/secrets file", output
-        assert_match /Adding Kamal to Gemfile and bundle/, output
-        assert_match /bundle add kamal/, output
-        assert_match /bundle binstubs kamal/, output
-        assert_match /Created binstub file in bin\/kamal/, output
+        assert_match /Adding dash to Gemfile and bundle/, output
+        assert_match /bundle add dash/, output
+        assert_match /bundle binstubs dash/, output
+        assert_match /Created binstub file in bin\/dash/, output
       end
     end
   end
@@ -678,7 +678,7 @@ class CliMainTest < CliTestCase
 
     run_command("init", "--bundle").tap do |output|
       assert_match /Config file already exists in config\/deploy.yml \(remove first to create a new one\)/, output
-      assert_match /Binstub already exists in bin\/kamal \(remove first to create a new one\)/, output
+      assert_match /Binstub already exists in bin\/dash \(remove first to create a new one\)/, output
     end
   end
 

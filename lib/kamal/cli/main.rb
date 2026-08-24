@@ -120,7 +120,7 @@ class Kamal::Cli::Main < Kamal::Cli::Base
             invoke "kamal:cli:app:boot", [], invoke_options.merge(version: version)
             rolled_back = true
           else
-            say "The app version '#{version}' is not available as a container (use 'kamal app containers' for available versions)", :red
+            say "The app version '#{version}' is not available as a container (use 'dash app containers' for available versions)", :red
           end
         end
       end
@@ -151,7 +151,7 @@ class Kamal::Cli::Main < Kamal::Cli::Base
     end
   end
 
-  desc "docs [SECTION]", "Show Kamal configuration documentation"
+  desc "docs [SECTION]", "Show dash configuration documentation"
   def docs(section = nil)
     case section
     when NilClass
@@ -181,7 +181,7 @@ class Kamal::Cli::Main < Kamal::Cli::Base
   end
 
   desc "init", "Create config stub in config/deploy.yml and secrets stub in .kamal"
-  option :bundle, type: :boolean, default: false, desc: "Add Kamal to the Gemfile and create a bin/kamal binstub"
+  option :bundle, type: :boolean, default: false, desc: "Add dash to the Gemfile and create a bin/dash binstub"
   def init
     require "fileutils"
 
@@ -208,15 +208,15 @@ class Kamal::Cli::Main < Kamal::Cli::Base
     end
 
     if options[:bundle]
-      if (binstub = Pathname.new(File.expand_path("bin/kamal"))).exist?
-        puts "Binstub already exists in bin/kamal (remove first to create a new one)"
+      if (binstub = Pathname.new(File.expand_path("bin/dash"))).exist?
+        puts "Binstub already exists in bin/dash (remove first to create a new one)"
       else
-        puts "Adding Kamal to Gemfile and bundle..."
+        puts "Adding dash to Gemfile and bundle..."
         run_locally do
-          execute :bundle, :add, :kamal
-          execute :bundle, :binstubs, :kamal
+          execute :bundle, :add, :dash
+          execute :bundle, :binstubs, :dash
         end
-        puts "Created binstub file in bin/kamal"
+        puts "Created binstub file in bin/dash"
       end
     end
   end
@@ -265,7 +265,7 @@ class Kamal::Cli::Main < Kamal::Cli::Base
     end
   end
 
-  desc "version", "Show Kamal version"
+  desc "version", "Show dash version"
   def version
     puts Kamal::VERSION
   end

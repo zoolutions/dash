@@ -41,7 +41,7 @@ class Kamal::Cli::Doctor::HostChecks
       if execute(*KAMAL.docker.running?, raise_on_non_zero_exit: false)
         result :docker, :ok, "docker is installed and running"
       else
-        result :docker, :fail, "docker is not installed or not running (run `kamal server bootstrap`)"
+        result :docker, :fail, "docker is not installed or not running (run `dash server bootstrap`)"
       end
     rescue StandardError => e
       result :docker, :fail, "#{e.class}: #{e.message}"
@@ -96,7 +96,7 @@ class Kamal::Cli::Doctor::HostChecks
       elsif version.nil?
         result :proxy_version, :ok, "not running (will be started on deploy)"
       elsif Kamal::Utils.older_version?(version, minimum)
-        result :proxy_version, :fail, "#{version} is older than the minimum #{minimum}, run `kamal proxy reboot` to update"
+        result :proxy_version, :fail, "#{version} is older than the minimum #{minimum}, run `dash proxy reboot` to update"
       else
         result :proxy_version, :ok, "#{version} (minimum #{minimum})"
       end
@@ -127,14 +127,14 @@ class Kamal::Cli::Doctor::HostChecks
         if mounted.include?(expected)
           result :proxy_socket, :ok, "docker socket #{expected} is mounted"
         elsif sleep_configured?
-          result :proxy_socket, :fail, "the running kamal-proxy has no #{expected} mount, so sleeping services never wake - run `kamal proxy reboot`"
+          result :proxy_socket, :fail, "the running kamal-proxy has no #{expected} mount, so sleeping services never wake - run `dash proxy reboot`"
         else
           # Nothing sleeps yet, so nothing hangs - drift rather than breakage.
-          result :proxy_socket, :warn, "the running kamal-proxy has no #{expected} mount - run `kamal proxy reboot` to apply the current configuration"
+          result :proxy_socket, :warn, "the running kamal-proxy has no #{expected} mount - run `dash proxy reboot` to apply the current configuration"
         end
       elsif (stray = mounted.grep(DOCKER_SOCKET_PATTERN).first)
         result :proxy_socket, :warn, "the running kamal-proxy mounts #{stray} but the config no longer asks for it - " \
-          "the socket is root-equivalent host access; `kamal proxy reboot` removes it"
+          "the socket is root-equivalent host access; `dash proxy reboot` removes it"
       else
         result :proxy_socket, :ok, "no docker socket configured or mounted"
       end

@@ -34,13 +34,15 @@ class Kamal::Configuration::Proxy::Boot
   end
 
   def image_name
-    "kamal-proxy"
+    "dash-proxy"
   end
 
   def image_default
     "#{repository_name}/#{image_name}"
   end
 
+  # Stays kamal-proxy until the server-artifact rename ships a migration
+  # bridge — every deployed host has a running container by this name.
   def container_name
     "kamal-proxy"
   end

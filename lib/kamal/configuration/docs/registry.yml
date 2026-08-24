@@ -60,5 +60,5 @@ registry:
 # You can validate the configuration by running:
 #
 # ```shell
-# kamal registry login
+# dash registry login
 # ```

@@ -1,6 +1,6 @@
 # dash Roadmap
 
-Evidence-linked improvement roadmap for the dash fork (gem + [`../kamal-proxy`](https://github.com/mhenrixon/kamal-proxy) — its proxy-side twin lives in that repo's ROADMAP.md). Goal: bridge selected gaps vs nginx/traefik/caddy/envoy for kamal's audience — full-stack apps on their own servers — without competing head-on. Sequencing favors value per line changed.
+Evidence-linked improvement roadmap for the dash fork (gem + [`../kamal-proxy`](https://github.com/zoolutions/dash-proxy) — its proxy-side twin lives in that repo's ROADMAP.md). Goal: bridge selected gaps vs nginx/traefik/caddy/envoy for kamal's audience — full-stack apps on their own servers — without competing head-on. Sequencing favors value per line changed.
 
 ## Strategic frame
 

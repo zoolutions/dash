@@ -317,7 +317,7 @@ module Kamal::Cli
             puts status
 
             unless status.include?(AUTOMATIC_DEPLOY_LOCK_MESSAGE)
-              raise LockError, "Deploy lock held manually, not waiting. Run 'kamal lock help' for more information"
+              raise LockError, "Deploy lock held manually, not waiting. Run 'dash lock help' for more information"
             end
 
             details_shown = true
@@ -346,7 +346,7 @@ module Kamal::Cli
       rescue LockHeldError
         say "Deploy lock already in place!", :red
         puts capture_lock_status
-        raise LockError, "Deploy lock found. Run 'kamal lock help' for more information"
+        raise LockError, "Deploy lock found. Run 'dash lock help' for more information"
       end
 
       def execute_lock_acquire(message, lock: KAMAL.lock, hosts: KAMAL.primary_host)

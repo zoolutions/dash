@@ -28,7 +28,7 @@ REPEAT:   Next scenario
 - Touching the loadbalancer auto-activation path (`lib/kamal/configuration/proxy/`)
 - Refactoring anything in the layer cake (see `CLAUDE.md` Architecture)
 
-**NOT for**: `kamal.gemspec`, `bin/release` — upstream-owned files, never edited (see `.claude/rules/upstream-sync.md`).
+**NOT for**: `lib/kamal/version.rb` — only `rake release` writes it.
 
 ## Workflow
 
@@ -177,7 +177,7 @@ Two builder tests are known-failing on Apple Silicon only (host-arch dependent);
 - Ignore failing tests
 - Test private/implementation details — test the public behavior of the Configuration/Command object
 - Skip testing error paths (`Kamal::ConfigurationError`, `SSHKit::Runner::ExecuteError`)
-- Edit `kamal.gemspec` or `bin/release` to make a test pass — those are upstream-owned; fix `dash.gemspec`/`bin/release-dash` or the actual bug instead
+- Rename a frozen server artifact to make a test pass — fix the actual bug instead (see CLAUDE.md staged-rename table)
 
 ## Checklist
 
@@ -189,4 +189,4 @@ Two builder tests are known-failing on Apple Silicon only (host-arch dependent);
 - [ ] All edge cases and error paths covered
 - [ ] `bundle exec rubocop --parallel` clean
 - [ ] Unit suite green; `bin/test` run if proxy/deploy/boot flow touched
-- [ ] No edits to upstream-owned files (`kamal.gemspec`, `bin/release`)
+- [ ] No manual version.rb bumps, no frozen-artifact renames
