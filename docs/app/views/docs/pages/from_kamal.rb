@@ -45,16 +45,18 @@ class Views::Docs::Pages::FromKamal < DocsUI::Page
         [
           [ [ :code, "config/deploy.yml" ], [ :md, "Keys unchanged — dash's config is a superset of kamal 2.x; every dash-only key is optional. ERB that calls into the gem needs `Kamal::` renamed to `Dash::` (see below)." ] ],
           [ [ :code, ".kamal/secrets" ], [ :md, "Still read — the default is now `.dash/secrets`, but dash falls back to `.kamal/` when that is the only directory present. Run `dash migrate` to move it." ] ],
-          [ [ :md, "`.kamal/` on the servers" ], [ :md, "Unchanged — locks, audit log, and hooks live where they always did." ] ],
+          [ [ :md, "`.kamal/` on the servers" ], [ :md, "Renamed to `.dash/` in 3.4 — dash moves it for you, in place, the first time it takes a lock on the host. Locks, audit log, proxy boot files and app env all come along; nothing is rebooted." ] ],
           [ [ :md, "`kamal-proxy` container" ], [ :md, "Same container name; dash manages the one kamal booted." ] ],
           [ [ :md, "`KAMAL_*` env vars & secrets" ], [ :md, "Still set — dash writes `DASH_*` and `KAMAL_*` side by side, so existing hooks and apps keep working. The `KAMAL_*` names go away in dash 5.0." ] ],
           [ [ :md, "Hooks (`.kamal/hooks/`)" ], [ :md, "Still read — same hook names, same environment, with `.dash/hooks/` as the new default location." ] ]
         ]
       )
       md <<~'MD'
-        There is nothing to migrate on the servers — a host deployed with kamal
-        is a host dash can deploy to. In your own repo, `.kamal/` keeps working
-        as-is; `dash migrate` moves it to `.dash/` when you are ready.
+        There is nothing for you to do on the servers — a host deployed with
+        kamal is a host dash can deploy to, and the one server-side rename
+        (`.kamal/` → `.dash/`) happens by itself on the next locked command. In
+        your own repo, `.kamal/` keeps working as-is; `dash migrate` moves it to
+        `.dash/` when you are ready.
       MD
     end
   end

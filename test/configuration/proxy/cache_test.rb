@@ -78,9 +78,9 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
     run = run_config "store" => "redis://:supers3cret@cache.example.com:6379/0"
 
     assert_equal "CACHE_STORE=redis://:supers3cret@cache.example.com:6379/0\n", run.secrets_io.string
-    assert_equal ".kamal/proxy/secrets.env", run.secrets_path
+    assert_equal ".dash/proxy/secrets.env", run.secrets_path
     assert_includes run.docker_options_args, "--env-file"
-    assert_includes run.docker_options_args, ".kamal/proxy/secrets.env"
+    assert_includes run.docker_options_args, ".dash/proxy/secrets.env"
 
     assert_no_match(/supers3cret/, run.run_command)
     assert_no_match(/supers3cret/, run.docker_options_args.join(" "))

@@ -13,20 +13,20 @@ class CommandsAppTest < ActiveSupport::TestCase
 
   test "run" do
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run.join(" ")
   end
 
   test "run with destination" do
     @destination = "staging"
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-staging-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-staging-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env KAMAL_DESTINATION=\"staging\" --env-file .kamal/apps/app-staging/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination=\"staging\" dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-staging-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-staging-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env KAMAL_DESTINATION=\"staging\" --env-file .dash/apps/app-staging/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination=\"staging\" dhh/app:999",
       new_command.run.join(" ")
   end
 
   test "run with hostname" do
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --hostname myhost --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --hostname myhost --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run(hostname: "myhost").join(" ")
   end
 
@@ -34,7 +34,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:servers] = { "web" => [ "1.1.1.1" ], "jobs" => { "hosts" => [ "1.1.1.2" ], "cmd" => "bin/jobs", "healthcheck" => { "port" => 7434, "path" => "/readyz", "start_period" => 60 } } }
 
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-jobs-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-jobs-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.2\" --env-file .kamal/apps/app/env/roles/jobs.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"jobs\" --label destination --health-cmd \"curl -f http://localhost:7434/readyz || exit 1\" --health-interval \"1s\" --health-start-period \"60s\" dhh/app:999 bin/jobs",
+      "docker run --detach --restart unless-stopped --name app-jobs-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-jobs-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.2\" --env-file .dash/apps/app/env/roles/jobs.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"jobs\" --label destination --health-cmd \"curl -f http://localhost:7434/readyz || exit 1\" --health-interval \"1s\" --health-start-period \"60s\" dhh/app:999 bin/jobs",
       new_command(role: "jobs", host: "1.1.1.2").run.join(" ")
   end
 
@@ -76,14 +76,14 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:volumes] = [ "/local/path:/container/path" ]
 
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --volume /local/path:/container/path --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --volume /local/path:/container/path --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run.join(" ")
   end
 
   test "run with custom options" do
     @config[:servers] = { "web" => [ "1.1.1.1" ], "jobs" => { "hosts" => [ "1.1.1.2" ], "cmd" => "bin/jobs", "options" => { "mount" => "somewhere", "cap-add" => true } } }
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-jobs-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-jobs-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.2\" --env-file .kamal/apps/app/env/roles/jobs.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"jobs\" --label destination --mount \"somewhere\" --cap-add dhh/app:999 bin/jobs",
+      "docker run --detach --restart unless-stopped --name app-jobs-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-jobs-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.2\" --env-file .dash/apps/app/env/roles/jobs.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"jobs\" --label destination --mount \"somewhere\" --cap-add dhh/app:999 bin/jobs",
       new_command(role: "jobs", host: "1.1.1.2").run.join(" ")
   end
 
@@ -91,7 +91,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:servers] = { "web" => { "hosts" => [ "1.1.1.1" ], "options" => { "restart" => "on-failure" } } }
 
     assert_equal \
-      "docker run --detach --restart on-failure --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart on-failure --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run.join(" ")
   end
 
@@ -99,7 +99,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:logging] = { "driver" => "local", "options" => { "max-size" => "100m", "max-file" => "3" } }
 
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .kamal/apps/app/env/roles/web.env --log-driver \"local\" --log-opt max-size=\"100m\" --log-opt max-file=\"3\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-driver \"local\" --log-opt max-size=\"100m\" --log-opt max-file=\"3\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run.join(" ")
   end
 
@@ -108,7 +108,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:servers] = { "web" => { "hosts" => [ "1.1.1.1" ], "logging" => { "driver" => "local", "options" => { "max-size" => "100m" } } } }
 
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .kamal/apps/app/env/roles/web.env --log-driver \"local\" --log-opt max-size=\"100m\" --log-opt max-file=\"3\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-driver \"local\" --log-opt max-size=\"100m\" --log-opt max-file=\"3\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run.join(" ")
   end
 
@@ -117,7 +117,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:env]["tags"] = { "tag1" => { "ENV1" => "value1" } }
 
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env ENV1=\"value1\" --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env ENV1=\"value1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run.join(" ")
   end
 
@@ -412,7 +412,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
   test "execute in new container" do
     assert_match \
-      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
+      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
       new_command.execute_in_new_container("bin/rails", "db:setup", env: {}).join(" ")
   end
 
@@ -420,19 +420,19 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:logging] = { "driver" => "local", "options" => { "max-size" => "100m", "max-file" => "3" } }
 
     assert_match \
-      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .kamal/apps/app/env/roles/web.env --log-driver "local" --log-opt max-size="100m" --log-opt max-file="3" dhh/app:999 bin/rails db:setup},
+      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-driver "local" --log-opt max-size="100m" --log-opt max-file="3" dhh/app:999 bin/rails db:setup},
       new_command.execute_in_new_container("bin/rails", "db:setup", env: {}).join(" ")
   end
 
   test "execute in new container with env" do
     assert_match \
-      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .kamal/apps/app/env/roles/web.env --env foo="bar" --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
+      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --env foo="bar" --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
       new_command.execute_in_new_container("bin/rails", "db:setup", env: { "foo" => "bar" }).join(" ")
   end
 
   test "execute in new detached container" do
     assert_match \
-      %r{docker run --detach --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
+      %r{docker run --detach --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
       new_command.execute_in_new_container("bin/rails", "db:setup", detach: true, env: {}).join(" ")
   end
 
@@ -441,14 +441,14 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:env]["tags"] = { "tag1" => { "ENV1" => "value1" } }
 
     assert_match \
-      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env ENV1="value1" --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
+      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env ENV1="value1" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
       new_command.execute_in_new_container("bin/rails", "db:setup", env: {}).join(" ")
   end
 
   test "execute in new container with custom options" do
     @config[:servers] = { "web" => { "hosts" => [ "1.1.1.1" ], "options" => { "mount" => "somewhere", "cap-add" => true } } }
     assert_match \
-      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size="10m" --mount "somewhere" --cap-add dhh/app:999 bin/rails db:setup},
+      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" --mount "somewhere" --cap-add dhh/app:999 bin/rails db:setup},
       new_command.execute_in_new_container("bin/rails", "db:setup", env: {}).join(" ")
   end
 
@@ -457,7 +457,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
     command = new_command.execute_in_new_container("bin/rails", "db:setup", env: {}).join(" ")
 
-    assert_match %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size="10m" --mount "somewhere" dhh/app:999 bin/rails db:setup}, command
+    assert_match %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" --mount "somewhere" dhh/app:999 bin/rails db:setup}, command
     assert_no_match(/--restart/, command)
   end
 
@@ -474,7 +474,7 @@ class CommandsAppTest < ActiveSupport::TestCase
   end
 
   test "execute in new container over ssh" do
-    assert_match %r{docker run -it --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails c},
+    assert_match %r{docker run -it --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails c},
       stub_stdin_tty { new_command.execute_in_new_container_over_ssh("bin/rails", "c", env: {}) }
   end
 
@@ -482,13 +482,13 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:servers] = [ { "1.1.1.1" => "tag1" } ]
     @config[:env]["tags"] = { "tag1" => { "ENV1" => "value1" } }
 
-    assert_match %r{ssh -t root@1.1.1.1 -p 22 'docker run -it --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env ENV1="value1" --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails c'},
+    assert_match %r{ssh -t root@1.1.1.1 -p 22 'docker run -it --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env ENV1="value1" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails c'},
       stub_stdin_tty { new_command.execute_in_new_container_over_ssh("bin/rails", "c", env: {}) }
   end
 
   test "execute in new container with custom options over ssh" do
     @config[:servers] = { "web" => { "hosts" => [ "1.1.1.1" ], "options" => { "mount" => "somewhere", "cap-add" => true } } }
-    assert_match %r{docker run -it --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --mount \"somewhere\" --cap-add dhh/app:999 bin/rails c},
+    assert_match %r{docker run -it --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --mount \"somewhere\" --cap-add dhh/app:999 bin/rails c},
       stub_stdin_tty { new_command.execute_in_new_container_over_ssh("bin/rails", "c", env: {}) }
   end
 
@@ -680,32 +680,32 @@ class CommandsAppTest < ActiveSupport::TestCase
 
   test "extract assets" do
     assert_equal [
-      :mkdir, "-p", ".kamal/apps/app/assets/extracted/web-999", "&&",
+      :mkdir, "-p", ".dash/apps/app/assets/extracted/web-999", "&&",
       :docker, :container, :rm, "app-web-assets", "2> /dev/null", "|| true", "&&",
       :docker, :container, :create, "--name", "app-web-assets", "dhh/app:999", "&&",
-      :docker, :container, :cp, "-L", "app-web-assets:/public/assets/.", ".kamal/apps/app/assets/extracted/web-999", "&&",
+      :docker, :container, :cp, "-L", "app-web-assets:/public/assets/.", ".dash/apps/app/assets/extracted/web-999", "&&",
       :docker, :container, :rm, "app-web-assets"
     ], new_command(asset_path: "/public/assets").extract_assets
   end
 
   test "sync asset volumes" do
     assert_equal [
-      :mkdir, "-p", ".kamal/apps/app/assets/volumes/web-999", ";",
-      :cp, "-rnT", ".kamal/apps/app/assets/extracted/web-999", ".kamal/apps/app/assets/volumes/web-999"
+      :mkdir, "-p", ".dash/apps/app/assets/volumes/web-999", ";",
+      :cp, "-rnT", ".dash/apps/app/assets/extracted/web-999", ".dash/apps/app/assets/volumes/web-999"
     ], new_command(asset_path: "/public/assets").sync_asset_volumes
 
     assert_equal [
-      :mkdir, "-p", ".kamal/apps/app/assets/volumes/web-999", ";",
-      :cp, "-rnT", ".kamal/apps/app/assets/extracted/web-999", ".kamal/apps/app/assets/volumes/web-999", ";",
-      :cp, "-rnT", ".kamal/apps/app/assets/extracted/web-999", ".kamal/apps/app/assets/volumes/web-998", "|| true", ";",
-      :cp, "-rnT", ".kamal/apps/app/assets/extracted/web-998", ".kamal/apps/app/assets/volumes/web-999", "|| true"
+      :mkdir, "-p", ".dash/apps/app/assets/volumes/web-999", ";",
+      :cp, "-rnT", ".dash/apps/app/assets/extracted/web-999", ".dash/apps/app/assets/volumes/web-999", ";",
+      :cp, "-rnT", ".dash/apps/app/assets/extracted/web-999", ".dash/apps/app/assets/volumes/web-998", "|| true", ";",
+      :cp, "-rnT", ".dash/apps/app/assets/extracted/web-998", ".dash/apps/app/assets/volumes/web-999", "|| true"
     ], new_command(asset_path: "/public/assets").sync_asset_volumes(old_version: 998)
   end
 
   test "clean up assets" do
     assert_equal [
-      :find, ".kamal/apps/app/assets/extracted", "-maxdepth 1", "-name", "'web-*'", "!", "-name", "web-999", "-exec rm -rf \"{}\" +", ";",
-      :find, ".kamal/apps/app/assets/volumes", "-maxdepth 1", "-name", "'web-*'", "!", "-name", "web-999", "-exec rm -rf \"{}\" +"
+      :find, ".dash/apps/app/assets/extracted", "-maxdepth 1", "-name", "'web-*'", "!", "-name", "web-999", "-exec rm -rf \"{}\" +", ";",
+      :find, ".dash/apps/app/assets/volumes", "-maxdepth 1", "-name", "'web-*'", "!", "-name", "web-999", "-exec rm -rf \"{}\" +"
     ], new_command(asset_path: "/public/assets").clean_up_assets
   end
 
@@ -729,7 +729,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
   test "remove_proxy_app_directory" do
     assert_equal \
-      "rm -r .kamal/proxy/apps-config/app",
+      "rm -r .dash/proxy/apps-config/app",
       new_command.remove_proxy_app_directory.join(" ")
   end
 

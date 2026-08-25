@@ -4,7 +4,16 @@ class Dash::Commands::Proxy < Dash::Commands::Base
   delegate :argumentize, :optionize, to: Dash::Utils
   attr_reader :proxy_run_config
 
-  CONFIG_DIGEST_LABEL = "org.kamal.proxy-config-digest"
+  CONFIG_DIGEST_LABEL = "org.dash.proxy-config-digest"
+
+  # Containers booted before the stage-3b rename carry the old key. New ones are
+  # labelled with CONFIG_DIGEST_LABEL only, but reads fall back to the legacy key
+  # so upgrading doesn't read as config drift and reboot every proxy for nothing.
+  # Both the legacy constant and the fallback go away in stage 3d.
+  LEGACY_CONFIG_DIGEST_LABEL = "org.kamal.proxy-config-digest"
+
+  CONFIG_DIGEST_FORMAT = "'{{ with index .Config.Labels \"#{CONFIG_DIGEST_LABEL}\" }}{{ . }}" \
+    "{{ else }}{{ index .Config.Labels \"#{LEGACY_CONFIG_DIGEST_LABEL}\" }}{{ end }}'"
 
   def initialize(config, host:)
     super(config)
@@ -52,7 +61,7 @@ class Dash::Commands::Proxy < Dash::Commands::Base
   end
 
   def config_digest
-    docker :inspect, container_name, "--format", "'{{ index .Config.Labels \"#{CONFIG_DIGEST_LABEL}\" }}'"
+    docker :inspect, container_name, "--format", CONFIG_DIGEST_FORMAT
   end
 
   def container_id(only_running: false)

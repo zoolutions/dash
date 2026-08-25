@@ -308,11 +308,23 @@ class IntegrationTest < ActiveSupport::TestCase
     end
 
     def assert_app_directory_removed
-      assert_directory_removed("./kamal/apps/#{@app}")
+      assert_directory_removed("/root/.dash/apps/#{@app}")
     end
 
+    # `ls` on a missing directory errors out and prints nothing, so counting its
+    # lines says "0" whether the path was removed or never existed — which is how
+    # this assertion passed for a run directory (`./kamal/apps/...`) that was
+    # never the real one. Test the directory itself instead.
     def assert_directory_removed(directory)
-      assert docker_compose("exec vm1 ls #{directory} | wc -l", capture: true).strip == "0"
+      assert_not path_exists_on?("vm1", directory), "#{directory} still exists on vm1"
+    end
+
+    def path_exists_on?(host, path)
+      vm_exec(host, "test -e #{path} && echo yes || echo no", capture: true).strip == "yes"
+    end
+
+    def vm_exec(host, command, **options)
+      docker_compose("exec #{host} sh -c '#{command}'", **options)
     end
 
     def assert_proxy_running

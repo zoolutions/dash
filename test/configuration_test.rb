@@ -325,7 +325,16 @@ class ConfigurationTest < ActiveSupport::TestCase
 
   test "run directory" do
     config = Dash::Configuration.new(@deploy)
-    assert_equal ".kamal", config.run_directory
+    assert_equal ".dash", config.run_directory
+    assert_equal ".kamal", Dash::Configuration::LEGACY_RUN_DIRECTORY
+  end
+
+  test "run directory derivatives hang off the current run directory" do
+    config = Dash::Configuration.new(@deploy)
+    assert_equal ".dash/apps", config.apps_directory
+    assert_equal ".dash/apps/app", config.app_directory
+    assert_equal ".dash/apps/app/env", config.env_directory
+    assert_equal ".dash/apps/app/assets", config.assets_directory
   end
 
   test "asset path" do

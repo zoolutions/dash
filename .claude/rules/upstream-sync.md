@@ -18,10 +18,11 @@ What survives from the fork era:
   `ghcr.io/zoolutions/dash-proxy` tag before the gem releases. `rake release` gates on this.
 - **Tag hygiene**: never `-suffix` tags (Gem::Version prerelease trap), never `git push --tags`.
   Gem tags are now plain `vX.Y.Z`; old `dash-v*` tags are frozen history.
-- **Server-artifact names**: the `kamal-proxy` container name, image title label
-  `org.opencontainers.image.title=kamal-proxy`, `.kamal/` directory, and `KAMAL_*` env vars
-  remain until the stage-3 rename (server artifacts with a rolling-upgrade bridge) ships.
-  The Ruby namespace became `Dash::` in stage 2 (issue #117).
+- **Server-artifact names**: the `kamal-proxy` container name, the `kamal` network, and the image
+  title label `org.opencontainers.image.title=kamal-proxy` remain until stage 3c, which needs a
+  coordinated dash-proxy release; `KAMAL_*` env vars are dual-emitted alongside `DASH_*` until 5.0.
+  The Ruby namespace became `Dash::` in stage 2 (#117), the project directory `.dash/` in 3a (#125),
+  and the server run directory `.dash/` plus the `org.dash.proxy-config-digest` label in 3b (#123).
 - **Test discipline**: interpolate `MINIMUM_VERSION` in assertions; multi-host fixtures set
   `loadbalancer: false` (the dind harness can't resolve inner VM hostnames).
 - The old `ghcr.io/zoolutions/kamal-proxy` package stays published — released gem versions

@@ -1,6 +1,6 @@
 # dash
 
-**dash** (`zoolutions/dash`) — deploy web apps anywhere. Began as a fork of [basecamp/kamal](https://github.com/basecamp/kamal); made a clean break in 2026-08 (issue #115) and now moves independently — no upstream remote, no sync, no contributions back. Published on rubygems.org as `dash`; the executable is `dash` and the Ruby namespace is `Dash::` (stage 2, issue #117). On-server artifacts (`.kamal/`, `kamal-proxy` container, `KAMAL_*` env vars) keep their names until stage 3 ships (see Staged rename below).
+**dash** (`zoolutions/dash`) — deploy web apps anywhere. Began as a fork of [basecamp/kamal](https://github.com/basecamp/kamal); made a clean break in 2026-08 (issue #115) and now moves independently — no upstream remote, no sync, no contributions back. Published on rubygems.org as `dash`; the executable is `dash` and the Ruby namespace is `Dash::` (stage 2, issue #117). The server run directory is `.dash/` as of stage 3b; the remaining on-server artifacts (`kamal-proxy` container, `kamal` network, `KAMAL_*` env vars) keep their names until stage 3c ships (see Staged rename below).
 
 ## Tech Stack
 
@@ -20,7 +20,7 @@
 4. **NO gem release before the proxy image exists** — the tag named by `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` must be pullable from `ghcr.io/zoolutions/dash-proxy` first (`rake release` gates on this)
 5. **NO `git push --tags`** — single-tag pushes only; `rake release` creates the gem tag via `gh release create`
 6. **NO rebasing published branches** — merge forward; history is shared
-7. **NO renaming server artifacts yet** — `.kamal/`, the `kamal-proxy` container name, `KAMAL_*` env vars, and the image title label wait for the stage-3 rename with a rolling-upgrade bridge
+7. **NO renaming the remaining server artifacts yet** — the `kamal-proxy` container name, the `kamal` docker network, the `kamal-proxy-config` / `kamal-loadbalancer-config` volumes, `KAMAL_*` env vars, and the image title label wait for stage 3c and a coordinated dash-proxy release. The run directory (`.dash/`) and config-digest label landed in 3b.
 
 ### Always Do
 
@@ -75,7 +75,10 @@ Gem tags are plain `vX.Y.Z` (own semver, 3.x line). Historical `dash-v*` tags ar
 |---|---|---|
 | 1 | CLI executable + user-facing text + docs (`dash` only) | DONE (3.2.0) |
 | 2 | Ruby namespace `Kamal::` → `Dash::`, `lib/kamal` → `lib/dash` | DONE (#117) |
-| 3 | Server artifacts: `.kamal/` → `.dash/`, `KAMAL_*` → `DASH_*`, container + label names — with a rolling-upgrade bridge | follow-up issue |
+| 3a | Local project directory `.kamal/` → `.dash/`, dual-emitted `DASH_*`/`KAMAL_*` env vars | DONE (#125) |
+| 3b | Server run directory `.kamal/` → `.dash/` (self-migrating `mv`), config-digest label `org.kamal.*` → `org.dash.*` (read-both), local registry container | DONE (#123) |
+| 3c | `kamal-proxy` container + network + volume names, `org.opencontainers.image.title` — needs a coordinated dash-proxy release | follow-up issue |
+| 3d | Drop the read-both fallbacks (`.kamal/` project dir, legacy digest label) | 5.0 |
 
 ## Testing
 

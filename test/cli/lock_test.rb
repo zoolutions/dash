@@ -3,7 +3,7 @@ require_relative "cli_test_case"
 class CliLockTest < CliTestCase
   test "status" do
     run_command("status").tap do |output|
-      assert_match "Running /usr/bin/env stat .kamal/lock-app > /dev/null && cat .kamal/lock-app/details | base64 -d on 1.1.1.1", output
+      assert_match "Running /usr/bin/env stat .dash/lock-app > /dev/null && cat .dash/lock-app/details | base64 -d on 1.1.1.1", output
     end
   end
 
@@ -15,7 +15,7 @@ class CliLockTest < CliTestCase
 
   test "status when there is no deploy lock" do
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_debug)
-      .raises(RuntimeError, "cat: .kamal/lock-app/details: No such file or directory")
+      .raises(RuntimeError, "cat: .dash/lock-app/details: No such file or directory")
 
     run_command("status").tap do |output|
       assert_match "There is no deploy lock", output
@@ -24,7 +24,7 @@ class CliLockTest < CliTestCase
 
   test "release when there is no deploy lock" do
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-      .raises(RuntimeError, "rm: cannot remove '.kamal/lock-app/details': No such file or directory")
+      .raises(RuntimeError, "rm: cannot remove '.dash/lock-app/details': No such file or directory")
 
     run_command("release").tap do |output|
       assert_match "There is no deploy lock", output

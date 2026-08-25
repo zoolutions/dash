@@ -33,7 +33,7 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
   test "client_ca_pem is translated to a container path" do
     proxy = configuration("ssl" => { "client_ca_pem" => "CLIENT_CA_PEM" }, "host" => "example.com").proxy
 
-    assert_equal ".kamal/proxy/apps-config/app/tls/client-ca.pem", proxy.host_client_ca
+    assert_equal ".dash/proxy/apps-config/app/tls/client-ca.pem", proxy.host_client_ca
     assert_equal "/home/kamal-proxy/.apps-config/app/tls/client-ca.pem", proxy.container_client_ca
     assert_equal "/home/kamal-proxy/.apps-config/app/tls/client-ca.pem", proxy.deploy_options[:"tls-client-ca-path"]
     assert proxy.client_ca?
@@ -45,7 +45,7 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
       proxy: { "ssl" => { "client_ca_pem" => "CLIENT_CA_PEM" }, "host" => "example.com" }
     )
 
-    assert_equal ".kamal/proxy/apps-config/app/tls/web/client-ca.pem", config.role(:web).proxy.host_client_ca
+    assert_equal ".dash/proxy/apps-config/app/tls/web/client-ca.pem", config.role(:web).proxy.host_client_ca
     assert_equal "/home/kamal-proxy/.apps-config/app/tls/web/client-ca.pem", config.role(:web).proxy.container_client_ca
   end
 

@@ -33,13 +33,13 @@ class CliTestCase < ActiveSupport::TestCase
 
     def stub_setup
       SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-        .with { |*args| args == [ :mkdir, "-p", ".kamal/apps/app" ] }
+        .with { |*args| args == [ :mkdir, "-p", ".dash/apps/app" ] }
       SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-        .with { |arg1, arg2, arg3| arg1 == :mkdir && arg2 == "-p" && arg3 == ".kamal/lock-app" }
+        .with { |arg1, arg2, arg3| arg1 == :mkdir && arg2 == "-p" && arg3 == ".dash/lock-app" }
       SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-        .with { |arg1, arg2| arg1 == :mkdir && arg2 == ".kamal/lock-app" }
+        .with { |arg1, arg2| arg1 == :mkdir && arg2 == ".dash/lock-app" }
       SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-        .with { |arg1, arg2| arg1 == :rm && arg2 == ".kamal/lock-app/details" }
+        .with { |arg1, arg2| arg1 == :rm && arg2 == ".dash/lock-app/details" }
       SSHKit::Backend::Abstract.any_instance.stubs(:execute)
         .with(:docker, :buildx, :inspect, "kamal-local-docker-container")
     end

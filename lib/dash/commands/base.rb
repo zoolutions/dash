@@ -32,6 +32,32 @@ module Dash::Commands
       [ :mkdir, "-p", path ]
     end
 
+    # Creates the run directory, renaming a pre-3b `.kamal` into place first.
+    #
+    # Lives on Base because two unlocked paths reach the run directory before
+    # Dash::Cli::Base#ensure_run_directory does — the auditor records "Pulled
+    # image" during `build:pull`, and every `mkdir -p .dash/...` underneath it
+    # creates the parent. If any of them made the directory with a bare mkdir,
+    # `.dash` would exist by the time the guard ran and the legacy tree would be
+    # stranded. Everything that can be first must run the same command.
+    #
+    # The migration is safe to repeat on every command:
+    #
+    # - Idempotent - once `.dash` exists the second guard is false forever.
+    # - Atomic - the two are siblings in the SSH user's home, so this is a
+    #   rename within one filesystem, never a copy.
+    # - Invisible to running containers - a bind mount resolves to an inode,
+    #   so the live proxy keeps serving from the renamed directory and only
+    #   picks up the new path when it is next recreated.
+    #
+    # `test` leads deliberately: SSHKit's command map passes `if`/`test`/`time`/
+    # `exec` through untouched and prefixes everything else with `/usr/bin/env`.
+    # The trailing `|| true` keeps the exit status zero when there is nothing to
+    # migrate, since callers execute this with raise_on_non_zero_exit on.
+    def ensure_run_directory
+      combine migrate_legacy_run_directory, make_directory(config.run_directory)
+    end
+
     def remove_directory(path)
       [ :rm, "-r", path ]
     end
@@ -51,6 +77,16 @@ module Dash::Commands
     end
 
     private
+      def migrate_legacy_run_directory
+        any \
+          combine(
+            [ :test, "-d", Dash::Configuration::LEGACY_RUN_DIRECTORY ],
+            [ :test, "!", "-e", config.run_directory ],
+            [ :mv, Dash::Configuration::LEGACY_RUN_DIRECTORY, config.run_directory ]
+          ),
+          [ :true ]
+      end
+
       def combine(*commands, by: "&&")
         commands
           .compact

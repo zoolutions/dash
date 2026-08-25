@@ -18,20 +18,20 @@ class CommandsAuditorTest < ActiveSupport::TestCase
 
   test "record" do
     assert_equal [
-      :mkdir, "-p", ".kamal", "&&",
+      *ENSURE_RUN_DIRECTORY, "&&",
       :echo,
       "\"[#{@recorded_at}] [#{@performer}] app removed container\"",
-      ">>", ".kamal/app-audit.log"
+      ">>", ".dash/app-audit.log"
     ], @auditor.record("app removed container")
   end
 
   test "record with destination" do
     new_command(destination: "staging").tap do |auditor|
       assert_equal [
-        :mkdir, "-p", ".kamal", "&&",
+        *ENSURE_RUN_DIRECTORY, "&&",
         :echo,
         "\"[#{@recorded_at}] [#{@performer}] [staging] app removed container\"",
-        ">>", ".kamal/app-staging-audit.log"
+        ">>", ".dash/app-staging-audit.log"
       ], auditor.record("app removed container")
     end
   end
@@ -39,20 +39,20 @@ class CommandsAuditorTest < ActiveSupport::TestCase
   test "record with command details" do
     new_command(role: "web").tap do |auditor|
       assert_equal [
-        :mkdir, "-p", ".kamal", "&&",
+        *ENSURE_RUN_DIRECTORY, "&&",
         :echo,
         "\"[#{@recorded_at}] [#{@performer}] [web] app removed container\"",
-        ">>", ".kamal/app-audit.log"
+        ">>", ".dash/app-audit.log"
       ], auditor.record("app removed container")
     end
   end
 
   test "record with arg details" do
     assert_equal [
-      :mkdir, "-p", ".kamal", "&&",
+      *ENSURE_RUN_DIRECTORY, "&&",
       :echo,
       "\"[#{@recorded_at}] [#{@performer}] [value] app removed container\"",
-      ">>", ".kamal/app-audit.log"
+      ">>", ".dash/app-audit.log"
     ], @auditor.record("app removed container", detail: "value")
   end
 

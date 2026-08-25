@@ -201,7 +201,7 @@ class CliBuildTest < CliTestCase
         .with { |*args| args[0..1] == [ :docker, :login ] }
 
       SSHKit::Backend::Abstract.any_instance.expects(:execute)
-      .with(:docker, :start, "kamal-docker-registry", "||", :docker, :run, "--detach", "-p", "127.0.0.1:5000:5000", "--name", "kamal-docker-registry", "registry:3")
+      .with(:docker, :start, "dash-docker-registry", "||", :docker, :run, "--detach", "-p", "127.0.0.1:5000:5000", "--name", "dash-docker-registry", "registry:3")
 
       SSHKit::Backend::Abstract.any_instance.expects(:execute)
         .with(:docker, :buildx, :rm, "kamal-local-registry-docker-container")
@@ -498,7 +498,7 @@ class CliBuildTest < CliTestCase
 
         output = run_command("push", "--verbose", fixture: fixture)
 
-        registry_setup = "docker start kamal-docker-registry || docker run --detach -p 127.0.0.1:5000:5000 --name kamal-docker-registry registry:3"
+        registry_setup = "docker start dash-docker-registry || docker run --detach -p 127.0.0.1:5000:5000 --name dash-docker-registry registry:3"
         buildx_build   = "docker buildx build"
 
         # The local registry container is started (or restarted) on the dev machine.

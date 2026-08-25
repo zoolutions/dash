@@ -1,4 +1,7 @@
 class Dash::Commands::Registry < Dash::Commands::Base
+  LOCAL_CONTAINER_NAME = "dash-docker-registry"
+  LEGACY_LOCAL_CONTAINER_NAME = "kamal-docker-registry"
+
   def login(registry_config: nil)
     registry_config ||= config.registry
 
@@ -20,16 +23,19 @@ class Dash::Commands::Registry < Dash::Commands::Base
     registry_config ||= config.registry
 
     combine \
-      docker(:start, "kamal-docker-registry"),
-      docker(:run, "--detach", "-p", "127.0.0.1:#{registry_config.local_port}:5000", "--name", "kamal-docker-registry", "registry:3"),
+      docker(:start, LOCAL_CONTAINER_NAME),
+      docker(:run, "--detach", "-p", "127.0.0.1:#{registry_config.local_port}:5000", "--name", LOCAL_CONTAINER_NAME, "registry:3"),
       by: "||"
   end
 
+  # The legacy container is torn down alongside the current one so an operator's
+  # laptop doesn't keep a stray kamal-docker-registry holding the local port
+  # after upgrading. Dash::Cli::Registry#remove already runs this with
+  # raise_on_non_zero_exit: false, so a missing container of either name is fine.
   def remove
-    combine \
-      docker(:stop, "kamal-docker-registry"),
-      docker(:rm, "kamal-docker-registry"),
-      by: "&&"
+    chain \
+      combine(docker(:stop, LOCAL_CONTAINER_NAME), docker(:rm, LOCAL_CONTAINER_NAME)),
+      combine(docker(:stop, LEGACY_LOCAL_CONTAINER_NAME), docker(:rm, LEGACY_LOCAL_CONTAINER_NAME))
   end
 
   def local?

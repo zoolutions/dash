@@ -87,11 +87,11 @@ class CommandsRegistryTest < ActiveSupport::TestCase
 
   test "registry setup" do
     @config[:registry] = { "server" => "localhost:5000" }
-    assert_equal "docker start kamal-docker-registry || docker run --detach -p 127.0.0.1:5000:5000 --name kamal-docker-registry registry:3", registry.setup.join(" ")
+    assert_equal "docker start dash-docker-registry || docker run --detach -p 127.0.0.1:5000:5000 --name dash-docker-registry registry:3", registry.setup.join(" ")
   end
 
-  test "registry remove" do
-    assert_equal "docker stop kamal-docker-registry && docker rm kamal-docker-registry", registry.remove.join(" ")
+  test "registry remove tears down the legacy container alongside the current one" do
+    assert_equal "docker stop dash-docker-registry && docker rm dash-docker-registry ; docker stop kamal-docker-registry && docker rm kamal-docker-registry", registry.remove.join(" ")
   end
 
   private

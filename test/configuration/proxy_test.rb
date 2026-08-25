@@ -243,8 +243,8 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
       }
 
       proxy = config.proxy
-      assert_equal ".kamal/proxy/apps-config/app/tls/cert.pem", proxy.host_tls_cert
-      assert_equal ".kamal/proxy/apps-config/app/tls/key.pem", proxy.host_tls_key
+      assert_equal ".dash/proxy/apps-config/app/tls/cert.pem", proxy.host_tls_cert
+      assert_equal ".dash/proxy/apps-config/app/tls/key.pem", proxy.host_tls_key
       assert_equal "/home/kamal-proxy/.apps-config/app/tls/cert.pem", proxy.container_tls_cert
       assert_equal "/home/kamal-proxy/.apps-config/app/tls/key.pem", proxy.container_tls_key
     end

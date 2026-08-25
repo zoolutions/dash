@@ -45,10 +45,10 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
         "credentials" => [ "LOOPIA_API_USER", "LOOPIA_API_PASSWORD" ]
 
       assert_equal "LOOPIA_API_USER=user\nLOOPIA_API_PASSWORD=s3cr3t\n", run.secrets_io.string
-      assert_equal ".kamal/proxy/secrets.env", run.secrets_path
+      assert_equal ".dash/proxy/secrets.env", run.secrets_path
 
       assert_includes run.docker_options_args, "--env-file"
-      assert_includes run.docker_options_args, ".kamal/proxy/secrets.env"
+      assert_includes run.docker_options_args, ".dash/proxy/secrets.env"
 
       assert_no_match(/s3cr3t/, run.run_command)
       assert_no_match(/s3cr3t/, run.docker_options_args.join(" "))

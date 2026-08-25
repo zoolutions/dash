@@ -64,15 +64,18 @@ class CliRegistryTest < CliTestCase
     assert_nothing_raised { run_command("setup", "--skip-local") }
   end
 
+  # The matcher is a plain string, not a regexp: an unescaped `||` inside a
+  # regexp literal is an alternation with two empty branches, so it matches
+  # everything and the assertion silently stops testing anything.
   test "setup local registry" do
     run_command("setup", fixture: :with_local_registry).tap do |output|
-      assert_match /docker start kamal-docker-registry || docker run --detach -p 127.0.0.1:5000:5000 --name kamal-docker-registry registry:2 as .*@localhost/, output
+      assert_match "docker start dash-docker-registry || docker run --detach -p 127.0.0.1:5000:5000 --name dash-docker-registry registry:3", output
     end
   end
 
-  test "remove local registry" do
+  test "remove local registry also cleans up a leftover kamal-docker-registry" do
     run_command("remove", fixture: :with_local_registry).tap do |output|
-      assert_match /docker stop kamal-docker-registry && docker rm kamal-docker-registry as .*@localhost/, output
+      assert_match "docker stop dash-docker-registry && docker rm dash-docker-registry ; docker stop kamal-docker-registry && docker rm kamal-docker-registry", output
     end
   end
 
