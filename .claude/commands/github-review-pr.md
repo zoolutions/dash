@@ -43,7 +43,7 @@ gh pr view <PR_NUMBER> --json title,state,url,baseRefName
 
 **Before touching anything**, load the fork rules — they change what "correct" looks like on almost every file:
 
-- `CLAUDE.md` — architecture (Thor CLI layer cake: `bin` → `Kamal::Cli` → `Commander` → `Commands` → `Configuration` → `SSHKit`), tooling, critical rules
+- `CLAUDE.md` — architecture (Thor CLI layer cake: `bin` → `Dash::Cli` → `Commander` → `Commands` → `Configuration` → `SSHKit`), tooling, critical rules
 - `.claude/rules/upstream-sync.md` — sync/release runbook, conflict playbook
 - `.claude/rules/git-workflow.md` — branch model, tags, release ordering
 - `.claude/rules/testing.md` — Minitest + Mocha conventions, `MINIMUM_VERSION` interpolation, known Apple-Silicon builder-test failures
@@ -54,7 +54,7 @@ Non-negotiables that apply to every fix in both phases below:
 |---|---|
 | `baseRefName` must be `dash`, never `main` | `main` is a fast-forward-only mirror of `basecamp/kamal` — no commits, ever |
 | Never rename frozen server artifacts (`.kamal/`, `kamal-proxy` container, `KAMAL_*`) | they wait for the staged rename bridge — see CLAUDE.md |
-| Never hardcode a proxy version in a test | interpolate `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` — see `.claude/rules/testing.md` |
+| Never hardcode a proxy version in a test | interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` — see `.claude/rules/testing.md` |
 | Never `git push --tags` | gem tags are plain `vX.Y.Z` via `rake release`; proxy tags `v<base>.<n>`; push one tag at a time |
 | Never rebase `main`, `dash`, or a shared `feat/*` | merge forward only, history is shared |
 
@@ -80,12 +80,12 @@ gh pr view <PR_NUMBER> --json mergeable,mergeStateStatus,baseRefName
 2. `git fetch origin <base>` then **`git merge origin/<base>`** — MERGE, never rebase. The branch is shared (it has a PR); a rebase would require a force-push, and `.claude/rules/git-workflow.md` forbids rebasing published branches. The base is normally `dash`, and `feat/*` branches root off `main`, so merging it forward is routine — it does not compromise a later upstream PR, which extracts the feature's own diff (`git diff dash...feat/<feature>`, see `.claude/rules/upstream-sync.md`).
 3. `git rerere` is enabled on this repo — previously-seen conflicts auto-replay their recorded resolutions. Review what rerere staged before trusting it (`git diff --staged`); a replayed resolution from a different context can be wrong.
 4. Resolve every conflicted file **semantically** — read both sides and produce the version that preserves BOTH changes' intent. Never blanket `--ours`/`--theirs` a source file. The authoritative per-file table is the **Conflict playbook in `.claude/rules/upstream-sync.md`** — apply it with these PR-context readings:
-   - **`lib/kamal/version.rb`**: take the BASE's side (`main`'s). The version is only ever written by `rake release` at release time on `main` — a feature branch never bumps it on purpose; a bump on the branch is accidental.
+   - **`lib/dash/version.rb`**: take the BASE's side (`main`'s). The version is only ever written by `rake release` at release time on `main` — a feature branch never bumps it on purpose; a bump on the branch is accidental.
    - **`Gemfile.lock`** (tracked at the repo root): take either side, then run `bundle install` and commit the settled result. Never hand-merge a lockfile. (CI deletes it before the test matrix, but the committed file must still be consistent.)
    - **`dash.gemspec`**: resolve dependency conflicts by keeping both sides' intent — it is the only gemspec since the 2026-08 clean break.
-   - **`lib/kamal/configuration/proxy/run.rb`**: keep the `ghcr.io/zoolutions` repository; a `MINIMUM_VERSION` conflict is a release-ordering question (proxy image first, gem second) — resolve per `.claude/rules/upstream-sync.md` and flag it in the report.
+   - **`lib/dash/configuration/proxy/run.rb`**: keep the `ghcr.io/zoolutions` repository; a `MINIMUM_VERSION` conflict is a release-ordering question (proxy image first, gem second) — resolve per `.claude/rules/upstream-sync.md` and flag it in the report.
    - **`test/cli/proxy_test.rb`, `test/commands/proxy_test.rb`**: keep the ghcr org and the `#{...MINIMUM_VERSION}` interpolation; adopt the other side's new assertions around them.
-   - **`test/integration/docker/deployer/setup.sh`**: a shell script — there is no Ruby interpolation here. Keep the ghcr image and set its literal tag equal to `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` (per the Conflict playbook in `.claude/rules/upstream-sync.md`).
+   - **`test/integration/docker/deployer/setup.sh`**: a shell script — there is no Ruby interpolation here. Keep the ghcr image and set its literal tag equal to `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` (per the Conflict playbook in `.claude/rules/upstream-sync.md`).
    - **`.github/workflows/ci.yml`**: keep the `dash` entry under push branches.
    - **New multi-host integration fixtures**: any primary role with >1 host needs `loadbalancer: false` under `proxy:` (the dind harness can't resolve inner VM hostnames).
 5. Run the verification gates BEFORE pushing the merge — scoped to what the conflict touched, at minimum:
@@ -166,7 +166,7 @@ If failures persist that trace to this branch's changes, **do not proceed to Pha
      }' -f owner=mhenrixon -f repo=kamal -F pr=<PR_NUMBER>
    ```
 2. **Categorise each unresolved thread**: valid fix / invalid suggestion / unclear (ask the user for unclear ones).
-3. **Implement accepted fixes**, respecting the architecture layers in `CLAUDE.md` — e.g. a Thor-option change belongs in `lib/kamal/cli/*`, a docker-command-string change in `lib/kamal/commands/*`, a deploy.yml-shape change in `lib/kamal/configuration/*`. Write/update the test first (RED → GREEN), per `.claude/rules/testing.md`.
+3. **Implement accepted fixes**, respecting the architecture layers in `CLAUDE.md` — e.g. a Thor-option change belongs in `lib/dash/cli/*`, a docker-command-string change in `lib/dash/commands/*`, a deploy.yml-shape change in `lib/dash/configuration/*`. Write/update the test first (RED → GREEN), per `.claude/rules/testing.md`.
 4. **Verify locally**:
    ```bash
    bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'

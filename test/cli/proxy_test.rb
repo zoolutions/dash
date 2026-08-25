@@ -5,7 +5,7 @@ class CliProxyTest < CliTestCase
     run_command("boot").tap do |output|
       assert_match "docker login", output
       assert_match "mkdir -p .kamal/proxy/apps-config", output
-      assert_match "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
+      assert_match "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
     end
   end
 
@@ -18,14 +18,14 @@ class CliProxyTest < CliTestCase
 
   test "a server lock released while its status is read is retried, not fatal" do
     # Deploy lock acquires, then the server lock is contended, then it frees up.
-    Kamal::Cli::Proxy.any_instance.stubs(:execute_lock_acquire)
+    Dash::Cli::Proxy.any_instance.stubs(:execute_lock_acquire)
       .returns(true)
-      .then.raises(Kamal::Cli::Base::LockHeldError)
+      .then.raises(Dash::Cli::Base::LockHeldError)
       .then.returns(true)
 
     # The holder released between our failed mkdir and this read.
-    Kamal::Cli::Proxy.any_instance.stubs(:capture_lock_status)
-      .raises(Kamal::Cli::Base::LockMissingError)
+    Dash::Cli::Proxy.any_instance.stubs(:capture_lock_status)
+      .raises(Dash::Cli::Base::LockMissingError)
 
     run_command("boot").tap do |output|
       assert_match "Acquiring the server lock...", output
@@ -39,8 +39,8 @@ class CliProxyTest < CliTestCase
     run_command("boot", fixture: :with_proxy_run_config).tap do |output|
       assert_match "docker login", output
       assert_match "mkdir -p .kamal/proxy/apps-config", output
-      assert_match_with_digest "docker container start kamal-proxy || docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9090 --cpus \"1.5\" registry:4443/ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --debug --metrics-port \"9090\" --recheck-targets-on-restore on 1.1.1.1", output
-      assert_match_with_digest "docker container start kamal-proxy || docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9190 ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --metrics-port \"9190\" --recheck-targets-on-restore on 1.1.1.3", output
+      assert_match_with_digest "docker container start kamal-proxy || docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9090 --cpus \"1.5\" registry:4443/ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --debug --metrics-port \"9090\" --recheck-targets-on-restore on 1.1.1.1", output
+      assert_match_with_digest "docker container start kamal-proxy || docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9190 ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --metrics-port \"9190\" --recheck-targets-on-restore on 1.1.1.3", output
     end
   end
 
@@ -123,7 +123,7 @@ class CliProxyTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:docker, :exec, "kamal-proxy", "kamal-proxy", :list, "--json")
       .returns({ services: { "other-app" => {} } }.to_json)
-    Kamal::Cli::Proxy::Reboot.any_instance.stubs(:re_register_services).returns([ "app-web" ])
+    Dash::Cli::Proxy::Reboot.any_instance.stubs(:re_register_services).returns([ "app-web" ])
 
     error = assert_raises(SSHKit::Runner::ExecuteError) { run_command("reboot", "-y") }
     assert_match "missing services after reboot: app-web", error.message
@@ -138,7 +138,7 @@ class CliProxyTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:docker, :exec, "kamal-proxy", "kamal-proxy", :list, "--json")
       .returns({ services: { "app-web" => { "target" => "abc:80" } } }.to_json)
-    Kamal::Cli::Proxy::Reboot.any_instance.stubs(:re_register_services).returns([ "app-web" ])
+    Dash::Cli::Proxy::Reboot.any_instance.stubs(:re_register_services).returns([ "app-web" ])
 
     run_command("reboot", "-y").tap do |output|
       assert_match "Rebooting kamal-proxy on 1.1.1.1", output
@@ -153,10 +153,10 @@ class CliProxyTest < CliTestCase
       assert_match "kamal-proxy configuration changed, rebooting on 1.1.1.1", output
       assert_match "kamal-proxy configuration changed, rebooting on 1.1.1.2", output
       %w[ 1.1.1.1 1.1.1.2 ].each do |host|
-        assert_match "docker pull $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") on #{host}", output
+        assert_match "docker pull $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") on #{host}", output
         assert_match "docker container stop --time 40 kamal-proxy on #{host}", output
         assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-proxy on #{host}", output
-        assert_match "--label org.kamal.proxy-config-digest=#{Kamal::Configuration::Proxy::Run.digest("")}", output
+        assert_match "--label org.kamal.proxy-config-digest=#{Dash::Configuration::Proxy::Run.digest("")}", output
       end
     end
   end
@@ -185,7 +185,7 @@ class CliProxyTest < CliTestCase
 
     run_command("boot", fixture: :with_proxy_port_holder).tap do |output|
       assert_match "Handing off kamal-proxy on 1.1.1.1 to a new generation (zero downtime)...", output
-      assert_match_with_digest "docker run --name kamal-proxy-next --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port on 1.1.1.1", output
+      assert_match_with_digest "docker run --name kamal-proxy-next --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port on 1.1.1.1", output
       assert_match "docker update --restart=no kamal-proxy on 1.1.1.1", output
       assert_match "docker exec kamal-proxy kamal-proxy drain --drain-timeout=30s on 1.1.1.1", output
       assert_match "docker wait kamal-proxy on 1.1.1.1", output
@@ -211,8 +211,8 @@ class CliProxyTest < CliTestCase
       assert_match "Migrating kamal-proxy on 1.1.1.1 to the port-holder architecture (brief gap)...", output
       assert_match "docker container stop --time 40 kamal-proxy on 1.1.1.1", output
       assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-proxy on 1.1.1.1", output
-      assert_match "docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold on 1.1.1.1", output
-      assert_match_with_digest "docker run --name kamal-proxy --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port on 1.1.1.1", output
+      assert_match "docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold on 1.1.1.1", output
+      assert_match_with_digest "docker run --name kamal-proxy --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=DIGEST --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port on 1.1.1.1", output
     end
   end
 
@@ -220,10 +220,10 @@ class CliProxyTest < CliTestCase
     stub_no_proxy_drift
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:docker, :inspect, "kamal-proxy", "--format '{{.Config.Image}}'", "|", :awk, "-F:", "'{print $NF}'")
-      .returns(Kamal::Configuration::Proxy::Run::MINIMUM_VERSION)
+      .returns(Dash::Configuration::Proxy::Run::MINIMUM_VERSION)
 
     run_command("boot", fixture: :with_proxy_port_holder).tap do |output|
-      assert_match "docker container start kamal-proxy-net || docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold on 1.1.1.1", output
+      assert_match "docker container start kamal-proxy-net || docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold on 1.1.1.1", output
       assert_match "docker container start kamal-proxy || docker run --name kamal-proxy --network container:kamal-proxy-net", output
     end
   end
@@ -235,7 +235,7 @@ class CliProxyTest < CliTestCase
       .returns("abc123")
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:docker, :inspect, "kamal-proxy", "--format", "'{{ index .Config.Labels \"org.kamal.proxy-config-digest\" }}'", raise_on_non_zero_exit: false)
-      .returns(Kamal::Configuration::Proxy::Run.digest(""))
+      .returns(Dash::Configuration::Proxy::Run.digest(""))
 
     run_command("boot").tap do |output|
       assert_match "docker container start kamal-proxy ||", output
@@ -245,7 +245,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "boot with run config conflicts" do
-    assert_raises Kamal::ConfigurationError, "Conflicting proxy run configurations for host 1.1.1.2" do
+    assert_raises Dash::ConfigurationError, "Conflicting proxy run configurations for host 1.1.1.2" do
       run_command("boot", fixture: :with_proxy_run_config_conflicts)
     end
   end
@@ -261,11 +261,11 @@ class CliProxyTest < CliTestCase
     exception = assert_raises do
       run_command("boot").tap do |output|
         assert_match "docker login", output
-        assert_match "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
+        assert_match "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
       end
     end
 
-    assert_includes exception.message, "kamal-proxy version v0.0.1 is too old, run `dash proxy reboot` in order to update to at least #{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}"
+    assert_includes exception.message, "kamal-proxy version v0.0.1 is too old, run `dash proxy reboot` in order to update to at least #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}"
   ensure
     Thread.report_on_exception = false
   end
@@ -275,12 +275,12 @@ class CliProxyTest < CliTestCase
     stub_no_proxy_drift
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
       .with(:docker, :inspect, "kamal-proxy", "--format '{{.Config.Image}}'", "|", :awk, "-F:", "'{print $NF}'")
-      .returns(Kamal::Configuration::Proxy::Run::MINIMUM_VERSION)
+      .returns(Dash::Configuration::Proxy::Run::MINIMUM_VERSION)
       .at_least_once
 
     run_command("boot").tap do |output|
       assert_match "docker login", output
-      assert_match "docker container start kamal-proxy || echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
+      assert_match "docker container start kamal-proxy || echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
     end
   ensure
     Thread.report_on_exception = false
@@ -289,11 +289,11 @@ class CliProxyTest < CliTestCase
   test "reboot" do
     run_command("reboot", "-y").tap do |output|
       %w[ 1.1.1.1 1.1.1.2 ].each do |host|
-        assert_match "docker pull $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") on #{host}", output
+        assert_match "docker pull $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") on #{host}", output
         assert_match "docker container stop --time 40 kamal-proxy on #{host}", output
         assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-proxy on #{host}", output
         assert_match "mkdir -p .kamal/proxy/apps-config on #{host}", output
-        assert_match "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=#{Kamal::Configuration::Proxy::Run.digest("")} --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config on #{host}", output
+        assert_match "echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.kamal.proxy-config-digest=#{Dash::Configuration::Proxy::Run.digest("")} --volume $PWD/.kamal/proxy/apps-config:/home/kamal-proxy/.apps-config on #{host}", output
         assert_match "docker exec kamal-proxy kamal-proxy list on #{host}", output
       end
     end
@@ -318,8 +318,8 @@ class CliProxyTest < CliTestCase
   end
 
   test "restart" do
-    Kamal::Cli::Proxy.any_instance.expects(:stop)
-    Kamal::Cli::Proxy.any_instance.expects(:start)
+    Dash::Cli::Proxy.any_instance.expects(:stop)
+    Dash::Cli::Proxy.any_instance.expects(:start)
 
     run_command("restart")
   end
@@ -404,10 +404,10 @@ class CliProxyTest < CliTestCase
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
       .with(:docker, :inspect, "kamal-proxy", "--format '{{.Config.Image}}'", "|", :awk, "-F:", "'{print $NF}'")
-      .returns(Kamal::Configuration::Proxy::Run::MINIMUM_VERSION)
+      .returns(Dash::Configuration::Proxy::Run::MINIMUM_VERSION)
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Dash::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
       .returns("no-healthcheck:running").at_least_once # workers health check
 
     run_command("upgrade", "-y").tap do |output|
@@ -420,7 +420,7 @@ class CliProxyTest < CliTestCase
       assert_match "/usr/bin/env mkdir -p .kamal", output
       assert_match "docker network create kamal", output
       assert_match "docker login -u [REDACTED] -p [REDACTED]", output
-      assert_match "docker container start kamal-proxy || echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
+      assert_match "docker container start kamal-proxy || echo $(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", output
       assert_match "/usr/bin/env mkdir -p .kamal", output
       assert_match %r{docker rename app-web-latest app-web-latest_replaced_.*}, output
       assert_match "/usr/bin/env mkdir -p .kamal/apps/app/env/roles", output
@@ -444,10 +444,10 @@ class CliProxyTest < CliTestCase
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
       .with(:docker, :inspect, "kamal-proxy", "--format '{{.Config.Image}}'", "|", :awk, "-F:", "'{print $NF}'")
-      .returns(Kamal::Configuration::Proxy::Run::MINIMUM_VERSION)
+      .returns(Dash::Configuration::Proxy::Run::MINIMUM_VERSION)
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Dash::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
       .returns("no-healthcheck:running").at_least_once # workers health check
 
     run_command("upgrade", "--rolling", "-y",).tap do |output|
@@ -615,7 +615,7 @@ class CliProxyTest < CliTestCase
 
   test "boot_config get" do
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:echo, "$(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\")")
+      .with(:echo, "$(cat .kamal/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .kamal/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .kamal/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .kamal/proxy/run_command 2> /dev/null || echo \"\")")
       .returns("--publish 80:80 --publish 8443:443 --label=foo=bar ghcr.io/zoolutions/dash-proxy:v1.0.0")
       .twice
 
@@ -682,7 +682,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "cache stats with loadbalancer asks the loadbalancer" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
       .with(:docker, :exec, "load-balancer", "kamal-proxy", :cache, :stats)
@@ -717,7 +717,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "cache purge with loadbalancer purges the bare service on the loadbalancer" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
       .with(:docker, :exec, "load-balancer", "kamal-proxy", :cache, :purge, "app")
@@ -736,7 +736,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "domains list with loadbalancer" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
       .with(:docker, :exec, "load-balancer", "kamal-proxy", "domains", "list")
@@ -749,7 +749,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "domains refresh with loadbalancer on proxy host uses proxy container name" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
       .with(:docker, :exec, "kamal-proxy", "kamal-proxy", "domains", "refresh")
@@ -769,7 +769,7 @@ class CliProxyTest < CliTestCase
 
   # Loadbalancer tests
   test "boot with loadbalancer" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     run_command("boot", fixture: :with_loadbalancer).tap do |output|
       assert_match "docker login", output
@@ -777,7 +777,7 @@ class CliProxyTest < CliTestCase
       # Check loadbalancer is started
       assert_match "Starting loadbalancer on lb.example.com", output
       assert_match "docker container start load-balancer || docker run --name load-balancer", output
-      assert_match "ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run", output
+      assert_match "ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run", output
     end
   end
 
@@ -785,7 +785,7 @@ class CliProxyTest < CliTestCase
   # the acme credentials env file has to reach its host too, not only the
   # per-app proxy hosts.
   test "boot with loadbalancer uploads the acme credentials to the loadbalancer host" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     with_test_secrets("secrets" => "CF_API_TOKEN=zone-rewriting-token") do
       uploads = capture_uploads
@@ -803,7 +803,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "reboot with loadbalancer re-uploads the acme credentials before replacing the container" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     with_test_secrets("secrets" => "CF_API_TOKEN=zone-rewriting-token") do
       uploads = capture_uploads
@@ -821,7 +821,7 @@ class CliProxyTest < CliTestCase
   # proxy hosts have - a config change reboots it on the next deploy instead
   # of leaving the old container serving indefinitely.
   test "boot with drifted loadbalancer reboots it automatically" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_drift
 
     run_command("boot", fixture: :with_loadbalancer).tap do |output|
@@ -833,8 +833,8 @@ class CliProxyTest < CliTestCase
   end
 
   test "boot with drifted loadbalancer and reboot_on_deploy false warns instead" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
-    Kamal::Configuration::Proxy.any_instance.stubs(:reboot_on_deploy?).returns(false)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.stubs(:reboot_on_deploy?).returns(false)
     stub_loadbalancer_drift
 
     run_command("boot", fixture: :with_loadbalancer).tap do |output|
@@ -846,7 +846,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "reboot with loadbalancer" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     run_command("reboot", "-y", fixture: :with_loadbalancer).tap do |output|
       # Check proxy is rebooted on web hosts
@@ -858,12 +858,12 @@ class CliProxyTest < CliTestCase
       assert_match "docker container stop load-balancer", output
       assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-loadbalancer", output
       assert_match "docker run --name load-balancer", output
-      assert_match "ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run", output
+      assert_match "ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run", output
     end
   end
 
   test "details with loadbalancer" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     run_command("details", fixture: :with_loadbalancer).tap do |output|
       assert_match "docker ps --filter 'name=^kamal-proxy$'", output
@@ -872,7 +872,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "loadbalancer info" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:docker, :ps, "--filter", "'name=^load-balancer$'")
@@ -884,7 +884,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "loadbalancer start" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     run_command("loadbalancer", "start", fixture: :with_loadbalancer).tap do |output|
       assert_match "docker login", output
@@ -893,7 +893,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "loadbalancer stop" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     run_command("loadbalancer", "stop", fixture: :with_loadbalancer).tap do |output|
       assert_match "docker container stop load-balancer", output
@@ -901,7 +901,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "loadbalancer logs" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture)
       .with(:docker, :logs, "load-balancer", "--timestamps", "2>&1")
@@ -914,7 +914,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "loadbalancer deploy" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     run_command("loadbalancer", "deploy", fixture: :with_loadbalancer).tap do |output|
       assert_match "Deploying to loadbalancer on lb.example.com with targets: 1.1.1.1, 1.1.1.2", output
@@ -929,7 +929,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "remove_container with loadbalancer" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     run_command("remove_container", fixture: :with_loadbalancer).tap do |output|
       assert_match "docker container prune --force --filter label=org.opencontainers.image.title=kamal-proxy", output
@@ -938,7 +938,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "remove_image with loadbalancer" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     # The load balancer runs the kamal-proxy image, so it is pruned by the
     # kamal-proxy title label - on its own host as well as on a shared one.
@@ -950,7 +950,7 @@ class CliProxyTest < CliTestCase
 
   # Shared host tests - loadbalancer on same server as proxy
   test "boot with loadbalancer on proxy host" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     run_command("boot", fixture: :with_loadbalancer_on_proxy_host).tap do |output|
       # Proxy should only boot on 1.1.1.2 (not 1.1.1.1 which is loadbalancer)
@@ -965,7 +965,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "reboot with loadbalancer on proxy host" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     run_command("reboot", "-y", fixture: :with_loadbalancer_on_proxy_host).tap do |output|
       # Proxy reboots only on 1.1.1.2
@@ -976,7 +976,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "loadbalancer on proxy host uses proxy container name" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     run_command("loadbalancer", "info", fixture: :with_loadbalancer_on_proxy_host).tap do |output|
       # When on proxy host, loadbalancer uses kamal-proxy container name
@@ -987,7 +987,7 @@ class CliProxyTest < CliTestCase
   # --- Shared loadbalancer tier: two dash apps, one load balancer host -------
 
   test "loadbalancer deploy claims the service name for this app" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_registry
 
     run_command("loadbalancer", "deploy", fixture: :with_loadbalancer).tap do |output|
@@ -997,7 +997,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "loadbalancer deploy is a no-op claim when this app already owns the service" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_registry(service_owner: loadbalancer_owner_token(:with_loadbalancer))
 
     run_command("loadbalancer", "deploy", fixture: :with_loadbalancer).tap do |output|
@@ -1008,7 +1008,7 @@ class CliProxyTest < CliTestCase
 
   test "loadbalancer deploy errors when another app owns the service name" do
     Thread.report_on_exception = false
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_registry(service_owner: "app other/app")
 
     error = assert_raises(SSHKit::Runner::ExecuteError) do
@@ -1022,7 +1022,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "boot records this app's run configuration for the shared load balancer" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_registry
 
     run_command("boot", fixture: :with_loadbalancer).tap do |output|
@@ -1032,7 +1032,7 @@ class CliProxyTest < CliTestCase
 
   test "boot errors when another app booted the load balancer with a different proxy.run" do
     Thread.report_on_exception = false
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_registry(run_config: "other-app other/app some-other-digest")
 
     error = assert_raises(SSHKit::Runner::ExecuteError) do
@@ -1046,7 +1046,7 @@ class CliProxyTest < CliTestCase
 
   # Two apps agreeing on proxy/run is precisely the supported shared topology.
   test "boot allows another app that booted the load balancer with the same proxy.run" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     digest = loadbalancer_config(:with_loadbalancer).run_config_digest
     stub_loadbalancer_registry(run_config: "other-app other/app #{digest}")
 
@@ -1058,7 +1058,7 @@ class CliProxyTest < CliTestCase
   # Same app, changed config: mirror the per-host proxy's stale-config message
   # rather than erroring - `dash proxy reboot` is the documented fix.
   test "boot warns when this app's own load balancer run config is stale" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_registry(run_config: "#{loadbalancer_owner_token(:with_loadbalancer)} stale-digest")
 
     run_command("boot", fixture: :with_loadbalancer).tap do |output|
@@ -1070,7 +1070,7 @@ class CliProxyTest < CliTestCase
   # kamal-proxy persists its service state in the kamal-loadbalancer-config
   # named volume, so replacing the container keeps every app's routes.
   test "reboot preserves other apps services registered on the shared load balancer" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_registry
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:docker, :exec, "load-balancer", "kamal-proxy", :list)
@@ -1094,7 +1094,7 @@ class CliProxyTest < CliTestCase
   # services and the site down. Re-register this app's routes immediately,
   # mirroring the per-host proxy reboot, and verify via the JSON listing.
   test "reboot re-registers this apps service on the load balancer and verifies it" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_registry(service_owner: loadbalancer_owner_token(:with_loadbalancer))
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:docker, :exec, "load-balancer", "kamal-proxy", :list, "--json")
@@ -1107,7 +1107,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "reboot fails when the load balancer is missing this apps service after re-registration" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_registry(service_owner: loadbalancer_owner_token(:with_loadbalancer))
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:docker, :exec, "load-balancer", "kamal-proxy", :list, "--json")
@@ -1120,7 +1120,7 @@ class CliProxyTest < CliTestCase
   # No owner record means this app never deployed through the LB - the
   # ordinary deploy step registers it later; there is nothing to restore.
   test "reboot skips load balancer re-registration when the service was never registered" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_registry
 
     run_command("reboot", "-y", fixture: :with_loadbalancer).tap do |output|
@@ -1130,7 +1130,7 @@ class CliProxyTest < CliTestCase
 
   test "remove refuses when other apps are installed on the loadbalancer host" do
     Thread.report_on_exception = false
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_registry
     # Only the dedicated load balancer host reports other apps.
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
@@ -1148,7 +1148,7 @@ class CliProxyTest < CliTestCase
   # `docker container prune` only collects stopped containers, so a load
   # balancer that is never stopped is never removed either.
   test "stop and start cover the loadbalancer host" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     run_command("stop", fixture: :with_loadbalancer).tap do |output|
       assert_match "docker container stop load-balancer on lb.example.com", output
@@ -1160,7 +1160,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "remove stops the loadbalancer before pruning it" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_registry
 
     run_command("remove", fixture: :with_loadbalancer).tap do |output|
@@ -1170,7 +1170,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "remove cleans up the loadbalancer directory" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_loadbalancer_registry
 
     run_command("remove", fixture: :with_loadbalancer).tap do |output|
@@ -1213,7 +1213,7 @@ class CliProxyTest < CliTestCase
   end
 
   test "export_certs targets the loadbalancer when load balancing" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     stub_cert_container_running "load-balancer"
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:docker, :exec, "load-balancer", "kamal-proxy", :export, :certs, "/home/kamal-proxy/.apps-config/certs-export.tar.gz")
@@ -1249,7 +1249,7 @@ class CliProxyTest < CliTestCase
     stub_cert_container_running "kamal-proxy"
 
     assert_raises(SSHKit::Runner::ExecuteError) do
-      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--archive", "certs.tar.gz", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+      stdouted { Dash::Cli::Proxy.start([ "import_certs", "--archive", "certs.tar.gz", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
     end
   end
 
@@ -1267,26 +1267,26 @@ class CliProxyTest < CliTestCase
 
   test "import_certs requires exactly one source" do
     assert_raises(ArgumentError) do
-      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+      stdouted { Dash::Cli::Proxy.start([ "import_certs", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
     end
 
     assert_raises(ArgumentError) do
-      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--traefik-acme", "a", "--archive", "b", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+      stdouted { Dash::Cli::Proxy.start([ "import_certs", "--traefik-acme", "a", "--archive", "b", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
     end
   end
 
   test "import_certs rejects contradictory flags" do
     # resolver is a Traefik-import concern, force/verify are archive concerns.
     assert_raises(ArgumentError) do
-      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--archive", "a", "--resolver", "le", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+      stdouted { Dash::Cli::Proxy.start([ "import_certs", "--archive", "a", "--resolver", "le", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
     end
 
     assert_raises(ArgumentError) do
-      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--traefik-acme", "a", "--force", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+      stdouted { Dash::Cli::Proxy.start([ "import_certs", "--traefik-acme", "a", "--force", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
     end
 
     assert_raises(ArgumentError) do
-      stdouted { Kamal::Cli::Proxy.start([ "import_certs", "--archive", "a", "--force", "--verify", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
+      stdouted { Dash::Cli::Proxy.start([ "import_certs", "--archive", "a", "--force", "--verify", "-c", "test/fixtures/deploy_with_proxy.yml" ]) }
     end
   end
 
@@ -1329,12 +1329,12 @@ class CliProxyTest < CliTestCase
     end
 
     def run_command(*command, fixture: :with_proxy)
-      stdouted { Kamal::Cli::Proxy.start([ *command, "-c", "test/fixtures/deploy_#{fixture}.yml" ]) }
+      stdouted { Dash::Cli::Proxy.start([ *command, "-c", "test/fixtures/deploy_#{fixture}.yml" ]) }
     end
 
     def loadbalancer_config(fixture)
-      config = Kamal::Configuration.create_from(config_file: Pathname.new(File.expand_path("test/fixtures/deploy_#{fixture}.yml")))
-      Kamal::Configuration::Loadbalancer.new(config: config, proxy_config: config.proxy.proxy_config, secrets: config.secrets)
+      config = Dash::Configuration.create_from(config_file: Pathname.new(File.expand_path("test/fixtures/deploy_#{fixture}.yml")))
+      Dash::Configuration::Loadbalancer.new(config: config, proxy_config: config.proxy.proxy_config, secrets: config.secrets)
     end
 
     def loadbalancer_owner_token(fixture)

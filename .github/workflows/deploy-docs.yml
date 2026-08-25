@@ -12,7 +12,7 @@ name: Deploy docs
 # (build_context ".", dockerfile "docs/Dockerfile", working_directory "docs"),
 # which is what the `gem "dash", path: ".."` path dependency needs — so the
 # caller only passes image + service. Deploying on release keeps the site's
-# version badge (Kamal::VERSION) in step with the published gem.
+# version badge (Dash::VERSION) in step with the published gem.
 on:
   release:
     types: [published]

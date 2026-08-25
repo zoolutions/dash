@@ -71,7 +71,7 @@ class CliServerTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:sh, "-c", "'curl -fsSL https://get.docker.com || wget -O - https://get.docker.com || echo \"exit 1\"'", "|", :sh).at_least_once
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with('[ "${EUID:-$(id -u)}" -eq 0 ]', raise_on_non_zero_exit: false).returns(true).at_least_once
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:mkdir, "-p", ".kamal").returns("").at_least_once
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".kamal/hooks/pre-connect", anything).at_least_once
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".kamal/hooks/docker-setup", anything).at_least_once
 
@@ -92,7 +92,7 @@ class CliServerTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with('sudo -n usermod -aG docker "${USER:-$(id -un)}"').at_least_once
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with("kill -HUP $PPID").at_least_once.raises(IOError, "closed stream")
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:mkdir, "-p", ".kamal").returns("").at_least_once
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".kamal/hooks/pre-connect", anything).at_least_once
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".kamal/hooks/docker-setup", anything).at_least_once
 
@@ -106,6 +106,6 @@ class CliServerTest < CliTestCase
 
   private
     def run_command(*command)
-      stdouted { Kamal::Cli::Server.start([ *command, "-c", "test/fixtures/deploy_with_accessories.yml" ]) }
+      stdouted { Dash::Cli::Server.start([ *command, "-c", "test/fixtures/deploy_with_accessories.yml" ]) }
     end
 end

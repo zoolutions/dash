@@ -46,7 +46,7 @@ class MainTest < IntegrationTest
     assert_match /Proxy Host: vm2/, details
     assert_match /App Host: vm1/, details
     assert_match /App Host: vm2/, details
-    assert_match /ghcr\.io\/zoolutions\/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}/, details
+    assert_match /ghcr\.io\/zoolutions\/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}/, details
     assert_match /localhost:5000\/app:#{first_version}/, details
 
     audit = kamal :audit, capture: true
@@ -88,7 +88,7 @@ class MainTest < IntegrationTest
     assert_equal "app-#{version}", config[:service_with_version]
     assert_equal [], config[:volume_args]
     assert_equal({ user: "root", port: 22, keepalive: true, keepalive_interval: 30, log_level: :fatal }, config[:ssh_options])
-    assert_equal({ "driver" => "docker", "arch" => "#{Kamal::Utils.docker_arch}", "args" => { "COMMIT_SHA" => version } }, config[:builder])
+    assert_equal({ "driver" => "docker", "arch" => "#{Dash::Utils.docker_arch}", "args" => { "COMMIT_SHA" => version } }, config[:builder])
     assert_equal [ "--log-opt", "max-size=\"10m\"" ], config[:logging]
   end
 
@@ -98,7 +98,7 @@ class MainTest < IntegrationTest
     kamal :deploy
 
     output = kamal :whome, capture: true
-    assert_equal Kamal::VERSION, output
+    assert_equal Dash::VERSION, output
 
     output = kamal :worker_hostname, capture: true
     assert_match /App Host: vm3\nvm3-[0-9a-f]{12}$/, output
@@ -202,7 +202,7 @@ class MainTest < IntegrationTest
       attrs = otel_resource_attributes
       assert_equal "kamal", attrs["service.name"]
       assert_equal "app", attrs["service.namespace"]
-      assert_equal Kamal::VERSION, attrs["service.version"]
+      assert_equal Dash::VERSION, attrs["service.version"]
       assert attrs["kamal.run_id"].present?, "Expected kamal.run_id attribute"
       assert attrs["kamal.performer"].present?, "Expected kamal.performer attribute"
       assert attrs["kamal.deploy_version"].present?, "Expected kamal.deploy_version attribute"

@@ -37,16 +37,16 @@ class CliAppTest < CliTestCase
   end
 
   test "boot uses group strategy when specified" do
-    Kamal::Cli::App.any_instance.stubs(:on).with("1.1.1.1").twice
-    Kamal::Cli::App.any_instance.stubs(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3", "1.1.1.4" ]).times(3)
+    Dash::Cli::App.any_instance.stubs(:on).with("1.1.1.1").twice
+    Dash::Cli::App.any_instance.stubs(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3", "1.1.1.4" ]).times(3)
 
     # Strategy is used when booting the containers
-    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3" ]).with_block_given
-    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.4" ]).with_block_given
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3" ]).with_block_given
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.4" ]).with_block_given
     # Two groups, so the wait paces the first against the second — and stops there.
     Object.any_instance.expects(:sleep).with(2).once
 
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
     run_command("boot", config: :with_boot_strategy, host: nil).tap do |output|
       assert_hook_ran "pre-app-boot", output, count: 2
@@ -57,7 +57,7 @@ class CliAppTest < CliTestCase
   # `wait` paces one group against the next. After the last group there is nothing left
   # to boot, so sleeping is pure deploy latency.
   test "boot does not wait after the final host group" do
-    Kamal::Cli::App.any_instance.stubs(:on)
+    Dash::Cli::App.any_instance.stubs(:on)
 
     Object.any_instance.expects(:sleep).with(2).times(3)
 
@@ -65,7 +65,7 @@ class CliAppTest < CliTestCase
   end
 
   test "boot does not wait at all when a single group covers every host" do
-    Kamal::Cli::App.any_instance.stubs(:on)
+    Dash::Cli::App.any_instance.stubs(:on)
 
     Object.any_instance.expects(:sleep).with(2).never
 
@@ -75,12 +75,12 @@ class CliAppTest < CliTestCase
   test "a percentage boot limit groups by app hosts, not accessory hosts" do
     # Four app hosts, four accessory hosts. Accessories are never booted here, so 25% is
     # one app host per group — counting all eight would boot two at a time.
-    Kamal::Cli::App.any_instance.stubs(:on).with("1.1.1.1")
-    Kamal::Cli::App.any_instance.stubs(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3", "1.1.1.4" ])
-    Kamal::Cli::App.any_instance.stubs(:on).with(%w[ 1.1.1.1 1.1.1.2 1.1.1.3 1.1.1.4 1.1.1.5 1.1.1.6 1.1.1.7 1.1.1.8 ])
+    Dash::Cli::App.any_instance.stubs(:on).with("1.1.1.1")
+    Dash::Cli::App.any_instance.stubs(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3", "1.1.1.4" ])
+    Dash::Cli::App.any_instance.stubs(:on).with(%w[ 1.1.1.1 1.1.1.2 1.1.1.3 1.1.1.4 1.1.1.5 1.1.1.6 1.1.1.7 1.1.1.8 ])
 
     [ "1.1.1.1", "1.1.1.2", "1.1.1.3", "1.1.1.4" ].each do |host|
-      Kamal::Cli::App.any_instance.expects(:on).with([ host ]).with_block_given
+      Dash::Cli::App.any_instance.expects(:on).with([ host ]).with_block_given
     end
 
     run_command("boot", config: :with_percentage_boot_limit, host: nil)
@@ -88,55 +88,55 @@ class CliAppTest < CliTestCase
 
   test "a percentage boot limit narrows with --roles" do
     # web only: 25% of two hosts clamps to one, not 25% of the whole file.
-    Kamal::Cli::App.any_instance.stubs(:on).with("1.1.1.1")
-    Kamal::Cli::App.any_instance.stubs(:on).with([ "1.1.1.1", "1.1.1.2" ])
-    Kamal::Cli::App.any_instance.stubs(:on).with(%w[ 1.1.1.1 1.1.1.2 1.1.1.3 1.1.1.4 1.1.1.5 1.1.1.6 1.1.1.7 1.1.1.8 ])
+    Dash::Cli::App.any_instance.stubs(:on).with("1.1.1.1")
+    Dash::Cli::App.any_instance.stubs(:on).with([ "1.1.1.1", "1.1.1.2" ])
+    Dash::Cli::App.any_instance.stubs(:on).with(%w[ 1.1.1.1 1.1.1.2 1.1.1.3 1.1.1.4 1.1.1.5 1.1.1.6 1.1.1.7 1.1.1.8 ])
 
-    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1" ]).with_block_given
-    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.2" ]).with_block_given
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.1" ]).with_block_given
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.2" ]).with_block_given
 
     run_command("boot", "--roles", "web", config: :with_percentage_boot_limit, host: nil)
   end
 
   test "boot without parallel roles" do
     # Without parallel_roles: on() called with all hosts, roles sequential per host
-    Kamal::Cli::App.any_instance.expects(:on).with("1.1.1.1").with_block_given.twice
-    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3" ]).with_block_given.times(4)
+    Dash::Cli::App.any_instance.expects(:on).with("1.1.1.1").with_block_given.twice
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3" ]).with_block_given.times(4)
 
     run_command("boot", config: :without_parallel_roles, host: nil)
   end
 
   test "boot with parallel roles" do
     # With parallel_roles: each role gets its own on() call, unpaced
-    Kamal::Cli::App.any_instance.expects(:on).with("1.1.1.1").with_block_given.twice
-    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3" ]).with_block_given.times(3)
-    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2" ], {}).with_block_given
-    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.3" ], {}).with_block_given
+    Dash::Cli::App.any_instance.expects(:on).with("1.1.1.1").with_block_given.twice
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3" ]).with_block_given.times(3)
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2" ], {}).with_block_given
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.3" ], {}).with_block_given
 
     run_command("boot", config: :with_parallel_roles, host: nil)
   end
 
   test "boot paces only the role that declares its own boot limit" do
     all_hosts = [ "1.1.1.1", "1.1.1.2", "1.1.1.3", "1.1.1.4" ]
-    Kamal::Cli::App.any_instance.expects(:on).with("1.1.1.1").with_block_given.twice
-    Kamal::Cli::App.any_instance.expects(:on).with(all_hosts).with_block_given.times(3)
+    Dash::Cli::App.any_instance.expects(:on).with("1.1.1.1").with_block_given.twice
+    Dash::Cli::App.any_instance.expects(:on).with(all_hosts).with_block_given.times(3)
 
     # The role-level boot forces role-first iteration even though parallel_roles is unset,
     # and only that role's hosts get a sequential runner — web still boots in parallel.
-    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2" ], {}).with_block_given
-    Kamal::Cli::App.any_instance.expects(:on).with([ "1.1.1.3", "1.1.1.4" ], { in: :sequence, wait: 0 }).with_block_given
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.1", "1.1.1.2" ], {}).with_block_given
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.3", "1.1.1.4" ], { in: :sequence, wait: 0 }).with_block_given
 
     run_command("boot", config: :with_role_boot, host: nil)
   end
 
   test "boot errors don't leave lock in place" do
-    Kamal::Cli::App.any_instance.expects(:using_version).raises(RuntimeError)
+    Dash::Cli::App.any_instance.expects(:using_version).raises(RuntimeError)
 
-    assert_not KAMAL.holding_lock?
+    assert_not DASH.holding_lock?
     assert_raises(RuntimeError) do
       stderred { run_command("boot") }
     end
-    assert_not KAMAL.holding_lock?
+    assert_not DASH.holding_lock?
   end
 
   test "boot with assets" do
@@ -191,7 +191,7 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Dash::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
       .returns("no-healthcheck:running").at_least_once # workers health check
 
     run_command("boot", config: :with_roles, host: nil).tap do |output|
@@ -210,7 +210,7 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Dash::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
       .returns("no-healthcheck:running").at_least_once # workers health check
 
     run_command("boot", config: :with_role_boot, host: nil).tap do |output|
@@ -264,7 +264,7 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Dash::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
       .returns("unhealthy").at_least_once # workers health check
 
     run_command("boot", config: :with_roles, host: nil, allow_execute_error: true).tap do |output|
@@ -287,7 +287,7 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Dash::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
       .returns("no-healthcheck:running", "no-healthcheck:stopped").at_least_once # workers health check
 
     run_command("boot", config: :with_roles, host: "1.1.1.3", allow_execute_error: true).tap do |output|
@@ -305,7 +305,7 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Dash::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
       .returns("unhealthy") # workers health check
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
@@ -335,7 +335,7 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Dash::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
       .returns("no-healthcheck:stopped") # workers has no healthcheck, container just died
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
@@ -361,7 +361,7 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Dash::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
       .returns("no-healthcheck:running").at_least_once # workers health check
 
     run_command("boot", config: :with_only_workers, host: nil).tap do |output|
@@ -384,9 +384,9 @@ class CliAppTest < CliTestCase
   end
 
   test "boot with custom ssl certificate" do
-    Kamal::Configuration::Proxy.any_instance.stubs(:custom_ssl_certificate?).returns(true)
-    Kamal::Configuration::Proxy.any_instance.stubs(:certificate_pem_content).returns("CERTIFICATE CONTENT")
-    Kamal::Configuration::Proxy.any_instance.stubs(:private_key_pem_content).returns("PRIVATE KEY CONTENT")
+    Dash::Configuration::Proxy.any_instance.stubs(:custom_ssl_certificate?).returns(true)
+    Dash::Configuration::Proxy.any_instance.stubs(:certificate_pem_content).returns("CERTIFICATE CONTENT")
+    Dash::Configuration::Proxy.any_instance.stubs(:private_key_pem_content).returns("PRIVATE KEY CONTENT")
 
     stub_running
     run_command("boot", config: :with_proxy).tap do |output|
@@ -402,8 +402,8 @@ class CliAppTest < CliTestCase
   # written into the apps-config tree the proxy container already mounts, so
   # the flag can name a path that resolves inside the container.
   test "boot with an mTLS client CA" do
-    Kamal::Configuration::Proxy.any_instance.stubs(:client_ca?).returns(true)
-    Kamal::Configuration::Proxy.any_instance.stubs(:client_ca_pem_content).returns("ca-bundle-content")
+    Dash::Configuration::Proxy.any_instance.stubs(:client_ca?).returns(true)
+    Dash::Configuration::Proxy.any_instance.stubs(:client_ca_pem_content).returns("ca-bundle-content")
 
     stub_running
     run_command("boot", config: :with_proxy).tap do |output|
@@ -573,7 +573,7 @@ class CliAppTest < CliTestCase
   end
 
   test "exec interactive" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.expects(:exec)
       .with(regexp_matches(%r{ssh -t root@1\.1\.1\.1 -p 22 'docker run -it --rm --name app-web-exec-latest-[0-9a-f]{6} --network kamal --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v'}))
 
@@ -588,7 +588,7 @@ class CliAppTest < CliTestCase
   end
 
   test "exec interactive with reuse" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.expects(:exec)
       .with("ssh -t root@1.1.1.1 -p 22 'docker exec -it app-web-999 ruby -v'")
 
@@ -603,7 +603,7 @@ class CliAppTest < CliTestCase
   end
 
   test "exec interactive with pipe on STDIN" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.expects(:exec)
       .with("ssh -t root@1.1.1.1 -p 22 'docker exec -i app-web-999 ruby -v'")
 
@@ -675,7 +675,7 @@ class CliAppTest < CliTestCase
 
   test "version through main" do
     with_argv([ "app", "version", "-c", "test/fixtures/deploy_with_accessories.yml", "--hosts", "1.1.1.1" ]) do
-      stdouted { Kamal::Cli::Main.start }.tap do |output|
+      stdouted { Dash::Cli::Main.start }.tap do |output|
         assert_match "sh -c 'docker ps --latest --format '\\''{{.Names}}'\\'' --filter label=service=app --filter label=destination= --filter label=role=web --filter status=running --filter status=restarting --filter ancestor=$(docker image ls --filter reference=dhh/app:latest --format '\\''{{.ID}}'\\'') ; docker ps --latest --format '\\''{{.Names}}'\\'' --filter label=service=app --filter label=destination= --filter label=role=web --filter status=running --filter status=restarting' | head -1 | while read line; do echo ${line#app-web-}; done", output
       end
     end
@@ -686,7 +686,7 @@ class CliAppTest < CliTestCase
 
     hostname = "this-hostname-is-really-unacceptably-long-to-be-honest.example.com"
 
-    stdouted { Kamal::Cli::App.start([ "boot", "-c", "test/fixtures/deploy_with_uncommon_hostnames.yml", "--hosts", hostname ]) }.tap do |output|
+    stdouted { Dash::Cli::App.start([ "boot", "-c", "test/fixtures/deploy_with_uncommon_hostnames.yml", "--hosts", hostname ]) }.tap do |output|
       assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname this-hostname-is-really-unacceptably-long-to-be-hon-[0-9a-f]{12} /, output
     end
   end
@@ -696,7 +696,7 @@ class CliAppTest < CliTestCase
 
     hostname = "this-hostname-with-random-part-is-too-long.example.com"
 
-    stdouted { Kamal::Cli::App.start([ "boot", "-c", "test/fixtures/deploy_with_uncommon_hostnames.yml", "--hosts", hostname ]) }.tap do |output|
+    stdouted { Dash::Cli::App.start([ "boot", "-c", "test/fixtures/deploy_with_uncommon_hostnames.yml", "--hosts", hostname ]) }.tap do |output|
       assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname this-hostname-with-random-part-is-too-long.example-[0-9a-f]{12} /, output
     end
   end
@@ -724,7 +724,7 @@ class CliAppTest < CliTestCase
   end
 
   test "boot runs proxy deploy hooks around the proxy deploy" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     run_command("boot", config: :with_proxy).tap do |output|
@@ -735,9 +735,9 @@ class CliAppTest < CliTestCase
   end
 
   test "boot passes the host and role to the proxy deploy hooks" do
-    Kamal::Cli::App.any_instance.stubs(:run_hook)
-    Kamal::Cli::App.any_instance.expects(:run_hook).with("pre-proxy-deploy", hosts: "1.1.1.1", role: "web")
-    Kamal::Cli::App.any_instance.expects(:run_hook).with("post-proxy-deploy", hosts: "1.1.1.1", role: "web")
+    Dash::Cli::App.any_instance.stubs(:run_hook)
+    Dash::Cli::App.any_instance.expects(:run_hook).with("pre-proxy-deploy", hosts: "1.1.1.1", role: "web")
+    Dash::Cli::App.any_instance.expects(:run_hook).with("post-proxy-deploy", hosts: "1.1.1.1", role: "web")
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
@@ -745,8 +745,8 @@ class CliAppTest < CliTestCase
   end
 
   test "boot skips proxy deploy hooks for roles not running the proxy" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
-    Kamal::Cli::Healthcheck::Poller.stubs(:wait_for_healthy)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Cli::Healthcheck::Poller.stubs(:wait_for_healthy)
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     run_command("boot", config: :with_proxy, host: "1.1.1.3").tap do |output|
@@ -757,7 +757,7 @@ class CliAppTest < CliTestCase
   end
 
   test "boot skips proxy deploy hooks with --skip-hooks" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     run_command("boot", "--skip-hooks", config: :with_proxy).tap do |output|
@@ -778,7 +778,7 @@ class CliAppTest < CliTestCase
   end
 
   test "boot runs app stop hooks around stopping the old version" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     stub_running
 
     run_command("boot").tap do |output|
@@ -789,9 +789,9 @@ class CliAppTest < CliTestCase
   end
 
   test "boot passes the host, role and stopped version to the app stop hooks" do
-    Kamal::Cli::App.any_instance.stubs(:run_hook)
-    Kamal::Cli::App.any_instance.expects(:run_hook).with("pre-app-stop", hosts: "1.1.1.1", role: "web", version: "123")
-    Kamal::Cli::App.any_instance.expects(:run_hook).with("post-app-stop", hosts: "1.1.1.1", role: "web", version: "123")
+    Dash::Cli::App.any_instance.stubs(:run_hook)
+    Dash::Cli::App.any_instance.expects(:run_hook).with("pre-app-stop", hosts: "1.1.1.1", role: "web", version: "123")
+    Dash::Cli::App.any_instance.expects(:run_hook).with("post-app-stop", hosts: "1.1.1.1", role: "web", version: "123")
 
     stub_running
 
@@ -799,8 +799,8 @@ class CliAppTest < CliTestCase
   end
 
   test "boot runs app stop hooks for a non-proxied role" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
-    Kamal::Cli::Healthcheck::Poller.stubs(:wait_for_healthy)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Cli::Healthcheck::Poller.stubs(:wait_for_healthy)
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     run_command("boot", config: :with_proxy, host: "1.1.1.3").tap do |output|
@@ -810,7 +810,7 @@ class CliAppTest < CliTestCase
   end
 
   test "boot runs app stop hooks for proxied roles too" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     run_command("boot", config: :with_proxy).tap do |output|
@@ -819,7 +819,7 @@ class CliAppTest < CliTestCase
   end
 
   test "boot doesn't run app stop hooks when there is no old version" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     Object.any_instance.stubs(:sleep)
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("12345678")
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
@@ -832,7 +832,7 @@ class CliAppTest < CliTestCase
   end
 
   test "boot skips app stop hooks with --skip-hooks" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     stub_running
 
     run_command("boot", "--skip-hooks").tap do |output|
@@ -864,7 +864,7 @@ class CliAppTest < CliTestCase
   end
 
   test "boot leaves the old container running when the exec probe never passes" do
-    Kamal::Configuration.any_instance.stubs(:deploy_timeout).returns(0)
+    Dash::Configuration.any_instance.stubs(:deploy_timeout).returns(0)
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     @executions = []
@@ -882,7 +882,7 @@ class CliAppTest < CliTestCase
   end
 
   test "start runs proxy deploy hooks around the proxy deploy" do
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("999") # old version
 
     run_command("start").tap do |output|
@@ -984,7 +984,7 @@ class CliAppTest < CliTestCase
 
     def run_command(*command, config: :with_accessories, host: "1.1.1.1", allow_execute_error: false)
       stdouted do
-        Kamal::Cli::App.start([ *command, "-c", "test/fixtures/deploy_#{config}.yml", *([ "--hosts", host ] if host) ])
+        Dash::Cli::App.start([ *command, "-c", "test/fixtures/deploy_#{config}.yml", *([ "--hosts", host ] if host) ])
       rescue SSHKit::Runner::ExecuteError => e
         raise e unless allow_execute_error
       end

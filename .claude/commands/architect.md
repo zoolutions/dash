@@ -16,11 +16,11 @@ Dash spans a Thor CLI layer cake in this repo, and a separate cmd -> rpc -> serv
 ## Dash Architecture Layers (this repo)
 
 ```
-Layer 5: bin/dash                  entry point -> Kamal::Cli::Main
-Layer 4: Kamal::Cli::*             lib/kamal/cli/ (Thor commands: app, accessory, build, proxy, registry, secrets, server, main)
-Layer 3: Kamal::Commander          lib/kamal/commander.rb (KAMAL singleton, target/role resolution)
-Layer 2: Kamal::Commands::*        lib/kamal/commands/ (docker command builders: app, proxy, loadbalancer, builder, registry)
-Layer 1: Kamal::Configuration      lib/kamal/configuration/ (deploy.yml -> objects, validation; proxy/run.rb, proxy/boot.rb)
+Layer 5: bin/dash                  entry point -> Dash::Cli::Main
+Layer 4: Dash::Cli::*             lib/dash/cli/ (Thor commands: app, accessory, build, proxy, registry, secrets, server, main)
+Layer 3: Dash::Commander          lib/dash/commander.rb (DASH singleton, target/role resolution)
+Layer 2: Dash::Commands::*        lib/dash/commands/ (docker command builders: app, proxy, loadbalancer, builder, registry)
+Layer 1: Dash::Configuration      lib/dash/configuration/ (deploy.yml -> objects, validation; proxy/run.rb, proxy/boot.rb)
 Layer 0: SSHKit                    remote execution against target hosts
 ```
 
@@ -28,7 +28,7 @@ Proxy features (on-demand TLS, loadbalancer, rate limiting, …) live in the sib
 
 ```
 Layer 2: cmd/kamal-proxy           CLI entrypoint, flag parsing
-Layer 1: rpc/                      RPC server + client (gem's Kamal::Commands::Proxy talks to this)
+Layer 1: rpc/                      RPC server + client (gem's Dash::Commands::Proxy talks to this)
 Layer 0: server/                   actual proxy logic (routing, TLS, health checks)
 ```
 
@@ -37,9 +37,9 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 ## Typical Implementation Flow
 
 1. **Proxy (if cross-repo)** — implement in `../kamal-proxy`, release image `v<base>.<n>` before touching the gem (hard ordering constraint, see `.claude/rules/upstream-sync.md`)
-2. **Configuration** — add the option under `lib/kamal/configuration/` (e.g. `proxy/run.rb`, `role.rb`), document it in `lib/kamal/configuration/docs/*.yml`
-3. **Commands** — teach `lib/kamal/commands/*` to build the docker/proxy CLI invocation
-4. **Cli** — wire the Thor command in `lib/kamal/cli/*`, including hooks if relevant
+2. **Configuration** — add the option under `lib/dash/configuration/` (e.g. `proxy/run.rb`, `role.rb`), document it in `lib/dash/configuration/docs/*.yml`
+3. **Commands** — teach `lib/dash/commands/*` to build the docker/proxy CLI invocation
+4. **Cli** — wire the Thor command in `lib/dash/cli/*`, including hooks if relevant
 5. **Tests** — unit tests alongside each touched layer (minitest + mocha, not RSpec)
 6. **Integration** — add/extend `test/integration/` fixtures only if the feature needs a real multi-host deploy proof
 
@@ -85,7 +85,7 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 | Skip `Configuration` validation | Every new option gets a validator + docs entry |
 | Shell out directly from `Cli` | Route through `Commands::*` builders |
 | Release gem before proxy image | Proxy image first — `MINIMUM_VERSION` must be pullable from ghcr.io |
-| Hardcode proxy version in tests | Interpolate `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` |
+| Hardcode proxy version in tests | Interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` |
 | Commit to `main` | Feature branches root off `main`, merge back into `main` |
 | Skip tests | TDD — minitest + mocha first, at every layer touched |
 | Chase Apple-Silicon builder test failures as regressions | Known host-arch-dependent; pass in CI |
@@ -95,7 +95,7 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 - [ ] Implementation order planned (proxy repo first if cross-repo, then bottom-up here)
 - [ ] Dependencies between layers identified (`Configuration` -> `Commands` -> `Cli`)
 - [ ] Docker/proxy invocations go through `Commands::*`, never shelled out from `Cli`
-- [ ] New options are validated and documented (`lib/kamal/configuration/docs/*.yml`)
+- [ ] New options are validated and documented (`lib/dash/configuration/docs/*.yml`)
 - [ ] Loadbalancer auto-activation checked if touching multi-host proxy behavior
 - [ ] Tests cover all touched layers (minitest + mocha)
 - [ ] `bundle exec rubocop --parallel` passes

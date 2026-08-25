@@ -36,7 +36,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
   test "missing env tag is ignored" do
     @deploy_with_roles[:servers]["workers"]["hosts"] = [ { "1.1.1.3" => [ "job" ] } ]
 
-    role = Kamal::Configuration.new(@deploy_with_roles).role(:workers)
+    role = Dash::Configuration.new(@deploy_with_roles).role(:workers)
     assert_equal "redis://a/b", role.env("1.1.1.3").clear["REDIS_URL"]
   end
 
@@ -61,11 +61,11 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
   test "custom labels via role specialization" do
     @deploy_with_roles[:labels] = { "my.custom.label" => "50" }
     @deploy_with_roles[:servers]["workers"]["labels"] = { "my.custom.label" => "70" }
-    assert_equal "70", Kamal::Configuration.new(@deploy_with_roles).role(:workers).labels["my.custom.label"]
+    assert_equal "70", Dash::Configuration.new(@deploy_with_roles).role(:workers).labels["my.custom.label"]
   end
 
   test "default proxy label on non-web role" do
-    config = Kamal::Configuration.new(@deploy_with_roles.tap { |c|
+    config = Dash::Configuration.new(@deploy_with_roles.tap { |c|
       c[:servers]["beta"] = { "proxy" => true, "hosts" => [ "1.1.1.5" ] }
     })
 
@@ -213,7 +213,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     assert_not config_with_roles.role(:web).assets?
     assert_not config_with_roles.role(:workers).assets?
 
-    config_with_assets = Kamal::Configuration.new(@deploy_with_roles.dup.tap { |c|
+    config_with_assets = Dash::Configuration.new(@deploy_with_roles.dup.tap { |c|
       c[:asset_path] = "foo"
     })
     assert_equal "foo", config_with_assets.role(:web).asset_path
@@ -223,7 +223,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     assert config_with_assets.role(:web).assets?
     assert_not config_with_assets.role(:workers).assets?
 
-    config_with_assets = Kamal::Configuration.new(@deploy_with_roles.dup.tap { |c|
+    config_with_assets = Dash::Configuration.new(@deploy_with_roles.dup.tap { |c|
       c[:servers]["web"] = { "hosts" => [ "1.1.1.1", "1.1.1.2" ], "asset_path" => "bar" }
     })
     assert_equal "bar", config_with_assets.role(:web).asset_path
@@ -240,14 +240,14 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
   test "asset path with mount options" do
     ENV["VERSION"] = "12345"
 
-    config_with_assets = Kamal::Configuration.new(@deploy_with_roles.dup.tap { |c|
+    config_with_assets = Dash::Configuration.new(@deploy_with_roles.dup.tap { |c|
       c[:asset_path] = "/rails/public/assets:z"
     })
     assert_equal "/rails/public/assets", config_with_assets.role(:web).asset_path
     assert_equal "z", config_with_assets.role(:web).asset_path_options
     assert_equal [ "--volume", "$PWD/.kamal/apps/app/assets/volumes/web-12345:/rails/public/assets:z" ], config_with_assets.role(:web).asset_volume_args
 
-    config_with_assets = Kamal::Configuration.new(@deploy_with_roles.dup.tap { |c|
+    config_with_assets = Dash::Configuration.new(@deploy_with_roles.dup.tap { |c|
       c[:servers]["web"] = { "hosts" => [ "1.1.1.1", "1.1.1.2" ], "asset_path" => "/assets:ro,z" }
     })
     assert_equal "/assets", config_with_assets.role(:web).asset_path
@@ -444,7 +444,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "port" => 7434 }
     @deploy_with_roles[:servers]["workers"]["options"] = { "health-cmd" => "pgrep -f bin/jobs" }
 
-    error = assert_raises Kamal::ConfigurationError do
+    error = assert_raises Dash::ConfigurationError do
       config_with_roles.role(:workers)
     end
 
@@ -454,7 +454,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
   test "empty healthcheck is not silently ignored" do
     @deploy_with_roles[:servers]["workers"]["healthcheck"] = {}
 
-    error = assert_raises Kamal::ConfigurationError do
+    error = assert_raises Dash::ConfigurationError do
       config_with_roles.role(:workers)
     end
 
@@ -464,7 +464,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
   test "healthcheck rejects unknown keys" do
     @deploy_with_roles[:servers]["workers"]["healthcheck"] = { "port" => 7434, "max_attempts" => 7 }
 
-    error = assert_raises Kamal::ConfigurationError do
+    error = assert_raises Dash::ConfigurationError do
       config_with_roles.role(:workers)
     end
 
@@ -503,7 +503,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
   test "healthcheck true is rejected" do
     @deploy_with_roles[:servers]["workers"]["healthcheck"] = true
 
-    error = assert_raises Kamal::ConfigurationError do
+    error = assert_raises Dash::ConfigurationError do
       config_with_roles.role(:workers)
     end
 
@@ -513,8 +513,8 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
   test "invalid boolean restart policy" do
     @deploy_with_roles[:servers]["workers"]["options"] = { "restart" => false }
 
-    error = assert_raises Kamal::ConfigurationError do
-      Kamal::Configuration.new(@deploy_with_roles)
+    error = assert_raises Dash::ConfigurationError do
+      Dash::Configuration.new(@deploy_with_roles)
     end
 
     assert_equal %(servers/workers/options/restart: should be a string. Use "no" to disable restarts), error.message
@@ -523,8 +523,8 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
   test "health option with braced expansion is rejected" do
     @deploy_with_roles[:servers]["workers"]["options"] = { "health-cmd" => "curl -fsS http://127.0.0.1:${HEALTH_PORT}/readyz || exit 1" }
 
-    error = assert_raises Kamal::ConfigurationError do
-      Kamal::Configuration.new(@deploy_with_roles)
+    error = assert_raises Dash::ConfigurationError do
+      Dash::Configuration.new(@deploy_with_roles)
     end
 
     assert_equal "servers/workers/options/health-cmd: cannot contain ${...}, which the deploy host's shell expands at docker run time, not the container — a role env var resolves to empty. Use the bare $VAR form, which expands in the container, or a literal value", error.message
@@ -546,8 +546,8 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
   test "health option with braced expansion is rejected in a list value" do
     @deploy_with_roles[:servers]["workers"]["options"] = { "health-cmd" => [ "curl -fsS http://127.0.0.1:8080/readyz", "curl -fsS http://127.0.0.1:${HEALTH_PORT}/readyz" ] }
 
-    error = assert_raises Kamal::ConfigurationError do
-      Kamal::Configuration.new(@deploy_with_roles)
+    error = assert_raises Dash::ConfigurationError do
+      Dash::Configuration.new(@deploy_with_roles)
     end
 
     assert_match "servers/workers/options/health-cmd: cannot contain ${...}", error.message
@@ -563,7 +563,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
   test "the global boot limit never becomes per-role pacing" do
     @deploy_with_roles[:boot] = { "limit" => 2, "wait" => 10 }
 
-    role = Kamal::Configuration.new(@deploy_with_roles).role(:workers)
+    role = Dash::Configuration.new(@deploy_with_roles).role(:workers)
 
     assert_equal({}, role.boot_runner_options(role.hosts))
   end
@@ -571,7 +571,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
   test "boot specialization paces the role's own hosts" do
     @deploy_with_roles[:servers]["workers"]["boot"] = { "limit" => 1 }
 
-    role = Kamal::Configuration.new(@deploy_with_roles).role(:workers)
+    role = Dash::Configuration.new(@deploy_with_roles).role(:workers)
 
     assert_equal 1, role.boot.limit_for(role.hosts)
     assert_equal({ in: :sequence, wait: 0 }, role.boot_runner_options(role.hosts))
@@ -581,7 +581,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     @deploy_with_roles[:servers]["web"] = [ "1.1.1.1", "1.1.1.2", "1.1.1.5", "1.1.1.6" ]
     @deploy_with_roles[:servers]["workers"]["boot"] = { "limit" => "50%" }
 
-    role = Kamal::Configuration.new(@deploy_with_roles).role(:workers)
+    role = Dash::Configuration.new(@deploy_with_roles).role(:workers)
 
     assert_equal 1, role.boot.limit_for(role.hosts)
   end
@@ -592,30 +592,30 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     @deploy_with_roles[:servers]["workers"]["hosts"] = %w[ 1.1.1.3 1.1.1.4 1.1.1.5 1.1.1.6 ]
     @deploy_with_roles[:servers]["workers"]["boot"] = { "limit" => "50%" }
 
-    role = Kamal::Configuration.new(@deploy_with_roles).role(:workers)
+    role = Dash::Configuration.new(@deploy_with_roles).role(:workers)
 
     assert_equal({ in: :groups, limit: 2, wait: 0 }, role.boot_runner_options(role.hosts))
     assert_equal({ in: :sequence, wait: 0 }, role.boot_runner_options(%w[ 1.1.1.3 1.1.1.4 ]))
   end
 
   test "boot is memoized, including the unspecialized nil" do
-    # Servers.new constructs every Role before Kamal::Configuration#initialize assigns
+    # Servers.new constructs every Role before Dash::Configuration#initialize assigns
     # @boot, so the role-scoped Boot has to be built on first read, not in the initializer.
     @deploy_with_roles[:servers]["workers"]["boot"] = { "limit" => 1 }
-    config = Kamal::Configuration.new(@deploy_with_roles)
+    config = Dash::Configuration.new(@deploy_with_roles)
 
     assert_same config.role(:workers).boot, config.role(:workers).boot
 
     web = config.role(:web)
-    Kamal::Configuration::Boot.expects(:new).never
+    Dash::Configuration::Boot.expects(:new).never
     2.times { assert_nil web.boot }
   end
 
   test "parallel_roles is rejected inside a role's boot" do
     @deploy_with_roles[:servers]["workers"]["boot"] = { "parallel_roles" => true }
 
-    error = assert_raises Kamal::ConfigurationError do
-      Kamal::Configuration.new(@deploy_with_roles)
+    error = assert_raises Dash::ConfigurationError do
+      Dash::Configuration.new(@deploy_with_roles)
     end
 
     assert_match "servers/workers/boot: unknown key: parallel_roles", error.message
@@ -623,10 +623,10 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
 
   private
     def config
-      Kamal::Configuration.new(@deploy)
+      Dash::Configuration.new(@deploy)
     end
 
     def config_with_roles
-      Kamal::Configuration.new(@deploy_with_roles)
+      Dash::Configuration.new(@deploy_with_roles)
     end
 end

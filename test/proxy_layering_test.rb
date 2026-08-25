@@ -7,7 +7,7 @@ require "test_helper"
 # the fork's headline topology (session affinity clobbered, sleep failing the
 # LB deploy, compress running twice).
 #
-# So: every flag Kamal::Configuration::Proxy#deploy_options can emit must have
+# So: every flag Dash::Configuration::Proxy#deploy_options can emit must have
 # a disposition recorded in DEPLOY_OPTION_DISPOSITIONS. A new option without
 # one fails the build here — the flag-coverage-canary pattern applied to
 # layering, so the next feature cannot skip the decision.
@@ -17,7 +17,7 @@ require "test_helper"
 # a hand-written list would go stale in exactly the way this test exists to
 # prevent.
 class ProxyLayeringTest < ActiveSupport::TestCase
-  DISPOSITIONS = Kamal::Configuration::Proxy::DEPLOY_OPTION_DISPOSITIONS
+  DISPOSITIONS = Dash::Configuration::Proxy::DEPLOY_OPTION_DISPOSITIONS
 
   # Same pair as the flag coverage canary: some options are mutually exclusive
   # (kamal-proxy forbids on-demand TLS alongside hosts, a custom certificate or
@@ -33,7 +33,7 @@ class ProxyLayeringTest < ActiveSupport::TestCase
       #{undecided.map { |key| "  --#{key}" }.join("\n")}
 
       Decide where each one lives when the load balancer fronts the per-host
-      proxies, and record it in Kamal::Configuration::Proxy::DEPLOY_OPTION_DISPOSITIONS:
+      proxies, and record it in Dash::Configuration::Proxy::DEPLOY_OPTION_DISPOSITIONS:
 
         :edge    — TLS, access control, affinity, caching: only where clients connect
         :per_app — headers, rewrites, sleep, compress: only next to the app
@@ -60,8 +60,8 @@ class ProxyLayeringTest < ActiveSupport::TestCase
   end
 
   test "deploy_options refuses a key with no disposition" do
-    error = assert_raises(Kamal::ConfigurationError) do
-      Kamal::Configuration::Proxy.disposition(:"not-a-real-deploy-option")
+    error = assert_raises(Dash::ConfigurationError) do
+      Dash::Configuration::Proxy.disposition(:"not-a-real-deploy-option")
     end
 
     assert_match "no layering disposition", error.message
@@ -75,7 +75,7 @@ class ProxyLayeringTest < ActiveSupport::TestCase
     proxy = config.role(:web).proxy
     proxy.stubs(:load_balancing?).returns(true)
 
-    loadbalancer = Kamal::Configuration::Loadbalancer.new \
+    loadbalancer = Dash::Configuration::Loadbalancer.new \
       config: config, proxy_config: proxy.proxy_config, secrets: config.secrets
 
     per_app = proxy.deploy_options.keys
@@ -93,7 +93,7 @@ class ProxyLayeringTest < ActiveSupport::TestCase
 
     def maximal_configs
       @maximal_configs ||= MAXIMAL_FIXTURES.map do |fixture|
-        Kamal::Configuration.create_from \
+        Dash::Configuration.create_from \
           config_file: Pathname.new(File.expand_path("fixtures/#{fixture}.yml", __dir__))
       end
     end

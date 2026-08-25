@@ -5,7 +5,7 @@ class CommandsDockerTest < ActiveSupport::TestCase
     @config = {
       service: "app", image: "dhh/app", registry: { "username" => "dhh", "password" => "secret" }, servers: [ "1.1.1.1" ], builder: { "arch" => "amd64" }
     }
-    @docker = Kamal::Commands::Docker.new(Kamal::Configuration.new(@config))
+    @docker = Dash::Commands::Docker.new(Dash::Configuration.new(@config))
   end
 
   test "install" do
@@ -41,7 +41,7 @@ class CommandsDockerTest < ActiveSupport::TestCase
   end
 
   test "manifest_available?" do
-    assert_equal "docker manifest inspect basecamp/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}",
-      @docker.manifest_available?("basecamp/kamal-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}").join(" ")
+    assert_equal "docker manifest inspect basecamp/kamal-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}",
+      @docker.manifest_available?("basecamp/kamal-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}").join(" ")
   end
 end

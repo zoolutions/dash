@@ -30,7 +30,7 @@ cell passed, so this is not a Ruby- or Rails-version break.
 
 - **A test-logic failure** — minitest reported 0 failures / 0 errors / 0 skips, and all 18
   integration tests ran (0 skips means the `build_circuit` never tripped).
-- **`Kamal::Commander`'s `at_exit { @output_logger&.close }`** (`lib/kamal/commander.rb`) —
+- **`Dash::Commander`'s `at_exit { @output_logger&.close }`** (`lib/dash/commander.rb`) —
   the only `at_exit` in the codebase. It is registered from `configure_output_with`, which
   returns early unless `config.output.enabled?`, i.e. unless the config carries an `output:`
   key. No fixture and no test sets one, so it never registers during the suite.

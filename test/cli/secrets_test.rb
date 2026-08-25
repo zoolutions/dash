@@ -29,6 +29,6 @@ class CliSecretsTest < CliTestCase
 
   private
     def run_command(*command)
-      stdouted { Kamal::Cli::Secrets.start([ *command, "-c", "test/fixtures/deploy_with_accessories.yml" ]) }
+      stdouted { Dash::Cli::Secrets.start([ *command, "-c", "test/fixtures/deploy_with_accessories.yml" ]) }
     end
 end

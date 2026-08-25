@@ -22,7 +22,7 @@ class CliDoctorTest < CliTestCase
       assert_match "OK 1.1.1.1: connected", output
       assert_match "OK 1.1.1.1: docker is installed and running", output
       assert_match "OK 1.1.1.1: logged in to Docker Hub", output
-      assert_match "dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} manifest is fetchable", output
+      assert_match "dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} manifest is fetchable", output
       assert_match "OK 1.1.1.1: not running (will be started on deploy)", output
       assert_match "OK 1.1.1.1: ports 80/443 free", output
       assert_match "OK app.example.com: resolves to 1.1.1.1", output
@@ -32,12 +32,12 @@ class CliDoctorTest < CliTestCase
   end
 
   test "doctor with proxy running at current version" do
-    stub_proxy_version Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
+    stub_proxy_version Dash::Configuration::Proxy::Run::MINIMUM_VERSION
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
 
     run_command("doctor").tap do |output|
-      assert_match "OK 1.1.1.1: #{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION} (minimum #{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION})", output
+      assert_match "OK 1.1.1.1: #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} (minimum #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION})", output
       assert_match "OK 1.1.1.1: ports 80/443 held by the running kamal-proxy", output
     end
   end
@@ -47,8 +47,8 @@ class CliDoctorTest < CliTestCase
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
 
-    exception = assert_raises(Kamal::Cli::DoctorError) { run_command("doctor") }
-    assert_includes exception.message, "v0.0.1 is older than the minimum #{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}"
+    exception = assert_raises(Dash::Cli::DoctorError) { run_command("doctor") }
+    assert_includes exception.message, "v0.0.1 is older than the minimum #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}"
   end
 
   test "doctor with ports in use" do
@@ -59,7 +59,7 @@ class CliDoctorTest < CliTestCase
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
 
-    exception = assert_raises(Kamal::Cli::DoctorError) { run_command("doctor") }
+    exception = assert_raises(Dash::Cli::DoctorError) { run_command("doctor") }
     assert_includes exception.message, "80, 443 already in use by another process"
   end
 
@@ -67,7 +67,7 @@ class CliDoctorTest < CliTestCase
     stub_domain_resolution to: []
     stub_served_certificate expiring: Time.now + (90 * 86_400)
 
-    exception = assert_raises(Kamal::Cli::DoctorError) { run_command("doctor") }
+    exception = assert_raises(Dash::Cli::DoctorError) { run_command("doctor") }
     assert_includes exception.message, "app.example.com: does not resolve"
   end
 
@@ -85,7 +85,7 @@ class CliDoctorTest < CliTestCase
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_custom_certificate expiring: Time.now - 86_400
 
-    exception = assert_raises(Kamal::Cli::DoctorError) { run_command("doctor") }
+    exception = assert_raises(Dash::Cli::DoctorError) { run_command("doctor") }
     assert_includes exception.message, "configured certificate expired on"
   end
 
@@ -101,7 +101,7 @@ class CliDoctorTest < CliTestCase
 
   test "doctor with unreachable tls endpoint warns" do
     stub_domain_resolution to: [ "1.1.1.1" ]
-    Kamal::Cli::Doctor::EndpointChecks.any_instance.stubs(:peer_certificate)
+    Dash::Cli::Doctor::EndpointChecks.any_instance.stubs(:peer_certificate)
       .raises(Errno::ECONNREFUSED.new("Connection refused"))
 
     run_command("doctor").tap do |output|
@@ -115,7 +115,7 @@ class CliDoctorTest < CliTestCase
   # the next reboot, and the failure mode is one hung request when a sleeping
   # service never wakes. The doctor inspects what is actually mounted.
   test "doctor reports a mounted docker socket" do
-    stub_proxy_version Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
+    stub_proxy_version Dash::Configuration::Proxy::Run::MINIMUM_VERSION
     stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy\n/var/run/docker.sock"
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
@@ -126,19 +126,19 @@ class CliDoctorTest < CliTestCase
   end
 
   test "doctor fails when sleep is configured but the running proxy lacks the socket mount" do
-    stub_proxy_version Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
+    stub_proxy_version Dash::Configuration::Proxy::Run::MINIMUM_VERSION
     stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy"
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
 
-    exception = assert_raises(Kamal::Cli::DoctorError) { run_command("doctor", fixture: "deploy_with_doctor_socket") }
+    exception = assert_raises(Dash::Cli::DoctorError) { run_command("doctor", fixture: "deploy_with_doctor_socket") }
     assert_includes exception.message, "no /var/run/docker.sock mount"
     assert_includes exception.message, "dash proxy reboot"
   end
 
   # Without sleep nothing hangs yet, so a missing mount is drift, not breakage.
   test "doctor warns when the socket is configured without sleep and not mounted" do
-    stub_proxy_version Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
+    stub_proxy_version Dash::Configuration::Proxy::Run::MINIMUM_VERSION
     stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy"
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
@@ -151,7 +151,7 @@ class CliDoctorTest < CliTestCase
 
   # Root-equivalent access the config no longer asks for deserves a flag.
   test "doctor warns about a mounted socket the config no longer asks for" do
-    stub_proxy_version Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
+    stub_proxy_version Dash::Configuration::Proxy::Run::MINIMUM_VERSION
     stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy\n/var/run/docker.sock"
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
@@ -176,7 +176,7 @@ class CliDoctorTest < CliTestCase
   end
 
   test "doctor stays quiet about sockets when none is configured or mounted" do
-    stub_proxy_version Kamal::Configuration::Proxy::Run::MINIMUM_VERSION
+    stub_proxy_version Dash::Configuration::Proxy::Run::MINIMUM_VERSION
     stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy"
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
@@ -199,7 +199,7 @@ class CliDoctorTest < CliTestCase
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
 
-    exception = assert_raises(Kamal::Cli::DoctorError) { run_command("doctor") }
+    exception = assert_raises(Dash::Cli::DoctorError) { run_command("doctor") }
     assert_includes exception.message, "SSH"
     assert_includes exception.message, "getaddrinfo"
   end
@@ -236,8 +236,8 @@ class CliDoctorTest < CliTestCase
       .raises(SocketError.new("getaddrinfo: nodename nor servname provided, or not known"))
 
     output = stdouted do
-      assert_raises(Kamal::Cli::DoctorError) do
-        with_argv([ "doctor", "-c", "test/fixtures/deploy_with_readiness_sources.yml" ]) { Kamal::Cli::Main.start }
+      assert_raises(Dash::Cli::DoctorError) do
+        with_argv([ "doctor", "-c", "test/fixtures/deploy_with_readiness_sources.yml" ]) { Dash::Cli::Main.start }
       end
     end
 
@@ -247,7 +247,7 @@ class CliDoctorTest < CliTestCase
   private
     def run_command(*command, fixture: "deploy_with_doctor")
       with_argv([ *command, "-c", "test/fixtures/#{fixture}.yml" ]) do
-        stdouted { Kamal::Cli::Main.start }
+        stdouted { Dash::Cli::Main.start }
       end
     end
 
@@ -273,13 +273,13 @@ class CliDoctorTest < CliTestCase
     end
 
     def stub_served_certificate(expiring:)
-      Kamal::Cli::Doctor::EndpointChecks.any_instance.stubs(:peer_certificate)
+      Dash::Cli::Doctor::EndpointChecks.any_instance.stubs(:peer_certificate)
         .returns(generate_certificate(not_after: expiring))
     end
 
     def stub_custom_certificate(expiring:)
-      Kamal::Configuration::Proxy.any_instance.stubs(:custom_ssl_certificate?).returns(true)
-      Kamal::Configuration::Proxy.any_instance.stubs(:certificate_pem_content)
+      Dash::Configuration::Proxy.any_instance.stubs(:custom_ssl_certificate?).returns(true)
+      Dash::Configuration::Proxy.any_instance.stubs(:certificate_pem_content)
         .returns(generate_certificate(not_after: expiring).to_pem)
     end
 

@@ -5,11 +5,11 @@ class CliTestCase < ActiveSupport::TestCase
     ENV["VERSION"]             = "999"
     ENV["RAILS_MASTER_KEY"]    = "123"
     ENV["MYSQL_ROOT_PASSWORD"] = "secret123"
-    Object.send(:remove_const, :KAMAL)
-    Object.const_set(:KAMAL, Kamal::Commander.new)
+    Object.send(:remove_const, :DASH)
+    Object.const_set(:DASH, Dash::Commander.new)
 
     # Ensure no loadbalancer functionality interferes with tests
-    Kamal::Configuration::Proxy.any_instance.stubs(:load_balancing?).returns(false)
+    Dash::Configuration::Proxy.any_instance.stubs(:load_balancing?).returns(false)
   end
 
   teardown do
@@ -21,7 +21,7 @@ class CliTestCase < ActiveSupport::TestCase
   private
     def fail_hook(hook)
       @executions = []
-      Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+      Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
       SSHKit::Backend::Abstract.any_instance.stubs(:execute)
         .with { |*args| @executions << args; args != [ ".kamal/hooks/#{hook}" ] }
@@ -57,7 +57,7 @@ class CliTestCase < ActiveSupport::TestCase
     end
 
     def with_build_directory
-      build_directory = File.join Dir.tmpdir, "kamal-clones", "app-#{pwd_sha}", File.basename(Kamal::Git.root)
+      build_directory = File.join Dir.tmpdir, "kamal-clones", "app-#{pwd_sha}", File.basename(Dash::Git.root)
       FileUtils.mkdir_p build_directory
       FileUtils.touch File.join build_directory, "Dockerfile"
       yield build_directory + "/"

@@ -18,6 +18,6 @@ class CommandsServerTest < ActiveSupport::TestCase
 
   private
     def new_command(extra_config = {})
-      Kamal::Commands::Server.new(Kamal::Configuration.new(@config.merge(extra_config)))
+      Dash::Commands::Server.new(Dash::Configuration.new(@config.merge(extra_config)))
     end
 end

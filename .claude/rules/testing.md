@@ -12,20 +12,20 @@ Follow RED -> GREEN -> REFACTOR:
 
 - **80% minimum** for all code
 - **100% required** for:
-  - `Kamal::Configuration::Proxy::Run` (`MINIMUM_VERSION`, repository defaults)
-  - `Kamal::Commander` (target/role resolution)
-  - `Kamal::Configuration` (deploy.yml parsing, validation)
-  - `Kamal::Commands::Proxy` / loadbalancer auto-activation logic
-  - `Kamal::Cli::Main` hooks (before/after deploy)
+  - `Dash::Configuration::Proxy::Run` (`MINIMUM_VERSION`, repository defaults)
+  - `Dash::Commander` (target/role resolution)
+  - `Dash::Configuration` (deploy.yml parsing, validation)
+  - `Dash::Commands::Proxy` / loadbalancer auto-activation logic
+  - `Dash::Cli::Main` hooks (before/after deploy)
 
 ## Test Type Preference
 
 | Feature involves | Use |
 |---|---|
-| `Kamal::Configuration::*` (deploy.yml -> objects) | Unit test |
-| `Kamal::Commands::*` (docker command string builders) | Unit test, assert generated shell command |
-| `Kamal::Cli::*` (Thor commands) | Unit test with `SSHKit::Backend::Printer` (see `test_helper.rb`) |
-| `Kamal::Commander` | Unit test |
+| `Dash::Configuration::*` (deploy.yml -> objects) | Unit test |
+| `Dash::Commands::*` (docker command string builders) | Unit test, assert generated shell command |
+| `Dash::Cli::*` (Thor commands) | Unit test with `SSHKit::Backend::Printer` (see `test_helper.rb`) |
+| `Dash::Commander` | Unit test |
 | Proxy boot / loadbalancer activation | Unit test in `test/commands/proxy_test.rb`, `test/commands/loadbalancer_test.rb` |
 | Full deploy against real hosts | Integration test (`test/integration/**`) |
 | `bin/dash` entry point | Not unit tested — covered by integration |
@@ -45,10 +45,10 @@ class ConfigurationProxyRunTest < ActiveSupport::TestCase
 
   test "run objects with identical config are equal" do
     deploy = base_deploy.deep_merge(proxy: { "run" => { "log_max_size" => "50m" } })
-    config = Kamal::Configuration.new(deploy)
+    config = Dash::Configuration.new(deploy)
 
-    run_a = Kamal::Configuration::Proxy::Run.new(config, run_config: { "log_max_size" => "50m" })
-    run_b = Kamal::Configuration::Proxy::Run.new(config, run_config: { "log_max_size" => "50m" })
+    run_a = Dash::Configuration::Proxy::Run.new(config, run_config: { "log_max_size" => "50m" })
+    run_b = Dash::Configuration::Proxy::Run.new(config, run_config: { "log_max_size" => "50m" })
 
     assert_equal run_a, run_b
   end
@@ -72,11 +72,11 @@ end
 
 ## Interpolate MINIMUM_VERSION — Never Hardcode Proxy Versions
 
-Fork-specific: proxy image tags are fork-owned (`ghcr.io/zoolutions/dash-proxy:v0.9.2.1`) and change independently of the gem. Tests must reference `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION`, never a literal version string:
+Fork-specific: proxy image tags are fork-owned (`ghcr.io/zoolutions/dash-proxy:v0.9.2.1`) and change independently of the gem. Tests must reference `Dash::Configuration::Proxy::Run::MINIMUM_VERSION`, never a literal version string:
 
 ```ruby
 # Correct
-assert_match %r{ghcr\.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}}, cmd
+assert_match %r{ghcr\.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}}, cmd
 
 # Wrong — breaks every time the proxy fork releases
 assert_match %r{ghcr\.io/zoolutions/dash-proxy:v0\.9\.2\.1}, cmd
@@ -113,7 +113,7 @@ If a deploy fixture under `test/fixtures/` gets a primary role with more than on
 - [ ] Unit tests pass: `bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'`
 - [ ] `bundle exec rubocop --parallel` clean
 - [ ] Full suite passes before pushing `main` or releasing: `bin/test`
-- [ ] Any proxy version in an assertion is `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION`, not a literal
+- [ ] Any proxy version in an assertion is `Dash::Configuration::Proxy::Run::MINIMUM_VERSION`, not a literal
 - [ ] New multi-host fixtures set `loadbalancer: false` if not testing that feature
 - [ ] Builder-test failures checked against the two known Apple-Silicon cases before treating as a bug
 - [ ] Coverage meets requirements (80% / 100% for critical-path components above)

@@ -66,13 +66,13 @@ in both trees (swap the path via `$ARGUMENTS`).
 
 `kamal deploy` runtime is dominated by network I/O (SSH exec on remote hosts,
 `docker build`/`push`, proxy health polling) — not local Ruby. A
-`benchmark-ips` micro-bench of, say, `Kamal::Commands::App#run` would measure
+`benchmark-ips` micro-bench of, say, `Dash::Commands::App#run` would measure
 string-array construction that's noise next to a single SSH round-trip. Don't
 build one. Two paths depending on what changed:
 
 ### B1. Local hot path (config load, command-array construction, Thor dispatch)
 
-If the change touches `lib/kamal/configuration/**` or `lib/kamal/commands/**`
+If the change touches `lib/dash/configuration/**` or `lib/dash/commands/**`
 (YAML parsing, validation, SSHKit command building — all in-process, no
 network), use a throwaway timing harness instead of a fabricated rake task:
 
@@ -86,7 +86,7 @@ bundle exec ruby -Itest -e '
   fixture = Pathname.new(File.expand_path("test/fixtures/deploy.yml"))
   Benchmark.bmbm do |x|
     x.report("create_from") do
-      N.times { Kamal::Configuration.create_from(config_file: fixture) }
+      N.times { Dash::Configuration.create_from(config_file: fixture) }
     end
   end
 ' > /tmp/before.txt
@@ -98,7 +98,7 @@ git worktree remove --force /tmp/dash-baseline
 ```
 
 Swap the `Benchmark.bmbm` block body for whatever construction path
-`$ARGUMENTS` names (e.g. `Kamal::Commands::App.new(...).run` for a command
+`$ARGUMENTS` names (e.g. `Dash::Commands::App.new(...).run` for a command
 builder change). Delete the script after — it's disposable, not committed.
 
 ### B2. Remote/deploy-shaped change (SSHKit command sequencing, hook ordering, proxy boot/health polling)
@@ -108,13 +108,13 @@ Docker daemon time on the target host. Instead:
 
 - Reproduce with the integration harness (`bin/test`, needs Docker + a published
   proxy image per `.claude/rules/upstream-sync.md`) and eyeball `print_runtime`
-  output (`lib/kamal/cli/base.rb`) — every `deploy`/`redeploy`/`rollback`
+  output (`lib/dash/cli/base.rb`) — every `deploy`/`redeploy`/`rollback`
   already wraps its critical section and prints `Finished all in N.N seconds`.
 - Run the same scenario on `main` in a worktree and on the branch, same
   Docker-in-Docker host, and diff the printed runtimes. This is a wall-clock
   A/B, not a micro-bench — say so in the report.
 - If the change adds/removes an SSH round-trip per host (e.g. an extra
-  `on(KAMAL.hosts)` block), count round-trips directly by reading the diff —
+  `on(DASH.hosts)` block), count round-trips directly by reading the diff —
   that's a more honest cost signal than a noisy timed run.
 
 ### 4. Report honestly (gem side)

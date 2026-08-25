@@ -12,14 +12,14 @@ gem "rails_icons", "~> 1.1"
 gem "rouge"
 
 # The gem this site documents. Path dep on the repo root (the app lives at docs/)
-# — used ONLY for c.version_badge (Kamal::VERSION; the Ruby namespace is still
-# Kamal:: until the staged rename, see the repo CLAUDE.md). `require:
-# "kamal/version"` loads just the version constant; the CLI never boots inside
+# — used ONLY for c.version_badge (Dash::VERSION; the Ruby namespace is still
+# Dash:: until the staged rename, see the repo CLAUDE.md). `require:
+# "dash/version"` loads just the version constant; the CLI never boots inside
 # the docs app. The config-reference pages read the doc YAMLs straight from
-# ../lib/kamal/configuration/docs/ (see app/models/config_doc.rb), not through
+# ../lib/dash/configuration/docs/ (see app/models/config_doc.rb), not through
 # the gem. The Docker build context is the repo root (config/deploy.yml
 # `context: ..`), so the path resolves in CI too.
-gem "dash", path: "..", require: "kamal/version"
+gem "dash", path: "..", require: "dash/version"
 
 # docs-kit's optional read-only MCP server (POST /mcp, JSON-RPC). Present so the
 # endpoint goes live (routes uncommented in config/routes.rb); the whole

@@ -14,7 +14,7 @@ class ConfigurationProxyBootTest < ActiveSupport::TestCase
       volumes: [ "/local/path:/container/path" ]
     }
 
-    @config = Kamal::Configuration.new(@deploy)
+    @config = Dash::Configuration.new(@deploy)
     @proxy_boot_config = @config.proxy_boot
   end
 

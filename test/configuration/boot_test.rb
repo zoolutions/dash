@@ -80,8 +80,8 @@ class ConfigurationBootTest < ActiveSupport::TestCase
   test "role-scoped boot reports its own context on a validation error" do
     config = config_with_boot(nil)
 
-    error = assert_raises(Kamal::ConfigurationError) do
-      Kamal::Configuration::Boot.new \
+    error = assert_raises(Dash::ConfigurationError) do
+      Dash::Configuration::Boot.new \
         config: config, boot_config: { "limit" => [ 1 ] }, context: "servers/workers/boot"
     end
 
@@ -104,6 +104,6 @@ class ConfigurationBootTest < ActiveSupport::TestCase
         }
       end
 
-      Kamal::Configuration.new(deploy)
+      Dash::Configuration.new(deploy)
     end
 end

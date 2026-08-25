@@ -53,13 +53,13 @@ class ConfigurationProxyRedirectsSourceTest < ActiveSupport::TestCase
   end
 
   test "redirects_source without source" do
-    assert_raises(Kamal::ConfigurationError) { configuration "redirects_source" => { "interval" => 300 } }
-    assert_raises(Kamal::ConfigurationError) { configuration "redirects_source" => {} }
+    assert_raises(Dash::ConfigurationError) { configuration "redirects_source" => { "interval" => 300 } }
+    assert_raises(Dash::ConfigurationError) { configuration "redirects_source" => {} }
   end
 
   test "redirects_source source must be a path or http url" do
     [ "example.com/redirects", "ftp://example.com/redirects", "redirects" ].each do |source|
-      assert_raises(Kamal::ConfigurationError, "expected #{source.inspect} to be rejected") do
+      assert_raises(Dash::ConfigurationError, "expected #{source.inspect} to be rejected") do
         configuration "redirects_source" => { "source" => source }
       end
     end
@@ -69,7 +69,7 @@ class ConfigurationProxyRedirectsSourceTest < ActiveSupport::TestCase
   # SSH round trip; catch it at config time instead.
   test "redirects_source interval must be an integer of at least 10 seconds" do
     [ 0, -300, "300", 1.5, 9 ].each do |interval|
-      assert_raises(Kamal::ConfigurationError, "expected interval #{interval.inspect} to be rejected") do
+      assert_raises(Dash::ConfigurationError, "expected interval #{interval.inspect} to be rejected") do
         configuration "redirects_source" => { "source" => "/redirects", "interval" => interval }
       end
     end
@@ -81,7 +81,7 @@ class ConfigurationProxyRedirectsSourceTest < ActiveSupport::TestCase
 
   private
     def configuration(proxy_config)
-      Kamal::Configuration.new @deploy.merge(proxy: proxy_config)
+      Dash::Configuration.new @deploy.merge(proxy: proxy_config)
     end
 
     def deploy_options(proxy_config)

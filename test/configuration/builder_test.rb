@@ -57,7 +57,7 @@ class ConfigurationBuilderTest < ActiveSupport::TestCase
   test "invalid cache type specified" do
     @deploy[:builder]["cache"] = { "type" => "invalid" }
 
-    assert_raises(Kamal::ConfigurationError) do
+    assert_raises(Dash::ConfigurationError) do
       config.builder
     end
   end
@@ -174,7 +174,7 @@ class ConfigurationBuilderTest < ActiveSupport::TestCase
   test "local disabled but no remote set" do
     @deploy[:builder]["local"] = false
 
-    assert_raises(Kamal::ConfigurationError) do
+    assert_raises(Dash::ConfigurationError) do
       config.builder
     end
   end
@@ -190,6 +190,6 @@ class ConfigurationBuilderTest < ActiveSupport::TestCase
 
   private
     def config
-      Kamal::Configuration.new(@deploy)
+      Dash::Configuration.new(@deploy)
     end
 end

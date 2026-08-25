@@ -3,7 +3,7 @@
 require "rails_helper"
 
 # The Configuration pages are generated from the gem's commented-YAML docs
-# (lib/kamal/configuration/docs/*.yml — the same files `dash docs` prints).
+# (lib/dash/configuration/docs/*.yml — the same files `dash docs` prints).
 # This spec keeps the Doc registry honest against that directory, in both
 # directions, so the reference can't silently drift from the gem:
 #
@@ -18,7 +18,7 @@ RSpec.describe "Config docs drift", type: :model do
   it "registers a Configuration page for every gem doc YAML" do
     missing = yaml_slugs - page_slugs
     expect(missing).to be_empty, <<~MSG
-      New doc YAMLs under lib/kamal/configuration/docs have no page: #{missing.inspect}
+      New doc YAMLs under lib/dash/configuration/docs have no page: #{missing.inspect}
       Add a `page` line to the Configuration group in app/models/doc.rb and a
       Views::Docs::Pages::Config::* class binding it with `config_doc`.
     MSG

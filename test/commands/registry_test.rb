@@ -96,11 +96,11 @@ class CommandsRegistryTest < ActiveSupport::TestCase
 
   private
     def registry
-      Kamal::Commands::Registry.new main_config
+      Dash::Commands::Registry.new main_config
     end
 
     def main_config
-      Kamal::Configuration.new(@config)
+      Dash::Configuration.new(@config)
     end
 
     def accessory_registry_config

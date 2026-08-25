@@ -10,7 +10,7 @@ end
 
 desc "Release a new version (rake release[1.2.3] or rake release[pre] or rake release[1.2.3,force])"
 task :release, %i[version force] do |_t, args|
-  require_relative "lib/kamal/version"
+  require_relative "lib/dash/version"
 
   def info(msg)    = puts "\e[34m→\e[0m #{msg}"
   def success(msg) = puts "\e[32m✓\e[0m #{msg}"
@@ -25,7 +25,7 @@ task :release, %i[version force] do |_t, args|
   dirty = `git status --porcelain`.strip
   abort "\e[31mAborting: working directory is not clean.\e[0m\n#{dirty}" unless dirty.empty?
 
-  current = Kamal::VERSION
+  current = Dash::VERSION
   prerelease = new_version.match?(/alpha|beta|rc|pre/) || new_version == "pre"
 
   if new_version == "pre"
@@ -35,7 +35,7 @@ task :release, %i[version force] do |_t, args|
 
   # The proxy image the gem will pull must exist BEFORE the gem releases —
   # integration tests and `dash proxy boot` pull it by this tag.
-  minimum_version = File.read("lib/kamal/configuration/proxy/run.rb")[/MINIMUM_VERSION\s*=\s*"([^"]+)"/, 1]
+  minimum_version = File.read("lib/dash/configuration/proxy/run.rb")[/MINIMUM_VERSION\s*=\s*"([^"]+)"/, 1]
   header "Proxy image gate"
   info "MINIMUM_VERSION is #{minimum_version} — must be published at ghcr.io/zoolutions/dash-proxy"
   unless system("docker buildx imagetools inspect ghcr.io/zoolutions/dash-proxy:#{minimum_version} >/dev/null 2>&1")
@@ -44,7 +44,7 @@ task :release, %i[version force] do |_t, args|
   success "Proxy image #{minimum_version} is published"
 
   tag = "v#{new_version}"
-  version_file = "lib/kamal/version.rb"
+  version_file = "lib/dash/version.rb"
 
   title = "Release #{tag}"
   title += " (force)" if force

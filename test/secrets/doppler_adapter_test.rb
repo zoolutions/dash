@@ -165,7 +165,7 @@ class DopplerAdapterTest < SecretAdapterTestCase
   private
     def run_command(*command)
       stdouted do
-        Kamal::Cli::Secrets.start \
+        Dash::Cli::Secrets.start \
           [ *command,
             "-c", "test/fixtures/deploy_with_accessories.yml",
             "--adapter", "doppler" ]

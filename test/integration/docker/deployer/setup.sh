@@ -21,14 +21,14 @@ install_dash
 # exercised by the suite — see app_with_roles, which pulls its proxy from
 # registry:4443 rather than the default registry.
 #
-# The tag must match Kamal::Configuration::Proxy::Run::MINIMUM_VERSION, so read it
+# The tag must match Dash::Configuration::Proxy::Run::MINIMUM_VERSION, so read it
 # from the source instead of hardcoding it here. Hardcoded, the two drift apart on
 # every version bump and the failure lands deep inside an unrelated deploy as
 # "manifest unknown" — a long way from the line that caused it.
-minimum_version=$(grep -oE 'MINIMUM_VERSION *= *"[^"]+"' /kamal/lib/kamal/configuration/proxy/run.rb | head -1 | cut -d'"' -f2)
+minimum_version=$(grep -oE 'MINIMUM_VERSION *= *"[^"]+"' /kamal/lib/dash/configuration/proxy/run.rb | head -1 | cut -d'"' -f2)
 
 if [ -z "$minimum_version" ]; then
-  echo "setup.sh: could not read MINIMUM_VERSION from lib/kamal/configuration/proxy/run.rb" >&2
+  echo "setup.sh: could not read MINIMUM_VERSION from lib/dash/configuration/proxy/run.rb" >&2
   exit 1
 fi
 

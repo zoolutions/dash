@@ -12,7 +12,7 @@ require "minitest/autorun" # using #stub that take args
 # idle timeout, which spawns a background eviction thread at require time.
 threads_before_sshkit = Thread.list
 require "sshkit"
-require "kamal"
+require "dash"
 
 ActiveSupport::LogSubscriber.logger = ActiveSupport::Logger.new(STDOUT) if ENV["VERBOSE"]
 
@@ -136,7 +136,7 @@ class SecretAdapterTestCase < ActiveSupport::TestCase
 
   private
     def stub_ticks
-      Kamal::Secrets::Adapters::Base.any_instance.stubs(:`)
+      Dash::Secrets::Adapters::Base.any_instance.stubs(:`)
     end
 
     def stub_ticks_with(command, succeed: true)

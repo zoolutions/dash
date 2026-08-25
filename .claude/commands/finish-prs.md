@@ -75,7 +75,7 @@ cd <worktree>
 git merge origin/dash
 ```
 
-**Merge, never rebase.** If the merge conflicts, do NOT resolve it here — `/github-review-pr` Phase A0 owns conflict resolution and carries the per-file playbook (`lib/kamal/version.rb` → base's side; `Gemfile.lock` → take either side then `bundle install`; `proxy/run.rb` → keep `ghcr.io/zoolutions/dash-proxy` and treat a `MINIMUM_VERSION` conflict as a release-ordering question; new multi-host fixtures → `loadbalancer: false`). Abort the merge (`git merge --abort`), and let step 2d handle it — Phase A0 runs first inside that command by design.
+**Merge, never rebase.** If the merge conflicts, do NOT resolve it here — `/github-review-pr` Phase A0 owns conflict resolution and carries the per-file playbook (`lib/dash/version.rb` → base's side; `Gemfile.lock` → take either side then `bundle install`; `proxy/run.rb` → keep `ghcr.io/zoolutions/dash-proxy` and treat a `MINIMUM_VERSION` conflict as a release-ordering question; new multi-host fixtures → `loadbalancer: false`). Abort the merge (`git merge --abort`), and let step 2d handle it — Phase A0 runs first inside that command by design.
 
 If the merge is clean, commit it (git's default merge message is fine) and continue.
 
@@ -149,7 +149,7 @@ If the user merges a PR **out of the planned order**, adapt: drop it from the re
 Two fork-specific things worth surfacing once, at the end, rather than fixing mid-queue:
 
 - **Upstream drift.** If several PRs in the queue conflicted against `main` in the same file, `main` may have moved and `dash` may be behind it. The durable fix is the routine sync in `.claude/rules/upstream-sync.md` (`git checkout main && git merge --ff-only upstream/main`, then `git checkout main && git merge main`) — a commit to `dash`, so mention it, don't do it unprompted.
-- **Release ordering.** If any PR in the queue moves `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION`, the referenced `ghcr.io/zoolutions/kamal-proxy` tag must already be published — proxy image first, gem second. Flag it before the user merges, because merging a gem PR that names an unpublished proxy tag breaks integration tests on `dash`.
+- **Release ordering.** If any PR in the queue moves `Dash::Configuration::Proxy::Run::MINIMUM_VERSION`, the referenced `ghcr.io/zoolutions/dash-proxy` tag must already be published — proxy image first, gem second. Flag it before the user merges, because merging a gem PR that names an unpublished proxy tag breaks integration tests on `dash`.
 
 ---
 

@@ -65,19 +65,19 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
     with_test_secrets("secrets" => "OTHER=value") do
       run = run_config "email" => "admin@example.com", "credentials" => [ "LOOPIA_API_PASSWORD" ]
 
-      error = assert_raises(Kamal::ConfigurationError) { run.secrets_io }
+      error = assert_raises(Dash::ConfigurationError) { run.secrets_io }
       assert_match "Secret 'LOOPIA_API_PASSWORD' not found", error.message
     end
   end
 
   test "config_digest is unchanged for a config with no acme block" do
-    config = Kamal::Configuration.new(base_deploy)
+    config = Dash::Configuration.new(base_deploy)
 
-    assert_equal Kamal::Configuration::Proxy::Run.digest(
-      "ghcr.io/zoolutions/dash-proxy:#{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}",
+    assert_equal Dash::Configuration::Proxy::Run.digest(
+      "ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}",
       "kamal-proxy run --recheck-targets-on-restore",
-      *Kamal::Configuration::Proxy::Run.new(config, run_config: {}).docker_options_args
-    ), Kamal::Configuration::Proxy::Run.new(config, run_config: {}).config_digest
+      *Dash::Configuration::Proxy::Run.new(config, run_config: {}).docker_options_args
+    ), Dash::Configuration::Proxy::Run.new(config, run_config: {}).config_digest
   end
 
   test "config_digest changes when acme settings change" do
@@ -98,12 +98,12 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
   end
 
   test "an unknown dns_provider fails validation naming the supported providers" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       validated_config "email" => "admin@example.com", "dns_provider" => "loopia"
     end
 
     assert_equal "proxy/run/acme: unsupported dns_provider 'loopia'. " \
-      "Supported providers: #{Kamal::Configuration::Proxy::Acme::DNS_PROVIDERS.join(", ")}", error.message
+      "Supported providers: #{Dash::Configuration::Proxy::Acme::DNS_PROVIDERS.join(", ")}", error.message
   end
 
   test "provider aliases and canonical names pass validation" do
@@ -136,14 +136,14 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
   end
 
   test "an unknown provider in a dns_provider hash fails validation naming the zone" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       validated_config "email" => "admin@example.com", "dns_provider" => {
         "platform.example" => "loopia", "default" => "hetzner"
       }
     end
 
     assert_equal "proxy/run/acme: unsupported dns_provider 'loopia' for 'platform.example'. " \
-      "Supported providers: #{Kamal::Configuration::Proxy::Acme::DNS_PROVIDERS.join(", ")}", error.message
+      "Supported providers: #{Dash::Configuration::Proxy::Acme::DNS_PROVIDERS.join(", ")}", error.message
   end
 
   test "provider aliases pass validation in a dns_provider hash" do
@@ -155,7 +155,7 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
   # The wire format cuts zone=provider at the first '=', so an '=' in a zone
   # would silently build an entry for a different zone.
   test "a zone containing an equals sign is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       validated_config "email" => "admin@example.com", "dns_provider" => { "bad=zone.example" => "cloudflare" }
     end
 
@@ -163,7 +163,7 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
   end
 
   test "an empty dns_provider hash is rejected" do
-    assert_raises(Kamal::ConfigurationError) do
+    assert_raises(Dash::ConfigurationError) do
       validated_config "email" => "admin@example.com", "dns_provider" => {}
     end
   end
@@ -172,7 +172,7 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
   # matches, so the misconfiguration surfaces as certificates that never issue.
   test "a non-string or whitespace zone key is rejected" do
     [ 123, "", "zone with spaces.example" ].each do |zone|
-      error = assert_raises(Kamal::ConfigurationError, "expected zone #{zone.inspect} to be rejected") do
+      error = assert_raises(Dash::ConfigurationError, "expected zone #{zone.inspect} to be rejected") do
         validated_config "email" => "admin@example.com", "dns_provider" => { zone => "cloudflare" }
       end
 
@@ -181,7 +181,7 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
   end
 
   test "a non-string provider in a dns_provider hash is rejected" do
-    assert_raises(Kamal::ConfigurationError) do
+    assert_raises(Dash::ConfigurationError) do
       validated_config "email" => "admin@example.com", "dns_provider" => { "platform.example" => true }
     end
   end
@@ -194,7 +194,7 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
   end
 
   test "acme requires an email" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       validated_config "dns_provider" => "cloudflare"
     end
 
@@ -202,7 +202,7 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
   end
 
   test "credentials must name secrets" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       validated_config "email" => "admin@example.com", "credentials" => [ { "LOOPIA_API_USER" => "user" } ]
     end
 
@@ -211,19 +211,19 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
 
   test "validate_secrets! resolves the acme credentials before any host is contacted" do
     with_test_secrets("secrets" => "OTHER=value") do
-      config = Kamal::Configuration.new base_deploy.merge(
+      config = Dash::Configuration.new base_deploy.merge(
         proxy: { "host" => "example.com", "run" => { "acme" => {
           "email" => "admin@example.com", "credentials" => [ "CF_API_TOKEN" ]
         } } }
       )
 
-      error = assert_raises(Kamal::ConfigurationError) { config.validate_secrets! }
+      error = assert_raises(Dash::ConfigurationError) { config.validate_secrets! }
       assert_match "Secret 'CF_API_TOKEN' not found", error.message
     end
   end
 
   test "an unknown acme key fails validation" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       validated_config "email" => "admin@example.com", "dns_challenge" => true
     end
 
@@ -232,16 +232,16 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
 
   private
     def validated_config(acme_config)
-      Kamal::Configuration.new base_deploy.merge(
+      Dash::Configuration.new base_deploy.merge(
         proxy: { "host" => "example.com", "run" => { "acme" => acme_config } }
       )
     end
 
     def run_config(acme_config)
-      config = Kamal::Configuration.new(base_deploy)
+      config = Dash::Configuration.new(base_deploy)
       run = acme_config.present? ? { "acme" => acme_config } : {}
 
-      Kamal::Configuration::Proxy::Run.new(config, run_config: run)
+      Dash::Configuration::Proxy::Run.new(config, run_config: run)
     end
 
     def base_deploy

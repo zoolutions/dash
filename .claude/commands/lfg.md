@@ -53,7 +53,7 @@ Before proceeding, you must:
 2. Explain WHY this is needed (fork rationale — is this something upstream rejected, or a new dash-only capability?)
 3. List what will change from the operator's perspective (`deploy.yml` keys, CLI flags, output)
 4. Identify edge cases not explicitly mentioned
-5. Explain the code path involved through the layer cake: `Kamal::Cli::*` → `Kamal::Commander` → `Kamal::Commands::*` → `Kamal::Configuration` → SSHKit
+5. Explain the code path involved through the layer cake: `Dash::Cli::*` → `Dash::Commander` → `Dash::Commands::*` → `Dash::Configuration` → SSHKit
 
 If you cannot complete ALL five items, investigate further.
 
@@ -66,11 +66,11 @@ Create a TaskCreate todo list with specific implementation steps.
 ## Phase 2: Explore
 
 1. Find related files (Glob/Grep or Explore agent)
-2. Read existing patterns in similar CLI commands under `lib/kamal/cli/`
-3. Understand dependencies and integration points across the layer cake (`lib/kamal/commander.rb`, `lib/kamal/commands/`, `lib/kamal/configuration/`)
+2. Read existing patterns in similar CLI commands under `lib/dash/cli/`
+3. Understand dependencies and integration points across the layer cake (`lib/dash/commander.rb`, `lib/dash/commands/`, `lib/dash/configuration/`)
 4. Check existing test coverage under `test/` (mirrors `lib/` structure; skip `test/integration` unless the change is deploy-path-sensitive)
-5. If touching proxy behavior, review `lib/kamal/configuration/proxy/` — `run.rb` owns `MINIMUM_VERSION` and the fork's default `ghcr.io/zoolutions/kamal-proxy` repository
-6. If touching multi-host or load balancing, review `lib/kamal/commands/loadbalancer.rb` and the `loadbalancer:` validation in `lib/kamal/configuration/validator/proxy.rb` — the dash-only loadbalancer auto-activates for any primary role with >1 web host
+5. If touching proxy behavior, review `lib/dash/configuration/proxy/` — `run.rb` owns `MINIMUM_VERSION` and the fork's default `ghcr.io/zoolutions/kamal-proxy` repository
+6. If touching multi-host or load balancing, review `lib/dash/commands/loadbalancer.rb` and the `loadbalancer:` validation in `lib/dash/configuration/validator/proxy.rb` — the dash-only loadbalancer auto-activates for any primary role with >1 web host
 7. Check `ROADMAP.md` for whether this item is already scoped (evidence-linked anchors, R1-R5 sequencing) — align implementation with the anchor's stated fix location
 
 ---
@@ -79,7 +79,7 @@ Create a TaskCreate todo list with specific implementation steps.
 
 1. List files to modify with specific changes
 2. List new files to create with purpose
-3. Identify whether this touches `lib/kamal/version.rb` (only `rake release` writes it) or frozen server-artifact names (`.kamal/`, `kamal-proxy` container, `KAMAL_*` env) — if so, STOP and check CLAUDE.md's staged-rename table
+3. Identify whether this touches `lib/dash/version.rb` (only `rake release` writes it) or frozen server-artifact names (`.kamal/`, `kamal-proxy` container, `KAMAL_*` env) — if so, STOP and check CLAUDE.md's staged-rename table
 4. Plan test coverage (TDD: tests FIRST), using minitest + mocha idioms already in `test/` — no RSpec
 5. Update task list with implementation steps
 6. Consider backwards compatibility with existing `deploy.yml` configs and the dash/upstream conflict playbook in `upstream-sync.md`
@@ -114,12 +114,12 @@ Write the MINIMUM code to make the test pass. Follow project patterns:
 
 | Never Do | Always Do |
 |----------|-----------|
-| Hardcode a proxy version string in code or tests | Interpolate `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION` |
+| Hardcode a proxy version string in code or tests | Interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` |
 | Rename a frozen server artifact (`.kamal/`, `kamal-proxy` container, `KAMAL_*`) | Wait for the staged rename bridge — see CLAUDE.md |
 | Add a `v*` git tag | Use `dash-v<version>` (gem) or coordinate with proxy's `v<base>.<n>` (image) |
-| Skip Thor command conventions | Follow existing `lib/kamal/cli/*.rb` patterns (options, hooks, `Kamal::Cli::Base`) |
-| Bypass `Kamal::Commander` for target/config resolution | Route through `KAMAL` singleton (`Kamal::Commander`) |
-| Reference upstream proxy repository defaults | Default to `ghcr.io/zoolutions/kamal-proxy` per `lib/kamal/configuration/proxy/run.rb` |
+| Skip Thor command conventions | Follow existing `lib/dash/cli/*.rb` patterns (options, hooks, `Dash::Cli::Base`) |
+| Bypass `Dash::Commander` for target/config resolution | Route through `DASH` singleton (`Dash::Commander`) |
+| Reference upstream proxy repository defaults | Default to `ghcr.io/zoolutions/kamal-proxy` per `lib/dash/configuration/proxy/run.rb` |
 | Add a multi-host integration fixture without opting out | Set `loadbalancer: false` under `proxy:` — the dind harness can't resolve inner VM hostnames |
 
 ### 4.3: Refactor
@@ -162,7 +162,7 @@ git blame <file>
 ### Map All Callers
 
 Don't just look at the method that failed:
-- Use Grep to find all call sites across `lib/kamal/cli/`, `lib/kamal/commands/`, `lib/kamal/configuration/`
+- Use Grep to find all call sites across `lib/dash/cli/`, `lib/dash/commands/`, `lib/dash/configuration/`
 - Does the error only happen with the loadbalancer active, or only on Apple Silicon (two known builder-test failures are host-arch-dependent, not real bugs — confirm CI passes before chasing those)?
 
 ### Five Whys
@@ -178,9 +178,9 @@ Keep asking WHY until you reach a meaningful fix point:
 ### Fix Location Principle
 
 The best fix is usually NOT where the error is raised:
-- Loadbalancer command missing a flag -> fix in `Kamal::Commands::Loadbalancer` to reuse `Proxy#deploy_options`, not patch the call site
+- Loadbalancer command missing a flag -> fix in `Dash::Commands::Loadbalancer` to reuse `Proxy#deploy_options`, not patch the call site
 - Validator no-op -> fix the key path it reads (e.g. `run.bind_ips` vs root `bind_ips`), not add a second check downstream
-- Version comparison breaks -> fix at `Kamal::Utils.older_version?` / `MINIMUM_VERSION`, not at each call site
+- Version comparison breaks -> fix at `Dash::Utils.older_version?` / `MINIMUM_VERSION`, not at each call site
 
 **Ask: "Where is the EARLIEST point I could prevent this error?" Fix there.**
 
@@ -214,7 +214,7 @@ Re-read the original requirements and verify:
 - "Have I addressed the ROOT CAUSE, not just the symptom?"
 - "Do my tests prove the issue is ACTUALLY fixed, not just suppressed?"
 - "Does this maintain backwards compatibility with existing `deploy.yml` configs?"
-- "Did I avoid bumping `lib/kamal/version.rb` (only `rake release` writes it) and renaming frozen server artifacts?"
+- "Did I avoid bumping `lib/dash/version.rb` (only `rake release` writes it) and renaming frozen server artifacts?"
 
 ---
 
@@ -250,7 +250,7 @@ git push -u origin $(git branch --show-current)
 
 gh pr create --base main --title "feat(scope): brief description" --body "$(cat <<'EOF'
 ## Summary
-- Key change 1 touching `lib/kamal/commands/loadbalancer.rb`
+- Key change 1 touching `lib/dash/commands/loadbalancer.rb`
 - Key change 2
 
 Closes #<issue_number>
@@ -308,7 +308,7 @@ The tests prove the CODE is right; this phase keeps the USER's mental model righ
 - [ ] `bundle exec rubocop --parallel` passes
 - [ ] Unit test suite passes (full `bin/test` if proxy/deploy paths touched)
 - [ ] Backwards compatibility with existing `deploy.yml` maintained
-- [ ] No manual bump of `lib/kamal/version.rb` (only `rake release` writes it), no frozen-artifact renames
+- [ ] No manual bump of `lib/dash/version.rb` (only `rake release` writes it), no frozen-artifact renames
 - [ ] Branch rooted off `main`, PR opened against `main`
 - [ ] PR body ends with `## Deviations & judgment calls` (from implementation-notes.md, since deleted)
 - [ ] Comprehension close-out delivered (decisions + three merge-gate questions)

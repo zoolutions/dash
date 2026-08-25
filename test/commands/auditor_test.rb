@@ -12,7 +12,7 @@ class CommandsAuditorTest < ActiveSupport::TestCase
     }
 
     @auditor = new_command
-    @performer = Kamal::Git.email.presence || `whoami`.chomp
+    @performer = Dash::Git.email.presence || `whoami`.chomp
     @recorded_at = Time.now.utc.iso8601
   end
 
@@ -59,6 +59,6 @@ class CommandsAuditorTest < ActiveSupport::TestCase
 
   private
     def new_command(destination: nil, **details)
-      Kamal::Commands::Auditor.new(Kamal::Configuration.new(@config, destination: destination, version: "123"), **details)
+      Dash::Commands::Auditor.new(Dash::Configuration.new(@config, destination: destination, version: "123"), **details)
     end
 end

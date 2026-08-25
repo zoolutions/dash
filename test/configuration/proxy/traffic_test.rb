@@ -46,7 +46,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
   end
 
   test "a newline in a header value is rejected rather than mangled" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "headers" => { "response" => { "set" => { "X-Test" => "one\ntwo" } } }
     end
 
@@ -55,7 +55,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
   end
 
   test "an invalid header name is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "headers" => { "request" => { "set" => { "X Bad Name" => "v" } } }
     end
 
@@ -65,7 +65,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
   # Go carries the host in Request.Host, not the header map, so kamal-proxy
   # refuses the rule rather than letting it silently do nothing.
   test "a request rule naming Host is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "headers" => { "request" => { "set" => { "Host" => "example.com" } } }
     end
 
@@ -97,14 +97,14 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
 
   test "a rule without a from or a to is rejected" do
     assert_equal "proxy/redirects/0: needs both from and to",
-      assert_raises(Kamal::ConfigurationError) { configuration "redirects" => [ { "to" => "/new" } ] }.message
+      assert_raises(Dash::ConfigurationError) { configuration "redirects" => [ { "to" => "/new" } ] }.message
 
     assert_equal "proxy/rewrites/0: needs both from and to",
-      assert_raises(Kamal::ConfigurationError) { configuration "rewrites" => [ { "from" => "/old" } ] }.message
+      assert_raises(Dash::ConfigurationError) { configuration "rewrites" => [ { "from" => "/old" } ] }.message
   end
 
   test "a rewrite replacement must be an absolute path" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "rewrites" => [ { "from" => "/old", "to" => "https://elsewhere.example.com" } ]
     end
 
@@ -114,7 +114,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
   test "a redirect replacement may be a full URL but not a bare word" do
     assert configuration("redirects" => [ { "from" => "/old", "to" => "https://elsewhere.example.com" } ])
 
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "redirects" => [ { "from" => "/old", "to" => "elsewhere" } ]
     end
 
@@ -122,7 +122,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
   end
 
   test "a rewrite cannot carry a status" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "rewrites" => [ { "from" => "/old", "to" => "/new", "status" => 302 } ]
     end
 
@@ -130,7 +130,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
   end
 
   test "an unsupported redirect status is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "redirects" => [ { "from" => "/old", "to" => "/new", "status" => 418 } ]
     end
 
@@ -148,7 +148,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
   # kamal-proxy rejects the pair (canonical redirection needs a fixed host,
   # on-demand TLS has none) - today the deploy fails after the SSH round-trip.
   test "canonical_host cannot be combined with on_demand_url" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "canonical_host" => "www.example.com", "ssl" => { "on_demand_url" => "/ask" }
     end
 
@@ -159,7 +159,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
   # A canonical host the proxy does not serve is a redirect loop-or-404
   # machine: every request bounces to a hostname no service answers for.
   test "canonical_host must be listed in hosts" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "canonical_host" => "www.example.com", "hosts" => [ "example.com" ]
     end
 
@@ -179,7 +179,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
   # an '=' inside the pattern silently builds a rule for the wrong path.
   test "redirect and rewrite from cannot contain an equals sign" do
     %w[ redirects rewrites ].each do |key|
-      error = assert_raises(Kamal::ConfigurationError, "expected #{key} to reject '='") do
+      error = assert_raises(Dash::ConfigurationError, "expected #{key} to reject '='") do
         configuration key => [ { "from" => "/old=path", "to" => "/new" } ]
       end
 
@@ -193,7 +193,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
   end
 
   test "a non-error status is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "intercept_errors" => [ 200 ] }
+    error = assert_raises(Dash::ConfigurationError) { configuration "intercept_errors" => [ 200 ] }
 
     assert_equal "proxy/intercept_errors: 200 must be a 4xx or 5xx status code", error.message
   end
@@ -208,7 +208,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
 
   test "no warning when error_pages_path is set" do
     out = stderred do
-      Kamal::Configuration.new @deploy.merge(error_pages_path: "public", proxy: { "intercept_errors" => [ 502 ] })
+      Dash::Configuration.new @deploy.merge(error_pages_path: "public", proxy: { "intercept_errors" => [ 502 ] })
     end
 
     assert_no_match(/intercept_errors is set but no error_pages_path/, out)
@@ -231,7 +231,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
     assert_equal [ "X-Request-Source: kamal" ], config.proxy.deploy_options[:"add-request-header"]
     assert_not config.proxy.deploy_options.key?(:"canonical-host"), "expected --canonical-host to stay off the per-app proxy"
 
-    loadbalancer = Kamal::Configuration::Loadbalancer.new config: config, proxy_config: proxy_config, secrets: config.secrets
+    loadbalancer = Dash::Configuration::Loadbalancer.new config: config, proxy_config: proxy_config, secrets: config.secrets
     %i[ add-request-header rewrite ].each do |flag|
       assert_not loadbalancer.deploy_options.key?(flag), "expected --#{flag} to stay off the load balancer"
     end
@@ -240,7 +240,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
 
   private
     def configuration(proxy_config)
-      Kamal::Configuration.new @deploy.merge(proxy: proxy_config)
+      Dash::Configuration.new @deploy.merge(proxy: proxy_config)
     end
 
     def deploy_options(proxy_config)

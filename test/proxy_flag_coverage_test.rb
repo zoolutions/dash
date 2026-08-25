@@ -28,7 +28,7 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
     "run" => {
       "http-port" => "the gem publishes host:container ports via docker; the proxy listens on its default inside",
       "https-port" => "same as --http-port",
-      "data-dir" => "fixed by the kamal-proxy-config volume mount in Kamal::Commands::Proxy#run",
+      "data-dir" => "fixed by the kamal-proxy-config volume mount in Dash::Commands::Proxy#run",
       "cache-store" => "delivered as CACHE_STORE via the 0600 proxy secrets env file - a store URL may embed credentials that must stay out of process listings and the audit log",
       "cache-lease-ttl" => "cut for 3.0 (#93 D4) - cross-node coalescing tuning with sane proxy defaults; proxy/run/flags remains the escape hatch",
       "cache-lease-wait" => "same as --cache-lease-ttl"
@@ -64,9 +64,9 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
   }.freeze
 
   test "the flag manifest tracks MINIMUM_VERSION" do
-    assert_equal Kamal::Configuration::Proxy::Run::MINIMUM_VERSION, MANIFEST["proxy_version"], <<~MESSAGE
+    assert_equal Dash::Configuration::Proxy::Run::MINIMUM_VERSION, MANIFEST["proxy_version"], <<~MESSAGE
       test/fixtures/kamal_proxy_flags.yml was generated for kamal-proxy #{MANIFEST["proxy_version"]},
-      but MINIMUM_VERSION is now #{Kamal::Configuration::Proxy::Run::MINIMUM_VERSION}.
+      but MINIMUM_VERSION is now #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}.
 
       Refresh it:  bin/sync-proxy-flags
 
@@ -89,8 +89,8 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
   # gem did not fails config validation for an operator who is holding it right.
   test "the gem's DNS provider allowlist matches what kamal-proxy advertises" do
     assert_equal MANIFEST.fetch("acme_dns_providers").sort,
-      Kamal::Configuration::Proxy::Acme::DNS_PROVIDERS.sort, <<~MESSAGE
-        kamal-proxy #{MANIFEST["proxy_version"]} and Kamal::Configuration::Proxy::Acme::DNS_PROVIDERS
+      Dash::Configuration::Proxy::Acme::DNS_PROVIDERS.sort, <<~MESSAGE
+        kamal-proxy #{MANIFEST["proxy_version"]} and Dash::Configuration::Proxy::Acme::DNS_PROVIDERS
         disagree about which DNS providers exist.
 
         Refresh the manifest (bin/sync-proxy-flags), then bring DNS_PROVIDERS in
@@ -131,7 +131,7 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
         For each one, either:
 
           * expose it — add the deploy.yml key, wire it into
-            #{subcommand == "deploy" ? "Kamal::Configuration::Proxy#deploy_options" : "Kamal::Configuration::Proxy::Run#run_command_options"},
+            #{subcommand == "deploy" ? "Dash::Configuration::Proxy#deploy_options" : "Dash::Configuration::Proxy::Run#run_command_options"},
             and set it in test/fixtures/deploy_with_every_proxy_option.yml so this
             check proves it is really wired; or
 
@@ -162,7 +162,7 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
     # ssl_domains, so one fixture cannot hold every key. Coverage is the union.
     def maximal_configs
       @maximal_configs ||= MAXIMAL_FIXTURES.map do |fixture|
-        Kamal::Configuration.create_from \
+        Dash::Configuration.create_from \
           config_file: Pathname.new(File.expand_path("fixtures/#{fixture}.yml", __dir__))
       end
     end

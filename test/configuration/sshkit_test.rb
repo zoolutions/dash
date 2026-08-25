@@ -11,7 +11,7 @@ class ConfigurationSshkitTest < ActiveSupport::TestCase
       volumes: [ "/local/path:/container/path" ]
     }
 
-    @config = Kamal::Configuration.new(@deploy)
+    @config = Dash::Configuration.new(@deploy)
   end
 
   test "sshkit defaults" do
@@ -21,7 +21,7 @@ class ConfigurationSshkitTest < ActiveSupport::TestCase
   end
 
   test "sshkit overrides" do
-    @config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(sshkit: {
+    @config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(sshkit: {
       "max_concurrent_starts" => 50,
       "pool_idle_timeout" => 600,
       "dns_retries" => 5

@@ -206,8 +206,8 @@ class CommandsAppTest < ActiveSupport::TestCase
       command.join(" ")
 
     # ...but anything kamal prints redacts it (registry-login precedent).
-    assert_includes Kamal::Utils.redacted(command), "--basic-auth=[REDACTED]"
-    assert_no_match(/s3cr3t/, Kamal::Utils.redacted(command).join(" "))
+    assert_includes Dash::Utils.redacted(command), "--basic-auth=[REDACTED]"
+    assert_no_match(/s3cr3t/, Dash::Utils.redacted(command).join(" "))
   end
 
   test "deploy with SSL" do
@@ -735,7 +735,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
   private
     def new_command(role: "web", host: "1.1.1.1", **additional_config)
-      config = Kamal::Configuration.new(@config.merge(additional_config), destination: @destination, version: "999")
-      Kamal::Commands::App.new(config, role: config.role(role), host: host)
+      config = Dash::Configuration.new(@config.merge(additional_config), destination: @destination, version: "999")
+      Dash::Commands::App.new(config, role: config.role(role), host: host)
     end
 end

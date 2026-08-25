@@ -11,69 +11,69 @@ class ConfigurationSshTest < ActiveSupport::TestCase
       volumes: [ "/local/path:/container/path" ]
     }
 
-    @config = Kamal::Configuration.new(@deploy)
+    @config = Dash::Configuration.new(@deploy)
   end
 
   test "ssh options" do
     assert_equal "root", @config.ssh.options[:user]
 
-    config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "user" => "app" }) })
+    config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "user" => "app" }) })
     assert_equal "app", config.ssh.options[:user]
     assert_equal 4, config.ssh.options[:logger].level
 
-    config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "log_level" => "debug" }) })
+    config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "log_level" => "debug" }) })
     assert_equal 0, config.ssh.options[:logger].level
 
-    config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "port" => 2222 }) })
+    config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "port" => 2222 }) })
     assert_equal 2222, config.ssh.options[:port]
 
-    config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "config" => true }) })
+    config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "config" => true }) })
     assert_equal true, config.ssh.options[:config]
 
-    config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "config" => false }) })
+    config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "config" => false }) })
     assert_equal false, config.ssh.options[:config]
 
-    config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "config" => "~/config.mine" }) })
+    config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "config" => "~/config.mine" }) })
     assert_equal "~/config.mine", config.ssh.options[:config]
 
-    config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "config" => [ "~/config.mine.1", "~/config.mine.2" ] }) })
+    config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "config" => [ "~/config.mine.1", "~/config.mine.2" ] }) })
     assert_equal [ "~/config.mine.1", "~/config.mine.2" ], config.ssh.options[:config]
 
     assert_nil @config.ssh.options[:forward_agent]
 
-    config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "forward_agent" => false }) })
+    config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "forward_agent" => false }) })
     assert_equal false, config.ssh.options[:forward_agent]
 
-    config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "forward_agent" => true }) })
+    config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "forward_agent" => true }) })
     assert_equal true, config.ssh.options[:forward_agent]
   end
 
   test "ssh options with proxy host" do
-    config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "proxy" => "1.2.3.4" }) })
+    config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "proxy" => "1.2.3.4" }) })
     assert_equal "root@1.2.3.4", config.ssh.options[:proxy].jump_proxies
   end
 
   test "ssh options with proxy host and user" do
-    config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "proxy" => "app@1.2.3.4" }) })
+    config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "proxy" => "app@1.2.3.4" }) })
     assert_equal "app@1.2.3.4", config.ssh.options[:proxy].jump_proxies
   end
 
   test "ssh key_data with plain value array" do
-    config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "key_data" => [ "-----BEGIN OPENSSH PRIVATE KEY-----" ] }) })
+    config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "key_data" => [ "-----BEGIN OPENSSH PRIVATE KEY-----" ] }) })
     _out, err = capture_io { assert_equal [ "-----BEGIN OPENSSH PRIVATE KEY-----" ], config.ssh.options[:key_data] }
     assert_match(/Inline key_data usage is deprecated/, err)
   end
 
   test "ssh key_data with array containing one secret string" do
     with_test_secrets("secrets" => "SSH_PRIVATE_KEY=secret_ssh_key") do
-      config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "key_data" => [ "SSH_PRIVATE_KEY" ] }) })
+      config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "key_data" => [ "SSH_PRIVATE_KEY" ] }) })
       assert_equal [ "secret_ssh_key" ], config.ssh.options[:key_data]
     end
   end
 
   test "ssh key_data with array containing multiple secret strings" do
     with_test_secrets("secrets" => "SSH_PRIVATE_KEY=secret_ssh_key\nSECOND_KEY=second_secret_ssh_key") do
-      config = Kamal::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "key_data" => [ "SSH_PRIVATE_KEY", "SECOND_KEY" ] }) })
+      config = Dash::Configuration.new(@deploy.tap { |c| c.merge!(ssh: { "key_data" => [ "SSH_PRIVATE_KEY", "SECOND_KEY" ] }) })
       assert_equal [ "secret_ssh_key", "second_secret_ssh_key" ], config.ssh.options[:key_data]
     end
   end

@@ -14,14 +14,14 @@ Nothing is upstreamed to basecamp anymore; the "safe moat" list in `ROADMAP.md` 
 What survives from the fork era:
 
 - **Release ordering**: proxy image first, gem second. `MINIMUM_VERSION`
-  (`lib/kamal/configuration/proxy/run.rb`) must name a published, public
+  (`lib/dash/configuration/proxy/run.rb`) must name a published, public
   `ghcr.io/zoolutions/dash-proxy` tag before the gem releases. `rake release` gates on this.
 - **Tag hygiene**: never `-suffix` tags (Gem::Version prerelease trap), never `git push --tags`.
   Gem tags are now plain `vX.Y.Z`; old `dash-v*` tags are frozen history.
 - **Server-artifact names**: the `kamal-proxy` container name, image title label
-  `org.opencontainers.image.title=kamal-proxy`, `.kamal/` directory, `KAMAL_*` env vars, and
-  the `Kamal::` Ruby namespace remain until the staged renames (namespace, then server
-  artifacts with a rolling-upgrade bridge) ship.
+  `org.opencontainers.image.title=kamal-proxy`, `.kamal/` directory, and `KAMAL_*` env vars
+  remain until the stage-3 rename (server artifacts with a rolling-upgrade bridge) ships.
+  The Ruby namespace became `Dash::` in stage 2 (issue #117).
 - **Test discipline**: interpolate `MINIMUM_VERSION` in assertions; multi-host fixtures set
   `loadbalancer: false` (the dind harness can't resolve inner VM hostnames).
 - The old `ghcr.io/zoolutions/kamal-proxy` package stays published — released gem versions

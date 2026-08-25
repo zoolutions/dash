@@ -45,11 +45,11 @@ class CommandsPruneTest < ActiveSupport::TestCase
 
   private
     def new_command(destination: nil)
-      Kamal::Commands::Prune.new(config(destination: destination))
+      Dash::Commands::Prune.new(config(destination: destination))
     end
 
     def config(destination: nil)
-      Kamal::Configuration.new(@config, version: "123", destination: destination)
+      Dash::Configuration.new(@config, version: "123", destination: destination)
     end
 
     def role(name, destination: nil)

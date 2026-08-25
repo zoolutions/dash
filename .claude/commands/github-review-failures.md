@@ -99,9 +99,9 @@ Look for:
 
 **Key patterns**:
 - `NameError: uninitialized constant` -> missing require or Zeitwerk autoload mismatch
-- `NoMethodError: undefined method` -> API change in `Kamal::Commands`/`Kamal::Configuration`
+- `NoMethodError: undefined method` -> API change in `Dash::Commands`/`Dash::Configuration`
 - `Mocha::ExpectationError` -> mock/stub no longer matches the call site
-- `expected: X, got: Y` on a proxy version string -> check whether the test hardcoded a proxy tag instead of interpolating `Kamal::Configuration::Proxy::Run::MINIMUM_VERSION`
+- `expected: X, got: Y` on a proxy version string -> check whether the test hardcoded a proxy tag instead of interpolating `Dash::Configuration::Proxy::Run::MINIMUM_VERSION`
 - Integration test failure pulling `ghcr.io/zoolutions/kamal-proxy:<tag>` -> the tag isn't published yet (see Known/Expected Failures below), not a code bug
 
 ### golangci-lint / go test failures (proxy)

@@ -34,12 +34,12 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
 
   test "ssl with no host" do
     @deploy[:proxy] = { "ssl" => true }
-    assert_raises(Kamal::ConfigurationError) { config.proxy.ssl? }
+    assert_raises(Dash::ConfigurationError) { config.proxy.ssl? }
   end
 
   test "ssl with both host and hosts" do
     @deploy[:proxy] = { "ssl" => true, host: "example.com", hosts: [ "anotherexample.com" ] }
-    assert_raises(Kamal::ConfigurationError) { config.proxy.ssl? }
+    assert_raises(Dash::ConfigurationError) { config.proxy.ssl? }
   end
 
   test "ssl false" do
@@ -122,21 +122,21 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     @deploy.delete(:servers)
     @deploy[:accessories] = { "db" => { "image" => "mysql", "host" => "1.1.1.5" } }
     @deploy[:proxy] = { "loadbalancer" => true }
-    exception = assert_raises(Kamal::ConfigurationError) { config }
+    exception = assert_raises(Dash::ConfigurationError) { config }
     assert_match "proxy/loadbalancer: can't be enabled without servers", exception.message
   end
 
   test "invalid loadbalancer values" do
     [ 123, "", "  ", "lb1.example.com,lb2.example.com", "lb.example.com extra" ].each do |value|
       @deploy[:proxy] = { "loadbalancer" => value }
-      exception = assert_raises(Kamal::ConfigurationError, "expected #{value.inspect} to be rejected") { config.proxy }
+      exception = assert_raises(Dash::ConfigurationError, "expected #{value.inspect} to be rejected") { config.proxy }
       assert_match "proxy/loadbalancer: should be true, false, or a single host", exception.message
     end
   end
 
   test "loadbalancer as a list of hosts" do
     @deploy[:proxy] = { "loadbalancer" => [ "lb.example.com" ] }
-    exception = assert_raises(Kamal::ConfigurationError) { config.proxy }
+    exception = assert_raises(Dash::ConfigurationError) { config.proxy }
     assert_match "proxy/loadbalancer: should be a string", exception.message
   end
 
@@ -193,7 +193,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
   test "invalid bind_ips" do
     [ "999.999.999.999", "localhost", "0.0.0.0/0" ].each do |ip|
       @deploy[:proxy] = { "run" => { "bind_ips" => [ ip ] } }
-      exception = assert_raises(Kamal::ConfigurationError, "expected #{ip.inspect} to be rejected") { config.proxy }
+      exception = assert_raises(Dash::ConfigurationError, "expected #{ip.inspect} to be rejected") { config.proxy }
       assert_match "Invalid publish IP address: #{ip}", exception.message
     end
   end
@@ -205,7 +205,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
 
   test "false not allowed" do
     @deploy[:proxy] = false
-    assert_raises(Kamal::ConfigurationError, "proxy: should be a hash") do
+    assert_raises(Dash::ConfigurationError, "proxy: should be a hash") do
       config.proxy
     end
   end
@@ -215,11 +215,11 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
   # defaults (a stale `version:` below MINIMUM_VERSION breaks `dash proxy boot`
   # for anyone who copies the example).
   test "docs example run version matches the pinned minimum version" do
-    assert_equal Kamal::Configuration::Proxy::Run::MINIMUM_VERSION, proxy_docs_example.dig("run", "version")
+    assert_equal Dash::Configuration::Proxy::Run::MINIMUM_VERSION, proxy_docs_example.dig("run", "version")
   end
 
   test "docs example run repository matches the code default" do
-    default_repository = Kamal::Configuration::Proxy::Run.new(config, run_config: {}).repository
+    default_repository = Dash::Configuration::Proxy::Run.new(config, run_config: {}).repository
     assert_equal default_repository, proxy_docs_example.dig("run", "repository")
   end
 
@@ -228,7 +228,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
   # schema". Filling it with literal keys would fork the proxy schema into a second,
   # drift-prone copy that rejects valid accessory proxy configs.
   test "accessory docs keep the proxy example as a stub" do
-    accessory_example = YAML.load(Kamal::Configuration::Accessory.validation_doc)
+    accessory_example = YAML.load(Dash::Configuration::Accessory.validation_doc)
     assert_equal "...", accessory_example.dig("accessories", "mysql", "proxy")
   end
 
@@ -287,13 +287,13 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
   test "healthcheck port must be an integer" do
     @deploy[:proxy] = { "healthcheck" => { "port" => "not-a-port" } }
 
-    assert_raises(Kamal::ConfigurationError) { config.proxy }
+    assert_raises(Dash::ConfigurationError) { config.proxy }
   end
 
   test "healthcheck rejects unknown keys" do
     @deploy[:proxy] = { "healthcheck" => { "hosts" => [ "health.example.com" ] } }
 
-    assert_raises(Kamal::ConfigurationError) { config.proxy }
+    assert_raises(Dash::ConfigurationError) { config.proxy }
   end
 
   test "ssl with certificate and no private key" do
@@ -304,7 +304,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
         },
         "host" => "example.com"
       }
-      assert_raises(Kamal::ConfigurationError) { config.proxy.ssl? }
+      assert_raises(Dash::ConfigurationError) { config.proxy.ssl? }
     end
   end
 
@@ -410,18 +410,18 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
 
   test "ssl_domains without source" do
     @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "interval" => 300 } }
-    assert_raises(Kamal::ConfigurationError) { config.proxy }
+    assert_raises(Dash::ConfigurationError) { config.proxy }
   end
 
   test "ssl_domains empty hash" do
     @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => {} }
-    assert_raises(Kamal::ConfigurationError) { config.proxy }
+    assert_raises(Dash::ConfigurationError) { config.proxy }
   end
 
   test "ssl_domains source must be a path or http url" do
     [ "example.com/domains", "ftp://example.com/domains", "domains" ].each do |source|
       @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "source" => source } }
-      assert_raises(Kamal::ConfigurationError, "expected #{source.inspect} to be rejected") { config.proxy }
+      assert_raises(Dash::ConfigurationError, "expected #{source.inspect} to be rejected") { config.proxy }
     end
   end
 
@@ -435,14 +435,14 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
   test "ssl_domains interval must be a positive integer" do
     [ 0, -300, "300", 1.5 ].each do |interval|
       @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "source" => "/domains", "interval" => interval } }
-      assert_raises(Kamal::ConfigurationError, "expected interval #{interval.inspect} to be rejected") { config.proxy }
+      assert_raises(Dash::ConfigurationError, "expected interval #{interval.inspect} to be rejected") { config.proxy }
     end
   end
 
   test "ssl_domains batch_size must be between 1 and 25" do
     [ 0, 26, "5", 1.5 ].each do |batch_size|
       @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "source" => "/domains", "batch_size" => batch_size } }
-      assert_raises(Kamal::ConfigurationError, "expected batch_size #{batch_size} to be rejected") { config.proxy }
+      assert_raises(Dash::ConfigurationError, "expected batch_size #{batch_size} to be rejected") { config.proxy }
     end
 
     [ 1, 25 ].each do |batch_size|
@@ -453,7 +453,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
 
   test "ssl_domains rejects unknown keys" do
     @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "source" => "/domains", "sources" => "/other" } }
-    assert_raises(Kamal::ConfigurationError) { config.proxy }
+    assert_raises(Dash::ConfigurationError) { config.proxy }
   end
 
   test "ssl with private key and no certificate" do
@@ -464,7 +464,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
         },
         "host" => "example.com"
       }
-      assert_raises(Kamal::ConfigurationError) { config.proxy.ssl? }
+      assert_raises(Dash::ConfigurationError) { config.proxy.ssl? }
     end
   end
 
@@ -515,7 +515,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
       { "read_routing" => { "writer_affinity_timeout" => "10" } }
     ].each do |override|
       @deploy[:proxy] = { "host" => "example.com" }.merge(override)
-      assert_raises(Kamal::ConfigurationError, "expected #{override.inspect} to be rejected") { config.proxy }
+      assert_raises(Dash::ConfigurationError, "expected #{override.inspect} to be rejected") { config.proxy }
     end
   end
 
@@ -534,13 +534,13 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
   test "path timeouts must be a hash" do
     @deploy[:proxy] = { "path_response_timeouts" => "/api=5m" }
 
-    assert_raises(Kamal::ConfigurationError) { config }
+    assert_raises(Dash::ConfigurationError) { config }
   end
 
   test "path timeouts values must be stringish" do
     @deploy[:proxy] = { "path_response_timeouts" => { "/api" => [ "5m" ] } }
 
-    assert_raises(Kamal::ConfigurationError) { config }
+    assert_raises(Dash::ConfigurationError) { config }
   end
 
   test "deploy options with basic auth" do
@@ -556,8 +556,8 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
 
     credential = config.proxy.deploy_options[:"basic-auth"]
 
-    assert_kind_of Kamal::Utils::Sensitive, credential
-    assert_no_match(/s3cr3t/, Kamal::Utils.redacted(credential))
+    assert_kind_of Dash::Utils::Sensitive, credential
+    assert_no_match(/s3cr3t/, Dash::Utils.redacted(credential))
   end
 
   test "deploy options with basic auth password from secrets" do
@@ -583,14 +583,14 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
   test "basic auth requires a username" do
     @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "password" => "s3cr3t" } }
 
-    error = assert_raises(Kamal::ConfigurationError) { config }
+    error = assert_raises(Dash::ConfigurationError) { config }
     assert_equal "proxy/basic_auth: Missing username setting (required when basic_auth is set)", error.message
   end
 
   test "basic auth requires a password or password_secret" do
     @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin" } }
 
-    error = assert_raises(Kamal::ConfigurationError) { config }
+    error = assert_raises(Dash::ConfigurationError) { config }
     assert_equal "proxy/basic_auth: Missing password or password_secret setting (required when basic_auth is set)", error.message
   end
 
@@ -600,21 +600,21 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
       "basic_auth" => { "username" => "admin", "password" => "s3cr3t", "password_secret" => "WEB_PASSWORD" }
     }
 
-    error = assert_raises(Kamal::ConfigurationError) { config }
+    error = assert_raises(Dash::ConfigurationError) { config }
     assert_equal "proxy/basic_auth: Specify one of 'password' or 'password_secret', not both", error.message
   end
 
   test "basic auth username must not contain a colon" do
     @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "ad:min", "password" => "s3cr3t" } }
 
-    error = assert_raises(Kamal::ConfigurationError) { config }
+    error = assert_raises(Dash::ConfigurationError) { config }
     assert_equal "proxy/basic_auth: Invalid username: cannot contain a colon", error.message
   end
 
   test "basic auth rejects a non-hash" do
     @deploy[:proxy] = { "host" => "example.com", "basic_auth" => "admin:s3cr3t" }
 
-    assert_raises(Kamal::ConfigurationError) { config }
+    assert_raises(Dash::ConfigurationError) { config }
   end
 
   # Never fail open: an empty secret must abort the deploy, not silently drop
@@ -623,7 +623,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     with_test_secrets("secrets" => "WEB_PASSWORD=") do
       @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin", "password_secret" => "WEB_PASSWORD" } }
 
-      error = assert_raises(Kamal::ConfigurationError) { config.proxy.deploy_options }
+      error = assert_raises(Dash::ConfigurationError) { config.proxy.deploy_options }
       assert_match(/basic_auth/, error.message)
     end
   end
@@ -632,7 +632,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     with_test_secrets("secrets" => "OTHER_PASSWORD=s3cr3t") do
       @deploy[:proxy] = { "host" => "example.com", "basic_auth" => { "username" => "admin", "password_secret" => "WEB_PASSWORD" } }
 
-      assert_raises(Kamal::ConfigurationError) { config.proxy.deploy_options }
+      assert_raises(Dash::ConfigurationError) { config.proxy.deploy_options }
     end
   end
 
@@ -650,10 +650,10 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
 
   private
     def config
-      Kamal::Configuration.new(@deploy)
+      Dash::Configuration.new(@deploy)
     end
 
     def proxy_docs_example
-      YAML.load(Kamal::Configuration::Proxy.validation_doc)["proxy"]
+      YAML.load(Dash::Configuration::Proxy.validation_doc)["proxy"]
     end
 end

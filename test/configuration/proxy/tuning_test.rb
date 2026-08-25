@@ -92,24 +92,24 @@ class ConfigurationProxyTuningTest < ActiveSupport::TestCase
       "max_conns" => "max_conns", "max_idle_conns" => "max_idle_conns",
       "idle_conn_timeout" => "idle_conn_timeout", "dial_timeout" => "dial_timeout"
     }.each_key do |key|
-      error = assert_raises(Kamal::ConfigurationError) { configuration "target" => { key => -1 } }
+      error = assert_raises(Dash::ConfigurationError) { configuration "target" => { key => -1 } }
       assert_equal "proxy/target: #{key} cannot be negative", error.message
     end
   end
 
   test "negative retry values are rejected" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "target" => { "try_duration" => -1 } }
+    error = assert_raises(Dash::ConfigurationError) { configuration "target" => { "try_duration" => -1 } }
     assert_equal "proxy/target: try_duration cannot be negative", error.message
   end
 
   test "try_interval without try_duration is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "target" => { "try_interval" => 1 } }
+    error = assert_raises(Dash::ConfigurationError) { configuration "target" => { "try_interval" => 1 } }
 
     assert_equal "proxy/target: try_interval has no effect without try_duration", error.message
   end
 
   test "try_interval with a zero try_duration is rejected too" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "target" => { "try_duration" => 0, "try_interval" => 1 }
     end
 
@@ -117,7 +117,7 @@ class ConfigurationProxyTuningTest < ActiveSupport::TestCase
   end
 
   test "a negative request_timeout is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "request_timeout" => -1 }
+    error = assert_raises(Dash::ConfigurationError) { configuration "request_timeout" => -1 }
 
     assert_equal "proxy/request_timeout: cannot be negative", error.message
   end
@@ -125,7 +125,7 @@ class ConfigurationProxyTuningTest < ActiveSupport::TestCase
   # Sibling consistency: request_timeout already refuses negatives, and
   # kamal-proxy clamps a negative --target-timeout just as silently.
   test "a negative response_timeout is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "response_timeout" => -1 }
+    error = assert_raises(Dash::ConfigurationError) { configuration "response_timeout" => -1 }
 
     assert_equal "proxy/response_timeout: cannot be negative", error.message
   end
@@ -133,13 +133,13 @@ class ConfigurationProxyTuningTest < ActiveSupport::TestCase
   # Zero means "use the proxy default of 100", not "keep none" - an operator
   # writing 0 to disable idle connections gets the opposite. Legal, so warn.
   test "max_idle_conns zero warns that it means the proxy default" do
-    out = stderred { Kamal::Configuration.new @deploy.merge(proxy: { "target" => { "max_idle_conns" => 0 } }) }
+    out = stderred { Dash::Configuration.new @deploy.merge(proxy: { "target" => { "max_idle_conns" => 0 } }) }
 
     assert_match "max_idle_conns: 0 means the proxy default of 100, not \"keep none\"", out
   end
 
   test "no warning for a positive max_idle_conns" do
-    out = stderred { Kamal::Configuration.new @deploy.merge(proxy: { "target" => { "max_idle_conns" => 10 } }) }
+    out = stderred { Dash::Configuration.new @deploy.merge(proxy: { "target" => { "max_idle_conns" => 10 } }) }
 
     assert_no_match(/max_idle_conns/, out)
   end
@@ -147,15 +147,15 @@ class ConfigurationProxyTuningTest < ActiveSupport::TestCase
   # kamal-proxy's parsePathTimeouts rejects these; both maps go through it.
   test "a negative path timeout is rejected in either map" do
     assert_equal "proxy/path_response_timeouts: '/uploads' cannot be negative",
-      assert_raises(Kamal::ConfigurationError) { configuration "path_response_timeouts" => { "/uploads" => -1 } }.message
+      assert_raises(Dash::ConfigurationError) { configuration "path_response_timeouts" => { "/uploads" => -1 } }.message
 
     assert_equal "proxy/path_request_timeouts: '/uploads' cannot be negative",
-      assert_raises(Kamal::ConfigurationError) { configuration "path_request_timeouts" => { "/uploads" => -1 } }.message
+      assert_raises(Dash::ConfigurationError) { configuration "path_request_timeouts" => { "/uploads" => -1 } }.message
   end
 
   private
     def configuration(proxy_config)
-      Kamal::Configuration.new @deploy.merge(proxy: proxy_config)
+      Dash::Configuration.new @deploy.merge(proxy: proxy_config)
     end
 
     def deploy_options(proxy_config)

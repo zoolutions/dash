@@ -1,7 +1,7 @@
 require "test_helper"
 require "digest"
 
-# `lib/kamal/sshkit_with_ext.rb` prepends modules that replace two SSHKit runner methods
+# `lib/dash/sshkit_with_ext.rb` prepends modules that replace two SSHKit runner methods
 # wholesale — neither calls `super`, because both need to change what happens *inside* the
 # loop rather than around it.
 #
@@ -38,7 +38,7 @@ class SshkitPatchDriftTest < ActiveSupport::TestCase
 
       assert_equal digest, Digest::SHA256.hexdigest(source), <<~MESSAGE
         Upstream #{class_name}##{method_name} changed since we copied it into
-        lib/kamal/sshkit_with_ext.rb. Our prepended module replaces it wholesale, so this
+        lib/dash/sshkit_with_ext.rb. Our prepended module replaces it wholesale, so this
         change is currently being dropped on the floor.
 
         Read the new upstream body, then either drop our patch, port the change into it, or

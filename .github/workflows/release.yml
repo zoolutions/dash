@@ -51,7 +51,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          GEM_VERSION=$(ruby -r ./lib/kamal/version -e "puts Kamal::VERSION")
+          GEM_VERSION=$(ruby -r ./lib/dash/version -e "puts Dash::VERSION")
           TAG_VERSION="${RELEASE_TAG#v}"
           if [ "$GEM_VERSION" != "$TAG_VERSION" ]; then
             echo "::error::Tag version ($TAG_VERSION) does not match gem version ($GEM_VERSION)"

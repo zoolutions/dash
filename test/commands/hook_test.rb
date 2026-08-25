@@ -11,7 +11,7 @@ class CommandsHookTest < ActiveSupport::TestCase
       builder: { "arch" => "amd64" }
     }
 
-    @performer = Kamal::Git.email.presence || `whoami`.chomp
+    @performer = Dash::Git.email.presence || `whoami`.chomp
     @recorded_at = Time.now.utc.iso8601
   end
 
@@ -49,6 +49,6 @@ class CommandsHookTest < ActiveSupport::TestCase
 
   private
     def new_command(**extra_config)
-      Kamal::Commands::Hook.new(Kamal::Configuration.new(@config.merge(**extra_config), version: "123"))
+      Dash::Commands::Hook.new(Dash::Configuration.new(@config.merge(**extra_config), version: "123"))
     end
 end

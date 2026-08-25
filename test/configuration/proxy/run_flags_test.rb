@@ -97,7 +97,7 @@ class ConfigurationProxyRunFlagsTest < ActiveSupport::TestCase
 
   # AC2 — reject the duplicate rather than emitting the flag twice
   test "a run.flags key colliding with a named key is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       run_config "log_format" => "text", "flags" => { "log-format" => "json" }
     end
 
@@ -105,7 +105,7 @@ class ConfigurationProxyRunFlagsTest < ActiveSupport::TestCase
   end
 
   test "a run.flags key colliding with a flag the gem always emits is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       run_config "flags" => { "recheck-targets-on-restore" => false }
     end
 
@@ -120,7 +120,7 @@ class ConfigurationProxyRunFlagsTest < ActiveSupport::TestCase
   # exclude_metrics_paths is a deploy flag, not a run flag
 
   test "exclude_metrics_paths lands on the deploy command" do
-    config = Kamal::Configuration.new @deploy.merge(proxy: { "exclude_metrics_paths" => [ "/up", "/health" ] })
+    config = Dash::Configuration.new @deploy.merge(proxy: { "exclude_metrics_paths" => [ "/up", "/health" ] })
 
     assert_equal [ "/up", "/health" ], config.proxy.deploy_options[:"exclude-metrics-path"]
     assert_no_match(/exclude-metrics-path/, run_config({}).run_command)
@@ -187,14 +187,14 @@ class ConfigurationProxyRunFlagsTest < ActiveSupport::TestCase
 
   private
     def run_config(run)
-      Kamal::Configuration::Proxy::Run.new Kamal::Configuration.new(@deploy), run_config: run
+      Dash::Configuration::Proxy::Run.new Dash::Configuration.new(@deploy), run_config: run
     end
 
     def proxy_config(run)
-      Kamal::Configuration.new @deploy.merge(proxy: { "run" => run })
+      Dash::Configuration.new @deploy.merge(proxy: { "run" => run })
     end
 
     def proxy_error(run)
-      assert_raises(Kamal::ConfigurationError) { proxy_config(run) }.message
+      assert_raises(Dash::ConfigurationError) { proxy_config(run) }.message
     end
 end

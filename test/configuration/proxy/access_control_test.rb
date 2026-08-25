@@ -67,7 +67,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
       assert_not options.key?(flag), "expected --#{flag} to be stripped from the per-app deploy"
     end
 
-    loadbalancer = Kamal::Configuration::Loadbalancer.new config: config, proxy_config: proxy_config, secrets: config.secrets
+    loadbalancer = Dash::Configuration::Loadbalancer.new config: config, proxy_config: proxy_config, secrets: config.secrets
     assert_equal [ "10.0.0.0/8" ], loadbalancer.deploy_options[:"allow-ip"]
     assert_equal 100, loadbalancer.deploy_options[:"rate-limit"]
     assert_equal "CF-Connecting-IP", loadbalancer.deploy_options[:"client-ip-header"]
@@ -77,25 +77,25 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
   # Address validation — Ruby's IPAddr is looser than the proxy's netip parsing
 
   test "a malformed CIDR fails locally" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "allow_ips" => [ "10.0.0.0/33" ] }
+    error = assert_raises(Dash::ConfigurationError) { configuration "allow_ips" => [ "10.0.0.0/33" ] }
 
     assert_equal "proxy/allow_ips: '10.0.0.0/33' is not a valid address or CIDR range", error.message
   end
 
   test "an IPv6 zone is rejected because it would match nothing" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "allow_ips" => [ "fe80::1%eth0" ] }
+    error = assert_raises(Dash::ConfigurationError) { configuration "allow_ips" => [ "fe80::1%eth0" ] }
 
     assert_equal "proxy/allow_ips: 'fe80::1%eth0' carries an IPv6 zone; write the address without it", error.message
   end
 
   test "an IPv4-mapped range is rejected because it would not match plain IPv4" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "allow_ips" => [ "::ffff:10.0.0.0/104" ] }
+    error = assert_raises(Dash::ConfigurationError) { configuration "allow_ips" => [ "::ffff:10.0.0.0/104" ] }
 
     assert_equal "proxy/allow_ips: '::ffff:10.0.0.0/104' is IPv4-mapped; write it as plain IPv4", error.message
   end
 
   test "rate_limit exempt entries are validated too" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "rate_limit" => { "requests" => 100, "exempt" => [ "nope" ] }
     end
 
@@ -103,7 +103,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
   end
 
   test "a default route in trusted_proxies is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "allow_ips" => [ "10.0.0.0/8" ], "client_ip" => { "trusted_proxies" => [ "0.0.0.0/0" ] }
     end
 
@@ -114,7 +114,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
   # Dependency rules kamal-proxy enforces after the deploy reaches a host
 
   test "trusted_proxies without allow_ips or rate_limit is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "client_ip" => { "trusted_proxies" => [ "10.0.0.0/8" ] }
     end
 
@@ -122,7 +122,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
   end
 
   test "a client_ip header without trusted_proxies is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "allow_ips" => [ "10.0.0.0/8" ], "client_ip" => { "header" => "CF-Connecting-IP" }
     end
 
@@ -135,7 +135,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
   # logging and everything downstream, so honoring it from untrusted peers is
   # a client-spoofable identity - exactly what the shipped docs say it is not.
   test "a client_ip header without trusted_proxies is rejected even without allow_ips or rate_limit" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "client_ip" => { "header" => "CF-Connecting-IP" }
     end
 
@@ -144,13 +144,13 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
   end
 
   test "burst without requests is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "rate_limit" => { "burst" => 20 } }
+    error = assert_raises(Dash::ConfigurationError) { configuration "rate_limit" => { "burst" => 20 } }
 
     assert_equal "proxy/rate_limit: burst has no effect without requests", error.message
   end
 
   test "exempt without requests is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "rate_limit" => { "exempt" => [ "10.0.0.0/8" ] }
     end
 
@@ -159,16 +159,16 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
 
   test "a negative rate or burst is rejected" do
     assert_equal "proxy/rate_limit: requests cannot be negative",
-      assert_raises(Kamal::ConfigurationError) { configuration "rate_limit" => { "requests" => -1 } }.message
+      assert_raises(Dash::ConfigurationError) { configuration "rate_limit" => { "requests" => -1 } }.message
 
     assert_equal "proxy/rate_limit: burst cannot be negative",
-      assert_raises(Kamal::ConfigurationError) { configuration "rate_limit" => { "requests" => 100, "burst" => -1 } }.message
+      assert_raises(Dash::ConfigurationError) { configuration "rate_limit" => { "requests" => 100, "burst" => -1 } }.message
   end
 
   # kamal-proxy serves the health check path without an address check or a rate
   # limit, so leaving it at / would quietly unrestrict the whole service.
   test "a root healthcheck path is rejected alongside access control" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "allow_ips" => [ "10.0.0.0/8" ], "healthcheck" => { "path" => "/" }
     end
 
@@ -184,7 +184,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
   # the operator meant.
   test "rate limiting behind a proxy without trusted_proxies warns" do
     out = stderred do
-      Kamal::Configuration.new @deploy.merge(
+      Dash::Configuration.new @deploy.merge(
         proxy: { "forward_headers" => true, "rate_limit" => { "requests" => 100 } }
       )
     end
@@ -195,7 +195,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
 
   test "no warning once trusted_proxies is declared" do
     out = stderred do
-      Kamal::Configuration.new @deploy.merge(
+      Dash::Configuration.new @deploy.merge(
         proxy: {
           "forward_headers" => true,
           "rate_limit" => { "requests" => 100 },
@@ -215,7 +215,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
 
   private
     def configuration(proxy_config)
-      Kamal::Configuration.new @deploy.merge(proxy: proxy_config)
+      Dash::Configuration.new @deploy.merge(proxy: proxy_config)
     end
 
     def deploy_options(proxy_config)

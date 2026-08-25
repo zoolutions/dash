@@ -10,7 +10,7 @@ WORKDIR /dash
 COPY Gemfile Gemfile.lock dash.gemspec ./
 
 # Required in dash.gemspec
-COPY lib/kamal/version.rb /dash/lib/kamal/version.rb
+COPY lib/dash/version.rb /dash/lib/dash/version.rb
 
 # Install system dependencies
 RUN apk add --no-cache build-base git docker-cli openssh-client-default yaml-dev \

@@ -21,12 +21,12 @@ class ConfigurationProxyCompressTest < ActiveSupport::TestCase
   test "the boolean shorthand offers the default encodings and nothing else" do
     options = deploy_options(true)
 
-    assert_equal Kamal::Configuration::Proxy::DEFAULT_COMPRESSION_ENCODINGS, options[:compress]
+    assert_equal Dash::Configuration::Proxy::DEFAULT_COMPRESSION_ENCODINGS, options[:compress]
     assert_equal [ :compress ], options.keys.grep(/compress/)
   end
 
   test "the default encodings are best-ratio first" do
-    assert_equal %w[ zstd br gzip ], Kamal::Configuration::Proxy::DEFAULT_COMPRESSION_ENCODINGS
+    assert_equal %w[ zstd br gzip ], Dash::Configuration::Proxy::DEFAULT_COMPRESSION_ENCODINGS
   end
 
   test "enabled in the block form is the same as the shorthand" do
@@ -73,14 +73,14 @@ class ConfigurationProxyCompressTest < ActiveSupport::TestCase
   # Validation — kamal-proxy rejects each of these, after the SSH round-trip
 
   test "min_length without compression is a config error" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "compress" => { "min_length" => 1024 } }
+    error = assert_raises(Dash::ConfigurationError) { configuration "compress" => { "min_length" => 1024 } }
 
     assert_equal "proxy/compress: min_length has no effect without compression - " \
       "set enabled: true or name the encodings", error.message
   end
 
   test "content_types without compression is a config error" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "compress" => { "content_types" => [ "text/html" ] }
     end
 
@@ -97,7 +97,7 @@ class ConfigurationProxyCompressTest < ActiveSupport::TestCase
   end
 
   test "an unsupported encoding is a config error" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "compress" => { "encodings" => [ "lzma" ] } }
+    error = assert_raises(Dash::ConfigurationError) { configuration "compress" => { "encodings" => [ "lzma" ] } }
 
     assert_equal "proxy/compress: unsupported encoding 'lzma'. Supported encodings: gzip, br, zstd", error.message
   end
@@ -107,7 +107,7 @@ class ConfigurationProxyCompressTest < ActiveSupport::TestCase
   end
 
   test "a negative min_length is a config error" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "compress" => { "enabled" => true, "min_length" => -1 }
     end
 
@@ -115,7 +115,7 @@ class ConfigurationProxyCompressTest < ActiveSupport::TestCase
   end
 
   test "a malformed content type is a config error" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "compress" => { "enabled" => true, "content_types" => [ "text" ] }
     end
 
@@ -126,14 +126,14 @@ class ConfigurationProxyCompressTest < ActiveSupport::TestCase
   test "type wildcards are accepted and main-type wildcards are not" do
     assert configuration("compress" => { "enabled" => true, "content_types" => [ "text/*" ] })
 
-    assert_raises(Kamal::ConfigurationError) do
+    assert_raises(Dash::ConfigurationError) do
       configuration "compress" => { "enabled" => true, "content_types" => [ "*/json" ] }
     end
   end
 
   private
     def configuration(proxy_config)
-      Kamal::Configuration.new @deploy.merge(proxy: proxy_config)
+      Dash::Configuration.new @deploy.merge(proxy: proxy_config)
     end
 
     def deploy_options(compress_config)

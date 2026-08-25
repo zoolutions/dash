@@ -10,8 +10,8 @@ class CliAccessoryTest < CliTestCase
   end
 
   test "boot" do
-    Kamal::Cli::Accessory.any_instance.expects(:directories).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:upload).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:directories).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:upload).with("mysql")
 
     run_command("boot", "mysql").tap do |output|
       assert_match "docker login private.registry -u [REDACTED] -p [REDACTED] on 1.1.1.3", output
@@ -20,12 +20,12 @@ class CliAccessoryTest < CliTestCase
   end
 
   test "boot all" do
-    Kamal::Cli::Accessory.any_instance.expects(:directories).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:upload).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:directories).with("redis")
-    Kamal::Cli::Accessory.any_instance.expects(:upload).with("redis")
-    Kamal::Cli::Accessory.any_instance.expects(:directories).with("busybox")
-    Kamal::Cli::Accessory.any_instance.expects(:upload).with("busybox")
+    Dash::Cli::Accessory.any_instance.expects(:directories).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:upload).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:directories).with("redis")
+    Dash::Cli::Accessory.any_instance.expects(:upload).with("redis")
+    Dash::Cli::Accessory.any_instance.expects(:directories).with("busybox")
+    Dash::Cli::Accessory.any_instance.expects(:upload).with("busybox")
 
     run_command("boot", "all").tap do |output|
       assert_match "docker login private.registry -u [REDACTED] -p [REDACTED] on 1.1.1.3", output
@@ -55,29 +55,29 @@ class CliAccessoryTest < CliTestCase
   end
 
   test "reboot" do
-    Kamal::Commands::Registry.any_instance.expects(:login)
-    Kamal::Cli::Accessory.any_instance.expects(:pull_image).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:stop).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_container).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:boot).with("mysql", prepare: false)
+    Dash::Commands::Registry.any_instance.expects(:login)
+    Dash::Cli::Accessory.any_instance.expects(:pull_image).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:stop).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:remove_container).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:boot).with("mysql", prepare: false)
 
     run_command("reboot", "mysql")
   end
 
   test "reboot all" do
-    Kamal::Commands::Registry.any_instance.expects(:login).times(4)
-    Kamal::Cli::Accessory.any_instance.expects(:pull_image).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:stop).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_container).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:boot).with("mysql", prepare: false)
-    Kamal::Cli::Accessory.any_instance.expects(:pull_image).with("redis")
-    Kamal::Cli::Accessory.any_instance.expects(:stop).with("redis")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_container).with("redis")
-    Kamal::Cli::Accessory.any_instance.expects(:boot).with("redis", prepare: false)
-    Kamal::Cli::Accessory.any_instance.expects(:pull_image).with("busybox")
-    Kamal::Cli::Accessory.any_instance.expects(:stop).with("busybox")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_container).with("busybox")
-    Kamal::Cli::Accessory.any_instance.expects(:boot).with("busybox", prepare: false)
+    Dash::Commands::Registry.any_instance.expects(:login).times(4)
+    Dash::Cli::Accessory.any_instance.expects(:pull_image).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:stop).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:remove_container).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:boot).with("mysql", prepare: false)
+    Dash::Cli::Accessory.any_instance.expects(:pull_image).with("redis")
+    Dash::Cli::Accessory.any_instance.expects(:stop).with("redis")
+    Dash::Cli::Accessory.any_instance.expects(:remove_container).with("redis")
+    Dash::Cli::Accessory.any_instance.expects(:boot).with("redis", prepare: false)
+    Dash::Cli::Accessory.any_instance.expects(:pull_image).with("busybox")
+    Dash::Cli::Accessory.any_instance.expects(:stop).with("busybox")
+    Dash::Cli::Accessory.any_instance.expects(:remove_container).with("busybox")
+    Dash::Cli::Accessory.any_instance.expects(:boot).with("busybox", prepare: false)
 
     run_command("reboot", "all")
   end
@@ -91,8 +91,8 @@ class CliAccessoryTest < CliTestCase
   end
 
   test "restart" do
-    Kamal::Cli::Accessory.any_instance.expects(:stop).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:start).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:stop).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:start).with("mysql")
 
     run_command("restart", "mysql")
   end
@@ -175,27 +175,27 @@ class CliAccessoryTest < CliTestCase
   end
 
   test "remove with confirmation" do
-    Kamal::Cli::Accessory.any_instance.expects(:stop).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_container).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_image).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_service_directory).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:stop).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:remove_container).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:remove_image).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:remove_service_directory).with("mysql")
 
     run_command("remove", "mysql", "-y")
   end
 
   test "remove all with confirmation" do
-    Kamal::Cli::Accessory.any_instance.expects(:stop).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_container).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_image).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_service_directory).with("mysql")
-    Kamal::Cli::Accessory.any_instance.expects(:stop).with("redis")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_container).with("redis")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_image).with("redis")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_service_directory).with("redis")
-    Kamal::Cli::Accessory.any_instance.expects(:stop).with("busybox")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_container).with("busybox")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_image).with("busybox")
-    Kamal::Cli::Accessory.any_instance.expects(:remove_service_directory).with("busybox")
+    Dash::Cli::Accessory.any_instance.expects(:stop).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:remove_container).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:remove_image).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:remove_service_directory).with("mysql")
+    Dash::Cli::Accessory.any_instance.expects(:stop).with("redis")
+    Dash::Cli::Accessory.any_instance.expects(:remove_container).with("redis")
+    Dash::Cli::Accessory.any_instance.expects(:remove_image).with("redis")
+    Dash::Cli::Accessory.any_instance.expects(:remove_service_directory).with("redis")
+    Dash::Cli::Accessory.any_instance.expects(:stop).with("busybox")
+    Dash::Cli::Accessory.any_instance.expects(:remove_container).with("busybox")
+    Dash::Cli::Accessory.any_instance.expects(:remove_image).with("busybox")
+    Dash::Cli::Accessory.any_instance.expects(:remove_service_directory).with("busybox")
 
     run_command("remove", "all", "-y")
   end
@@ -217,8 +217,8 @@ class CliAccessoryTest < CliTestCase
   end
 
   test "hosts param respected" do
-    Kamal::Cli::Accessory.any_instance.expects(:directories).with("redis")
-    Kamal::Cli::Accessory.any_instance.expects(:upload).with("redis")
+    Dash::Cli::Accessory.any_instance.expects(:directories).with("redis")
+    Dash::Cli::Accessory.any_instance.expects(:upload).with("redis")
 
     run_command("boot", "redis", "--hosts", "1.1.1.1").tap do |output|
       assert_match "docker login private.registry -u [REDACTED] -p [REDACTED] on 1.1.1.1", output
@@ -229,8 +229,8 @@ class CliAccessoryTest < CliTestCase
   end
 
   test "hosts param intersected with configuration" do
-    Kamal::Cli::Accessory.any_instance.expects(:directories).with("redis")
-    Kamal::Cli::Accessory.any_instance.expects(:upload).with("redis")
+    Dash::Cli::Accessory.any_instance.expects(:directories).with("redis")
+    Dash::Cli::Accessory.any_instance.expects(:upload).with("redis")
 
     run_command("boot", "redis", "--hosts", "1.1.1.1,1.1.1.3").tap do |output|
       assert_match "docker login private.registry -u [REDACTED] -p [REDACTED] on 1.1.1.1", output
@@ -275,6 +275,6 @@ class CliAccessoryTest < CliTestCase
 
   private
     def run_command(*command)
-      stdouted { Kamal::Cli::Accessory.start([ *command, "-c", "test/fixtures/deploy_with_accessories_with_different_registries.yml" ]) }
+      stdouted { Dash::Cli::Accessory.start([ *command, "-c", "test/fixtures/deploy_with_accessories_with_different_registries.yml" ]) }
     end
 end

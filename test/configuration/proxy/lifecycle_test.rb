@@ -32,7 +32,7 @@ class ConfigurationProxyLifecycleTest < ActiveSupport::TestCase
   end
 
   test "a cookie without enabled is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "session_affinity" => { "cookie" => "_pin" } }
+    error = assert_raises(Dash::ConfigurationError) { configuration "session_affinity" => { "cookie" => "_pin" } }
 
     assert_equal "proxy/session_affinity: cookie has no effect without enabled: true", error.message
   end
@@ -40,7 +40,7 @@ class ConfigurationProxyLifecycleTest < ActiveSupport::TestCase
   # net/http silently drops a cookie with an invalid name, which looks exactly
   # like affinity not working.
   test "an invalid cookie name is rejected" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration "session_affinity" => { "enabled" => true, "cookie" => "bad name" }
     end
 
@@ -68,17 +68,17 @@ class ConfigurationProxyLifecycleTest < ActiveSupport::TestCase
 
   test "containers and wake_timeout without after are rejected" do
     assert_equal "proxy/sleep: containers has no effect without after",
-      assert_raises(Kamal::ConfigurationError) { configuration "sleep" => { "containers" => [ "a" ] } }.message
+      assert_raises(Dash::ConfigurationError) { configuration "sleep" => { "containers" => [ "a" ] } }.message
 
     assert_equal "proxy/sleep: wake_timeout has no effect without after",
-      assert_raises(Kamal::ConfigurationError) { configuration "sleep" => { "wake_timeout" => 30 } }.message
+      assert_raises(Dash::ConfigurationError) { configuration "sleep" => { "wake_timeout" => 30 } }.message
   end
 
   test "negative durations are rejected" do
-    negative_after = assert_raises(Kamal::ConfigurationError) { configuration SOCKET.merge("sleep" => { "after" => -1 }) }
+    negative_after = assert_raises(Dash::ConfigurationError) { configuration SOCKET.merge("sleep" => { "after" => -1 }) }
     assert_equal "proxy/sleep: after cannot be negative", negative_after.message
 
-    negative_wake = assert_raises(Kamal::ConfigurationError) do
+    negative_wake = assert_raises(Dash::ConfigurationError) do
       configuration SOCKET.merge("sleep" => { "after" => 300, "wake_timeout" => -1 })
     end
     assert_equal "proxy/sleep: wake_timeout cannot be negative", negative_wake.message
@@ -87,7 +87,7 @@ class ConfigurationProxyLifecycleTest < ActiveSupport::TestCase
   # A sleeping backend cannot answer an on-demand TLS probe, and waking one would
   # let any SNI on the internet start a container.
   test "sleep cannot be combined with on-demand TLS" do
-    error = assert_raises(Kamal::ConfigurationError) do
+    error = assert_raises(Dash::ConfigurationError) do
       configuration SOCKET.merge("ssl" => { "on_demand_url" => "/ask" }, "sleep" => { "after" => 300 })
     end
 
@@ -120,7 +120,7 @@ class ConfigurationProxyLifecycleTest < ActiveSupport::TestCase
   # AC2 — the boot-time prerequisite for a deploy-time key, named rather than
   # deferred to a hung request.
   test "sleep without a docker socket names the key that is missing" do
-    error = assert_raises(Kamal::ConfigurationError) { configuration "sleep" => { "after" => 300 } }
+    error = assert_raises(Dash::ConfigurationError) { configuration "sleep" => { "after" => 300 } }
 
     assert_equal "Role(s) web: proxy/sleep requires proxy/run/docker_socket - kamal-proxy can only stop and " \
       "start containers through the container runtime socket, and it is not mounted into the proxy without it",
@@ -128,7 +128,7 @@ class ConfigurationProxyLifecycleTest < ActiveSupport::TestCase
   end
 
   test "a role inheriting docker_socket from the root proxy is accepted" do
-    config = Kamal::Configuration.new @deploy.merge(
+    config = Dash::Configuration.new @deploy.merge(
       servers: { "web" => { "hosts" => [ "1.1.1.1" ] } },
       proxy: SOCKET.merge("sleep" => { "after" => 300 })
     )
@@ -138,7 +138,7 @@ class ConfigurationProxyLifecycleTest < ActiveSupport::TestCase
 
   private
     def configuration(proxy_config)
-      Kamal::Configuration.new @deploy.merge(proxy: proxy_config)
+      Dash::Configuration.new @deploy.merge(proxy: proxy_config)
     end
 
     def deploy_options(proxy_config)
@@ -146,6 +146,6 @@ class ConfigurationProxyLifecycleTest < ActiveSupport::TestCase
     end
 
     def run_config(run)
-      Kamal::Configuration::Proxy::Run.new Kamal::Configuration.new(@deploy), run_config: run
+      Dash::Configuration::Proxy::Run.new Dash::Configuration.new(@deploy), run_config: run
     end
 end

@@ -15,13 +15,13 @@ Gem-side fixes and exposure of already-built proxy capability:
 
 | Item | Evidence / anchor |
 |---|---|
-| Loadbalancer propagates the full `Proxy#deploy_options` (reuse it — `Kamal::Commands::Loadbalancer` rebuilds flags from scratch today), respects `app_port` instead of hardcoded `:80`, respects `proxy.run.publish`/options | `lib/kamal/commands/loadbalancer.rb:19-20,37-48`; found via integration failures 2026-07-03 |
-| Fix `bind_ips` validator checking the root key instead of `run.bind_ips` (validation is a no-op today) | `lib/kamal/configuration/validator/proxy.rb:27-28` |
+| Loadbalancer propagates the full `Proxy#deploy_options` (reuse it — `Dash::Commands::Loadbalancer` rebuilds flags from scratch today), respects `app_port` instead of hardcoded `:80`, respects `proxy.run.publish`/options | `lib/dash/commands/loadbalancer.rb:19-20,37-48`; found via integration failures 2026-07-03 |
+| Fix `bind_ips` validator checking the root key instead of `run.bind_ips` (validation is a no-op today) | `lib/dash/configuration/validator/proxy.rb:27-28` |
 | Add validation for the `loadbalancer:` key (must be `false`, `true`, or a proxy-role host) | validator has no entry today |
 | Expose `healthcheck.port` / `healthcheck.host` in deploy.yml — merged proxy-side (kamal-proxy#152), never plumbed into YAML | kamal#1234 (11 comments), kamal#1842 |
-| Expose `--tls-staging`, `--read-target` + writer-affinity knobs in deploy.yml | flag map in `lib/kamal/configuration/proxy.rb:91-123` |
+| Expose `--tls-staging`, `--read-target` + writer-affinity knobs in deploy.yml | flag map in `lib/dash/configuration/proxy.rb:91-123` |
 | Expose `kamal-proxy rollout` as `kamal app rollout deploy/set/stop` — cookie-keyed canary is fully implemented proxy-side with zero gem surface (`grep rollout lib/` = 0 hits) | kamal#941 demand thread |
-| Add `pre/post-proxy-deploy` hooks (none exist around the per-app proxy deploy) | hook inventory in `lib/kamal/cli/proxy.rb` |
+| Add `pre/post-proxy-deploy` hooks (none exist around the per-app proxy deploy) | hook inventory in `lib/dash/cli/proxy.rb` |
 | Docs: fill the accessory-proxy stub (`docs/accessory.yml:158-160`), fix stale run defaults (`docs/proxy.yml:174-175`) | — |
 
 Proxy-side R1 items (bug fixes: cert renewal manager never started, cert metrics unwired, slowloris/server timeouts) — see `../kamal-proxy/ROADMAP.md`.

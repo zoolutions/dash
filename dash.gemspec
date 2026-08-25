@@ -1,8 +1,8 @@
-require_relative "lib/kamal/version"
+require_relative "lib/dash/version"
 
 Gem::Specification.new do |spec|
   spec.name        = "dash"
-  spec.version     = Kamal::VERSION
+  spec.version     = Dash::VERSION
   spec.authors     = [ "Mikael Henriksson" ]
   spec.email       = "mikael@zoolutions.llc"
   spec.homepage    = "https://github.com/zoolutions/dash"

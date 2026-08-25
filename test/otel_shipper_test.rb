@@ -2,14 +2,14 @@ require "test_helper"
 
 class OtelShipperTest < ActiveSupport::TestCase
   setup do
-    @tags = Kamal::Tags.new(
+    @tags = Dash::Tags.new(
       performer: "deployer",
       service: "myapp",
       version: "abc123",
       destination: "production"
     )
-    Kamal::OtelShipper.any_instance.stubs(:start_flush_thread)
-    @shipper = Kamal::OtelShipper.new(endpoint: "http://localhost:4318", tags: @tags)
+    Dash::OtelShipper.any_instance.stubs(:start_flush_thread)
+    @shipper = Dash::OtelShipper.new(endpoint: "http://localhost:4318", tags: @tags)
   end
 
   teardown do
@@ -171,7 +171,7 @@ class OtelShipperTest < ActiveSupport::TestCase
     assert_includes keys, "deployment.environment.name"
 
     assert_equal "kamal", shipped_resource_attr("service.name")
-    assert_equal Kamal::VERSION, shipped_resource_attr("service.version")
+    assert_equal Dash::VERSION, shipped_resource_attr("service.version")
     assert_equal "myapp", shipped_resource_attr("service.namespace")
     assert_equal @shipper.run_id, shipped_resource_attr("kamal.run_id")
     assert_equal "abc123", shipped_resource_attr("kamal.deploy_version")
@@ -186,7 +186,7 @@ class OtelShipperTest < ActiveSupport::TestCase
 
     scope = @shipped.first.dig("resourceLogs", 0, "scopeLogs", 0, "scope")
     assert_equal "kamal", scope["name"]
-    assert_equal Kamal::VERSION, scope["version"]
+    assert_equal Dash::VERSION, scope["version"]
   end
 
   test "accepts lines after shutdown" do
@@ -255,8 +255,8 @@ class OtelShipperTest < ActiveSupport::TestCase
     end
 
     def create_threaded_shipper
-      Kamal::OtelShipper.any_instance.unstub(:start_flush_thread)
-      Kamal::OtelShipper.new(endpoint: "http://localhost:4318", tags: @tags)
+      Dash::OtelShipper.any_instance.unstub(:start_flush_thread)
+      Dash::OtelShipper.new(endpoint: "http://localhost:4318", tags: @tags)
     end
 
     def stub_otel_http

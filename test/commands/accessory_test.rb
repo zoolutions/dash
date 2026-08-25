@@ -231,6 +231,6 @@ class CommandsAccessoryTest < ActiveSupport::TestCase
 
   private
     def new_command(accessory)
-      Kamal::Commands::Accessory.new(Kamal::Configuration.new(@config), name: accessory)
+      Dash::Commands::Accessory.new(Dash::Configuration.new(@config), name: accessory)
     end
 end

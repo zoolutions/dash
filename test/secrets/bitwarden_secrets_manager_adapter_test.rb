@@ -185,7 +185,7 @@ class BitwardenSecretsManagerAdapterTest < SecretAdapterTestCase
 
     def run_command(*command)
       stdouted do
-        Kamal::Cli::Secrets.start \
+        Dash::Cli::Secrets.start \
           [ *command,
             "--adapter", "bitwarden-sm" ]
       end

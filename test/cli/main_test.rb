@@ -7,8 +7,8 @@ class CliMainTest < CliTestCase
   test "setup" do
     invoke_options = base_invoke_options
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:server:bootstrap", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:deploy).with(boot_accessories: true)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:server:bootstrap", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:deploy).with(boot_accessories: true)
 
     run_command("setup").tap do |output|
       assert_match /Ensure Docker is installed.../, output
@@ -18,14 +18,14 @@ class CliMainTest < CliTestCase
   test "setup with skip_push" do
     invoke_options = base_invoke_options
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:server:bootstrap", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:accessory:boot", [ "all" ], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:server:bootstrap", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:accessory:boot", [ "all" ], invoke_options)
     # deploy
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:pull", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:prune:all", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:pull", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:prune:all", [], invoke_options)
 
     run_command("setup", "--skip_push").tap do |output|
       assert_match /Ensure Docker is installed.../, output
@@ -43,13 +43,13 @@ class CliMainTest < CliTestCase
     with_test_secrets("secrets" => "DB_PASSWORD=secret") do
       invoke_options = base_invoke_options(config_file: "deploy_with_local_registry.yml", verbose: true)
 
-      Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
-      Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
-      Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-      Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
-      Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:prune:all", [], invoke_options)
+      Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:deliver", [], invoke_options)
+      Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:boot", [], invoke_options)
+      Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+      Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
+      Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:prune:all", [], invoke_options)
 
-      Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+      Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
       run_command("deploy", "--verbose", config_file: "deploy_with_local_registry").tap do |output|
         assert_hook_ran "pre-connect", output
@@ -66,14 +66,14 @@ class CliMainTest < CliTestCase
   test "setup with no_cache" do
     invoke_options = base_invoke_options(no_cache: true)
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:server:bootstrap", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:accessory:boot", [ "all" ], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:server:bootstrap", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:accessory:boot", [ "all" ], invoke_options)
     # deploy
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:prune:all", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:deliver", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:prune:all", [], invoke_options)
 
     run_command("setup", "--no-cache").tap do |output|
       assert_match /Ensure Docker is installed.../, output
@@ -89,13 +89,13 @@ class CliMainTest < CliTestCase
     with_test_secrets("secrets" => "DB_PASSWORD=secret") do
       invoke_options = base_invoke_options(verbose: true)
 
-      Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
-      Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
-      Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-      Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
-      Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:prune:all", [], invoke_options)
+      Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:deliver", [], invoke_options)
+      Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:boot", [], invoke_options)
+      Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+      Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
+      Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:prune:all", [], invoke_options)
 
-      Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+      Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
       run_command("deploy", "--verbose").tap do |output|
         assert_hook_ran "pre-connect", output
@@ -112,11 +112,11 @@ class CliMainTest < CliTestCase
   test "deploy with skip_push" do
     invoke_options = base_invoke_options
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:pull", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:prune:all", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:pull", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:prune:all", [], invoke_options)
 
     run_command("deploy", "--skip_push").tap do |output|
       assert_match /Acquiring the deploy lock/, output
@@ -131,11 +131,11 @@ class CliMainTest < CliTestCase
   test "deploy with no_cache" do
     invoke_options = base_invoke_options(no_cache: true)
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:prune:all", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:deliver", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:prune:all", [], invoke_options)
 
     run_command("deploy", "--no-cache").tap do |output|
       assert_match /Build and push app image/, output
@@ -163,7 +163,7 @@ class CliMainTest < CliTestCase
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
       .with(:git, "-C", anything, :"rev-parse", :HEAD)
-      .returns(Kamal::Git.revision)
+      .returns(Dash::Git.revision)
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
       .with(:git, "-C", anything, :status, "--porcelain")
@@ -174,7 +174,7 @@ class CliMainTest < CliTestCase
       .returns("")
       .at_least_once
 
-    assert_raises(Kamal::Cli::LockError) do
+    assert_raises(Dash::Cli::LockError) do
       run_command("deploy")
     end
   end
@@ -198,13 +198,13 @@ class CliMainTest < CliTestCase
       .with(:stat, ".kamal/lock-app", ">", "/dev/null", "&&", :cat, ".kamal/lock-app/details", "|", :base64, "-d")
       .returns("Locked by: alice\nVersion: 999\nMessage: Automatic deploy lock")
 
-    Kamal::Cli::Base.any_instance.stubs(:sleep)
+    Dash::Cli::Base.any_instance.stubs(:sleep)
 
-    Kamal::Cli::Main.any_instance.stubs(:invoke)
+    Dash::Cli::Main.any_instance.stubs(:invoke)
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:git, "-C", anything, :"rev-parse", :HEAD)
-      .returns(Kamal::Git.revision)
+      .returns(Dash::Git.revision)
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:git, "-C", anything, :status, "--porcelain")
@@ -234,11 +234,11 @@ class CliMainTest < CliTestCase
       .with(:stat, ".kamal/lock-app", ">", "/dev/null", "&&", :cat, ".kamal/lock-app/details", "|", :base64, "-d")
       .returns("Locked by: alice\nVersion: 999\nMessage: Automatic deploy lock")
 
-    Kamal::Cli::Base.any_instance.stubs(:sleep)
+    Dash::Cli::Base.any_instance.stubs(:sleep)
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:git, "-C", anything, :"rev-parse", :HEAD)
-      .returns(Kamal::Git.revision)
+      .returns(Dash::Git.revision)
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:git, "-C", anything, :status, "--porcelain")
@@ -248,7 +248,7 @@ class CliMainTest < CliTestCase
       .with(:docker, :info, "--format '{{index .RegistryConfig.Mirrors 0}}'")
       .returns("")
 
-    assert_raises(Kamal::Cli::LockError) do
+    assert_raises(Dash::Cli::LockError) do
       run_command("deploy", "--lock-wait", "--lock-wait-timeout", "0", "--lock-wait-interval", "0")
     end
   end
@@ -271,11 +271,11 @@ class CliMainTest < CliTestCase
       .returns("Locked by: alice\nVersion: 999\nMessage: Stopping deploys for maintenance")
 
     # A manually held lock must never trigger a wait, even with a long timeout
-    Kamal::Cli::Base.any_instance.expects(:sleep).never
+    Dash::Cli::Base.any_instance.expects(:sleep).never
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:git, "-C", anything, :"rev-parse", :HEAD)
-      .returns(Kamal::Git.revision)
+      .returns(Dash::Git.revision)
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with(:git, "-C", anything, :status, "--porcelain")
@@ -285,7 +285,7 @@ class CliMainTest < CliTestCase
       .with(:docker, :info, "--format '{{index .RegistryConfig.Mirrors 0}}'")
       .returns("")
 
-    error = assert_raises(Kamal::Cli::LockError) do
+    error = assert_raises(Dash::Cli::LockError) do
       run_command("deploy", "--lock-wait", "--lock-wait-timeout", "60", "--lock-wait-interval", "0")
     end
     assert_match /held manually/, error.message
@@ -296,16 +296,16 @@ class CliMainTest < CliTestCase
 
     invoke_options = base_invoke_options
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:prune:all", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:deliver", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:prune:all", [], invoke_options)
 
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
     with_kamal_lock_env do
-      KAMAL.reset
+      DASH.reset
       run_command("deploy").tap do |output|
         assert_no_match /Acquiring the deploy lock/, output
         assert_match /Build and push app image/, output
@@ -332,7 +332,7 @@ class CliMainTest < CliTestCase
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
       .with(:git, "-C", anything, :"rev-parse", :HEAD)
-      .returns(Kamal::Git.revision)
+      .returns(Dash::Git.revision)
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
       .with(:git, "-C", anything, :status, "--porcelain")
@@ -351,25 +351,25 @@ class CliMainTest < CliTestCase
   test "deploy errors during outside section leave remote lock" do
     invoke_options = base_invoke_options
 
-    Kamal::Cli::Main.any_instance.expects(:invoke)
-      .with("kamal:cli:build:deliver", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke)
+      .with("dash:cli:build:deliver", [], invoke_options)
       .raises(RuntimeError)
 
-    assert_not KAMAL.holding_lock?
+    assert_not DASH.holding_lock?
     assert_raises(RuntimeError) do
       stderred { run_command("deploy") }
     end
-    assert_not KAMAL.holding_lock?
+    assert_not DASH.holding_lock?
   end
 
   test "deploy with skipped hooks" do
     invoke_options = base_invoke_options(skip_hooks: true)
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:prune:all", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:deliver", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:prune:all", [], invoke_options)
 
     run_command("deploy", "--skip_hooks") do
       assert_no_match /Running the post-deploy hook.../, output
@@ -377,9 +377,9 @@ class CliMainTest < CliTestCase
   end
 
   test "deploy with missing secrets fails before building" do
-    Kamal::Cli::Main.any_instance.expects(:invoke).never
+    Dash::Cli::Main.any_instance.expects(:invoke).never
 
-    error = assert_raises Kamal::ConfigurationError do
+    error = assert_raises Dash::ConfigurationError do
       run_command("deploy", config_file: "deploy_with_secrets")
     end
 
@@ -389,11 +389,11 @@ class CliMainTest < CliTestCase
   test "redeploy" do
     invoke_options = base_invoke_options(verbose: true)
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:deliver", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
 
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
     run_command("redeploy", "--verbose").tap do |output|
       assert_hook_ran "pre-connect", output
@@ -407,9 +407,9 @@ class CliMainTest < CliTestCase
   test "redeploy with skip_push" do
     invoke_options = base_invoke_options
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:pull", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:pull", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
 
     run_command("redeploy", "--skip_push").tap do |output|
       assert_match /Pull app image/, output
@@ -419,9 +419,9 @@ class CliMainTest < CliTestCase
   test "redeploy with no_cache" do
     invoke_options = base_invoke_options(no_cache: true)
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:deliver", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
 
     run_command("redeploy", "--no-cache").tap do |output|
       assert_match /Build and push app image/, output
@@ -454,10 +454,10 @@ class CliMainTest < CliTestCase
     end
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
-      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-123$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Kamal::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-123$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Dash::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
       .returns("no-healthcheck:running").at_least_once # health check
 
-    Kamal::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
     run_command("rollback", "--verbose", "123", config_file: "deploy_with_accessories").tap do |output|
       assert_hook_ran "pre-deploy", output
@@ -469,7 +469,7 @@ class CliMainTest < CliTestCase
   end
 
   test "rollback without old version" do
-    Kamal::Cli::Main.any_instance.stubs(:container_available?).returns(true)
+    Dash::Cli::Main.any_instance.stubs(:container_available?).returns(true)
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
       .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-web-123$'", "--quiet", raise_on_non_zero_exit: false)
@@ -489,18 +489,18 @@ class CliMainTest < CliTestCase
 
   test "remove" do
     options = base_invoke_options(version: nil, confirmed: true)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:remove", [], options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:remove", [], options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:accessory:remove", [ "all" ], options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:registry:remove", [], options.merge(skip_local: true))
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:remove", [], options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:remove", [], options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:accessory:remove", [ "all" ], options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:registry:remove", [], options.merge(skip_local: true))
 
     run_command("remove", "-y")
   end
 
   test "details" do
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:details")
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:details")
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:accessory:details", [ "all" ])
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:details")
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:details")
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:accessory:details", [ "all" ])
 
     run_command("details")
   end
@@ -726,14 +726,14 @@ class CliMainTest < CliTestCase
   end
 
   test "version" do
-    version = stdouted { Kamal::Cli::Main.new.version }
-    assert_equal Kamal::VERSION, version
+    version = stdouted { Dash::Cli::Main.new.version }
+    assert_equal Dash::VERSION, version
   end
 
   test "run an alias for details" do
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:details")
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:details")
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:accessory:details", [ "all" ])
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:details")
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:details")
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:accessory:details", [ "all" ])
 
     run_command("info", config_file: "deploy_with_aliases")
   end
@@ -770,7 +770,7 @@ class CliMainTest < CliTestCase
   test "switch config file with an alias" do
     with_config_files do
       with_argv([ "other_config" ]) do
-        stdouted { Kamal::Cli::Main.start }.tap do |output|
+        stdouted { Dash::Cli::Main.start }.tap do |output|
           assert_match ":service_with_version: app2-999", output
         end
       end
@@ -780,7 +780,7 @@ class CliMainTest < CliTestCase
   test "switch destination with an alias" do
     with_config_files do
       with_argv([ "other_destination_config" ]) do
-        stdouted { Kamal::Cli::Main.start }.tap do |output|
+        stdouted { Dash::Cli::Main.start }.tap do |output|
           assert_match ":service_with_version: app3-999", output
         end
       end
@@ -790,11 +790,11 @@ class CliMainTest < CliTestCase
   test "run an alias with require_destination" do
     invoke_options = base_invoke_options(config_file: "deploy_for_required_dest.yml", destination: "world")
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:prune:all", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:deliver", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:prune:all", [], invoke_options)
 
     run_command("world_deploy", config_file: "deploy_for_required_dest")
   end
@@ -808,8 +808,8 @@ class CliMainTest < CliTestCase
 
   test "upgrade" do
     invoke_options = base_invoke_options(config_file: "deploy_with_accessories.yml", version: nil, confirmed: true, rolling: false)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:upgrade", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:accessory:upgrade", [ "all" ], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:upgrade", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:accessory:upgrade", [ "all" ], invoke_options)
 
     run_command("upgrade", "-y", config_file: "deploy_with_accessories").tap do |output|
       assert_match "Upgrading all hosts...", output
@@ -819,8 +819,8 @@ class CliMainTest < CliTestCase
 
   test "upgrade rolling" do
     invoke_options = base_invoke_options(config_file: "deploy_with_accessories.yml", version: nil, confirmed: true, rolling: false)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:upgrade", [], invoke_options).times(4)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:accessory:upgrade", [ "all" ], invoke_options).times(3)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:upgrade", [], invoke_options).times(4)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:accessory:upgrade", [ "all" ], invoke_options).times(3)
 
     run_command("upgrade", "--rolling", "-y", config_file: "deploy_with_accessories").tap do |output|
       assert_match "Upgrading 1.1.1.1...", output
@@ -835,15 +835,15 @@ class CliMainTest < CliTestCase
   end
 
   test "deploy prints the config banner and validates secrets before building" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     invoke_options = base_invoke_options
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:loadbalancer", [ "deploy" ], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:prune:all", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:loadbalancer", [ "deploy" ], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:deliver", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:prune:all", [], invoke_options)
 
     run_command("deploy").tap do |output|
       assert_match /Deploying app \(version 999\)/, output
@@ -859,10 +859,10 @@ class CliMainTest < CliTestCase
   end
 
   test "deploy does not load balance a multi-host primary role that does not run the proxy" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:proxy:loadbalancer", [ "deploy" ], anything).never
-    Kamal::Cli::Main.any_instance.expects(:invoke).at_least_once
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:proxy:loadbalancer", [ "deploy" ], anything).never
+    Dash::Cli::Main.any_instance.expects(:invoke).at_least_once
 
     run_command("deploy", config_file: "deploy_with_only_workers").tap do |output|
       assert_match /workers: 2 hosts \(1\.1\.1\.1, 1\.1\.1\.2\)/, output
@@ -871,9 +871,9 @@ class CliMainTest < CliTestCase
   end
 
   test "deploy config banner shows no loadbalancer line when load balancing is disabled" do
-    Kamal::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).at_least_once
+    Dash::Cli::Main.any_instance.expects(:invoke).at_least_once
 
     run_command("deploy", config_file: "deploy_with_loadbalancer_false").tap do |output|
       assert_match /Deploying app \(version 999\)/, output
@@ -882,7 +882,7 @@ class CliMainTest < CliTestCase
   end
 
   test "deploy config banner names the readiness source per role" do
-    Kamal::Cli::Main.any_instance.expects(:invoke).at_least_once
+    Dash::Cli::Main.any_instance.expects(:invoke).at_least_once
 
     run_command("deploy", config_file: "deploy_with_readiness_sources").tap do |output|
       assert_match /web: 1 host \(1\.1\.1\.1\) — readiness: kamal-proxy health check \/healthz/, output
@@ -896,7 +896,7 @@ class CliMainTest < CliTestCase
   end
 
   test "deploy config banner omits the proxy health check path when it is not configured" do
-    Kamal::Cli::Main.any_instance.expects(:invoke).at_least_once
+    Dash::Cli::Main.any_instance.expects(:invoke).at_least_once
 
     run_command("deploy").tap do |output|
       assert_match /web: 2 hosts \(1\.1\.1\.1, 1\.1\.1\.2\) — readiness: kamal-proxy health check$/, output
@@ -906,9 +906,9 @@ class CliMainTest < CliTestCase
   test "redeploy prints the config banner and validates secrets before building" do
     invoke_options = base_invoke_options
 
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:build:deliver", [], invoke_options)
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:stale_containers", [], invoke_options.merge(stop: true))
-    Kamal::Cli::Main.any_instance.expects(:invoke).with("kamal:cli:app:boot", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:build:deliver", [], invoke_options)
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:stale_containers", [], invoke_options.merge(stop: true))
+    Dash::Cli::Main.any_instance.expects(:invoke).with("dash:cli:app:boot", [], invoke_options)
 
     run_command("redeploy").tap do |output|
       assert_match /Deploying app \(version 999\)/, output
@@ -920,7 +920,7 @@ class CliMainTest < CliTestCase
   private
     def run_command(*command, config_file: "deploy_simple")
       with_argv([ *command, "-c", "test/fixtures/#{config_file}.yml" ]) do
-        stdouted { Kamal::Cli::Main.start }
+        stdouted { Dash::Cli::Main.start }
       end
     end
 
@@ -930,7 +930,7 @@ class CliMainTest < CliTestCase
       argv += [ "-c", config_path ]
 
       with_argv([ *argv ]) do
-        stdouted { Kamal::Cli::Main.start }
+        stdouted { Dash::Cli::Main.start }
       end
     end
 
