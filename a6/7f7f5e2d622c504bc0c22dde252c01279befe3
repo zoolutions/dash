@@ -1,0 +1,143 @@
+test/commands/accessory_test.rb
+  s_005eb982cd5af6::t_9362d82eea21b5 76-81
+lib/dash/cli/templates/sample_hooks/pre-app-boot.sample
+  s_005eb982cd5af6::t_ad438e94b46988 3
+lib/dash/cli/templates/sample_hooks/pre-proxy-deploy.sample
+  s_005eb982cd5af6::t_ad438e94b46988 3
+lib/dash/cli/templates/sample_hooks/pre-app-stop.sample
+  s_005eb982cd5af6::t_ad438e94b46988 7,12
+docs/.dockerignore
+  s_005eb982cd5af6::t_12e4f0bccc8126 43
+test/cli/main_test.rb
+  s_005eb982cd5af6::t_68e020917875c3 760-775
+  s_005eb982cd5af6::t_71f343dc556e35 662-674,682-759,776-788
+  s_005eb982cd5af6::t_fa45443011c0da 675-681
+  s_005eb982cd5af6::t_8f582f8168c2d3 640-641,645-658
+  s_005eb982cd5af6::t_2401edc311d34f 798,807
+  s_005eb982cd5af6::t_9cd1531ebc7cc6 402
+docs/app/views/docs/pages/installation.rb
+  s_005eb982cd5af6::t_8f9fbd66044fe7 72
+docs/app/views/docs/pages/overview.rb
+  s_005eb982cd5af6::t_77dea0a2e26a30 35-37
+  s_005eb982cd5af6::t_8f9fbd66044fe7 77
+lib/dash/configuration/proxy.rb
+  s_005eb982cd5af6::t_7a1cbcdc4af121 277,605
+lib/dash/cli/base.rb
+  s_005eb982cd5af6::t_50aec7e4e658bb 106-107,109,112-116
+  s_005eb982cd5af6::t_bdb15db4d82305 54-57
+  s_005eb982cd5af6::t_7b52c1946f2830 21-26
+  s_005eb982cd5af6::t_d6dcd3fe80b472 102-105,108,110-111
+lib/dash/commands/accessory.rb
+  s_005eb982cd5af6::t_1ae1edb758bad7 23
+test/cli/accessory_test.rb
+  s_005eb982cd5af6::t_e81239f3932467 18,38-41,226,238,248,258,265-266
+test/cli/cli_test_case.rb
+  s_005eb982cd5af6::t_f8a90f0b2c38af 10
+  s_005eb982cd5af6::t_f798bd86e9fd4a 28,30,48
+lib/dash/cli/templates/sample_hooks/pre-proxy-reboot.sample
+  s_005eb982cd5af6::t_ad438e94b46988 3
+lib/dash/cli/main.rb
+  s_005eb982cd5af6::t_df218f22d6e35f 242-247
+  s_005eb982cd5af6::t_ff4a3f2ae36c5d 183,196-201,204,207,212
+lib/dash/cli/templates/sample_hooks/pre-connect.sample
+  s_005eb982cd5af6::t_ad438e94b46988 8-14,16
+lib/dash/configuration/docs/env.yml
+  s_005eb982cd5af6::t_434822e8f9c889 3-4,17,19-20,22-23,26,30,43
+lib/dash/configuration/docs/proxy.yml
+  s_005eb982cd5af6::t_481ea5f6e8a8e5 164,380,883
+lib/dash/secrets.rb
+  s_005eb982cd5af6::t_2b95af266f3e56 6,8
+lib/dash/cli/templates/sample_hooks/docker-setup.sample
+  s_005eb982cd5af6::t_ad438e94b46988 3
+lib/dash/cli/templates/sample_hooks/post-proxy-reboot.sample
+  s_005eb982cd5af6::t_ad438e94b46988 3
+lib/dash/cli/templates/sample_hooks/post-proxy-deploy.sample
+  s_005eb982cd5af6::t_ad438e94b46988 3
+docs/app/views/docs/pages/quick_start.rb
+  s_005eb982cd5af6::t_8f9fbd66044fe7 48,65,68-69
+lib/dash/cli/templates/sample_hooks/pre-build.sample
+  s_005eb982cd5af6::t_ad438e94b46988 12-17,46-47
+docs/app/views/docs/pages/commands.rb
+  s_005eb982cd5af6::t_8f9fbd66044fe7 20
+lib/dash/cli/templates/sample_hooks/post-deploy.sample
+  s_005eb982cd5af6::t_ad438e94b46988 6-12,14
+lib/dash/cli/templates/sample_hooks/post-app-stop.sample
+  s_005eb982cd5af6::t_ad438e94b46988 5,9
+test/configuration/env_test.rb
+  s_005eb982cd5af6::t_73c80310df78bc 34,72
+test/test_helper.rb
+  s_005eb982cd5af6::t_951e80133b8f3a 81-82,88-93,99-100
+test/commander_test.rb
+  s_005eb982cd5af6::t_cacb20761db1e0 203-239,241-252
+test/commands/hook_test.rb
+  s_005eb982cd5af6::t_4d32d5c81f3db3 45,47,49,51,53
+  s_005eb982cd5af6::t_f798bd86e9fd4a 19
+  s_005eb982cd5af6::t_8a60dc764ab52b 24,26,28,30,32
+test/cli/server_test.rb
+  s_005eb982cd5af6::t_f798bd86e9fd4a 75-76,96-97
+test/cli/app_test.rb
+  s_005eb982cd5af6::t_f798bd86e9fd4a 853
+lib/dash/cli/app/ssl_certificates.rb
+  s_005eb982cd5af6::t_7a1cbcdc4af121 27
+lib/dash/cli/templates/sample_hooks/pre-deploy.sample
+  s_005eb982cd5af6::t_ad438e94b46988 10-17,20
+lib/dash/cli/main/migrate.rb
+  s_005eb982cd5af6::t_20662b86c5761e 1-79
+lib/dash/cli/templates/secrets
+  s_005eb982cd5af6::t_7d2289cfea0c85 5-6,10,14,20-21
+test/project_directory_test.rb
+  s_005eb982cd5af6::t_6501f51cd65f1d 1-72
+lib/dash/commander.rb
+  s_005eb982cd5af6::t_20958e5638acd8 241-248
+  s_005eb982cd5af6::t_e915863c0ca81c 18-19
+README.md
+  s_005eb982cd5af6::t_85d12ecc10e3e5 5
+lib/dash/configuration/docs/registry.yml
+  s_005eb982cd5af6::t_434822e8f9c889 7,18,24,48,56
+test/configuration_test.rb
+  s_005eb982cd5af6::t_32a8de5dfe4a71 643,645-652
+  s_005eb982cd5af6::t_4d29c40e07b0fa 373-383
+  s_005eb982cd5af6::t_0e980b1b6b946f 644
+  s_005eb982cd5af6::t_1388ef24330834 642,653-694
+test/secrets_test.rb
+  s_005eb982cd5af6::t_576de698a21f32 120-134
+lib/dash/cli/templates/deploy.yml
+  s_005eb982cd5af6::t_ad438e94b46988 33,35,44,80
+lib/dash/configuration/docs/configuration.yml
+  s_005eb982cd5af6::t_30f019688f5702 84,109-110
+lib/dash/project_directory.rb
+  s_005eb982cd5af6::t_99477eccfeb9ac 1-28
+test/tags_test.rb
+  s_005eb982cd5af6::t_fcda86fc1d50c8 1-52
+lib/dash/configuration/docs/builder.yml
+  s_005eb982cd5af6::t_434822e8f9c889 22,28,90
+lib/dash/configuration.rb
+  s_005eb982cd5af6::t_b226cb19876c2c 316,320
+  s_005eb982cd5af6::t_20a2e6659c4e50 21
+docs/app/views/docs/pages/from_kamal.rb
+  s_005eb982cd5af6::t_5af81472a62e77 47,50-51,56-57
+  s_005eb982cd5af6::t_dcaa66658a38d2 42
+  s_005eb982cd5af6::t_b819268e4d1fe4 126-128
+lib/dash/tags.rb
+  s_005eb982cd5af6::t_7db7bd579dc9a2 29-30,32-35
+lib/dash/cli/templates/sample_hooks/post-app-boot.sample
+  s_005eb982cd5af6::t_ad438e94b46988 3
+docs/app/views/docs/pages/certificates.rb
+  s_005eb982cd5af6::t_8f9fbd66044fe7 110,132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "a67f7f5e2d622c504bc0c22dde252c01279befe3",
+  "prompts": {},
+  "sessions": {
+    "s_005eb982cd5af6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6593723-610e-4611-a86f-01887d00cdad",
+        "model": "claude-opus-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
