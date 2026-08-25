@@ -242,7 +242,7 @@ class Dash::Cli::Main < Dash::Cli::Base
   desc "migrate", "Move this project's .kamal directory to .dash"
   option :dry_run, type: :boolean, default: false, desc: "Report what would move without touching anything"
   def migrate
-    Dash::Cli::Main::Migrate.new(self, dry_run: options[:dry_run]).run
+    Dash::Cli::Main::Migrate.new(dry_run: options[:dry_run]).run.each { |message, color| say message, color }
   end
 
   desc "upgrade", "Upgrade from Kamal 1.x to 2.0"

@@ -4,6 +4,10 @@ require "fileutils"
 # it never opens an SSH connection and never reads deploy.yml - and only ever
 # runs when the operator asks for it, because silently rewriting someone's
 # working tree is not a deploy tool's job.
+#
+# Returns [message, color] pairs rather than printing: output belongs to the Thor
+# command, and reaching into the Thor instance for `say` couples this class to a
+# shell helper whose visibility changes between Thor versions.
 class Dash::Cli::Main::Migrate
   CURRENT = Dash::ProjectDirectory::CURRENT
   LEGACY = Dash::ProjectDirectory::LEGACY
@@ -11,33 +15,25 @@ class Dash::Cli::Main::Migrate
   LEGACY_ENV_PATTERN = /\bKAMAL_[A-Z0-9_]+/
   EXTRA_SCANNED_FILES = [ "config/deploy.yml" ].freeze
 
-  attr_reader :shell, :dry_run
-  delegate :say, to: :shell
+  attr_reader :dry_run
 
-  def initialize(shell, dry_run: false)
-    @shell = shell
+  def initialize(dry_run: false)
     @dry_run = dry_run
   end
 
   def run
-    unless Dir.exist?(LEGACY)
-      say "No #{LEGACY} directory to migrate."
-      return
-    end
+    return [ [ "No #{LEGACY} directory to migrate.", nil ] ] unless Dir.exist?(LEGACY)
 
     if Dir.exist?(CURRENT)
-      say "Both #{CURRENT} and #{LEGACY} exist. Merge them by hand, then remove #{LEGACY}.", :yellow
-      return
+      return [ [ "Both #{CURRENT} and #{LEGACY} exist. Merge them by hand, then remove #{LEGACY}.", :yellow ] ]
     end
 
     if dry_run
-      say "Would move #{LEGACY} to #{CURRENT}#{" with git mv" if tracked_by_git?}"
+      [ [ "Would move #{LEGACY} to #{CURRENT}#{" with git mv" if tracked_by_git?}", nil ], *legacy_env_reference_lines ]
     else
       move
-      say "Moved #{LEGACY} to #{CURRENT}", :green
+      [ [ "Moved #{LEGACY} to #{CURRENT}", :green ], *legacy_env_reference_lines ]
     end
-
-    report_legacy_env_references
   end
 
   private
@@ -59,16 +55,18 @@ class Dash::Cli::Main::Migrate
     # Reported, never rewritten: both prefixes carry the same value until 5.0,
     # so there is nothing to fix today and an automatic rewrite of hook scripts
     # would be a much bigger promise than this command makes.
-    def report_legacy_env_references
+    def legacy_env_reference_lines
       references = scanned_files.filter_map do |file|
         names = File.read(file, encoding: Encoding::BINARY).scan(LEGACY_ENV_PATTERN).uniq
         [ file, names ] if names.any?
       end
 
-      return if references.empty?
+      return [] if references.empty?
 
-      say "\nFound legacy KAMAL_* references. dash sets both prefixes until 5.0, so nothing is urgent:"
-      references.each { |file, names| say "  #{file}: #{names.sort.join(", ")}" }
+      [
+        [ "\nFound legacy KAMAL_* references. dash sets both prefixes until 5.0, so nothing is urgent:", nil ],
+        *references.map { |file, names| [ "  #{file}: #{names.sort.join(", ")}", nil ] }
+      ]
     end
 
     def scanned_files
