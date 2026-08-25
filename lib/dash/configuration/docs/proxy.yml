@@ -161,7 +161,7 @@ proxy:
   #
   # `client_ca_pem` requires mutual TLS: clients must present a certificate
   # signed by this CA bundle. Like `certificate_pem` it names a secret in
-  # `.kamal/secrets`; the content is uploaded next to the app's TLS material
+  # `.dash/secrets`; the content is uploaded next to the app's TLS material
   # under `.kamal/proxy/apps-config`, and the proxy is given the path it sees
   # inside its own container. An empty secret fails the deploy rather than
   # silently turning mTLS off.
@@ -377,7 +377,7 @@ proxy:
   #
   # Set exactly one of `password_secret` or `password` — never both.
   #
-  # Prefer `password_secret`: it names an entry in `.kamal/secrets`, so the
+  # Prefer `password_secret`: it names an entry in `.dash/secrets`, so the
   # password never lives in this file.
   #
   #     basic_auth:
@@ -880,7 +880,7 @@ proxy:
     # staging environment while you are working out a DNS setup, so you do not
     # burn production rate limits on failed attempts.
     #
-    # `credentials` names entries in `.kamal/secrets` to pass to the proxy
+    # `credentials` names entries in `.dash/secrets` to pass to the proxy
     # container as environment variables - the API credentials your DNS provider
     # needs (`CF_DNS_API_TOKEN`, `LOOPIA_API_USER`, ...). Name them exactly as the
     # provider expects them, since the name is what reaches the container.

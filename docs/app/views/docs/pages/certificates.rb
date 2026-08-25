@@ -107,7 +107,7 @@ class Views::Docs::Pages::Certificates < DocsUI::Page
         Providers: cloudflare, digitalocean, gcloud, godaddy, hetzner,
         namecheap, route53, vultr (plus `auto`, which picks from the
         credentials it can see and logs which one it armed). `credentials`
-        names entries in `.kamal/secrets`; they are written to a `0600` env
+        names entries in `.dash/secrets`; they are written to a `0600` env
         file on the proxy host and passed with `--env-file`, never on the
         command line.
 
@@ -129,7 +129,7 @@ class Views::Docs::Pages::Certificates < DocsUI::Page
         The `ssl:` hash is home to the rest of the TLS surface:
 
         - `certificate_pem` / `private_key_pem` — bring your own certificate,
-          loaded from `.kamal/secrets`.
+          loaded from `.dash/secrets`.
         - `on_demand_url` — instead of a fixed host list, the proxy asks this
           endpoint whether it may issue for the hostname in an incoming
           handshake (2xx approves). Mutually exclusive with `host`/`hosts`,

@@ -370,16 +370,18 @@ class ConfigurationTest < ActiveSupport::TestCase
     assert_equal config.role(:web_chicago).running_proxy?, true
   end
 
-  test "traefik hooks raise error" do
-    Dir.mktmpdir do |dir|
-      Dir.chdir(dir) do
-        FileUtils.mkdir_p ".kamal/hooks"
-        FileUtils.touch ".kamal/hooks/post-traefik-reboot"
-        FileUtils.touch ".kamal/hooks/pre-traefik-reboot"
-        exception = assert_raises(Dash::ConfigurationError) do
-          Dash::Configuration.new(@deploy)
+  [ ".dash", ".kamal" ].each do |project_directory|
+    test "traefik hooks in #{project_directory} raise error" do
+      Dir.mktmpdir do |dir|
+        Dir.chdir(dir) do
+          FileUtils.mkdir_p "#{project_directory}/hooks"
+          FileUtils.touch "#{project_directory}/hooks/post-traefik-reboot"
+          FileUtils.touch "#{project_directory}/hooks/pre-traefik-reboot"
+          exception = assert_raises(Dash::ConfigurationError) do
+            Dash::Configuration.new(@deploy)
+          end
+          assert_equal "Found pre-traefik-reboot, post-traefik-reboot, these should be renamed to (pre|post)-proxy-reboot", exception.message
         end
-        assert_equal "Found pre-traefik-reboot, post-traefik-reboot, these should be renamed to (pre|post)-proxy-reboot", exception.message
       end
     end
   end
@@ -637,4 +639,57 @@ class ConfigurationTest < ActiveSupport::TestCase
     assert_match "servers/workers/boot", error.message
     assert_match "boot/parallel_roles: false", error.message
   end
+
+  test "create_from exports the destination under both env prefixes" do
+    Dash::Configuration.create_from(config_file: Pathname.new(File.expand_path("fixtures/deploy_for_dest.yml", __dir__)), destination: "world")
+
+    assert_equal "world", ENV["DASH_DESTINATION"]
+    assert_equal "world", ENV["KAMAL_DESTINATION"]
+  ensure
+    ENV.delete("DASH_DESTINATION")
+    ENV.delete("KAMAL_DESTINATION")
+  end
+
+  test "hooks_path and secrets_path default to the .dash project directory" do
+    in_project_with(".dash") do
+      config = Dash::Configuration.new(@deploy)
+
+      assert_equal ".dash/hooks", config.hooks_path
+      assert_equal ".dash/secrets", config.secrets_path
+    end
+  end
+
+  test "hooks_path and secrets_path fall back to the legacy .kamal project directory" do
+    in_project_with(".kamal") do
+      config = Dash::Configuration.new(@deploy)
+
+      assert_equal ".kamal/hooks", config.hooks_path
+      assert_equal ".kamal/secrets", config.secrets_path
+    end
+  end
+
+  test "explicit hooks_path and secrets_path win over both project directories" do
+    in_project_with(".dash", ".kamal") do
+      config = Dash::Configuration.new(@deploy.merge(hooks_path: "config/hooks", secrets_path: "config/secrets"))
+
+      assert_equal "config/hooks", config.hooks_path
+      assert_equal "config/secrets", config.secrets_path
+    end
+  end
+
+  private
+    def in_project_with(*directories)
+      original_pwd = Dir.pwd
+
+      Dir.mktmpdir do |tmpdir|
+        directories.each { |directory| FileUtils.mkdir_p(File.join(tmpdir, directory)) }
+
+        begin
+          Dir.chdir(tmpdir)
+          yield
+        ensure
+          Dir.chdir(original_pwd)
+        end
+      end
+    end
 end

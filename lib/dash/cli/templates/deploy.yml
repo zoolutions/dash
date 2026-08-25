@@ -30,9 +30,9 @@ registry:
   # server: registry.digitalocean.com / ghcr.io / ...
   # username: my-user
 
-  # Always use an access token rather than real password (pulled from .kamal/secrets).
+  # Always use an access token rather than real password (pulled from .dash/secrets).
   # password:
-  #   - KAMAL_REGISTRY_PASSWORD
+  #   - DASH_REGISTRY_PASSWORD
 
 # Configure builder setup.
 builder:
@@ -41,7 +41,7 @@ builder:
   # args:
   #   RUBY_VERSION: <%= ENV["RBENV_VERSION"] || ENV["rvm_ruby_string"] || "#{RUBY_ENGINE}-#{RUBY_ENGINE_VERSION}" %>
 
-# Inject ENV variables into containers (secrets come from .kamal/secrets).
+# Inject ENV variables into containers (secrets come from .dash/secrets).
 #
 # env:
 #   clear:
@@ -77,7 +77,7 @@ builder:
 #   limit: 10 # Can also specify as a percentage of total hosts, such as "25%"
 #   wait: 2
 
-# Use accessory services (secrets come from .kamal/secrets).
+# Use accessory services (secrets come from .dash/secrets).
 #
 # accessories:
 #   db:

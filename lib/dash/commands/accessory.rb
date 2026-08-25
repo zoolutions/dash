@@ -20,7 +20,7 @@ class Dash::Commands::Accessory < Dash::Commands::Base
       *network_args,
       *config.logging_args,
       *publish_args,
-      *([ "--env", "KAMAL_HOST=\"#{host}\"" ] if host),
+      *([ "--env", "DASH_HOST=\"#{host}\"", "--env", "KAMAL_HOST=\"#{host}\"" ] if host),
       *env_args,
       *volume_args,
       *label_args,

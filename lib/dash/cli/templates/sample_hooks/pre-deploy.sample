@@ -7,17 +7,17 @@
 # Fails unless the combined status is "success"
 #
 # These environment variables are available:
-# KAMAL_RECORDED_AT
-# KAMAL_PERFORMER
-# KAMAL_VERSION
-# KAMAL_HOSTS
-# KAMAL_COMMAND
-# KAMAL_SUBCOMMAND
-# KAMAL_ROLES (if set)
-# KAMAL_DESTINATION (if set)
+# DASH_RECORDED_AT
+# DASH_PERFORMER
+# DASH_VERSION
+# DASH_HOSTS
+# DASH_COMMAND
+# DASH_SUBCOMMAND
+# DASH_ROLES (if set)
+# DASH_DESTINATION (if set)
 
 # Only check the build status for production deployments
-if ENV["KAMAL_COMMAND"] == "rollback" || ENV["KAMAL_DESTINATION"] != "production"
+if ENV["DASH_COMMAND"] == "rollback" || ENV["DASH_DESTINATION"] != "production"
   exit 0
 end
 

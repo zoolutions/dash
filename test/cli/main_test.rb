@@ -399,7 +399,7 @@ class CliMainTest < CliTestCase
       assert_hook_ran "pre-connect", output
       assert_match /Build and push app image/, output
       assert_hook_ran "pre-deploy", output
-      assert_match /Running \/usr\/bin\/env .kamal\/hooks\/pre-deploy /, output
+      assert_match /Running \/usr\/bin\/env .dash\/hooks\/pre-deploy /, output
       assert_hook_ran "post-deploy", output
     end
   end
@@ -637,11 +637,155 @@ class CliMainTest < CliTestCase
     in_dummy_git_repo do
       run_command("init").tap do |output|
         assert_match "Created configuration file in config/deploy.yml", output
-        assert_match "Created .kamal/secrets file", output
+        assert_match "Created .dash/secrets file", output
+        assert_match "Created sample hooks in .dash/hooks", output
       end
 
       assert_file "config/deploy.yml", "service: my-app"
-      assert_file ".kamal/secrets", "KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD"
+      assert_file ".dash/secrets", "DASH_REGISTRY_PASSWORD=$DASH_REGISTRY_PASSWORD"
+      assert_not File.exist?(".kamal")
+    end
+  end
+
+  test "init leaves an existing legacy project directory alone" do
+    in_dummy_git_repo do
+      FileUtils.mkdir_p ".kamal/hooks"
+      File.write ".kamal/secrets", "SECRET=existing"
+
+      run_command("init")
+
+      assert_not File.exist?(".dash/secrets")
+      assert_file ".kamal/secrets", "SECRET=existing"
+    end
+  end
+
+  test "migrate moves the legacy project directory with git mv" do
+    in_dummy_git_repo do
+      FileUtils.mkdir_p ".kamal/hooks"
+      File.write ".kamal/secrets", "SECRET=abc"
+      File.write ".kamal/hooks/pre-deploy", "echo $KAMAL_VERSION"
+      `git add -A && git -c user.email=t@t -c user.name=t commit -qm init`
+
+      run_command("migrate").tap do |output|
+        assert_match "Moved .kamal to .dash", output
+      end
+
+      assert_not File.exist?(".kamal")
+      assert_file ".dash/secrets", "SECRET=abc"
+
+      # `git mv` stages the rename, so the new paths are already tracked and the
+      # old ones are gone from the index — a plain FileUtils.mv would leave the
+      # operator with an unstaged delete plus untracked files.
+      tracked = `git ls-files`.lines.map(&:strip)
+      assert_includes tracked, ".dash/secrets"
+      assert_empty tracked.grep(/\A\.kamal/)
+    end
+  end
+
+  test "migrate moves the legacy project directory when it is not tracked by git" do
+    in_dummy_git_repo do
+      FileUtils.mkdir_p ".kamal"
+      File.write ".kamal/secrets", "SECRET=abc"
+
+      run_command("migrate")
+
+      assert_not File.exist?(".kamal")
+      assert_file ".dash/secrets", "SECRET=abc"
+    end
+  end
+
+  test "migrate reports legacy env var references without changing them" do
+    in_dummy_git_repo do
+      FileUtils.mkdir_p ".kamal/hooks"
+      File.write ".kamal/hooks/pre-deploy", "echo $KAMAL_VERSION on $KAMAL_HOSTS"
+
+      run_command("migrate").tap do |output|
+        assert_match "hooks/pre-deploy", output
+        assert_match "KAMAL_VERSION", output
+        assert_match "KAMAL_HOSTS", output
+      end
+
+      assert_file ".dash/hooks/pre-deploy", "echo $KAMAL_VERSION on $KAMAL_HOSTS"
+    end
+  end
+
+  test "migrate is a no-op when there is nothing to move" do
+    in_dummy_git_repo do
+      run_command("migrate").tap do |output|
+        assert_match "No .kamal directory to migrate", output
+      end
+
+      assert_not File.exist?(".dash")
+    end
+  end
+
+  test "migrate refuses to overwrite an existing .dash directory" do
+    in_dummy_git_repo do
+      FileUtils.mkdir_p ".dash"
+      FileUtils.mkdir_p ".kamal"
+
+      run_command("migrate").tap do |output|
+        assert_match "Both .dash and .kamal exist", output
+      end
+
+      assert File.exist?(".kamal")
+    end
+  end
+
+  test "migrate --dry-run touches nothing" do
+    in_dummy_git_repo do
+      FileUtils.mkdir_p ".kamal"
+      File.write ".kamal/secrets", "SECRET=abc"
+
+      run_command("migrate", "--dry-run").tap do |output|
+        assert_match "Would move .kamal to .dash", output
+      end
+
+      assert File.exist?(".kamal/secrets")
+      assert_not File.exist?(".dash")
+    end
+  end
+
+  test "commands warn once when the legacy project directory is in use" do
+    in_dummy_git_repo do
+      FileUtils.mkdir_p ".kamal"
+
+      output = run_command("version")
+
+      assert_match "Using the legacy .kamal/ project directory", output
+      assert_equal 1, output.scan("Using the legacy").size
+    end
+  end
+
+  # `Dash::Cli::Alias::Command#run` calls DASH.reset and re-enters
+  # Dash::Cli::Main.start, so a commander-scoped guard warns a second time.
+  test "an aliased command warns only once about the legacy project directory" do
+    config_path = File.expand_path("test/fixtures/deploy_with_aliases.yml")
+
+    in_dummy_git_repo do
+      FileUtils.mkdir_p ".kamal"
+
+      output = with_argv([ "info", "-c", config_path ]) do
+        stdouted { Dash::Cli::Main.start }
+      end
+
+      assert_equal 1, output.scan("Using the legacy").size
+    end
+  end
+
+  test "commands do not warn when the project uses .dash" do
+    in_dummy_git_repo do
+      FileUtils.mkdir_p ".dash"
+
+      assert_no_match /Using the legacy/, run_command("version")
+    end
+  end
+
+  test "migrate does not warn about the directory it is there to move" do
+    in_dummy_git_repo do
+      FileUtils.mkdir_p ".kamal"
+
+      assert_no_match /Using the legacy/, run_command("migrate")
     end
   end
 
@@ -651,7 +795,7 @@ class CliMainTest < CliTestCase
 
       run_command("init").tap do |output|
         assert_match /Config file already exists in config\/deploy.yml \(remove first to create a new one\)/, output
-        assert_no_match /Added .kamal\/secrets/, output
+        assert_no_match /Added .dash\/secrets/, output
       end
     end
   end
@@ -660,7 +804,7 @@ class CliMainTest < CliTestCase
     in_dummy_git_repo do
       run_command("init", "--bundle").tap do |output|
         assert_match "Created configuration file in config/deploy.yml", output
-        assert_match "Created .kamal/secrets file", output
+        assert_match "Created .dash/secrets file", output
         assert_match /Adding dash to Gemfile and bundle/, output
         assert_match /bundle add dash/, output
         assert_match /bundle binstubs dash/, output

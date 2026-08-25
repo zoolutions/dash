@@ -180,7 +180,7 @@ class Dash::Cli::Main < Dash::Cli::Base
     end
   end
 
-  desc "init", "Create config stub in config/deploy.yml and secrets stub in .kamal"
+  desc "init", "Create config stub in config/deploy.yml and secrets stub in .dash"
   option :bundle, type: :boolean, default: false, desc: "Add dash to the Gemfile and create a bin/dash binstub"
   def init
     require "fileutils"
@@ -193,18 +193,23 @@ class Dash::Cli::Main < Dash::Cli::Base
       puts "Created configuration file in config/deploy.yml"
     end
 
-    unless (secrets_file = Pathname.new(File.expand_path(".kamal/secrets"))).exist?
+    # Resolved rather than hardcoded to .dash: a project still on .kamal must
+    # keep getting its stubs there, or init would create a second directory that
+    # silently wins resolution and orphans the operator's real secrets.
+    project_directory = Dash::ProjectDirectory.path
+
+    unless (secrets_file = Pathname.new(File.expand_path("#{project_directory}/secrets"))).exist?
       FileUtils.mkdir_p secrets_file.dirname
       FileUtils.cp_r Pathname.new(File.expand_path("templates/secrets", __dir__)), secrets_file
-      puts "Created .kamal/secrets file"
+      puts "Created #{project_directory}/secrets file"
     end
 
-    unless (hooks_dir = Pathname.new(File.expand_path(".kamal/hooks"))).exist?
+    unless (hooks_dir = Pathname.new(File.expand_path("#{project_directory}/hooks"))).exist?
       hooks_dir.mkpath
       Pathname.new(File.expand_path("templates/sample_hooks", __dir__)).each_child do |sample_hook|
         FileUtils.cp sample_hook, hooks_dir, preserve: true
       end
-      puts "Created sample hooks in .kamal/hooks"
+      puts "Created sample hooks in #{project_directory}/hooks"
     end
 
     if options[:bundle]
@@ -232,6 +237,12 @@ class Dash::Cli::Main < Dash::Cli::Base
         invoke "dash:cli:registry:remove", [], options.without(:confirmed).merge(skip_local: true)
       end
     end
+  end
+
+  desc "migrate", "Move this project's .kamal directory to .dash"
+  option :dry_run, type: :boolean, default: false, desc: "Report what would move without touching anything"
+  def migrate
+    Dash::Cli::Main::Migrate.new(self, dry_run: options[:dry_run]).run
   end
 
   desc "upgrade", "Upgrade from Kamal 1.x to 2.0"

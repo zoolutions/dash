@@ -9,12 +9,12 @@
 # 4. The version we are deploying matches the remote
 #
 # These environment variables are available:
-# KAMAL_RECORDED_AT
-# KAMAL_PERFORMER
-# KAMAL_VERSION
-# KAMAL_HOSTS
-# KAMAL_ROLES (if set)
-# KAMAL_DESTINATION (if set)
+# DASH_RECORDED_AT
+# DASH_PERFORMER
+# DASH_VERSION
+# DASH_HOSTS
+# DASH_ROLES (if set)
+# DASH_DESTINATION (if set)
 
 if [ -n "$(git status --porcelain)" ]; then
   echo "Git checkout is not clean, aborting..." >&2
@@ -43,8 +43,8 @@ if [ -z "$remote_head" ]; then
   exit 1
 fi
 
-if [ "$KAMAL_VERSION" != "$remote_head" ]; then
-  echo "Version ($KAMAL_VERSION) does not match remote HEAD ($remote_head), aborting..." >&2
+if [ "$DASH_VERSION" != "$remote_head" ]; then
+  echo "Version ($DASH_VERSION) does not match remote HEAD ($remote_head), aborting..." >&2
   exit 1
 fi
 

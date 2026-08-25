@@ -81,7 +81,7 @@ asset_path: /path/to/assets
 
 # Hooks path
 #
-# Path to hooks, defaults to `.kamal/hooks`.
+# Path to hooks, defaults to `.dash/hooks` (`.kamal/hooks` is still read when only that exists).
 # See https://kamal-deploy.org/docs/hooks for more information:
 hooks_path: /user_home/kamal/hooks
 
@@ -106,8 +106,8 @@ hooks_output:
 
 # Secrets path
 #
-# Path to secrets, defaults to `.kamal/secrets`.
-# Kamal looks for `<secrets_path>-common` first and then `<secrets_path>`.
+# Path to secrets, defaults to `.dash/secrets` (`.kamal/secrets` is still read when only that exists).
+# dash looks for `<secrets_path>-common` first and then `<secrets_path>`.
 # When using destinations, it instead looks for `<secrets_path>-common` first and then
 # `<secrets_path>.<destination>`. Later files override earlier ones.
 secrets_path: /user_home/kamal/secrets

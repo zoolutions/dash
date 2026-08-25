@@ -26,8 +26,13 @@ class Dash::Tags
     @tags = tags.compact
   end
 
+  # Both prefixes carry the same value: hooks are operator-written and apps read
+  # these at runtime, so the old names stay until 5.0 (zoolutions/dash#118).
   def env
-    tags.transform_keys { |detail| "KAMAL_#{detail.upcase}" }
+    tags.each_with_object({}) do |(detail, value), env|
+      env["DASH_#{detail.upcase}"] = value
+      env["KAMAL_#{detail.upcase}"] = value
+    end
   end
 
   def to_s

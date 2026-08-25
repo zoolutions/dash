@@ -16,15 +16,20 @@ class CommandsHookTest < ActiveSupport::TestCase
   end
 
   test "run" do
-    assert_equal [ ".kamal/hooks/foo" ], new_command.run("foo")
+    assert_equal [ ".dash/hooks/foo" ], new_command.run("foo")
   end
 
   test "env" do
     assert_equal ({
+      "DASH_RECORDED_AT" => @recorded_at,
       "KAMAL_RECORDED_AT" => @recorded_at,
+      "DASH_PERFORMER" => @performer,
       "KAMAL_PERFORMER" => @performer,
+      "DASH_VERSION" => "123",
       "KAMAL_VERSION" => "123",
+      "DASH_SERVICE_VERSION" => "app@123",
       "KAMAL_SERVICE_VERSION" => "app@123",
+      "DASH_SERVICE" => "app",
       "KAMAL_SERVICE" => "app"
     }), new_command.env
   end
@@ -37,10 +42,15 @@ class CommandsHookTest < ActiveSupport::TestCase
     with_test_secrets("secrets" => "DB_PASSWORD=secret") do
       assert_equal (
         {
+          "DASH_RECORDED_AT" => @recorded_at,
           "KAMAL_RECORDED_AT" => @recorded_at,
+          "DASH_PERFORMER" => @performer,
           "KAMAL_PERFORMER" => @performer,
+          "DASH_VERSION" => "123",
           "KAMAL_VERSION" => "123",
+          "DASH_SERVICE_VERSION" => "app@123",
           "KAMAL_SERVICE_VERSION" => "app@123",
+          "DASH_SERVICE" => "app",
           "KAMAL_SERVICE" => "app",
           "DB_PASSWORD" => "secret" }
       ), new_command.env(secrets: true)

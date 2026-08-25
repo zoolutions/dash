@@ -3,9 +3,9 @@ require "dotenv"
 class Dash::Secrets
   Dash::Secrets::Dotenv::InlineCommandSubstitution.install!
 
-  def initialize(destination: nil, secrets_path: ".kamal/secrets")
+  def initialize(destination: nil, secrets_path: nil)
     @destination = destination
-    @secrets_path = secrets_path
+    @secrets_path = secrets_path || Dash::ProjectDirectory.join("secrets")
     @mutex = Mutex.new
   end
 

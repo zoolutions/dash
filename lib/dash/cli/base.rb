@@ -18,6 +18,12 @@ module Dash::Cli
     def self.exit_on_failure?() true end
     def self.dynamic_command_class() Dash::Cli::Alias::Command end
 
+    # One legacy-project-directory deprecation notice per process. Tests reset it
+    # in CliTestCase, the same way they reset the DASH singleton.
+    class << self
+      attr_accessor :legacy_project_directory_warned
+    end
+
     class_option :verbose, type: :boolean, aliases: "-v", desc: "Detailed logging"
     class_option :quiet, type: :boolean, aliases: "-q", desc: "Minimal logging"
 
@@ -45,7 +51,10 @@ module Dash::Cli
         super
       end
 
-      initialize_commander unless DASH.configured?
+      unless DASH.configured?
+        initialize_commander
+        warn_on_legacy_project_directory(config[:current_command]&.name)
+      end
     end
 
     # Public so collaborators like Dash::Cli::App::Boot can fire hooks, but not a Thor command.
@@ -88,6 +97,21 @@ module Dash::Cli
     private
       def options_with_subcommand_class_options
         options.merge(@_initializer.last[:class_options] || {})
+      end
+
+      # Process-scoped rather than commander-scoped: Dash::Cli::Alias::Command
+      # resets DASH and re-enters Dash::Cli::Main.start, so an aliased command
+      # builds a second commander and would otherwise warn twice. `dash migrate`
+      # is exempt - telling an operator to run the command they are running is noise.
+      def warn_on_legacy_project_directory(command_name)
+        return if command_name == "migrate"
+        return if Dash::Cli::Base.legacy_project_directory_warned
+        return unless Dash::ProjectDirectory.legacy?
+
+        Dash::Cli::Base.legacy_project_directory_warned = true
+
+        say "Using the legacy #{Dash::ProjectDirectory::LEGACY}/ project directory. Run `dash migrate` to move it to " \
+            "#{Dash::ProjectDirectory::CURRENT}/ (#{Dash::ProjectDirectory::LEGACY}/ support is removed in dash 5.0).", :yellow
       end
 
       def initialize_commander

@@ -274,7 +274,7 @@ class Dash::Configuration::Proxy
     ssl_config["on_demand_url"]
   end
 
-  # The name of a secret in .kamal/secrets holding the CA bundle client
+  # The name of a secret in .dash/secrets holding the CA bundle client
   # certificates must chain to - mirroring ssl.certificate_pem, not a local
   # file path. Kamal uploads the content into the app's TLS directory, which
   # the proxy container already mounts, and hands the proxy the path it sees
@@ -602,7 +602,7 @@ class Dash::Configuration::Proxy
 
     # kamal-proxy takes the credential as <username>:<password> and cuts at the
     # first colon, so a password may contain colons but a username may not (the
-    # validator enforces that). The password is read from .kamal/secrets when
+    # validator enforces that). The password is read from .dash/secrets when
     # password_secret names it, so it need not live in deploy.yml.
     def basic_auth_credential
       basic_auth = proxy_config["basic_auth"]

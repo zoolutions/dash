@@ -2,8 +2,8 @@
 
 # Runs on each host just after the previous container has been stopped.
 #
-# NOTE: $KAMAL_VERSION is the version that was STOPPED, not the one being deployed.
+# NOTE: $DASH_VERSION is the version that was STOPPED, not the one being deployed.
 #
 # A failure here is logged and the deploy continues.
 
-echo "Stopped $KAMAL_ROLE version $KAMAL_VERSION on $KAMAL_HOSTS"
+echo "Stopped $DASH_ROLE version $DASH_VERSION on $DASH_HOSTS"

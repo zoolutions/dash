@@ -200,7 +200,56 @@ class CommanderTest < ActiveSupport::TestCase
     assert_nil @kamal.instance_variable_get(:@output_logger)
   end
 
+  test "held locks are picked up from the DASH env vars" do
+    with_env("DASH_LOCK" => "true", "DASH_SERVER_LOCK" => "true") do
+      commander = Dash::Commander.new
+
+      assert commander.holding_lock?
+      assert commander.holding_server_lock?
+    end
+  end
+
+  test "held locks are picked up from the legacy KAMAL env vars" do
+    with_env("KAMAL_LOCK" => "true", "KAMAL_SERVER_LOCK" => "true") do
+      commander = Dash::Commander.new
+
+      assert commander.holding_lock?
+      assert commander.holding_server_lock?
+    end
+  end
+
+  test "the DASH env var wins when both are set" do
+    with_env("DASH_LOCK" => "false", "KAMAL_LOCK" => "true") do
+      assert_not Dash::Commander.new.holding_lock?
+    end
+
+    with_env("DASH_LOCK" => "true", "KAMAL_LOCK" => "false") do
+      assert Dash::Commander.new.holding_lock?
+    end
+  end
+
+  test "no lock is held when neither env var is set" do
+    with_env({}) do
+      commander = Dash::Commander.new
+
+      assert_not commander.holding_lock?
+      assert_not commander.holding_server_lock?
+    end
+  end
+
   private
+    def with_env(vars)
+      names = %w[ DASH_LOCK DASH_SERVER_LOCK KAMAL_LOCK KAMAL_SERVER_LOCK ]
+      original = names.to_h { |name| [ name, ENV[name] ] }
+
+      names.each { |name| ENV.delete(name) }
+      vars.each { |name, value| ENV[name] = value }
+
+      yield
+    ensure
+      original.each { |name, value| value.nil? ? ENV.delete(name) : ENV[name] = value }
+    end
+
     def configure_with(variant)
       @kamal = Dash::Commander.new.tap do |kamal|
         kamal.configure config_file: Pathname.new(File.expand_path("fixtures/#{variant}.yml", __dir__))

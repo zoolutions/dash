@@ -19,13 +19,13 @@ builder:
 
   # Remote
   #
-  # The connection string for a remote builder. If supplied, Kamal will use this
+  # The connection string for a remote builder. If supplied, dash will use this
   # for builds that do not match the local architecture of the deployment host.
   remote: ssh://docker@docker-builder
 
   # Local
   #
-  # If set to false, Kamal will always use the remote builder even when building
+  # If set to false, dash will always use the remote builder even when building
   # the local architecture.
   #
   # Defaults to true:
@@ -87,7 +87,7 @@ builder:
 
   # Build secrets
   #
-  # Values are read from `.kamal/secrets`:
+  # Values are read from `.dash/secrets`:
   secrets:
     - SECRET1
     - SECRET2
