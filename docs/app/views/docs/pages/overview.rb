@@ -31,10 +31,11 @@ class Views::Docs::Pages::Overview < DocsUI::Page
         merge — proxy load balancing, readiness gates, response caching, traffic
         shaping, SAN certificate batching, wildcard certificates — and moves at
         its own pace. Existing kamal deployments **upgrade in place**: the
-        on-server artifacts (the `.kamal/` directory, the `kamal-proxy`
-        container) are unchanged, `KAMAL_*` env vars are still set alongside
-        their `DASH_*` twins, and a `.kamal/` directory in your repo is still
-        read. See [From kamal](/docs/from-kamal) for the migration story.
+        `kamal-proxy` container is untouched, the server's `.kamal/` directory
+        renames itself to `.dash/` on the next deploy, `KAMAL_*` env vars are
+        still set alongside their `DASH_*` twins, and a `.kamal/` directory in
+        your repo is still read. See [From kamal](/docs/from-kamal) for the
+        migration story.
       MD
     end
   end

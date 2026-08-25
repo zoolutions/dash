@@ -155,11 +155,11 @@ class CliAppTest < CliTestCase
 
     run_command("boot", config: :with_assets).tap do |output|
       assert_match "docker tag dhh/app:latest dhh/app:latest", output
-      assert_match "/usr/bin/env mkdir -p .kamal/apps/app/assets/volumes/web-latest ; cp -rnT .kamal/apps/app/assets/extracted/web-latest .kamal/apps/app/assets/volumes/web-latest ; cp -rnT .kamal/apps/app/assets/extracted/web-latest .kamal/apps/app/assets/volumes/web-123 || true ; cp -rnT .kamal/apps/app/assets/extracted/web-123 .kamal/apps/app/assets/volumes/web-latest || true", output
-      assert_match "/usr/bin/env mkdir -p .kamal/apps/app/assets/extracted/web-latest && docker container rm app-web-assets 2> /dev/null || true && docker container create --name app-web-assets dhh/app:latest && docker container cp -L app-web-assets:/public/assets/. .kamal/apps/app/assets/extracted/web-latest && docker container rm app-web-assets", output
+      assert_match "/usr/bin/env mkdir -p .dash/apps/app/assets/volumes/web-latest ; cp -rnT .dash/apps/app/assets/extracted/web-latest .dash/apps/app/assets/volumes/web-latest ; cp -rnT .dash/apps/app/assets/extracted/web-latest .dash/apps/app/assets/volumes/web-123 || true ; cp -rnT .dash/apps/app/assets/extracted/web-123 .dash/apps/app/assets/volumes/web-latest || true", output
+      assert_match "/usr/bin/env mkdir -p .dash/apps/app/assets/extracted/web-latest && docker container rm app-web-assets 2> /dev/null || true && docker container create --name app-web-assets dhh/app:latest && docker container cp -L app-web-assets:/public/assets/. .dash/apps/app/assets/extracted/web-latest && docker container rm app-web-assets", output
       assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname 1.1.1.1-[0-9a-f]{12} /, output
       assert_match "docker container ls --all --filter 'name=^app-web-123$' --quiet | xargs docker stop", output
-      assert_match "/usr/bin/env find .kamal/apps/app/assets/extracted -maxdepth 1 -name 'web-*' ! -name web-latest -exec rm -rf \"{}\" + ; find .kamal/apps/app/assets/volumes -maxdepth 1 -name 'web-*' ! -name web-latest -exec rm -rf \"{}\" +", output
+      assert_match "/usr/bin/env find .dash/apps/app/assets/extracted -maxdepth 1 -name 'web-*' ! -name web-latest -exec rm -rf \"{}\" + ; find .dash/apps/app/assets/volumes -maxdepth 1 -name 'web-*' ! -name web-latest -exec rm -rf \"{}\" +", output
     end
   end
 
@@ -374,11 +374,11 @@ class CliAppTest < CliTestCase
     with_error_pages(directory: "public") do
       stub_running
       run_command("boot", config: :with_error_pages).tap do |output|
-        assert_match /Uploading .*kamal-error-pages.*\/latest to \.kamal\/proxy\/apps-config\/app\/error_pages/, output
+        assert_match /Uploading .*kamal-error-pages.*\/latest to \.dash\/proxy\/apps-config\/app\/error_pages/, output
         assert_match "docker tag dhh/app:latest dhh/app:latest", output
         assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname 1.1.1.1-[0-9a-f]{12} /, output
         assert_match "docker container ls --all --filter 'name=^app-web-123$' --quiet | xargs docker stop", output
-        assert_match "Running /usr/bin/env find .kamal/proxy/apps-config/app/error_pages -mindepth 1 -maxdepth 1 ! -name latest -exec rm -rf {} + on 1.1.1.1", output
+        assert_match "Running /usr/bin/env find .dash/proxy/apps-config/app/error_pages -mindepth 1 -maxdepth 1 ! -name latest -exec rm -rf {} + on 1.1.1.1", output
       end
     end
   end
@@ -391,8 +391,8 @@ class CliAppTest < CliTestCase
     stub_running
     run_command("boot", config: :with_proxy).tap do |output|
       assert_match "Writing SSL certificates for web on 1.1.1.1", output
-      assert_match "mkdir -p .kamal/proxy/apps-config/app/tls", output
-      assert_match "Uploading \"CERTIFICATE CONTENT\" to .kamal/proxy/apps-config/app/tls/web/cert.pem", output
+      assert_match "mkdir -p .dash/proxy/apps-config/app/tls", output
+      assert_match "Uploading \"CERTIFICATE CONTENT\" to .dash/proxy/apps-config/app/tls/web/cert.pem", output
       assert_match "--tls-certificate-path=\"/home/kamal-proxy/.apps-config/app/tls/web/cert.pem\"", output
       assert_match "--tls-private-key-path=\"/home/kamal-proxy/.apps-config/app/tls/web/key.pem\"", output
     end
@@ -408,8 +408,8 @@ class CliAppTest < CliTestCase
     stub_running
     run_command("boot", config: :with_proxy).tap do |output|
       assert_match "Writing SSL certificates for web on 1.1.1.1", output
-      assert_match "mkdir -p .kamal/proxy/apps-config/app/tls", output
-      assert_match "Uploading \"ca-bundle-content\" to .kamal/proxy/apps-config/app/tls/web/client-ca.pem", output
+      assert_match "mkdir -p .dash/proxy/apps-config/app/tls", output
+      assert_match "Uploading \"ca-bundle-content\" to .dash/proxy/apps-config/app/tls/web/client-ca.pem", output
       assert_match "--tls-client-ca-path=\"/home/kamal-proxy/.apps-config/app/tls/web/client-ca.pem\"", output
     end
   end
@@ -469,8 +469,8 @@ class CliAppTest < CliTestCase
       assert_match "sh -c 'docker ps --latest --quiet --filter label=service=app --filter label=destination= --filter label=role=web --filter status=running --filter status=restarting --filter ancestor=$(docker image ls --filter reference=dhh/app:latest --format '\\''{{.ID}}'\\'') ; docker ps --latest --quiet --filter label=service=app --filter label=destination= --filter label=role=web --filter status=running --filter status=restarting' | head -1 | xargs docker stop", output
       assert_match "docker container prune --force --filter label=service=app", output
       assert_match "docker image prune --all --force --filter label=service=app", output
-      assert_match "rm -r .kamal/apps/app on 1.1.1.1", output
-      assert_match "rm -r .kamal/proxy/apps-config/app on 1.1.1.1", output
+      assert_match "rm -r .dash/apps/app on 1.1.1.1", output
+      assert_match "rm -r .dash/proxy/apps-config/app on 1.1.1.1", output
     end
   end
 
@@ -480,8 +480,8 @@ class CliAppTest < CliTestCase
       assert_match "docker container prune --force --filter label=service=app", output
       # Images and directories should NOT be removed when other roles remain on the host
       assert_no_match(/docker image prune --all --force --filter label=service=app/, output)
-      assert_no_match(/rm -r .kamal\/apps\/app/, output)
-      assert_no_match(/rm -r .kamal\/proxy\/apps-config\/app/, output)
+      assert_no_match(/rm -r .dash\/apps\/app/, output)
+      assert_no_match(/rm -r .dash\/proxy\/apps-config\/app/, output)
     end
   end
 
@@ -491,8 +491,8 @@ class CliAppTest < CliTestCase
       assert_match "docker container prune --force --filter label=service=app", output
       # Images and directories SHOULD be removed when all roles on host are removed
       assert_match "docker image prune --all --force --filter label=service=app", output
-      assert_match "rm -r .kamal/apps/app on 1.1.1.1", output
-      assert_match "rm -r .kamal/proxy/apps-config/app on 1.1.1.1", output
+      assert_match "rm -r .dash/apps/app on 1.1.1.1", output
+      assert_match "rm -r .dash/proxy/apps-config/app on 1.1.1.1", output
     end
   end
 
@@ -516,15 +516,15 @@ class CliAppTest < CliTestCase
 
   test "remove_app_directories" do
     run_command("remove_app_directories").tap do |output|
-      assert_match "rm -r .kamal/apps/app on 1.1.1.1", output
-      assert_match "rm -r .kamal/proxy/apps-config/app on 1.1.1.1", output
+      assert_match "rm -r .dash/apps/app on 1.1.1.1", output
+      assert_match "rm -r .dash/proxy/apps-config/app on 1.1.1.1", output
     end
   end
 
   test "exec" do
     run_command("exec", "ruby -v").tap do |output|
       assert_match "docker login -u [REDACTED] -p [REDACTED]", output
-      assert_match %r{docker run --rm --name app-web-exec-latest-[0-9a-f]{6} --network kamal --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v}, output
+      assert_match %r{docker run --rm --name app-web-exec-latest-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v}, output
     end
   end
 
@@ -537,13 +537,13 @@ class CliAppTest < CliTestCase
 
   test "exec separate arguments" do
     run_command("exec", "ruby", " -v").tap do |output|
-      assert_match %r{docker run --rm --name app-web-exec-latest-[0-9a-f]{6} --network kamal --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v}, output
+      assert_match %r{docker run --rm --name app-web-exec-latest-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v}, output
     end
   end
 
   test "exec detach" do
     run_command("exec", "--detach", "ruby -v").tap do |output|
-      assert_match %r{docker run --detach --name app-web-exec-latest-[0-9a-f]{6} --network kamal --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v}, output
+      assert_match %r{docker run --detach --name app-web-exec-latest-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v}, output
     end
   end
 
@@ -575,7 +575,7 @@ class CliAppTest < CliTestCase
   test "exec interactive" do
     Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.expects(:exec)
-      .with(regexp_matches(%r{ssh -t root@1\.1\.1\.1 -p 22 'docker run -it --rm --name app-web-exec-latest-[0-9a-f]{6} --network kamal --env-file .kamal/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v'}))
+      .with(regexp_matches(%r{ssh -t root@1\.1\.1\.1 -p 22 'docker run -it --rm --name app-web-exec-latest-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v'}))
 
     stub_stdin_tty do
       run_command("exec", "-i", "ruby -v").tap do |output|
@@ -707,7 +707,7 @@ class CliAppTest < CliTestCase
     run_command("boot", config: :with_proxy).tap do |output|
       assert_match /Renaming container .* to .* as already deployed on 1.1.1.1/, output # Rename
       assert_match /docker rename app-web-latest app-web-latest_replaced_[0-9a-f]{16}/, output
-      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname 1.1.1.1-[0-9a-f]{12} --env KAMAL_CONTAINER_NAME="app-web-latest" --env KAMAL_VERSION="latest" --env KAMAL_HOST="1.1.1.1" --env-file .kamal\/apps\/app\/env\/roles\/web.env --log-opt max-size="10m" --label service="app" --label role="web" --label destination dhh\/app:latest/, output
+      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname 1.1.1.1-[0-9a-f]{12} --env KAMAL_CONTAINER_NAME="app-web-latest" --env KAMAL_VERSION="latest" --env KAMAL_HOST="1.1.1.1" --env-file .dash\/apps\/app\/env\/roles\/web.env --log-opt max-size="10m" --label service="app" --label role="web" --label destination dhh\/app:latest/, output
       assert_match /Deploying web on 1.1.1.1 via kamal-proxy \(waiting up to 6s for it to become healthy\).../, output
       assert_match /docker exec kamal-proxy kamal-proxy deploy app-web --target="123:80"/, output
       assert_match "docker container ls --all --filter 'name=^app-web-123$' --quiet | xargs docker stop", output

@@ -171,8 +171,15 @@ stop_timeout: 30
 
 # Run directory
 #
-# Directory to store dash runtime files in on the host, default `.kamal`:
-run_directory: /etc/kamal
+# Where dash keeps its runtime files on each host — per-app env and assets, the
+# proxy's boot files and apps-config mount, loadbalancer service claims, deploy
+# locks, and the audit log. Resolved against the SSH user's home, default
+# `.dash`. A host still holding the pre-3.4 `.kamal` directory is renamed to
+# `.dash` in place the next time dash takes a lock on it; nothing is rebooted.
+#
+# The key is accepted but not yet honoured — the path is currently always
+# `.dash`. Tracked separately from the stage-3 rename.
+run_directory: .dash
 
 # SSH options
 #

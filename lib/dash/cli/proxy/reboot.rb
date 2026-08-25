@@ -52,7 +52,7 @@ class Dash::Cli::Proxy::Reboot
     # generation starts. This used to live inside stop_and_replace only, and
     # the port-holder paths launched their generation without it — a
     # port-holder reboot on a host without the file died with
-    # "open .kamal/proxy/secrets.env: no such file or directory".
+    # "open .dash/proxy/secrets.env: no such file or directory".
     def sync_proxy_secrets
       if (run_config = proxy.proxy_run_config)&.secrets?
         upload! run_config.secrets_io, run_config.secrets_path, mode: "0600"

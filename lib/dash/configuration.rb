@@ -8,6 +8,10 @@ require "net/ssh/proxy/jump"
 class Dash::Configuration
   HOOKS_OUTPUT_LEVELS = [ :quiet, :verbose ].freeze
 
+  # The pre-3b name of #run_directory. Referenced only by the one-shot host
+  # migration in Dash::Commands::Base; nothing reads paths under it.
+  LEGACY_RUN_DIRECTORY = ".kamal"
+
   delegate :service, :labels, :hooks_path, to: :raw_config, allow_nil: true
   delegate :argumentize, :optionize, to: Dash::Utils
 
@@ -292,8 +296,14 @@ class Dash::Configuration
     raw_config.stop_timeout
   end
 
+  # Where dash keeps its per-host state - app env and assets, the proxy's
+  # options/image/run_command files and apps-config bind mount, loadbalancer
+  # service claims, deploy locks and the audit log - under the SSH user's home.
+  # Renamed from `.kamal` in stage 3b of the server artifact rename
+  # (zoolutions/dash#118); hosts still on the old name are migrated in place by
+  # Dash::Commands::Base#ensure_run_directory.
   def run_directory
-    ".kamal"
+    ".dash"
   end
 
   def apps_directory

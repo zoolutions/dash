@@ -1,6 +1,29 @@
 require_relative "integration_test"
 
 class MainTest < IntegrationTest
+  # Stage 3b (#123): a host that last deployed with dash <= 3.3 keeps its state in
+  # `.kamal/`. The first locked command renames it in place, so the audit log and
+  # the proxy's boot files survive and nothing is rebooted. Only an integration
+  # run can exercise this branch — a fresh host never has the legacy directory.
+  test "an existing .kamal run directory is migrated to .dash on deploy" do
+    [ "vm1", "vm2" ].each do |vm|
+      vm_exec(vm, "mkdir -p /root/.kamal/proxy && echo carried-over > /root/.kamal/app-audit.log")
+    end
+
+    kamal :deploy
+    assert_app_is_up
+
+    [ "vm1", "vm2" ].each do |vm|
+      assert_not path_exists_on?(vm, "/root/.kamal"), "#{vm} still has the legacy .kamal directory"
+      assert_equal "carried-over", vm_exec(vm, "cat /root/.dash/app-audit.log | head -1", capture: true).strip
+    end
+
+    # Second pass: the guard is false now, so this is a no-op rather than a
+    # failure — the migration runs on every locked command, not just the first.
+    kamal :deploy
+    assert_app_is_up
+  end
+
   test "deploy, redeploy, rollback, details and audit" do
     first_version = latest_app_version
 

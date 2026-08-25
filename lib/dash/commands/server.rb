@@ -1,8 +1,4 @@
 class Dash::Commands::Server < Dash::Commands::Base
-  def ensure_run_directory
-    make_directory config.run_directory
-  end
-
   def remove_app_directory
     remove_directory config.app_directory
   end

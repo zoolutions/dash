@@ -76,7 +76,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     assert_equal "redis://a/b", config_with_roles.role(:workers).env("1.1.1.3").clear["REDIS_URL"]
 
     assert_equal \
-      [ "--env", "REDIS_URL=\"redis://a/b\"", "--env", "WEB_CONCURRENCY=\"4\"", "--env-file", ".kamal/apps/app/env/roles/workers.env" ],
+      [ "--env", "REDIS_URL=\"redis://a/b\"", "--env", "WEB_CONCURRENCY=\"4\"", "--env-file", ".dash/apps/app/env/roles/workers.env" ],
       config_with_roles.role(:workers).env_args("1.1.1.3").map(&:to_s)
 
     assert_equal \
@@ -95,7 +95,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
 
   test "env args" do
     assert_equal \
-      [ "--env", "REDIS_URL=\"redis://a/b\"", "--env", "WEB_CONCURRENCY=\"4\"", "--env-file", ".kamal/apps/app/env/roles/workers.env" ],
+      [ "--env", "REDIS_URL=\"redis://a/b\"", "--env", "WEB_CONCURRENCY=\"4\"", "--env-file", ".dash/apps/app/env/roles/workers.env" ],
       config_with_roles.role(:workers).env_args("1.1.1.3").map(&:to_s)
 
     assert_equal \
@@ -125,7 +125,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
       }
 
       assert_equal \
-        [ "--env", "REDIS_URL=\"redis://a/b\"", "--env", "WEB_CONCURRENCY=\"4\"", "--env-file", ".kamal/apps/app/env/roles/workers.env" ],
+        [ "--env", "REDIS_URL=\"redis://a/b\"", "--env", "WEB_CONCURRENCY=\"4\"", "--env-file", ".dash/apps/app/env/roles/workers.env" ],
         config_with_roles.role(:workers).env_args("1.1.1.3").map(&:to_s)
 
       assert_equal \
@@ -147,7 +147,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
       }
 
       assert_equal \
-        [ "--env", "REDIS_URL=\"redis://a/b\"", "--env", "WEB_CONCURRENCY=\"4\"", "--env-file", ".kamal/apps/app/env/roles/workers.env" ],
+        [ "--env", "REDIS_URL=\"redis://a/b\"", "--env", "WEB_CONCURRENCY=\"4\"", "--env-file", ".dash/apps/app/env/roles/workers.env" ],
         config_with_roles.role(:workers).env_args("1.1.1.3").map(&:to_s)
 
       assert_equal \
@@ -168,7 +168,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
       }
 
       assert_equal \
-        [ "--env", "REDIS_URL=\"redis://a/b\"", "--env", "WEB_CONCURRENCY=\"4\"", "--env-file", ".kamal/apps/app/env/roles/workers.env" ],
+        [ "--env", "REDIS_URL=\"redis://a/b\"", "--env", "WEB_CONCURRENCY=\"4\"", "--env-file", ".dash/apps/app/env/roles/workers.env" ],
         config_with_roles.role(:workers).env_args("1.1.1.3").map(&:to_s)
 
       assert_equal \
@@ -195,7 +195,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
       }
 
       assert_equal \
-        [ "--env", "REDIS_URL=\"redis://c/d\"", "--env-file", ".kamal/apps/app/env/roles/workers.env" ],
+        [ "--env", "REDIS_URL=\"redis://c/d\"", "--env-file", ".dash/apps/app/env/roles/workers.env" ],
         config_with_roles.role(:workers).env_args("1.1.1.3").map(&:to_s)
 
       assert_equal \
@@ -218,7 +218,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     })
     assert_equal "foo", config_with_assets.role(:web).asset_path
     assert_equal "foo", config_with_assets.role(:workers).asset_path
-    assert_equal [ "--volume", "$PWD/.kamal/apps/app/assets/volumes/web-12345:foo" ], config_with_assets.role(:web).asset_volume_args
+    assert_equal [ "--volume", "$PWD/.dash/apps/app/assets/volumes/web-12345:foo" ], config_with_assets.role(:web).asset_volume_args
     assert_nil config_with_assets.role(:workers).asset_volume_args
     assert config_with_assets.role(:web).assets?
     assert_not config_with_assets.role(:workers).assets?
@@ -228,7 +228,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     })
     assert_equal "bar", config_with_assets.role(:web).asset_path
     assert_nil config_with_assets.role(:workers).asset_path
-    assert_equal [ "--volume", "$PWD/.kamal/apps/app/assets/volumes/web-12345:bar" ], config_with_assets.role(:web).asset_volume_args
+    assert_equal [ "--volume", "$PWD/.dash/apps/app/assets/volumes/web-12345:bar" ], config_with_assets.role(:web).asset_volume_args
     assert_nil config_with_assets.role(:workers).asset_volume_args
     assert config_with_assets.role(:web).assets?
     assert_not config_with_assets.role(:workers).assets?
@@ -245,14 +245,14 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
     })
     assert_equal "/rails/public/assets", config_with_assets.role(:web).asset_path
     assert_equal "z", config_with_assets.role(:web).asset_path_options
-    assert_equal [ "--volume", "$PWD/.kamal/apps/app/assets/volumes/web-12345:/rails/public/assets:z" ], config_with_assets.role(:web).asset_volume_args
+    assert_equal [ "--volume", "$PWD/.dash/apps/app/assets/volumes/web-12345:/rails/public/assets:z" ], config_with_assets.role(:web).asset_volume_args
 
     config_with_assets = Dash::Configuration.new(@deploy_with_roles.dup.tap { |c|
       c[:servers]["web"] = { "hosts" => [ "1.1.1.1", "1.1.1.2" ], "asset_path" => "/assets:ro,z" }
     })
     assert_equal "/assets", config_with_assets.role(:web).asset_path
     assert_equal "ro,z", config_with_assets.role(:web).asset_path_options
-    assert_equal [ "--volume", "$PWD/.kamal/apps/app/assets/volumes/web-12345:/assets:ro,z" ], config_with_assets.role(:web).asset_volume_args
+    assert_equal [ "--volume", "$PWD/.dash/apps/app/assets/volumes/web-12345:/assets:ro,z" ], config_with_assets.role(:web).asset_volume_args
 
   ensure
     ENV.delete("VERSION")
@@ -260,16 +260,16 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
 
   test "asset extracted path" do
     ENV["VERSION"] = "12345"
-    assert_equal ".kamal/apps/app/assets/extracted/web-12345", config_with_roles.role(:web).asset_extracted_directory
-    assert_equal ".kamal/apps/app/assets/extracted/workers-12345", config_with_roles.role(:workers).asset_extracted_directory
+    assert_equal ".dash/apps/app/assets/extracted/web-12345", config_with_roles.role(:web).asset_extracted_directory
+    assert_equal ".dash/apps/app/assets/extracted/workers-12345", config_with_roles.role(:workers).asset_extracted_directory
   ensure
     ENV.delete("VERSION")
   end
 
   test "asset volume path" do
     ENV["VERSION"] = "12345"
-    assert_equal ".kamal/apps/app/assets/volumes/web-12345", config_with_roles.role(:web).asset_volume_directory
-    assert_equal ".kamal/apps/app/assets/volumes/workers-12345", config_with_roles.role(:workers).asset_volume_directory
+    assert_equal ".dash/apps/app/assets/volumes/web-12345", config_with_roles.role(:web).asset_volume_directory
+    assert_equal ".dash/apps/app/assets/volumes/workers-12345", config_with_roles.role(:workers).asset_volume_directory
   ensure
     ENV.delete("VERSION")
   end

@@ -10,13 +10,13 @@ class CommandsLockTest < ActiveSupport::TestCase
 
   test "status" do
     assert_equal \
-      "stat .kamal/lock-app-production > /dev/null && cat .kamal/lock-app-production/details | base64 -d",
+      "stat .dash/lock-app-production > /dev/null && cat .dash/lock-app-production/details | base64 -d",
       new_command.status.join(" ")
   end
 
   test "acquire" do
     assert_match \
-      %r{mkdir \.kamal/lock-app-production && echo ".*" > \.kamal/lock-app-production/details}m,
+      %r{mkdir \.dash/lock-app-production && echo ".*" > \.dash/lock-app-production/details}m,
       new_command.acquire("Hello", "123").join(" ")
   end
 
@@ -24,7 +24,7 @@ class CommandsLockTest < ActiveSupport::TestCase
     Dash::Git.stubs(:user_name).returns("Сергей Федоров")
 
     command = new_command.acquire("Hello", "123").join(" ")
-    encoded_details = command.match(/echo "(.*)" > \.kamal\/lock-app-production\/details/m)[1]
+    encoded_details = command.match(/echo "(.*)" > \.dash\/lock-app-production\/details/m)[1]
 
     assert_predicate command, :ascii_only?
     assert_includes Base64.decode64(encoded_details).force_encoding(Encoding::UTF_8), "Locked by: Сергей Федоров"
@@ -32,23 +32,23 @@ class CommandsLockTest < ActiveSupport::TestCase
 
   test "release" do
     assert_match \
-      "rm .kamal/lock-app-production/details && rm -r .kamal/lock-app-production",
+      "rm .dash/lock-app-production/details && rm -r .dash/lock-app-production",
       new_command.release.join(" ")
   end
 
   test "server-scoped lock omits service and destination so every deploy collides" do
     assert_equal \
-      "stat .kamal/lock-server > /dev/null && cat .kamal/lock-server/details | base64 -d",
+      "stat .dash/lock-server > /dev/null && cat .dash/lock-server/details | base64 -d",
       new_command(scope: :server).status.join(" ")
   end
 
   test "server-scoped acquire and release target the shared directory" do
     assert_match \
-      %r{mkdir \.kamal/lock-server && echo ".*" > \.kamal/lock-server/details}m,
+      %r{mkdir \.dash/lock-server && echo ".*" > \.dash/lock-server/details}m,
       new_command(scope: :server).acquire("Hello", "123").join(" ")
 
     assert_match \
-      "rm .kamal/lock-server/details && rm -r .kamal/lock-server",
+      "rm .dash/lock-server/details && rm -r .dash/lock-server",
       new_command(scope: :server).release.join(" ")
   end
 

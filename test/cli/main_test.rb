@@ -152,14 +152,14 @@ class CliMainTest < CliTestCase
     Dir.stubs(:chdir)
 
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-      .with { |*args| args == [ :mkdir, "-p", ".kamal/apps/app" ] }
+      .with { |*args| args == [ :mkdir, "-p", ".dash/apps/app" ] }
 
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-      .with { |*arg| arg[0..1] == [ :mkdir, ".kamal/lock-app" ] }
+      .with { |*arg| arg[0..1] == [ :mkdir, ".dash/lock-app" ] }
       .raises(RuntimeError, "mkdir: cannot create directory ‘kamal/lock-app’: File exists")
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_debug)
-      .with(:stat, ".kamal/lock-app", ">", "/dev/null", "&&", :cat, ".kamal/lock-app/details", "|", :base64, "-d")
+      .with(:stat, ".dash/lock-app", ">", "/dev/null", "&&", :cat, ".dash/lock-app/details", "|", :base64, "-d")
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
       .with(:git, "-C", anything, :"rev-parse", :HEAD)
@@ -186,16 +186,16 @@ class CliMainTest < CliTestCase
     Dir.stubs(:chdir)
 
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-      .with { |*args| args == [ :mkdir, "-p", ".kamal/apps/app" ] }
+      .with { |*args| args == [ :mkdir, "-p", ".dash/apps/app" ] }
 
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-      .with { |*arg| arg[0..1] == [ :mkdir, ".kamal/lock-app" ] }
+      .with { |*arg| arg[0..1] == [ :mkdir, ".dash/lock-app" ] }
       .raises(RuntimeError, "mkdir: cannot create directory ‘kamal/lock-app’: File exists").then
       .raises(RuntimeError, "mkdir: cannot create directory ‘kamal/lock-app’: File exists").then
       .returns(nil)
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_debug)
-      .with(:stat, ".kamal/lock-app", ">", "/dev/null", "&&", :cat, ".kamal/lock-app/details", "|", :base64, "-d")
+      .with(:stat, ".dash/lock-app", ">", "/dev/null", "&&", :cat, ".dash/lock-app/details", "|", :base64, "-d")
       .returns("Locked by: alice\nVersion: 999\nMessage: Automatic deploy lock")
 
     Dash::Cli::Base.any_instance.stubs(:sleep)
@@ -224,14 +224,14 @@ class CliMainTest < CliTestCase
     Dir.stubs(:chdir)
 
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-      .with { |*args| args == [ :mkdir, "-p", ".kamal/apps/app" ] }
+      .with { |*args| args == [ :mkdir, "-p", ".dash/apps/app" ] }
 
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-      .with { |*arg| arg[0..1] == [ :mkdir, ".kamal/lock-app" ] }
+      .with { |*arg| arg[0..1] == [ :mkdir, ".dash/lock-app" ] }
       .raises(RuntimeError, "mkdir: cannot create directory ‘kamal/lock-app’: File exists")
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_debug)
-      .with(:stat, ".kamal/lock-app", ">", "/dev/null", "&&", :cat, ".kamal/lock-app/details", "|", :base64, "-d")
+      .with(:stat, ".dash/lock-app", ">", "/dev/null", "&&", :cat, ".dash/lock-app/details", "|", :base64, "-d")
       .returns("Locked by: alice\nVersion: 999\nMessage: Automatic deploy lock")
 
     Dash::Cli::Base.any_instance.stubs(:sleep)
@@ -260,14 +260,14 @@ class CliMainTest < CliTestCase
     Dir.stubs(:chdir)
 
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-      .with { |*args| args == [ :mkdir, "-p", ".kamal/apps/app" ] }
+      .with { |*args| args == [ :mkdir, "-p", ".dash/apps/app" ] }
 
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-      .with { |*arg| arg[0..1] == [ :mkdir, ".kamal/lock-app" ] }
+      .with { |*arg| arg[0..1] == [ :mkdir, ".dash/lock-app" ] }
       .raises(RuntimeError, "mkdir: cannot create directory ‘kamal/lock-app’: File exists")
 
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_debug)
-      .with(:stat, ".kamal/lock-app", ">", "/dev/null", "&&", :cat, ".kamal/lock-app/details", "|", :base64, "-d")
+      .with(:stat, ".dash/lock-app", ">", "/dev/null", "&&", :cat, ".dash/lock-app/details", "|", :base64, "-d")
       .returns("Locked by: alice\nVersion: 999\nMessage: Stopping deploys for maintenance")
 
     # A manually held lock must never trigger a wait, even with a long timeout
@@ -324,10 +324,10 @@ class CliMainTest < CliTestCase
     Dir.stubs(:chdir)
 
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-      .with { |*args| args == [ :mkdir, "-p", ".kamal/apps/app" ] }
+      .with { |*args| args == [ :mkdir, "-p", ".dash/apps/app" ] }
 
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-      .with { |*arg| arg[0..1] == [ :mkdir, ".kamal/lock-app" ] }
+      .with { |*arg| arg[0..1] == [ :mkdir, ".dash/lock-app" ] }
       .raises(SocketError, "getaddrinfo: nodename nor servname provided, or not known")
 
     SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
@@ -507,7 +507,7 @@ class CliMainTest < CliTestCase
 
   test "audit" do
     run_command("audit").tap do |output|
-      assert_match %r{tail -n 50 \.kamal/app-audit.log on 1.1.1.1}, output
+      assert_match %r{tail -n 50 \.dash/app-audit.log on 1.1.1.1}, output
       assert_match /App Host: 1.1.1.1/, output
     end
   end
@@ -835,7 +835,7 @@ class CliMainTest < CliTestCase
       assert_match /docker ps --quiet --filter label=service=app | xargs docker stop/, output
       assert_match /docker container prune --force --filter label=service=app/, output
       assert_match /docker image prune --all --force --filter label=service=app/, output
-      assert_match "/usr/bin/env rm -r .kamal/apps/app", output
+      assert_match "/usr/bin/env rm -r .dash/apps/app", output
 
       assert_match /docker container stop app-mysql/, output
       assert_match /docker container prune --force --filter label=service=app-mysql/, output

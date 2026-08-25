@@ -48,7 +48,7 @@ class CliServerTest < CliTestCase
   test "bootstrap already installed" do
     stub_setup
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:docker, "-v", raise_on_non_zero_exit: false).returns(true).at_least_once
-    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:mkdir, "-p", ".kamal").returns("").at_least_once
+    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(*ENSURE_RUN_DIRECTORY).returns("").at_least_once
 
     assert_equal "Acquiring the deploy lock...\nReleasing the deploy lock...", run_command("bootstrap")
   end
@@ -57,7 +57,7 @@ class CliServerTest < CliTestCase
     stub_setup
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:docker, "-v", raise_on_non_zero_exit: false).returns(false).at_least_once
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with('[ "${EUID:-$(id -u)}" -eq 0 ] || sudo -nl usermod >/dev/null', raise_on_non_zero_exit: false).returns(false).at_least_once
-    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:mkdir, "-p", ".kamal").returns("").at_least_once
+    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(*ENSURE_RUN_DIRECTORY).returns("").at_least_once
 
     assert_raise RuntimeError, "Docker is not installed on 1.1.1.1, 1.1.1.3, 1.1.1.4, 1.1.1.2 and can't be automatically installed without having root access and the `curl` command available. Install Docker manually: https://docs.docker.com/engine/install/" do
       run_command("bootstrap")
@@ -70,7 +70,7 @@ class CliServerTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with('[ "${EUID:-$(id -u)}" -eq 0 ] || sudo -nl usermod >/dev/null', raise_on_non_zero_exit: false).returns(true).at_least_once
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:sh, "-c", "'curl -fsSL https://get.docker.com || wget -O - https://get.docker.com || echo \"exit 1\"'", "|", :sh).at_least_once
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with('[ "${EUID:-$(id -u)}" -eq 0 ]', raise_on_non_zero_exit: false).returns(true).at_least_once
-    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:mkdir, "-p", ".kamal").returns("").at_least_once
+    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(*ENSURE_RUN_DIRECTORY).returns("").at_least_once
     Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".dash/hooks/pre-connect", anything).at_least_once
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".dash/hooks/docker-setup", anything).at_least_once
@@ -91,7 +91,7 @@ class CliServerTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with('id -nG "${USER:-$(id -un)}" | grep -qw docker', raise_on_non_zero_exit: false).returns(false).at_least_once
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with('sudo -n usermod -aG docker "${USER:-$(id -un)}"').at_least_once
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with("kill -HUP $PPID").at_least_once.raises(IOError, "closed stream")
-    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:mkdir, "-p", ".kamal").returns("").at_least_once
+    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(*ENSURE_RUN_DIRECTORY).returns("").at_least_once
     Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".dash/hooks/pre-connect", anything).at_least_once
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".dash/hooks/docker-setup", anything).at_least_once

@@ -10,7 +10,7 @@ class Dash::Commands::Auditor < Dash::Commands::Base
   # Runs remotely
   def record(line, **details)
     combine \
-      make_run_directory,
+      ensure_run_directory,
       append([ :echo, escape_shell_value(audit_line(line, **details)) ], audit_log_file)
   end
 
@@ -27,10 +27,6 @@ class Dash::Commands::Auditor < Dash::Commands::Base
 
     def audit_tags(**details)
       tags(**self.details, **details)
-    end
-
-    def make_run_directory
-      [ :mkdir, "-p", config.run_directory ]
     end
 
     def audit_line(line, **details)

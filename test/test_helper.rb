@@ -48,6 +48,15 @@ class ActiveSupport::TestCase
   include ActiveSupport::Testing::Stream
   extend Rails::LineFiltering
 
+  # Dash::Commands::Base#ensure_run_directory — the one-shot .kamal -> .dash
+  # migration plus the mkdir. Every command that can be the first to touch the
+  # run directory emits exactly this, so it is spelled out once here and any
+  # change to either half has to be deliberate.
+  ENSURE_RUN_DIRECTORY = [
+    :test, "-d", ".kamal", "&&", :test, "!", "-e", ".dash", "&&", :mv, ".kamal", ".dash", "||", :true,
+    "&&", :mkdir, "-p", ".dash"
+  ].freeze
+
   private
     def stdouted
       capture(:stdout) { yield }.strip

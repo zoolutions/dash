@@ -62,7 +62,7 @@ class Dash::Commands::Loadbalancer < Dash::Commands::Base
   end
 
   def config_digest
-    docker :inspect, container_name, "--format", "'{{ index .Config.Labels \"#{Dash::Commands::Proxy::CONFIG_DIGEST_LABEL}\" }}'"
+    docker :inspect, container_name, "--format", Dash::Commands::Proxy::CONFIG_DIGEST_FORMAT
   end
 
   def container_id(only_running: false)
@@ -110,7 +110,7 @@ class Dash::Commands::Loadbalancer < Dash::Commands::Base
   end
 
   # Where the proxy secrets env file lands (see Proxy::Run#secrets_path) -
-  # the same .kamal/proxy directory the per-app proxy hosts use.
+  # the same .dash/proxy directory the per-app proxy hosts use.
   def ensure_proxy_directory
     make_directory loadbalancer_config.run.host_directory
   end
