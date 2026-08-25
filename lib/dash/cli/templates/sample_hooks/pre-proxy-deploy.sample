@@ -1,3 +1,3 @@
 #!/usr/bin/env sh
 
-echo "Routing traffic for $KAMAL_ROLE version $KAMAL_VERSION on $KAMAL_HOSTS..."
+echo "Routing traffic for $DASH_ROLE version $DASH_VERSION on $DASH_HOSTS..."

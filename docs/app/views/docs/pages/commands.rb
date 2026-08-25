@@ -17,7 +17,7 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     [ "dash config", "Show combined config (including secrets!)" ],
     [ "dash docs [SECTION]", "Show dash configuration documentation" ],
     [ "dash doctor", "Diagnose deploy readiness of servers, registry, proxy, ports, DNS, certificates, and per-role readiness gates" ],
-    [ "dash init", "Create config stub in config/deploy.yml and secrets stub in .kamal" ],
+    [ "dash init", "Create config stub in config/deploy.yml and secrets stub in .dash" ],
     [ "dash remove", "Remove the proxy, app, accessories, and registry session from servers" ],
     [ "dash upgrade", "Upgrade from Kamal 1.x to 2.0" ],
     [ "dash version", "Show dash version" ]

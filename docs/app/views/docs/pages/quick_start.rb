@@ -45,7 +45,7 @@ class Views::Docs::Pages::QuickStart < DocsUI::Page
         registry:
           username: my-user
           password:
-            - KAMAL_REGISTRY_PASSWORD
+            - DASH_REGISTRY_PASSWORD
 
         # The architecture to build for.
         builder:
@@ -62,11 +62,11 @@ class Views::Docs::Pages::QuickStart < DocsUI::Page
   def secrets
     DocsUI::Section("Provide the registry password") do
       md <<~'MD'
-        Secrets are read from `.kamal/secrets` — dotenv format, with command
+        Secrets are read from `.dash/secrets` — dotenv format, with command
         substitution for password managers:
       MD
-      DocsUI::Code(<<~SHELL, filename: ".kamal/secrets")
-        KAMAL_REGISTRY_PASSWORD=$KAMAL_REGISTRY_PASSWORD
+      DocsUI::Code(<<~SHELL, filename: ".dash/secrets")
+        DASH_REGISTRY_PASSWORD=$DASH_REGISTRY_PASSWORD
       SHELL
       md <<~'MD'
         See the [Environment](/docs/env) reference for secret env vars and the

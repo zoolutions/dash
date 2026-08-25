@@ -7,6 +7,7 @@ class CliTestCase < ActiveSupport::TestCase
     ENV["MYSQL_ROOT_PASSWORD"] = "secret123"
     Object.send(:remove_const, :DASH)
     Object.const_set(:DASH, Dash::Commander.new)
+    Dash::Cli::Base.legacy_project_directory_warned = false
 
     # Ensure no loadbalancer functionality interferes with tests
     Dash::Configuration::Proxy.any_instance.stubs(:load_balancing?).returns(false)
@@ -24,9 +25,9 @@ class CliTestCase < ActiveSupport::TestCase
       Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
 
       SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-        .with { |*args| @executions << args; args != [ ".kamal/hooks/#{hook}" ] }
+        .with { |*args| @executions << args; args != [ ".dash/hooks/#{hook}" ] }
       SSHKit::Backend::Abstract.any_instance.stubs(:execute)
-        .with { |*args| args.first == ".kamal/hooks/#{hook}" }
+        .with { |*args| args.first == ".dash/hooks/#{hook}" }
         .raises(SSHKit::Command::Failed.new("failed"))
     end
 
@@ -44,7 +45,7 @@ class CliTestCase < ActiveSupport::TestCase
     end
 
     def assert_hook_ran(hook, output, count: 1)
-      regexp = ([ "/usr/bin/env .kamal/hooks/#{hook}" ] * count).join(".*")
+      regexp = ([ "/usr/bin/env .dash/hooks/#{hook}" ] * count).join(".*")
       assert_match /#{regexp}/m, output
     end
 

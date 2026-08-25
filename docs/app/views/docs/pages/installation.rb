@@ -69,7 +69,7 @@ class Views::Docs::Pages::Installation < DocsUI::Page
 
         - `config/deploy.yml` — the deployment configuration; every key is
           documented in the [Configuration](/docs/configuration) reference.
-        - `.kamal/secrets` — where registry passwords and other secrets are
+        - `.dash/secrets` — where registry passwords and other secrets are
           read from (dotenv format, command substitution supported).
       MD
     end

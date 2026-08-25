@@ -4,7 +4,7 @@
 
 # Using a local container registry
 #
-# If the registry server starts with `localhost`, Kamal will start a local Docker registry
+# If the registry server starts with `localhost`, dash will start a local Docker registry
 # on that port and push the app image to it.
 registry:
   server: localhost:5555
@@ -15,13 +15,13 @@ registry:
 # set up a private repository before deploying, or change the default repository privacy
 # settings to private in your [Docker Hub settings](https://hub.docker.com/repository-settings/default-privacy).
 #
-# A reference to a secret (in this case, `KAMAL_REGISTRY_PASSWORD`) will look up the secret
+# A reference to a secret (in this case, `DASH_REGISTRY_PASSWORD`) will look up the secret
 # in the local environment:
 registry:
   username:
     - <your docker hub username>
   password:
-    - KAMAL_REGISTRY_PASSWORD
+    - DASH_REGISTRY_PASSWORD
 
 # Using AWS ECR as the container registry
 #
@@ -45,7 +45,7 @@ registry:
 # base64 -i /path/to/key.json | tr -d "\\n"
 # ```
 #
-# You'll then need to set the `KAMAL_REGISTRY_PASSWORD` secret to that value.
+# You'll then need to set the `DASH_REGISTRY_PASSWORD` secret to that value.
 #
 # Use the environment variable as the password along with `_json_key_base64` as the username.
 # Here’s the final configuration:
@@ -53,7 +53,7 @@ registry:
   server: <your registry region>-docker.pkg.dev
   username: _json_key_base64
   password:
-    - KAMAL_REGISTRY_PASSWORD
+    - DASH_REGISTRY_PASSWORD
 
 # Validating the configuration
 #

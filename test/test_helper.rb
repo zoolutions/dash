@@ -78,21 +78,26 @@ class ActiveSupport::TestCase
       original_stdin.close
     end
 
-    def with_test_secrets(**files)
-      setup_test_secrets(**files)
+    def with_test_secrets(directory: Dash::ProjectDirectory::CURRENT, **files)
+      setup_test_secrets(directory: directory, **files)
       yield
     ensure
       teardown_test_secrets
     end
 
-    def setup_test_secrets(**files)
+    # The pre-3a layout, for exercising the `.kamal/` fallback.
+    def with_legacy_test_secrets(**files, &block)
+      with_test_secrets(directory: Dash::ProjectDirectory::LEGACY, **files, &block)
+    end
+
+    def setup_test_secrets(directory: Dash::ProjectDirectory::CURRENT, **files)
       @original_pwd = Dir.pwd
       @secrets_tmpdir = Dir.mktmpdir
       copy_fixtures(@secrets_tmpdir)
 
       Dir.chdir(@secrets_tmpdir)
-      FileUtils.mkdir_p(".kamal")
-      Dir.chdir(".kamal") do
+      FileUtils.mkdir_p(directory)
+      Dir.chdir(directory) do
         files.each do |filename, contents|
           File.binwrite(filename.to_s, contents)
         end

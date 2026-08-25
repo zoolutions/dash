@@ -32,8 +32,9 @@ class Views::Docs::Pages::Overview < DocsUI::Page
         shaping, SAN certificate batching, wildcard certificates — and moves at
         its own pace. Existing kamal deployments **upgrade in place**: the
         on-server artifacts (the `.kamal/` directory, the `kamal-proxy`
-        container, `KAMAL_*` secrets) are unchanged. See
-        [From kamal](/docs/from-kamal) for the migration story.
+        container) are unchanged, `KAMAL_*` env vars are still set alongside
+        their `DASH_*` twins, and a `.kamal/` directory in your repo is still
+        read. See [From kamal](/docs/from-kamal) for the migration story.
       MD
     end
   end
@@ -73,7 +74,7 @@ class Views::Docs::Pages::Overview < DocsUI::Page
         registry:
           username: my-user
           password:
-            - KAMAL_REGISTRY_PASSWORD
+            - DASH_REGISTRY_PASSWORD
       YAML
     end
   end

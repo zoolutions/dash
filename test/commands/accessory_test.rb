@@ -73,6 +73,12 @@ class CommandsAccessoryTest < ActiveSupport::TestCase
       new_command(:busybox).run.join(" ")
   end
 
+  test "run with a host injects the host under both env prefixes" do
+    command = new_command(:mysql).run(host: "1.1.1.3").join(" ")
+
+    assert_match "--env DASH_HOST=\"1.1.1.3\" --env KAMAL_HOST=\"1.1.1.3\"", command
+  end
+
   test "run with logging config" do
     @config[:logging] = { "driver" => "local", "options" => { "max-size" => "100m", "max-file" => "3" } }
 

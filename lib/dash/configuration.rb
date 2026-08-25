@@ -18,7 +18,7 @@ class Dash::Configuration
 
   class << self
     def create_from(config_file:, destination: nil, version: nil)
-      ENV["KAMAL_DESTINATION"] = destination
+      ENV["DASH_DESTINATION"] = ENV["KAMAL_DESTINATION"] = destination
 
       raw_config = load_raw_config(config_file: config_file, destination: destination)
 
@@ -313,11 +313,11 @@ class Dash::Configuration
   end
 
   def hooks_path
-    raw_config.hooks_path || ".kamal/hooks"
+    raw_config.hooks_path || Dash::ProjectDirectory.join("hooks")
   end
 
   def secrets_path
-    raw_config.secrets_path || ".kamal/secrets"
+    raw_config.secrets_path || Dash::ProjectDirectory.join("secrets")
   end
 
   def asset_path

@@ -72,8 +72,8 @@ class CliServerTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with('[ "${EUID:-$(id -u)}" -eq 0 ]', raise_on_non_zero_exit: false).returns(true).at_least_once
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:mkdir, "-p", ".kamal").returns("").at_least_once
     Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
-    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".kamal/hooks/pre-connect", anything).at_least_once
-    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".kamal/hooks/docker-setup", anything).at_least_once
+    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".dash/hooks/pre-connect", anything).at_least_once
+    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".dash/hooks/docker-setup", anything).at_least_once
 
     run_command("bootstrap").tap do |output|
       ("1.1.1.1".."1.1.1.4").map do |host|
@@ -93,8 +93,8 @@ class CliServerTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with("kill -HUP $PPID").at_least_once.raises(IOError, "closed stream")
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with(:mkdir, "-p", ".kamal").returns("").at_least_once
     Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
-    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".kamal/hooks/pre-connect", anything).at_least_once
-    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".kamal/hooks/docker-setup", anything).at_least_once
+    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".dash/hooks/pre-connect", anything).at_least_once
+    SSHKit::Backend::Abstract.any_instance.expects(:execute).with(".dash/hooks/docker-setup", anything).at_least_once
 
     run_command("bootstrap").tap do |output|
       ("1.1.1.1".."1.1.1.4").map do |host|

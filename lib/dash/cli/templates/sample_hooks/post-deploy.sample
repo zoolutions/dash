@@ -3,12 +3,12 @@
 # A sample post-deploy hook
 #
 # These environment variables are available:
-# KAMAL_RECORDED_AT
-# KAMAL_PERFORMER
-# KAMAL_VERSION
-# KAMAL_HOSTS
-# KAMAL_ROLES (if set)
-# KAMAL_DESTINATION (if set)
-# KAMAL_RUNTIME
+# DASH_RECORDED_AT
+# DASH_PERFORMER
+# DASH_VERSION
+# DASH_HOSTS
+# DASH_ROLES (if set)
+# DASH_DESTINATION (if set)
+# DASH_RUNTIME
 
-echo "$KAMAL_PERFORMER deployed $KAMAL_VERSION to $KAMAL_DESTINATION in $KAMAL_RUNTIME seconds"
+echo "$DASH_PERFORMER deployed $DASH_VERSION to $DASH_DESTINATION in $DASH_RUNTIME seconds"

@@ -39,21 +39,22 @@ class Views::Docs::Pages::FromKamal < DocsUI::Page
   end
 
   def what_stays
-    DocsUI::Section("What stays exactly the same") do
+    DocsUI::Section("What keeps working") do
       DocsUI::Table(
         [ "Artifact", "Status" ],
         [
           [ [ :code, "config/deploy.yml" ], [ :md, "Keys unchanged — dash's config is a superset of kamal 2.x; every dash-only key is optional. ERB that calls into the gem needs `Kamal::` renamed to `Dash::` (see below)." ] ],
-          [ [ :code, ".kamal/secrets" ], [ :md, "Unchanged — same location, same dotenv format." ] ],
+          [ [ :code, ".kamal/secrets" ], [ :md, "Still read — the default is now `.dash/secrets`, but dash falls back to `.kamal/` when that is the only directory present. Run `dash migrate` to move it." ] ],
           [ [ :md, "`.kamal/` on the servers" ], [ :md, "Unchanged — locks, audit log, and hooks live where they always did." ] ],
           [ [ :md, "`kamal-proxy` container" ], [ :md, "Same container name; dash manages the one kamal booted." ] ],
-          [ [ :md, "`KAMAL_*` env vars & secrets" ], [ :md, "Unchanged — `KAMAL_REGISTRY_PASSWORD` and friends keep their names." ] ],
-          [ [ :md, "Hooks (`.kamal/hooks/`)" ], [ :md, "Unchanged — same hook names, same environment." ] ]
+          [ [ :md, "`KAMAL_*` env vars & secrets" ], [ :md, "Still set — dash writes `DASH_*` and `KAMAL_*` side by side, so existing hooks and apps keep working. The `KAMAL_*` names go away in dash 5.0." ] ],
+          [ [ :md, "Hooks (`.kamal/hooks/`)" ], [ :md, "Still read — same hook names, same environment, with `.dash/hooks/` as the new default location." ] ]
         ]
       )
       md <<~'MD'
         There is nothing to migrate on the servers — a host deployed with kamal
-        is a host dash can deploy to.
+        is a host dash can deploy to. In your own repo, `.kamal/` keeps working
+        as-is; `dash migrate` moves it to `.dash/` when you are ready.
       MD
     end
   end
@@ -122,6 +123,9 @@ class Views::Docs::Pages::FromKamal < DocsUI::Page
 
         # 3. Deploy — reboots the proxy onto dash-proxy, then ships the app
         dash deploy
+
+        # 4. Optional, any time: move .kamal/ to .dash/ in your own repo
+        dash migrate
       SHELL
       md <<~'MD'
         Upstream kamal's docs at [kamal-deploy.org](https://kamal-deploy.org)

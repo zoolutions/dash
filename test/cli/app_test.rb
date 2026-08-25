@@ -850,7 +850,7 @@ class CliAppTest < CliTestCase
     stderred { run_command("boot") }
 
     assert @executions.any? { |args| args.join(" ").include?("app-web-123") && args.join(" ").include?("docker stop") }
-    assert @executions.any? { |args| args.first == ".kamal/hooks/post-app-stop" }
+    assert @executions.any? { |args| args.first == ".dash/hooks/post-app-stop" }
   end
 
   test "boot gates a role with an exec healthcheck on the probe's exit code" do

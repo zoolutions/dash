@@ -15,8 +15,8 @@ class Dash::Commander
 
   def reset
     self.verbosity = :info
-    self.holding_lock = ENV["KAMAL_LOCK"] == "true"
-    self.holding_server_lock = ENV["KAMAL_SERVER_LOCK"] == "true"
+    self.holding_lock = env_flag("DASH_LOCK", "KAMAL_LOCK")
+    self.holding_server_lock = env_flag("DASH_SERVER_LOCK", "KAMAL_SERVER_LOCK")
     self.connected = false
     self.logging = false
     self.lock_wait = false
@@ -237,5 +237,13 @@ class Dash::Commander
 
     def specifics
       @specifics ||= Dash::Commander::Specifics.new(config, specific_hosts, specific_roles)
+    end
+
+    # First name that is set wins, so DASH_* takes precedence over the legacy
+    # KAMAL_* twin rather than either one merely being truthy. Dash::Tags#env
+    # writes both with the same value, so they only disagree when an operator
+    # sets one by hand.
+    def env_flag(*names)
+      names.filter_map { |name| ENV[name] }.first == "true"
     end
 end

@@ -24,7 +24,7 @@ class Dash::Cli::App::SslCertificates
     end
 
     # The client CA arrives the same way the server certificate does: as
-    # secret content named in .kamal/secrets, resolved here at upload time.
+    # secret content named in .dash/secrets, resolved here at upload time.
     if role.proxy.client_ca?
       upload!(StringIO.new(role.proxy.client_ca_pem_content), role.proxy.host_client_ca, mode: "0644")
     end
