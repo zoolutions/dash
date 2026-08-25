@@ -1,0 +1,23 @@
+lib/dash/cli/main/migrate.rb
+  s_005eb982cd5af6::t_acf4d233ced611 7-10,18,20,25,28,32,35,58,64,66-69
+test/cli/migrate_test.rb
+  s_005eb982cd5af6::t_0dd7394f28cda2 1-72
+lib/dash/cli/main.rb
+  s_005eb982cd5af6::t_13220badbcbf45 245
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "e6bff27654458f16201421ab3e011d113d2c6f3c",
+  "prompts": {},
+  "sessions": {
+    "s_005eb982cd5af6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e6593723-610e-4611-a86f-01887d00cdad",
+        "model": "claude-opus-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
