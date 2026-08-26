@@ -75,8 +75,16 @@ COPY --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --from=build /app /app
 
 # Non-root runtime user; owns the writable dirs.
+#
+# The dirs are created here rather than relying on the build context to carry
+# them. Rails' .gitignore empties log/ and tmp/, and this repo has no .keep
+# files in either, so nothing about them survives into the context — the
+# .dockerignore negations for /docs/log/.keep and /docs/tmp/.keep name files
+# that do not exist. Creating them in the image also means the runtime does not
+# depend on .gitignore, .dockerignore and a pair of .keep files agreeing.
 RUN groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash && \
+    mkdir -p /app/docs/log /app/docs/tmp/pids && \
     chown -R 1000:1000 /app/docs/log /app/docs/tmp
 USER 1000:1000
 
