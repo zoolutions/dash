@@ -1,6 +1,6 @@
 # Proxy
 #
-# Kamal uses [kamal-proxy](https://github.com/basecamp/kamal-proxy) to provide
+# Kamal uses [dash-proxy](https://github.com/basecamp/dash-proxy) to provide
 # gapless deployments. It runs on ports 80 and 443 and forwards requests to the
 # application container.
 #
@@ -74,13 +74,13 @@ proxy:
   # Sharing one loadbalancer between several dash apps
   #
   # More than one dash app may point `loadbalancer:` at the same host. Each app
-  # registers its own service on the shared kamal-proxy and keeps its own
+  # registers its own service on the shared dash-proxy and keeps its own
   # deploy.yml; the load balancer multiplexes them by hostname.
   #
   # The rules dash enforces for that topology:
   #
-  # * Service state survives a reboot. kamal-proxy persists its services in the
-  #   `kamal-loadbalancer-config` volume (or `kamal-proxy-config` when the
+  # * Service state survives a reboot. dash-proxy persists its services in the
+  #   `dash-loadbalancer-config` volume (or `dash-proxy-config` when the
   #   loadbalancer shares a proxy host), and `dash proxy reboot` only replaces
   #   the container. Rebooting from app A does not drop app B's routes — the
   #   surviving service list is printed after the restart.
@@ -104,7 +104,7 @@ proxy:
 
   # Automatic proxy reboot on deploy
   #
-  # When `dash deploy` detects that the running kamal-proxy container was
+  # When `dash deploy` detects that the running dash-proxy container was
   # started with a different image, version or run options than the current
   # configuration, it reboots the proxy automatically — one host at a time —
   # before booting the app.
@@ -126,13 +126,13 @@ proxy:
 
   # SSL
   #
-  # kamal-proxy can provide automatic HTTPS for your application via Let's Encrypt.
+  # dash-proxy can provide automatic HTTPS for your application via Let's Encrypt.
   #
   # This requires that we are deploying to one server and the host option is set.
   # The host value must point to the server we are deploying to, and port 443 must be
   # open for the Let's Encrypt challenge to succeed.
   #
-  # If you set `ssl` to `true`, `kamal-proxy` will stop forwarding headers to your app,
+  # If you set `ssl` to `true`, `dash-proxy` will stop forwarding headers to your app,
   # unless you explicitly set `forward_headers: true`
   #
   # Defaults to `false`:
@@ -156,7 +156,7 @@ proxy:
   # absolute http(s) URL is called directly. Answer 2xx to approve. On-demand TLS
   # replaces the static hostname list, so it cannot be combined with
   # `host`/`hosts`, with `certificate_pem`, or with `ssl_domains` — dash rejects
-  # those at config time, because kamal-proxy would reject the deploy and there
+  # those at config time, because dash-proxy would reject the deploy and there
   # is no sensible winner to pick.
   #
   # `client_ca_pem` requires mutual TLS: clients must present a certificate
@@ -176,7 +176,7 @@ proxy:
 
   # SSL redirect
   #
-  # By default, kamal-proxy will redirect all HTTP requests to HTTPS when SSL is enabled.
+  # By default, dash-proxy will redirect all HTTP requests to HTTPS when SSL is enabled.
   # If you prefer that HTTP traffic is passed through to your application (along with
   # HTTPS traffic), you can disable this redirect by setting `ssl_redirect: false`:
   ssl_redirect: false
@@ -244,7 +244,7 @@ proxy:
   #
   # If you are behind a trusted proxy, you can set this to `true` to forward the headers.
   #
-  # By default, kamal-proxy will not forward the headers if the `ssl` option is set to `true`, and
+  # By default, dash-proxy will not forward the headers if the `ssl` option is set to `true`, and
   # will forward them if it is set to `false`.
   forward_headers: true
 
@@ -278,7 +278,7 @@ proxy:
       set:
         Strict-Transport-Security: max-age=31536000
       add:
-        X-Served-By: kamal-proxy
+        X-Served-By: dash-proxy
       remove:
         - Server
 
@@ -329,7 +329,7 @@ proxy:
   #
   # Authentication tokens live in the PROXY's environment, not the app's: polls
   # send `KAMAL_PROXY_REDIRECTS_TOKEN` as a bearer token when set, and
-  # `POST /.kamal-proxy/redirects/refresh` nudges an immediate re-poll when
+  # `POST /.dash-proxy/redirects/refresh` nudges an immediate re-poll when
   # authenticated with `KAMAL_PROXY_REFRESH_TOKEN`. Set both via
   # `proxy.run.options.env`, next to `KAMAL_PROXY_DOMAINS_TOKEN` — never as
   # deploy flags, which leak into process listings and audit logs.
@@ -397,19 +397,19 @@ proxy:
     password_secret: WEB_BASIC_AUTH_PASSWORD
   #
   # ### Notes
-  # - Requires a kamal-proxy that supports `--basic-auth`. This is newer than
+  # - Requires a dash-proxy that supports `--basic-auth`. This is newer than
   #   the current `MINIMUM_VERSION`, so make sure your proxy is up to date
   #   before enabling it — an older proxy fails the deploy on an unknown flag.
   # - Basic credentials are replayable and are sent on every request. Use this
   #   with `ssl: true`, or terminate TLS in front of the proxy.
-  # - kamal-proxy removes the `Authorization` header before forwarding, so a
+  # - dash-proxy removes the `Authorization` header before forwarding, so a
   #   service behind basic auth cannot also pass credentials through to its
   #   target. When load balancing, the credentials are enforced by the load
   #   balancer only.
 
   # Dynamic TLS domains
   #
-  # kamal-proxy can learn TLS hostnames from your application at runtime
+  # dash-proxy can learn TLS hostnames from your application at runtime
   # instead of fixing them at deploy time. It polls `source` — a path
   # (resolved against a healthy app target) or an absolute http(s) URL —
   # for the domain list and manages Let's Encrypt certificates for it
@@ -434,21 +434,21 @@ proxy:
   # Who the client is
   #
   # Rate limiting and IP allow lists are both only as correct as the address they
-  # key on, so configure this first if anything sits in front of kamal-proxy.
+  # key on, so configure this first if anything sits in front of dash-proxy.
   #
   # With no `trusted_proxies`, the client is always the address that opened the
   # connection — nothing a client sends can influence it, which is what makes the
   # allow list meaningful.
   #
   # Once you declare `trusted_proxies`, and only when the connecting address is
-  # one of them, kamal-proxy reads the forwarded chain instead: it walks the
+  # one of them, dash-proxy reads the forwarded chain instead: it walks the
   # chain from the nearest hop backwards past every proxy you declared, and the
   # first address none of your proxies wrote is the client. **List every hop**,
-  # not only the one that connects to kamal-proxy — a chain it cannot resolve
+  # not only the one that connects to dash-proxy — a chain it cannot resolve
   # denies the request rather than falling back to the connecting address.
   #
   # `header` names the header carrying the original client IP (`CF-Connecting-IP`
-  # behind Cloudflare, `True-Client-IP` behind some others); kamal-proxy reads it
+  # behind Cloudflare, `True-Client-IP` behind some others); dash-proxy reads it
   # instead of `X-Forwarded-For`. It is only honoured when `trusted_proxies` is
   # set, because otherwise it is just something the client wrote — dash rejects
   # that combination rather than appearing to honour it.
@@ -501,7 +501,7 @@ proxy:
   #
   # Refuse requests whose full User-Agent matches one of these RE2 patterns,
   # checked after the IP rules. A missing User-Agent only matches an explicit
-  # '^$' pattern. Patterns are matched by kamal-proxy (Go RE2), so dash checks
+  # '^$' pattern. Patterns are matched by dash-proxy (Go RE2), so dash checks
   # only their shape, not their syntax.
   deny_user_agents:
     - 'BadBot/.*'
@@ -661,7 +661,7 @@ proxy:
   # This block is the *policy*, and it is per service. Where the entries live is
   # proxy-wide and set under `run/cache` below.
   #
-  # Only `enabled` is required. Everything else keeps kamal-proxy's own default
+  # Only `enabled` is required. Everything else keeps dash-proxy's own default
   # until you set it.
   #
   # `max_ttl` caps the lifetime the app asks for, in seconds, so one mistaken
@@ -690,7 +690,7 @@ proxy:
   # ### When it is not caching
   #
   # A cache that quietly stores nothing is the usual first surprise. Start with
-  # `dash proxy cache stats`; kamal-proxy also explains every refusal — check
+  # `dash proxy cache stats`; dash-proxy also explains every refusal — check
   # `dash proxy logs` for the reason, and the `cache_refusals_total` metric
   # (by `reason`) if you run with `metrics_port`.
   # The common reasons are a missing `Cache-Control: public, max-age=...` on the
@@ -739,7 +739,7 @@ proxy:
 
   # Read-only targets
   #
-  # kamal-proxy can split traffic between the deployed (writer) targets and a
+  # dash-proxy can split traffic between the deployed (writer) targets and a
   # set of read-only targets, e.g. app instances backed by database replicas.
   # Read requests are routed to the read targets; write requests always go to
   # the writers.
@@ -771,7 +771,7 @@ proxy:
   # re-pinned, so a deploy does not strand anybody. Reads served by a
   # `read_targets` replica are never pinned.
   #
-  # `cookie` renames the pin cookie; kamal-proxy picks a sensible default.
+  # `cookie` renames the pin cookie; dash-proxy picks a sensible default.
   session_affinity:
     enabled: true
     cookie: _kamal_affinity
@@ -827,19 +827,19 @@ proxy:
     publish: false                 # Publish ports to the host (default: true)
     bind_ips:                      # List of IPs to bind to when publishing ports
       - 0.0.0.0
-    registry: registry:4443        # Extra registry prefix for the kamal-proxy image
+    registry: registry:4443        # Extra registry prefix for the dash-proxy image
                                    # (default: none). If you set this, also override
                                    # `repository` to a host-less path (e.g.
-                                   # myfork/kamal-proxy) - the default repository
+                                   # myfork/dash-proxy) - the default repository
                                    # below already embeds its ghcr.io host
     repository: ghcr.io/zoolutions/dash-proxy # Container repository for the
-                                   # kamal-proxy image (this is the default)
-    version: v1.0.0.7              # Version tag of the kamal-proxy image to use.
+                                   # dash-proxy image (this is the default)
+    version: v1.1.0.0              # Version tag of the dash-proxy image to use.
                                    # Defaults to the minimum version this gem
                                    # requires - only pin it to roll forward early,
                                    # never below the default
     port_holder: true              # Zero-downtime proxy reboots (default: false).
-                                   # Runs a minimal long-lived kamal-proxy-net container that
+                                   # Runs a minimal long-lived dash-proxy-net container that
                                    # owns the published ports; proxy generations join its
                                    # network namespace and overlap during a reboot, so config
                                    # and version changes apply without dropping requests.
@@ -857,7 +857,7 @@ proxy:
     # DNS-01 on their own. `auto` is an explicit opt-in that picks the provider
     # from the credentials it can see and logs at boot which one it armed;
     # `none` says "no DNS-01" explicitly. An unsupported name is rejected here,
-    # at config time - kamal-proxy would only log a warning and then never
+    # at config time - dash-proxy would only log a warning and then never
     # issue a certificate.
     #
     # A plain string (`dns_provider: cloudflare`) uses one provider for every
@@ -866,7 +866,7 @@ proxy:
     # spread across registrars. Each provider's API credentials must be present
     # under `credentials` for its challenges to succeed.
     #
-    # kamal-proxy also accepts short aliases for the canonical names - `cf`
+    # dash-proxy also accepts short aliases for the canonical names - `cf`
     # (cloudflare), `do` (digitalocean), `gcp`/`google`/`googledns` (gcloud),
     # `gd` (godaddy), `hz` (hetzner), `nc` (namecheap), `aws`/`r53` (route53)
     # and `vr` (vultr). Prefer the canonical name; the aliases exist so a
@@ -1018,15 +1018,15 @@ proxy:
     # Defaults to false:
     reuse_port: true
 
-    # Escape hatch for `kamal-proxy run`
+    # Escape hatch for `dash-proxy run`
     #
-    # Anything kamal-proxy accepts that has no key above. Note the difference
+    # Anything dash-proxy accepts that has no key above. Note the difference
     # from `options` below, which many people expect to do this: `flags` goes to
-    # `kamal-proxy run`, `options` goes to `docker run`.
+    # `dash-proxy run`, `options` goes to `docker run`.
     #
     # `true` renders a bare flag; anything else renders `--flag value`. No
     # translation is applied, so write Go durations and lists the way
-    # kamal-proxy wants them.
+    # dash-proxy wants them.
     #
     # A key here that a named setting already emits is rejected rather than
     # passed twice — set one or the other.
@@ -1037,7 +1037,7 @@ proxy:
     #
     # Path to the container runtime socket, which is what `proxy/sleep` needs in
     # order to stop and start containers. Setting it does two things: it passes
-    # the path to kamal-proxy, and it mounts that path into the proxy container,
+    # the path to dash-proxy, and it mounts that path into the proxy container,
     # since the flag alone only says where to look.
     #
     # **Reaching this socket is root-equivalent on the host.** It is a separate,
@@ -1073,11 +1073,11 @@ proxy:
       store_timeout: 2
       memory_size: 134_217_728
     # `options` are `docker run` options for the proxy container - resource
-    # limits, labels, extra mounts - NOT kamal-proxy flags. A kamal-proxy flag
+    # limits, labels, extra mounts - NOT dash-proxy flags. A dash-proxy flag
     # the gem has no key for goes in `flags` above instead.
     options:                       # Additional options to pass to `docker run`
       label:
-        - custom.label=kamal-proxy
+        - custom.label=dash-proxy
       memory: 512m
       cpus: 0.5
 

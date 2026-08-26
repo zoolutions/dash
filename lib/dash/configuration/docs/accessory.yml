@@ -150,7 +150,7 @@ accessories:
     #
     # The network the accessory will be attached to.
     #
-    # Defaults to kamal:
+    # Defaults to dash:
     network: custom
 
     # Proxy
@@ -160,12 +160,12 @@ accessories:
     # app-level `proxy:` (see `dash docs proxy`), though root-only keys such as
     # `loadbalancer` and `reboot_on_deploy` have no effect inside an accessory.
     # Declaring a proxy here makes the accessory's hosts proxy hosts:
-    # `dash proxy boot` (and `dash deploy`) will run kamal-proxy on them
+    # `dash proxy boot` (and `dash deploy`) will run dash-proxy on them
     # automatically.
     #
     # Accessories are never load balanced. The loadbalancer fans the app's own
     # service out to its role targets, so an accessory always registers its
-    # hostname and TLS with the kamal-proxy on its own host — whether or not the
+    # hostname and TLS with the dash-proxy on its own host — whether or not the
     # loadbalancer is active for the app. Point the accessory's DNS record at the
     # accessory host, not at the loadbalancer.
     #

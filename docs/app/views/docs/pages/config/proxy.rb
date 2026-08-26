@@ -5,5 +5,5 @@
 class Views::Docs::Pages::Config::Proxy < Views::Docs::Pages::ConfigPage
   config_doc "proxy"
 
-  def lead = "kamal-proxy deploy options — hosts, SSL, load balancing, caching, traffic shaping, and more."
+  def lead = "dash-proxy deploy options — hosts, SSL, load balancing, caching, traffic shaping, and more."
 end

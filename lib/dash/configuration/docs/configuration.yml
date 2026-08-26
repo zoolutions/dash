@@ -201,7 +201,7 @@ accessories:
 
 # Proxy
 #
-# Configuration for kamal-proxy, see dash docs proxy:
+# Configuration for dash-proxy, see dash docs proxy:
 proxy:
   ...
 
