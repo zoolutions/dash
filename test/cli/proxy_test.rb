@@ -659,6 +659,37 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  # A held domain normally frees itself once DNS points at the proxy; retry is
+  # for the operator who already knows the cause is fixed.
+  test "domains retry with a host" do
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :exec, "kamal-proxy", "kamal-proxy", "domains", "retry", "app.example.com")
+      .returns("Cleared 1 issuance hold")
+      .at_least_once
+
+    run_command("domains", "retry", "app.example.com").tap do |output|
+      assert_match "Cleared 1 issuance hold", output
+    end
+  end
+
+  test "domains retry --all" do
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :exec, "kamal-proxy", "kamal-proxy", "domains", "retry", "--all")
+      .returns("Cleared 3 issuance holds")
+      .at_least_once
+
+    run_command("domains", "retry", "--all").tap do |output|
+      assert_match "Cleared 3 issuance holds", output
+    end
+  end
+
+  test "domains rejects an unknown subcommand" do
+    run_command("domains", "bogus").tap do |output|
+      assert_match "Unknown domains subcommand: bogus", output
+      assert_match "retry", output
+    end
+  end
+
   # Cache admin surfaces on the layer that owns the cache: the loadbalancer
   # when load balancing (cache policy is edge-only), else the proxy hosts.
   test "cache stats" do

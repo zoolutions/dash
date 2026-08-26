@@ -484,23 +484,35 @@ class Dash::Cli::Proxy < Dash::Cli::Base
     end
   end
 
-  desc "domains SUBCOMMAND", "Manage dynamic TLS domains (refresh, list, stats)"
-  def domains(subcommand)
+  desc "domains SUBCOMMAND [ARGS]", "Inspect TLS domains and their certificate issuance (refresh, list, stats, retry)"
+  long_desc <<~DESC
+    Inspect the TLS domains this proxy serves, and the state of their certificates.
+
+    `list` shows every domain — both those learned from a domain source and the
+    hosts named in deploy.yml — with whether it holds a certificate and, if
+    issuance is held, when the hold lifts and why.
+
+    A hold normally clears itself: the proxy re-checks held domains and issues as
+    soon as the domain points at it, so a DNS cutover needs no intervention.
+    `retry HOST` (or `retry --all`) is for when you already know the cause is
+    fixed and would rather not wait.
+  DESC
+  def domains(subcommand, *args)
     case subcommand
-    when "refresh", "list", "stats"
+    when "refresh", "list", "stats", "retry"
       # TLS terminates at the load balancer when load balancing, so the
       # dynamic domain set lives there rather than on the per-host proxies.
       if DASH.config.proxy.load_balancing?
         on(DASH.config.proxy.effective_loadbalancer) do |host|
-          puts_by_host host, capture_with_info(*DASH.loadbalancer.domains(subcommand)), type: "Loadbalancer"
+          puts_by_host host, capture_with_info(*DASH.loadbalancer.domains(subcommand, *args)), type: "Loadbalancer"
         end
       else
         on(DASH.proxy_hosts) do |host|
-          puts_by_host host, capture_with_info(*DASH.proxy(host).domains(subcommand)), type: "Proxy"
+          puts_by_host host, capture_with_info(*DASH.proxy(host).domains(subcommand, *args)), type: "Proxy"
         end
       end
     else
-      puts "Unknown domains subcommand: #{subcommand}. Available: refresh, list, stats"
+      puts "Unknown domains subcommand: #{subcommand}. Available: refresh, list, stats, retry"
     end
   end
 

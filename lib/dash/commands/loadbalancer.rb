@@ -42,8 +42,9 @@ class Dash::Commands::Loadbalancer < Dash::Commands::Base
       *loadbalancer_config.deploy_command_args(targets: targets)
   end
 
-  def domains(subcommand)
-    docker :exec, container_name, "kamal-proxy", "domains", subcommand
+  # `retry` takes a host, or --all; the rest take no arguments.
+  def domains(subcommand, *args)
+    docker :exec, container_name, "kamal-proxy", "domains", subcommand, *args
   end
 
   def list(json: false)

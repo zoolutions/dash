@@ -27,8 +27,25 @@ class Dash::Cli::Doctor::EndpointChecks
 
     def dns_results
       proxied_units.flat_map do |unit|
-        unit.proxy.hosts.map { |domain| dns_check(domain, unit.hosts) }
+        unit.proxy.hosts.map { |domain| dns_check(domain, unit.hosts, acme_issued: acme_issued?(unit)) }
       end
+    end
+
+    # Whether this unit's certificate comes from ACME rather than the operator.
+    # Only then does where the domain points decide whether a certificate can
+    # exist — a supplied certificate is unaffected by DNS.
+    def acme_issued?(unit)
+      unit.proxy.ssl? && !unit.proxy.custom_ssl_certificate?
+    end
+
+    # The two states a DNS cutover passes through — not resolving yet, and still
+    # resolving to the old host — are exactly when an operator wonders whether
+    # something is broken. Nothing is: the proxy refuses to spend an ACME order
+    # it cannot win, re-checks held domains, and issues once the domain arrives.
+    ISSUANCE_PENDING = "no certificate can be issued until it points here, and the proxy issues automatically once it does".freeze
+
+    def with_issuance_note(detail, acme_issued)
+      acme_issued ? "#{detail} - #{ISSUANCE_PENDING}" : detail
     end
 
     def certificate_results
@@ -41,17 +58,18 @@ class Dash::Cli::Doctor::EndpointChecks
       end
     end
 
-    def dns_check(domain, unit_hosts)
+    def dns_check(domain, unit_hosts, acme_issued: false)
       resolved = Resolv.getaddresses(domain)
       expected = expected_ips(unit_hosts)
       matching = resolved & expected
 
       if resolved.empty?
-        result :dns, domain, :fail, "does not resolve"
+        result :dns, domain, :fail, with_issuance_note("does not resolve", acme_issued)
       elsif matching.any?
         result :dns, domain, :ok, "resolves to #{matching.join(", ")}"
       else
-        result :dns, domain, :warn, "resolves to #{resolved.join(", ")}, expected one of #{expected.join(", ")} (fine when fronted by a CDN or load balancer)"
+        result :dns, domain, :warn,
+          with_issuance_note("resolves to #{resolved.join(", ")}, expected one of #{expected.join(", ")} (fine when fronted by a CDN or load balancer)", acme_issued)
       end
     rescue StandardError => e
       result :dns, domain, :fail, "could not resolve (#{e.message})"

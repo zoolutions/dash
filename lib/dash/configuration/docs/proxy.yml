@@ -834,7 +834,7 @@ proxy:
                                    # below already embeds its ghcr.io host
     repository: ghcr.io/zoolutions/dash-proxy # Container repository for the
                                    # kamal-proxy image (this is the default)
-    version: v1.0.0.6              # Version tag of the kamal-proxy image to use.
+    version: v1.0.0.7              # Version tag of the kamal-proxy image to use.
                                    # Defaults to the minimum version this gem
                                    # requires - only pin it to roll forward early,
                                    # never below the default
@@ -880,6 +880,28 @@ proxy:
     # staging environment while you are working out a DNS setup, so you do not
     # burn production rate limits on failed attempts.
     #
+    # `release_probe_interval` is how often, in seconds, the proxy re-checks a
+    # domain whose issuance is currently held - which is what decides how long
+    # after a DNS cutover the certificate appears (proxy v1.0.0.7+).
+    #
+    # You can point a host at dash before its DNS is repointed. No certificate
+    # is ordered until the first HTTPS request arrives, and the proxy first
+    # checks that the domain actually routes back to it - because until it does,
+    # an HTTP-01 challenge cannot succeed, and a failed attempt burns Let's
+    # Encrypt's limit of five failed authorizations per hostname per hour.
+    # Tripping that limit is what would otherwise delay the certificate at the
+    # moment of the cutover. Held domains are re-checked on this interval and
+    # issued as soon as the domain arrives, so the cutover costs one interval
+    # rather than a backoff step.
+    #
+    # The default is 60. A negative value switches release probing off, leaving
+    # a held domain to wait out its backoff. Zones covered by a DNS-01 provider
+    # skip all of this: DNS-01 never depends on where a domain points, so their
+    # certificates can be issued well before a cutover.
+    #
+    # `dash proxy domains list` shows what is held and why; `dash proxy domains
+    # retry HOST` clears a hold when you already know the cause is fixed.
+    #
     # `credentials` names entries in `.dash/secrets` to pass to the proxy
     # container as environment variables - the API credentials your DNS provider
     # needs (`CF_DNS_API_TOKEN`, `LOOPIA_API_USER`, ...). Name them exactly as the
@@ -899,6 +921,7 @@ proxy:
         default: route53
       prefer_wildcard: true
       http_fallback: false
+      release_probe_interval: 60
       directory: https://acme-staging-v02.api.letsencrypt.org/directory
       credentials:
         - CF_DNS_API_TOKEN

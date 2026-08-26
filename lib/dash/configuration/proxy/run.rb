@@ -1,5 +1,5 @@
 class Dash::Configuration::Proxy::Run
-  MINIMUM_VERSION = "v1.0.0.6"
+  MINIMUM_VERSION = "v1.0.0.7"
   DEFAULT_HTTP_PORT = 80
   DEFAULT_HTTPS_PORT = 443
   DEFAULT_LOG_MAX_SIZE = "10m"

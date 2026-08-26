@@ -63,7 +63,8 @@ class Dash::Configuration::Proxy::Acme
       "acme-dns-provider": dns_provider_entries,
       "acme-directory": acme_config["directory"],
       "acme-prefer-wildcard": acme_config["prefer_wildcard"],
-      "acme-http-fallback": acme_config["http_fallback"]
+      "acme-http-fallback": acme_config["http_fallback"],
+      "acme-release-probe-interval": Dash::Utils.seconds_duration(acme_config["release_probe_interval"])
     }.compact
   end
 

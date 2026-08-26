@@ -60,4 +60,26 @@ class UtilsTest < ActiveSupport::TestCase
     assert_equal "\"${HEALTH_PORT}\"", Dash::Utils.escape_shell_value("${HEALTH_PORT}")
     assert_equal "\"\\$HEALTH_PORT\"", Dash::Utils.escape_shell_value("$HEALTH_PORT")
   end
+
+  test "seconds_duration renders plain numbers as Go seconds" do
+    assert_equal "30s", Dash::Utils.seconds_duration(30)
+    assert_equal "30s", Dash::Utils.seconds_duration("30")
+    assert_equal "1.5s", Dash::Utils.seconds_duration(1.5)
+    assert_equal "-1s", Dash::Utils.seconds_duration(-1)
+  end
+
+  # Zero disables a timeout, so it is a value rather than an absence.
+  test "seconds_duration keeps zero and drops only nil" do
+    assert_equal "0s", Dash::Utils.seconds_duration(0)
+    assert_nil Dash::Utils.seconds_duration(nil)
+  end
+
+  # Appending "s" to a value that already carries a unit changes its meaning:
+  # "5m" would become "5ms", which Go accepts as five milliseconds.
+  test "seconds_duration passes a value that already carries a unit through untouched" do
+    assert_equal "5m", Dash::Utils.seconds_duration("5m")
+    assert_equal "1h30m", Dash::Utils.seconds_duration("1h30m")
+    assert_equal "500ms", Dash::Utils.seconds_duration("500ms")
+    assert_equal "-1s", Dash::Utils.seconds_duration("-1s")
+  end
 end

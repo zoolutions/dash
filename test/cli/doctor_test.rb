@@ -81,6 +81,42 @@ class CliDoctorTest < CliTestCase
     end
   end
 
+  # "does not resolve" and "resolves elsewhere" are the two states a DNS cutover
+  # passes through, and in both an ACME certificate simply cannot be issued yet.
+  # Saying so — and that the proxy picks it up by itself — is the difference
+  # between an operator waiting confidently and asking someone whether it broke.
+  test "doctor explains that an unresolvable ACME domain cannot be certified yet" do
+    stub_domain_resolution to: []
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+
+    exception = assert_raises(Dash::Cli::DoctorError) { run_command("doctor") }
+    assert_includes exception.message, "app.example.com: does not resolve"
+    assert_includes exception.message, "no certificate can be issued until it points here"
+    assert_includes exception.message, "the proxy issues automatically once it does"
+  end
+
+  test "doctor explains the certificate wait when an ACME domain resolves elsewhere" do
+    stub_domain_resolution to: [ "5.5.5.5" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+
+    run_command("doctor").tap do |output|
+      assert_match "WARN app.example.com: resolves to 5.5.5.5, expected one of 1.1.1.1", output
+      assert_match "no certificate can be issued until it points here", output
+    end
+  end
+
+  # A custom certificate is supplied by the operator, so DNS has no bearing on
+  # whether it exists. Promising automatic issuance there would be a lie.
+  test "doctor does not promise issuance for a custom certificate" do
+    stub_domain_resolution to: [ "5.5.5.5" ]
+    stub_custom_certificate expiring: Time.now + (90 * 86_400)
+
+    run_command("doctor").tap do |output|
+      assert_match "WARN app.example.com: resolves to 5.5.5.5", output
+      assert_no_match(/no certificate can be issued/, output)
+    end
+  end
+
   test "doctor with expired custom certificate" do
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_custom_certificate expiring: Time.now - 86_400

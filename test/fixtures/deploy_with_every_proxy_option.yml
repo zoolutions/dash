@@ -194,6 +194,9 @@ proxy:
       # true renders as a bare flag, false as --flag=false; cover both shapes.
       prefer_wildcard: true
       http_fallback: false
+      # How often held domains are re-probed, so a hold lifts once DNS points
+      # here. Plain seconds, like every other duration in deploy.yml.
+      release_probe_interval: 60
     cache:
       store: redis://cache.example.com:6379/0
       store_timeout: 2
