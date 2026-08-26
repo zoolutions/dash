@@ -5,7 +5,7 @@ class CliAppTest < CliTestCase
     stub_running
     run_command("boot").tap do |output|
       assert_match "docker tag dhh/app:latest dhh/app:latest", output
-      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname 1.1.1.1-[0-9a-f]{12} /, output
+      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network dash --hostname 1.1.1.1-[0-9a-f]{12} /, output
       assert_match "docker container ls --all --filter 'name=^app-web-123$' --quiet | xargs docker stop", output
     end
   end
@@ -29,7 +29,7 @@ class CliAppTest < CliTestCase
     run_command("boot").tap do |output|
       assert_match /Renaming container .* to .* as already deployed on 1.1.1.1/, output # Rename
       assert_match /docker rename app-web-latest app-web-latest_replaced_[0-9a-f]{16}/, output
-      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname 1.1.1.1-[0-9a-f]{12} /, output
+      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network dash --hostname 1.1.1.1-[0-9a-f]{12} /, output
       assert_match "docker container ls --all --filter 'name=^app-web-123$' --quiet | xargs docker stop", output
     end
   ensure
@@ -157,7 +157,7 @@ class CliAppTest < CliTestCase
       assert_match "docker tag dhh/app:latest dhh/app:latest", output
       assert_match "/usr/bin/env mkdir -p .dash/apps/app/assets/volumes/web-latest ; cp -rnT .dash/apps/app/assets/extracted/web-latest .dash/apps/app/assets/volumes/web-latest ; cp -rnT .dash/apps/app/assets/extracted/web-latest .dash/apps/app/assets/volumes/web-123 || true ; cp -rnT .dash/apps/app/assets/extracted/web-123 .dash/apps/app/assets/volumes/web-latest || true", output
       assert_match "/usr/bin/env mkdir -p .dash/apps/app/assets/extracted/web-latest && docker container rm app-web-assets 2> /dev/null || true && docker container create --name app-web-assets dhh/app:latest && docker container cp -L app-web-assets:/public/assets/. .dash/apps/app/assets/extracted/web-latest && docker container rm app-web-assets", output
-      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname 1.1.1.1-[0-9a-f]{12} /, output
+      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network dash --hostname 1.1.1.1-[0-9a-f]{12} /, output
       assert_match "docker container ls --all --filter 'name=^app-web-123$' --quiet | xargs docker stop", output
       assert_match "/usr/bin/env find .dash/apps/app/assets/extracted -maxdepth 1 -name 'web-*' ! -name web-latest -exec rm -rf \"{}\" + ; find .dash/apps/app/assets/volumes -maxdepth 1 -name 'web-*' ! -name web-latest -exec rm -rf \"{}\" +", output
     end
@@ -180,7 +180,7 @@ class CliAppTest < CliTestCase
 
     run_command("boot", config: :with_env_tags).tap do |output|
       assert_match "docker tag dhh/app:latest dhh/app:latest", output
-      assert_match %r{docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname 1.1.1.1-[0-9a-f]{12} --env KAMAL_CONTAINER_NAME="app-web-latest" --env KAMAL_VERSION="latest" --env KAMAL_HOST="1.1.1.1" --env TEST="root" --env EXPERIMENT="disabled" --env SITE="site1"}, output
+      assert_match %r{docker run --detach --restart unless-stopped --name app-web-latest --network dash --hostname 1.1.1.1-[0-9a-f]{12} --env KAMAL_CONTAINER_NAME="app-web-latest" --env KAMAL_VERSION="latest" --env KAMAL_HOST="1.1.1.1" --env TEST="root" --env EXPERIMENT="disabled" --env SITE="site1"}, output
       assert_match "docker container ls --all --filter 'name=^app-web-123$' --quiet | xargs docker stop", output
     end
   end
@@ -240,7 +240,7 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
       .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-web-latest$'", "--quiet", "|", :xargs, :docker, :stop, raise_on_non_zero_exit: false)
     SSHKit::Backend::Abstract.any_instance.expects(:execute)
-      .with(:docker, :exec, "kamal-proxy", "kamal-proxy", :deploy, "app-web", "--target=\"123:80\"", "--deploy-timeout=\"1s\"", "--drain-timeout=\"30s\"", "--buffer-requests", "--buffer-responses", "--log-request-header=\"Cache-Control\"", "--log-request-header=\"Last-Modified\"", "--log-request-header=\"User-Agent\"").raises(SSHKit::Command::Failed.new("Failed to deploy"))
+      .with(:docker, :exec, "dash-proxy", "dash-proxy", :deploy, "app-web", "--target=\"123:80\"", "--deploy-timeout=\"1s\"", "--drain-timeout=\"30s\"", "--buffer-requests", "--buffer-responses", "--log-request-header=\"Cache-Control\"", "--log-request-header=\"Last-Modified\"", "--log-request-header=\"User-Agent\"").raises(SSHKit::Command::Failed.new("Failed to deploy"))
 
     stderred do
       run_command("boot", config: :with_roles, host: nil, allow_execute_error: true).tap do |output|
@@ -366,7 +366,7 @@ class CliAppTest < CliTestCase
 
     run_command("boot", config: :with_only_workers, host: nil).tap do |output|
       assert_match /First workers container is healthy on 1.1.1.\d, booting any other roles/, output
-      assert_no_match "kamal-proxy", output
+      assert_no_match "dash-proxy", output
     end
   end
 
@@ -376,7 +376,7 @@ class CliAppTest < CliTestCase
       run_command("boot", config: :with_error_pages).tap do |output|
         assert_match /Uploading .*kamal-error-pages.*\/latest to \.dash\/proxy\/apps-config\/app\/error_pages/, output
         assert_match "docker tag dhh/app:latest dhh/app:latest", output
-        assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname 1.1.1.1-[0-9a-f]{12} /, output
+        assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network dash --hostname 1.1.1.1-[0-9a-f]{12} /, output
         assert_match "docker container ls --all --filter 'name=^app-web-123$' --quiet | xargs docker stop", output
         assert_match "Running /usr/bin/env find .dash/proxy/apps-config/app/error_pages -mindepth 1 -maxdepth 1 ! -name latest -exec rm -rf {} + on 1.1.1.1", output
       end
@@ -393,8 +393,8 @@ class CliAppTest < CliTestCase
       assert_match "Writing SSL certificates for web on 1.1.1.1", output
       assert_match "mkdir -p .dash/proxy/apps-config/app/tls", output
       assert_match "Uploading \"CERTIFICATE CONTENT\" to .dash/proxy/apps-config/app/tls/web/cert.pem", output
-      assert_match "--tls-certificate-path=\"/home/kamal-proxy/.apps-config/app/tls/web/cert.pem\"", output
-      assert_match "--tls-private-key-path=\"/home/kamal-proxy/.apps-config/app/tls/web/key.pem\"", output
+      assert_match "--tls-certificate-path=\"/home/dash-proxy/.apps-config/app/tls/web/cert.pem\"", output
+      assert_match "--tls-private-key-path=\"/home/dash-proxy/.apps-config/app/tls/web/key.pem\"", output
     end
   end
 
@@ -410,7 +410,7 @@ class CliAppTest < CliTestCase
       assert_match "Writing SSL certificates for web on 1.1.1.1", output
       assert_match "mkdir -p .dash/proxy/apps-config/app/tls", output
       assert_match "Uploading \"ca-bundle-content\" to .dash/proxy/apps-config/app/tls/web/client-ca.pem", output
-      assert_match "--tls-client-ca-path=\"/home/kamal-proxy/.apps-config/app/tls/web/client-ca.pem\"", output
+      assert_match "--tls-client-ca-path=\"/home/dash-proxy/.apps-config/app/tls/web/client-ca.pem\"", output
     end
   end
 
@@ -419,7 +419,7 @@ class CliAppTest < CliTestCase
 
     run_command("start").tap do |output|
       assert_match "docker start app-web-999", output
-      assert_match "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"999:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\"", output
+      assert_match "docker exec dash-proxy dash-proxy deploy app-web --target=\"999:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\"", output
     end
   end
 
@@ -524,7 +524,7 @@ class CliAppTest < CliTestCase
   test "exec" do
     run_command("exec", "ruby -v").tap do |output|
       assert_match "docker login -u [REDACTED] -p [REDACTED]", output
-      assert_match %r{docker run --rm --name app-web-exec-latest-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v}, output
+      assert_match %r{docker run --rm --name app-web-exec-latest-[0-9a-f]{6} --network dash --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v}, output
     end
   end
 
@@ -537,13 +537,13 @@ class CliAppTest < CliTestCase
 
   test "exec separate arguments" do
     run_command("exec", "ruby", " -v").tap do |output|
-      assert_match %r{docker run --rm --name app-web-exec-latest-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v}, output
+      assert_match %r{docker run --rm --name app-web-exec-latest-[0-9a-f]{6} --network dash --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v}, output
     end
   end
 
   test "exec detach" do
     run_command("exec", "--detach", "ruby -v").tap do |output|
-      assert_match %r{docker run --detach --name app-web-exec-latest-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v}, output
+      assert_match %r{docker run --detach --name app-web-exec-latest-[0-9a-f]{6} --network dash --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v}, output
     end
   end
 
@@ -575,7 +575,7 @@ class CliAppTest < CliTestCase
   test "exec interactive" do
     Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
     SSHKit::Backend::Abstract.any_instance.expects(:exec)
-      .with(regexp_matches(%r{ssh -t root@1\.1\.1\.1 -p 22 'docker run -it --rm --name app-web-exec-latest-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v'}))
+      .with(regexp_matches(%r{ssh -t root@1\.1\.1\.1 -p 22 'docker run -it --rm --name app-web-exec-latest-[0-9a-f]{6} --network dash --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:latest ruby -v'}))
 
     stub_stdin_tty do
       run_command("exec", "-i", "ruby -v").tap do |output|
@@ -687,7 +687,7 @@ class CliAppTest < CliTestCase
     hostname = "this-hostname-is-really-unacceptably-long-to-be-honest.example.com"
 
     stdouted { Dash::Cli::App.start([ "boot", "-c", "test/fixtures/deploy_with_uncommon_hostnames.yml", "--hosts", hostname ]) }.tap do |output|
-      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname this-hostname-is-really-unacceptably-long-to-be-hon-[0-9a-f]{12} /, output
+      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network dash --hostname this-hostname-is-really-unacceptably-long-to-be-hon-[0-9a-f]{12} /, output
     end
   end
 
@@ -697,7 +697,7 @@ class CliAppTest < CliTestCase
     hostname = "this-hostname-with-random-part-is-too-long.example.com"
 
     stdouted { Dash::Cli::App.start([ "boot", "-c", "test/fixtures/deploy_with_uncommon_hostnames.yml", "--hosts", hostname ]) }.tap do |output|
-      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname this-hostname-with-random-part-is-too-long.example-[0-9a-f]{12} /, output
+      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network dash --hostname this-hostname-with-random-part-is-too-long.example-[0-9a-f]{12} /, output
     end
   end
 
@@ -707,9 +707,9 @@ class CliAppTest < CliTestCase
     run_command("boot", config: :with_proxy).tap do |output|
       assert_match /Renaming container .* to .* as already deployed on 1.1.1.1/, output # Rename
       assert_match /docker rename app-web-latest app-web-latest_replaced_[0-9a-f]{16}/, output
-      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname 1.1.1.1-[0-9a-f]{12} --env KAMAL_CONTAINER_NAME="app-web-latest" --env KAMAL_VERSION="latest" --env KAMAL_HOST="1.1.1.1" --env-file .dash\/apps\/app\/env\/roles\/web.env --log-opt max-size="10m" --label service="app" --label role="web" --label destination dhh\/app:latest/, output
-      assert_match /Deploying web on 1.1.1.1 via kamal-proxy \(waiting up to 6s for it to become healthy\).../, output
-      assert_match /docker exec kamal-proxy kamal-proxy deploy app-web --target="123:80"/, output
+      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network dash --hostname 1.1.1.1-[0-9a-f]{12} --env KAMAL_CONTAINER_NAME="app-web-latest" --env KAMAL_VERSION="latest" --env KAMAL_HOST="1.1.1.1" --env-file .dash\/apps\/app\/env\/roles\/web.env --log-opt max-size="10m" --label service="app" --label role="web" --label destination dhh\/app:latest/, output
+      assert_match /Deploying web on 1.1.1.1 via dash-proxy \(waiting up to 6s for it to become healthy\).../, output
+      assert_match /docker exec dash-proxy dash-proxy deploy app-web --target="123:80"/, output
       assert_match "docker container ls --all --filter 'name=^app-web-123$' --quiet | xargs docker stop", output
     end
   end
@@ -718,8 +718,8 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     run_command("boot", config: :with_proxy_roles, host: nil).tap do |output|
-      assert_match "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"123:80\" --deploy-timeout=\"6s\" --drain-timeout=\"30s\" --target-timeout=\"10s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"", output
-      assert_match "docker exec kamal-proxy kamal-proxy deploy app-web2 --target=\"123:80\" --deploy-timeout=\"6s\" --drain-timeout=\"30s\" --target-timeout=\"15s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"", output
+      assert_match "docker exec dash-proxy dash-proxy deploy app-web --target=\"123:80\" --deploy-timeout=\"6s\" --drain-timeout=\"30s\" --target-timeout=\"10s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"", output
+      assert_match "docker exec dash-proxy dash-proxy deploy app-web2 --target=\"123:80\" --deploy-timeout=\"6s\" --drain-timeout=\"30s\" --target-timeout=\"15s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"", output
     end
   end
 
@@ -730,7 +730,7 @@ class CliAppTest < CliTestCase
     run_command("boot", config: :with_proxy).tap do |output|
       assert_hook_ran "pre-proxy-deploy", output
       assert_hook_ran "post-proxy-deploy", output
-      assert_match /pre-proxy-deploy.*kamal-proxy deploy app-web.*post-proxy-deploy/m, output
+      assert_match /pre-proxy-deploy.*dash-proxy deploy app-web.*post-proxy-deploy/m, output
     end
   end
 
@@ -761,7 +761,7 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     run_command("boot", "--skip-hooks", config: :with_proxy).tap do |output|
-      assert_match /kamal-proxy deploy app-web/, output
+      assert_match /dash-proxy deploy app-web/, output
       assert_no_match /hooks\/pre-proxy-deploy/, output
       assert_no_match /hooks\/post-proxy-deploy/, output
     end
@@ -773,7 +773,7 @@ class CliAppTest < CliTestCase
 
     stderred { run_command("boot", config: :with_proxy, allow_execute_error: true) }
 
-    assert @executions.none? { |args| args.join(" ").include?("kamal-proxy deploy") }
+    assert @executions.none? { |args| args.join(" ").include?("dash-proxy deploy") }
     assert @executions.any? { |args| args.join(" ").include?("app-web-latest") && args.join(" ").include?("docker stop") }
   end
 
@@ -814,7 +814,7 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
 
     run_command("boot", config: :with_proxy).tap do |output|
-      assert_match /kamal-proxy deploy app-web.*pre-app-stop/m, output
+      assert_match /dash-proxy deploy app-web.*pre-app-stop/m, output
     end
   end
 
@@ -886,25 +886,25 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("999") # old version
 
     run_command("start").tap do |output|
-      assert_match /pre-proxy-deploy.*kamal-proxy deploy app-web.*post-proxy-deploy/m, output
+      assert_match /pre-proxy-deploy.*dash-proxy deploy app-web.*post-proxy-deploy/m, output
     end
   end
 
   test "live" do
     run_command("live").tap do |output|
-      assert_match "docker exec kamal-proxy kamal-proxy resume app-web on 1.1.1.1", output
+      assert_match "docker exec dash-proxy dash-proxy resume app-web on 1.1.1.1", output
     end
   end
 
   test "maintenance" do
     run_command("maintenance").tap do |output|
-      assert_match "docker exec kamal-proxy kamal-proxy stop app-web --drain-timeout=\"30s\" on 1.1.1.1", output
+      assert_match "docker exec dash-proxy dash-proxy stop app-web --drain-timeout=\"30s\" on 1.1.1.1", output
     end
   end
 
   test "maintenance with options" do
     run_command("maintenance", "--message", "Hello", "--drain_timeout", "10").tap do |output|
-      assert_match "docker exec kamal-proxy kamal-proxy stop app-web --drain-timeout=\"10s\" --message=\"Hello\" on 1.1.1.1", output
+      assert_match "docker exec dash-proxy dash-proxy stop app-web --drain-timeout=\"10s\" --message=\"Hello\" on 1.1.1.1", output
     end
   end
 
@@ -913,8 +913,8 @@ class CliAppTest < CliTestCase
     stub_rollout_target_not_deployed
 
     run_command("rollout", "deploy").tap do |output|
-      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network kamal --hostname 1.1.1.1-[0-9a-f]{12} /, output
-      assert_match "docker exec kamal-proxy kamal-proxy rollout deploy app-web --target=\"12345678:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\"", output
+      assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network dash --hostname 1.1.1.1-[0-9a-f]{12} /, output
+      assert_match "docker exec dash-proxy dash-proxy rollout deploy app-web --target=\"12345678:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\"", output
     end
   end
 
@@ -923,7 +923,7 @@ class CliAppTest < CliTestCase
     stub_rollout_target_not_deployed
 
     run_command("rollout", "deploy").tap do |output|
-      assert_no_match /kamal-proxy deploy app-web/, output
+      assert_no_match /dash-proxy deploy app-web/, output
       assert_no_match /xargs docker stop/, output
     end
   end
@@ -936,25 +936,25 @@ class CliAppTest < CliTestCase
 
     run_command("rollout", "deploy", allow_execute_error: true).tap do |output|
       assert_match /Version latest is already deployed/, output
-      assert_no_match /kamal-proxy rollout deploy/, output
+      assert_no_match /dash-proxy rollout deploy/, output
     end
   end
 
   test "rollout set with percent" do
     run_command("rollout", "set", "--percent", "10").tap do |output|
-      assert_match "docker exec kamal-proxy kamal-proxy rollout set app-web --percent=\"10\" on 1.1.1.1", output
+      assert_match "docker exec dash-proxy dash-proxy rollout set app-web --percent=\"10\" on 1.1.1.1", output
     end
   end
 
   test "rollout set with list" do
     run_command("rollout", "set", "--list", "dhh", "jorge").tap do |output|
-      assert_match "docker exec kamal-proxy kamal-proxy rollout set app-web --list=\"dhh\" --list=\"jorge\" on 1.1.1.1", output
+      assert_match "docker exec dash-proxy dash-proxy rollout set app-web --list=\"dhh\" --list=\"jorge\" on 1.1.1.1", output
     end
   end
 
   test "rollout set with percent zero parks the rollout without tearing it down" do
     run_command("rollout", "set", "--percent", "0").tap do |output|
-      assert_match "docker exec kamal-proxy kamal-proxy rollout set app-web --percent=\"0\" on 1.1.1.1", output
+      assert_match "docker exec dash-proxy dash-proxy rollout set app-web --percent=\"0\" on 1.1.1.1", output
     end
   end
 
@@ -964,7 +964,7 @@ class CliAppTest < CliTestCase
 
   test "rollout stop" do
     run_command("rollout", "stop").tap do |output|
-      assert_match "docker exec kamal-proxy kamal-proxy rollout stop app-web on 1.1.1.1", output
+      assert_match "docker exec dash-proxy dash-proxy rollout stop app-web on 1.1.1.1", output
     end
   end
 

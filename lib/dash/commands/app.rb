@@ -18,7 +18,7 @@ class Dash::Commands::App < Dash::Commands::Base
       "--detach",
       "--restart", role.restart_policy,
       "--name", container_name,
-      "--network", "kamal",
+      "--network", "dash",
       *([ "--hostname", hostname ] if hostname),
       "--env", "KAMAL_CONTAINER_NAME=\"#{container_name}\"",
       "--env", "KAMAL_VERSION=\"#{config.version}\"",

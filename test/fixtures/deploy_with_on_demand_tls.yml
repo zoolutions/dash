@@ -1,5 +1,5 @@
 # The second maximal proxy fixture, for options that cannot coexist with the
-# first. kamal-proxy rejects on-demand TLS alongside a static host list, a custom
+# first. dash-proxy rejects on-demand TLS alongside a static host list, a custom
 # certificate, or ssl_domains — all three of which
 # deploy_with_every_proxy_option.yml needs for its own coverage.
 #

@@ -31,7 +31,7 @@ class Dash::Cli::Proxy::Reboot
     # Pull before stopping the old container: a registry outage or rate limit
     # can then no longer strand the host with no proxy at all.
     def pull_image
-      info "Pulling kamal-proxy image on #{host}..."
+      info "Pulling dash-proxy image on #{host}..."
       execute *proxy.pull
     end
 
@@ -64,7 +64,7 @@ class Dash::Cli::Proxy::Reboot
 
     # Phase 1 replacement: stop the old container, start the new one. Brief gap.
     def stop_and_replace
-      info "Stopping and removing kamal-proxy on #{host}, if running..."
+      info "Stopping and removing dash-proxy on #{host}, if running..."
       execute *proxy.stop(timeout: DASH.config.drain_timeout + 10), raise_on_non_zero_exit: false
       execute *proxy.remove_container
 
@@ -87,7 +87,7 @@ class Dash::Cli::Proxy::Reboot
     end
 
     def handoff_generation
-      info "Handing off kamal-proxy on #{host} to a new generation (zero downtime)..."
+      info "Handing off dash-proxy on #{host} to a new generation (zero downtime)..."
       execute *proxy.remove_stopped_container(name: proxy.next_container_name), raise_on_non_zero_exit: false
       execute *proxy.run(digest: drift.expected_digest, name: proxy.next_container_name)
       wait_until_ready(name: proxy.next_container_name)
@@ -102,7 +102,7 @@ class Dash::Cli::Proxy::Reboot
     # The old proxy still owns the published ports, so the holder cannot bind
     # them until it is gone. One final replacement with a brief gap.
     def migrate_to_holder
-      info "Migrating kamal-proxy on #{host} to the port-holder architecture (brief gap)..."
+      info "Migrating dash-proxy on #{host} to the port-holder architecture (brief gap)..."
       execute *proxy.stop(timeout: DASH.config.drain_timeout + 10), raise_on_non_zero_exit: false
       execute *proxy.remove_container
 
@@ -124,7 +124,7 @@ class Dash::Cli::Proxy::Reboot
       begin
         capture_with_info(*proxy.list(**{ name: name }.compact), verbosity: :debug)
       rescue SSHKit::Command::Failed
-        raise Dash::Cli::BootError, "kamal-proxy on #{host} did not become ready within #{READY_TIMEOUT} seconds" if Time.now >= deadline
+        raise Dash::Cli::BootError, "dash-proxy on #{host} did not become ready within #{READY_TIMEOUT} seconds" if Time.now >= deadline
         sleep 0.5
         retry
       end
@@ -146,7 +146,7 @@ class Dash::Cli::Proxy::Reboot
         endpoint = capture_with_info(*app.container_id_for_version(version, only_running: true), raise_on_non_zero_exit: false).strip.presence
         next unless endpoint
 
-        info "Re-registering #{role.container_prefix} with kamal-proxy on #{host}..."
+        info "Re-registering #{role.container_prefix} with dash-proxy on #{host}..."
         execute *app.deploy(target: endpoint)
         registered_services << role.container_prefix
       end
@@ -158,7 +158,7 @@ class Dash::Cli::Proxy::Reboot
         target = capture_with_info(*accessory.container_id_for(container_name: accessory_config.service_name, only_running: true), raise_on_non_zero_exit: false).strip.presence
         next unless target
 
-        info "Re-registering #{accessory_config.service_name} with kamal-proxy on #{host}..."
+        info "Re-registering #{accessory_config.service_name} with dash-proxy on #{host}..."
         execute *accessory.deploy(target: target)
         registered_services << accessory_config.service_name
       end
@@ -176,7 +176,7 @@ class Dash::Cli::Proxy::Reboot
       missing = registered_services - listed
 
       if missing.any?
-        raise Dash::Cli::BootError, "kamal-proxy on #{host} is missing services after reboot: #{missing.join(", ")}"
+        raise Dash::Cli::BootError, "dash-proxy on #{host} is missing services after reboot: #{missing.join(", ")}"
       end
     end
 end

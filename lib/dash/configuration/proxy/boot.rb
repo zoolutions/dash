@@ -41,10 +41,8 @@ class Dash::Configuration::Proxy::Boot
     "#{repository_name}/#{image_name}"
   end
 
-  # Stays kamal-proxy until the server-artifact rename ships a migration
-  # bridge — every deployed host has a running container by this name.
   def container_name
-    "kamal-proxy"
+    Dash::Configuration::Proxy::CONTAINER_NAME
   end
 
   def host_directory
@@ -72,7 +70,7 @@ class Dash::Configuration::Proxy::Boot
   end
 
   def apps_container_directory
-    "/home/kamal-proxy/.apps-config"
+    "/home/dash-proxy/.apps-config"
   end
 
   def apps_volume

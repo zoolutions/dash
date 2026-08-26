@@ -346,7 +346,7 @@ class ConfigurationAccessoryTest < ActiveSupport::TestCase
   end
 
   test "network_args default" do
-    assert_equal [ "--network", "kamal" ], @config.accessory(:mysql).network_args
+    assert_equal [ "--network", "dash" ], @config.accessory(:mysql).network_args
   end
 
   test "network_args with configured options" do

@@ -41,10 +41,44 @@ class Dash::Commands::Docker < Dash::Commands::Base
   end
 
   def create_network
-    docker :network, :create, :kamal
+    docker :network, :create, Dash::Configuration::Proxy::NETWORK
+  end
+
+  # Stage 3c: docker cannot rename a network, so `dash` is created alongside
+  # `kamal` and everything still on the old one is joined to the new one.
+  #
+  # App containers would be replaced by the next deploy anyway; accessories are
+  # not, and that is the whole point — without this a renamed proxy cannot
+  # reach `db` or `redis`. Connecting a container that is already attached
+  # fails, so each connect tolerates its own failure rather than aborting the
+  # sweep. The old network is never removed; that is documented manual cleanup
+  # and stage 3d's code change.
+  def connect_legacy_network_containers
+    any \
+      combine(
+        legacy_network_exists,
+        pipe(legacy_network_container_names, connect_each_to_network)
+      ),
+      [ :true ]
   end
 
   private
+    def legacy_network_exists
+      docker :network, :inspect, Dash::Configuration::Proxy::LEGACY_NETWORK, ">", "/dev/null", "2>&1"
+    end
+
+    def legacy_network_container_names
+      docker :network, :inspect, Dash::Configuration::Proxy::LEGACY_NETWORK,
+        "--format", "'{{range .Containers}}{{.Name}}{{\"\\n\"}}{{end}}'"
+    end
+
+    # Already-attached containers make `network connect` fail; tolerate each
+    # one's failure rather than letting it abort the sweep.
+    def connect_each_to_network
+      [ :xargs, "-r", "-I{}", "sh", "-c",
+        "'docker network connect #{Dash::Configuration::Proxy::NETWORK} {} 2>/dev/null || true'" ]
+    end
+
     def get_docker
       shell \
         any \

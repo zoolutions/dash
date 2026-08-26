@@ -13,20 +13,20 @@ class CommandsAppTest < ActiveSupport::TestCase
 
   test "run" do
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-999 --network dash --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run.join(" ")
   end
 
   test "run with destination" do
     @destination = "staging"
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-staging-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-staging-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env KAMAL_DESTINATION=\"staging\" --env-file .dash/apps/app-staging/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination=\"staging\" dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-staging-999 --network dash --env KAMAL_CONTAINER_NAME=\"app-web-staging-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env KAMAL_DESTINATION=\"staging\" --env-file .dash/apps/app-staging/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination=\"staging\" dhh/app:999",
       new_command.run.join(" ")
   end
 
   test "run with hostname" do
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --hostname myhost --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-999 --network dash --hostname myhost --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run(hostname: "myhost").join(" ")
   end
 
@@ -34,7 +34,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:servers] = { "web" => [ "1.1.1.1" ], "jobs" => { "hosts" => [ "1.1.1.2" ], "cmd" => "bin/jobs", "healthcheck" => { "port" => 7434, "path" => "/readyz", "start_period" => 60 } } }
 
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-jobs-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-jobs-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.2\" --env-file .dash/apps/app/env/roles/jobs.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"jobs\" --label destination --health-cmd \"curl -f http://localhost:7434/readyz || exit 1\" --health-interval \"1s\" --health-start-period \"60s\" dhh/app:999 bin/jobs",
+      "docker run --detach --restart unless-stopped --name app-jobs-999 --network dash --env KAMAL_CONTAINER_NAME=\"app-jobs-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.2\" --env-file .dash/apps/app/env/roles/jobs.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"jobs\" --label destination --health-cmd \"curl -f http://localhost:7434/readyz || exit 1\" --health-interval \"1s\" --health-start-period \"60s\" dhh/app:999 bin/jobs",
       new_command(role: "jobs", host: "1.1.1.2").run.join(" ")
   end
 
@@ -76,14 +76,14 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:volumes] = [ "/local/path:/container/path" ]
 
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --volume /local/path:/container/path --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-999 --network dash --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --volume /local/path:/container/path --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run.join(" ")
   end
 
   test "run with custom options" do
     @config[:servers] = { "web" => [ "1.1.1.1" ], "jobs" => { "hosts" => [ "1.1.1.2" ], "cmd" => "bin/jobs", "options" => { "mount" => "somewhere", "cap-add" => true } } }
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-jobs-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-jobs-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.2\" --env-file .dash/apps/app/env/roles/jobs.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"jobs\" --label destination --mount \"somewhere\" --cap-add dhh/app:999 bin/jobs",
+      "docker run --detach --restart unless-stopped --name app-jobs-999 --network dash --env KAMAL_CONTAINER_NAME=\"app-jobs-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.2\" --env-file .dash/apps/app/env/roles/jobs.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"jobs\" --label destination --mount \"somewhere\" --cap-add dhh/app:999 bin/jobs",
       new_command(role: "jobs", host: "1.1.1.2").run.join(" ")
   end
 
@@ -91,7 +91,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:servers] = { "web" => { "hosts" => [ "1.1.1.1" ], "options" => { "restart" => "on-failure" } } }
 
     assert_equal \
-      "docker run --detach --restart on-failure --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart on-failure --name app-web-999 --network dash --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run.join(" ")
   end
 
@@ -99,7 +99,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:logging] = { "driver" => "local", "options" => { "max-size" => "100m", "max-file" => "3" } }
 
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-driver \"local\" --log-opt max-size=\"100m\" --log-opt max-file=\"3\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-999 --network dash --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-driver \"local\" --log-opt max-size=\"100m\" --log-opt max-file=\"3\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run.join(" ")
   end
 
@@ -108,7 +108,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:servers] = { "web" => { "hosts" => [ "1.1.1.1" ], "logging" => { "driver" => "local", "options" => { "max-size" => "100m" } } } }
 
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-driver \"local\" --log-opt max-size=\"100m\" --log-opt max-file=\"3\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-999 --network dash --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env-file .dash/apps/app/env/roles/web.env --log-driver \"local\" --log-opt max-size=\"100m\" --log-opt max-file=\"3\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run.join(" ")
   end
 
@@ -117,7 +117,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:env]["tags"] = { "tag1" => { "ENV1" => "value1" } }
 
     assert_equal \
-      "docker run --detach --restart unless-stopped --name app-web-999 --network kamal --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env ENV1=\"value1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
+      "docker run --detach --restart unless-stopped --name app-web-999 --network dash --env KAMAL_CONTAINER_NAME=\"app-web-999\" --env KAMAL_VERSION=\"999\" --env KAMAL_HOST=\"1.1.1.1\" --env ENV1=\"value1\" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --label service=\"app\" --label role=\"web\" --label destination dhh/app:999",
       new_command.run.join(" ")
   end
 
@@ -183,7 +183,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
   test "deploy" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(target: "172.1.0.2").join(" ")
   end
 
@@ -191,7 +191,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:proxy] = { "path_response_timeouts" => { "/api/reports" => "5m", "/stream" => 0 } }
 
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --path-timeout=\"/api/reports=5m\" --path-timeout=\"/stream=0s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --path-timeout=\"/api/reports=5m\" --path-timeout=\"/stream=0s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(target: "172.1.0.2").join(" ")
   end
 
@@ -202,7 +202,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
     # The executed argv carries the real credential...
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"172.1.0.2:80\" --host=\"example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --basic-auth=\"admin:s3cr3t\" --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --host=\"example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --basic-auth=\"admin:s3cr3t\" --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       command.join(" ")
 
     # ...but anything kamal prints redacts it (registry-login precedent).
@@ -214,7 +214,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:proxy] = { "ssl" => true, "host" => "example.com" }
 
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"172.1.0.2:80\" --host=\"example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --host=\"example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(target: "172.1.0.2").join(" ")
   end
 
@@ -222,7 +222,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:proxy] = { "ssl" => true, "hosts" => [ "example.com", "anotherexample.com" ] }
 
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"172.1.0.2:80\" --host=\"example.com\" --host=\"anotherexample.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --host=\"example.com\" --host=\"anotherexample.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(target: "172.1.0.2").join(" ")
   end
 
@@ -230,7 +230,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:proxy] = { "ssl" => false }
 
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(target: "172.1.0.2").join(" ")
   end
 
@@ -238,7 +238,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:proxy] = { "healthcheck" => { "interval" => 1, "timeout" => 10, "path" => "/health", "port" => 3001, "host" => "health.example.com" } }
 
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --health-check-interval=\"1s\" --health-check-timeout=\"10s\" --health-check-path=\"/health\" --health-check-port=\"3001\" --health-check-host=\"health.example.com\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --health-check-interval=\"1s\" --health-check-timeout=\"10s\" --health-check-path=\"/health\" --health-check-port=\"3001\" --health-check-host=\"health.example.com\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(target: "172.1.0.2").join(" ")
   end
 
@@ -246,19 +246,19 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:proxy] = { "healthcheck" => { "port" => 8080 } }
 
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --health-check-port=\"8080\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --health-check-port=\"8080\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(target: "172.1.0.2").join(" ")
   end
 
   test "remove" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy remove app-web",
+      "docker exec dash-proxy dash-proxy remove app-web",
       new_command.remove.join(" ")
   end
 
   test "rollout_deploy" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy rollout deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\"",
+      "docker exec dash-proxy dash-proxy rollout deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\"",
       new_command.rollout_deploy(target: "172.1.0.2").join(" ")
   end
 
@@ -266,7 +266,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:proxy] = { "ssl" => true, "host" => "example.com", "response_timeout" => 10 }
 
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy rollout deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\"",
+      "docker exec dash-proxy dash-proxy rollout deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\"",
       new_command.rollout_deploy(target: "172.1.0.2").join(" ")
   end
 
@@ -275,37 +275,37 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:drain_timeout] = 12
 
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy rollout deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"6s\" --drain-timeout=\"12s\"",
+      "docker exec dash-proxy dash-proxy rollout deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"6s\" --drain-timeout=\"12s\"",
       new_command.rollout_deploy(target: "172.1.0.2").join(" ")
   end
 
   test "rollout_set with percent" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy rollout set app-web --percent=\"10\"",
+      "docker exec dash-proxy dash-proxy rollout set app-web --percent=\"10\"",
       new_command.rollout_set(percent: 10).join(" ")
   end
 
   test "rollout_set with percent zero" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy rollout set app-web --percent=\"0\"",
+      "docker exec dash-proxy dash-proxy rollout set app-web --percent=\"0\"",
       new_command.rollout_set(percent: 0).join(" ")
   end
 
   test "rollout_set with list" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy rollout set app-web --list=\"dhh\" --list=\"jorge\"",
+      "docker exec dash-proxy dash-proxy rollout set app-web --list=\"dhh\" --list=\"jorge\"",
       new_command.rollout_set(list: [ "dhh", "jorge" ]).join(" ")
   end
 
   test "rollout_set with percent and list" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy rollout set app-web --percent=\"10\" --list=\"dhh\"",
+      "docker exec dash-proxy dash-proxy rollout set app-web --percent=\"10\" --list=\"dhh\"",
       new_command.rollout_set(percent: 10, list: [ "dhh" ]).join(" ")
   end
 
   test "rollout_stop" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy rollout stop app-web",
+      "docker exec dash-proxy dash-proxy rollout stop app-web",
       new_command.rollout_stop.join(" ")
   end
 
@@ -412,7 +412,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
   test "execute in new container" do
     assert_match \
-      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
+      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network dash --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
       new_command.execute_in_new_container("bin/rails", "db:setup", env: {}).join(" ")
   end
 
@@ -420,19 +420,19 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:logging] = { "driver" => "local", "options" => { "max-size" => "100m", "max-file" => "3" } }
 
     assert_match \
-      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-driver "local" --log-opt max-size="100m" --log-opt max-file="3" dhh/app:999 bin/rails db:setup},
+      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network dash --env-file .dash/apps/app/env/roles/web.env --log-driver "local" --log-opt max-size="100m" --log-opt max-file="3" dhh/app:999 bin/rails db:setup},
       new_command.execute_in_new_container("bin/rails", "db:setup", env: {}).join(" ")
   end
 
   test "execute in new container with env" do
     assert_match \
-      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --env foo="bar" --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
+      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network dash --env-file .dash/apps/app/env/roles/web.env --env foo="bar" --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
       new_command.execute_in_new_container("bin/rails", "db:setup", env: { "foo" => "bar" }).join(" ")
   end
 
   test "execute in new detached container" do
     assert_match \
-      %r{docker run --detach --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
+      %r{docker run --detach --name app-web-exec-999-[0-9a-f]{6} --network dash --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
       new_command.execute_in_new_container("bin/rails", "db:setup", detach: true, env: {}).join(" ")
   end
 
@@ -441,14 +441,14 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:env]["tags"] = { "tag1" => { "ENV1" => "value1" } }
 
     assert_match \
-      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env ENV1="value1" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
+      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network dash --env ENV1="value1" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails db:setup},
       new_command.execute_in_new_container("bin/rails", "db:setup", env: {}).join(" ")
   end
 
   test "execute in new container with custom options" do
     @config[:servers] = { "web" => { "hosts" => [ "1.1.1.1" ], "options" => { "mount" => "somewhere", "cap-add" => true } } }
     assert_match \
-      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" --mount "somewhere" --cap-add dhh/app:999 bin/rails db:setup},
+      %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network dash --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" --mount "somewhere" --cap-add dhh/app:999 bin/rails db:setup},
       new_command.execute_in_new_container("bin/rails", "db:setup", env: {}).join(" ")
   end
 
@@ -457,7 +457,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
     command = new_command.execute_in_new_container("bin/rails", "db:setup", env: {}).join(" ")
 
-    assert_match %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" --mount "somewhere" dhh/app:999 bin/rails db:setup}, command
+    assert_match %r{docker run --rm --name app-web-exec-999-[0-9a-f]{6} --network dash --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" --mount "somewhere" dhh/app:999 bin/rails db:setup}, command
     assert_no_match(/--restart/, command)
   end
 
@@ -474,7 +474,7 @@ class CommandsAppTest < ActiveSupport::TestCase
   end
 
   test "execute in new container over ssh" do
-    assert_match %r{docker run -it --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails c},
+    assert_match %r{docker run -it --rm --name app-web-exec-999-[0-9a-f]{6} --network dash --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails c},
       stub_stdin_tty { new_command.execute_in_new_container_over_ssh("bin/rails", "c", env: {}) }
   end
 
@@ -482,13 +482,13 @@ class CommandsAppTest < ActiveSupport::TestCase
     @config[:servers] = [ { "1.1.1.1" => "tag1" } ]
     @config[:env]["tags"] = { "tag1" => { "ENV1" => "value1" } }
 
-    assert_match %r{ssh -t root@1.1.1.1 -p 22 'docker run -it --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env ENV1="value1" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails c'},
+    assert_match %r{ssh -t root@1.1.1.1 -p 22 'docker run -it --rm --name app-web-exec-999-[0-9a-f]{6} --network dash --env ENV1="value1" --env-file .dash/apps/app/env/roles/web.env --log-opt max-size="10m" dhh/app:999 bin/rails c'},
       stub_stdin_tty { new_command.execute_in_new_container_over_ssh("bin/rails", "c", env: {}) }
   end
 
   test "execute in new container with custom options over ssh" do
     @config[:servers] = { "web" => { "hosts" => [ "1.1.1.1" ], "options" => { "mount" => "somewhere", "cap-add" => true } } }
-    assert_match %r{docker run -it --rm --name app-web-exec-999-[0-9a-f]{6} --network kamal --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --mount \"somewhere\" --cap-add dhh/app:999 bin/rails c},
+    assert_match %r{docker run -it --rm --name app-web-exec-999-[0-9a-f]{6} --network dash --env-file .dash/apps/app/env/roles/web.env --log-opt max-size=\"10m\" --mount \"somewhere\" --cap-add dhh/app:999 bin/rails c},
       stub_stdin_tty { new_command.execute_in_new_container_over_ssh("bin/rails", "c", env: {}) }
   end
 
@@ -711,19 +711,19 @@ class CommandsAppTest < ActiveSupport::TestCase
 
   test "live" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy resume app-web",
+      "docker exec dash-proxy dash-proxy resume app-web",
       new_command.live.join(" ")
   end
 
   test "maintenance" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy stop app-web",
+      "docker exec dash-proxy dash-proxy stop app-web",
       new_command.maintenance.join(" ")
   end
 
   test "maintenance with options" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy stop app-web --drain-timeout=\"10s\" --message=\"Hi\"",
+      "docker exec dash-proxy dash-proxy stop app-web --drain-timeout=\"10s\" --message=\"Hi\"",
       new_command.maintenance(drain_timeout: 10, message: "Hi").join(" ")
   end
 

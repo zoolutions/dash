@@ -15,7 +15,7 @@ class CommandsProxyTest < ActiveSupport::TestCase
 
   test "run" do
     assert_equal \
-      "echo $(cat .dash/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .dash/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .dash/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .dash/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config",
+      "echo $(cat .dash/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .dash/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .dash/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .dash/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name dash-proxy --network dash --detach --restart unless-stopped --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config",
       new_command.run.join(" ")
   end
 
@@ -23,85 +23,91 @@ class CommandsProxyTest < ActiveSupport::TestCase
     @config.delete(:proxy)
 
     assert_equal \
-      "echo $(cat .dash/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .dash/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .dash/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .dash/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config",
+      "echo $(cat .dash/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .dash/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .dash/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .dash/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name dash-proxy --network dash --detach --restart unless-stopped --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config",
       new_command.run.join(" ")
   end
 
   test "proxy start" do
     assert_equal \
-      "docker container start kamal-proxy",
+      "docker container start dash-proxy",
       new_command.start.join(" ")
   end
 
   test "proxy stop" do
     assert_equal \
-      "docker container stop kamal-proxy",
+      "docker container stop dash-proxy",
       new_command.stop.join(" ")
   end
 
   test "proxy info" do
     assert_equal \
-      "docker ps --filter 'name=^kamal-proxy$'",
+      "docker ps --filter 'name=^dash-proxy$'",
       new_command.info.join(" ")
   end
 
   test "proxy logs" do
     assert_equal \
-      "docker logs kamal-proxy --timestamps 2>&1",
+      "docker logs dash-proxy --timestamps 2>&1",
       new_command.logs.join(" ")
   end
 
   test "proxy logs since 2h" do
     assert_equal \
-      "docker logs kamal-proxy --since 2h --timestamps 2>&1",
+      "docker logs dash-proxy --since 2h --timestamps 2>&1",
       new_command.logs(since: "2h").join(" ")
   end
 
   test "proxy logs last 10 lines" do
     assert_equal \
-      "docker logs kamal-proxy --tail 10 --timestamps 2>&1",
+      "docker logs dash-proxy --tail 10 --timestamps 2>&1",
       new_command.logs(lines: 10).join(" ")
   end
 
   test "proxy logs without timestamps" do
     assert_equal \
-      "docker logs kamal-proxy 2>&1",
+      "docker logs dash-proxy 2>&1",
       new_command.logs(timestamps: false).join(" ")
   end
 
   test "proxy logs with grep hello!" do
     assert_equal \
-      "docker logs kamal-proxy --timestamps 2>&1 | grep 'hello!'",
+      "docker logs dash-proxy --timestamps 2>&1 | grep 'hello!'",
       new_command.logs(grep: "hello!").join(" ")
   end
 
-  test "proxy remove container" do
+  # Docker ANDs multiple `--filter label=` values, so covering both the current
+  # and the pre-rename title is two chained commands. Without the legacy pass a
+  # host that has not been through the stage-3c rename keeps its old container
+  # and image after `dash proxy remove`.
+  test "proxy remove container prunes both the current and the legacy title" do
     assert_equal \
+      "docker container prune --force --filter label=org.opencontainers.image.title=dash-proxy && " \
       "docker container prune --force --filter label=org.opencontainers.image.title=kamal-proxy",
       new_command.remove_container.join(" ")
   end
 
-  test "proxy remove image" do
+  test "proxy remove image prunes both the current and the legacy title" do
     assert_equal \
+      "docker image prune --all --force --filter label=org.opencontainers.image.title=dash-proxy && " \
       "docker image prune --all --force --filter label=org.opencontainers.image.title=kamal-proxy",
       new_command.remove_image.join(" ")
   end
 
   test "proxy follow logs" do
     assert_equal \
-      "ssh -t root@1.1.1.1 -p 22 'docker logs kamal-proxy --timestamps --tail 10 --follow 2>&1'",
+      "ssh -t root@1.1.1.1 -p 22 'docker logs dash-proxy --timestamps --tail 10 --follow 2>&1'",
       new_command.follow_logs(host: @config[:servers].first)
   end
 
   test "proxy follow logs with grep hello!" do
     assert_equal \
-      "ssh -t root@1.1.1.1 -p 22 'docker logs kamal-proxy --timestamps --tail 10 --follow 2>&1 | grep \"hello!\"'",
+      "ssh -t root@1.1.1.1 -p 22 'docker logs dash-proxy --timestamps --tail 10 --follow 2>&1 | grep \"hello!\"'",
       new_command.follow_logs(host: @config[:servers].first, grep: "hello!")
   end
 
   test "version" do
     assert_equal \
-      "docker inspect kamal-proxy --format '{{.Config.Image}}' | awk -F: '{print $NF}'",
+      "docker inspect dash-proxy --format '{{.Config.Image}}' | awk -F: '{print $NF}'",
       new_command.version.join(" ")
   end
 
@@ -168,75 +174,75 @@ class CommandsProxyTest < ActiveSupport::TestCase
   test "registry run config" do
     @config[:proxy] = { "run" => { "registry" => "registry:4443" } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m registry:4443/ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name dash-proxy --network dash --detach --restart unless-stopped --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m registry:4443/ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "repository run config" do
     @config[:proxy] = { "run" => { "repository" => "custom/repo" } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m custom/repo:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name dash-proxy --network dash --detach --restart unless-stopped --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m custom/repo:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "image_version run config" do
     @config[:proxy] = { "run" => { "version" => "v1.2.3" } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:v1.2.3 kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name dash-proxy --network dash --detach --restart unless-stopped --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:v1.2.3 dash-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "bind_ips run config" do
     @config[:proxy] = { "run" => { "bind_ips" => [ "0.0.0.0", "127.0.0.1" ] } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 0.0.0.0:80:80 --publish 0.0.0.0:443:443 --publish 127.0.0.1:80:80 --publish 127.0.0.1:443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name dash-proxy --network dash --detach --restart unless-stopped --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --publish 0.0.0.0:80:80 --publish 0.0.0.0:443:443 --publish 127.0.0.1:80:80 --publish 127.0.0.1:443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "log_max_size run config" do
     @config[:proxy] = { "run" => { "log_max_size" => "50m" } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=50m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name dash-proxy --network dash --detach --restart unless-stopped --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=50m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "domains" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy domains refresh",
+      "docker exec dash-proxy dash-proxy domains refresh",
       new_command.domains("refresh").join(" ")
   end
 
   test "debug run config" do
     @config[:proxy] = { "run" => { "debug" => true } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --debug --recheck-targets-on-restore",
+      "docker run --name dash-proxy --network dash --detach --restart unless-stopped --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy run --debug --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "metrics_port run config" do
     @config[:proxy] = { "run" => { "metrics_port" => 9090 } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9090 ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --metrics-port \"9090\" --recheck-targets-on-restore",
+      "docker run --name dash-proxy --network dash --detach --restart unless-stopped --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m --expose=9090 ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy run --metrics-port \"9090\" --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "don't publish run config" do
     @config[:proxy] = { "run" => { "publish" => false } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name dash-proxy --network dash --detach --restart unless-stopped --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "run with config digest label" do
     @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
     assert_equal \
-      "docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.dash.proxy-config-digest=abc123 --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name dash-proxy --network dash --detach --restart unless-stopped --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy --label org.dash.proxy-config-digest=abc123 --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy run --recheck-targets-on-restore",
       new_command.run(digest: "abc123").join(" ")
   end
 
   test "run with config digest label on legacy boot config path" do
     assert_equal \
-      "echo $(cat .dash/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .dash/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .dash/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .dash/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name kamal-proxy --network kamal --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --label org.dash.proxy-config-digest=abc123 --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config",
+      "echo $(cat .dash/proxy/options 2> /dev/null || echo \"--publish 80:80 --publish 443:443 --log-opt max-size=10m\") $(cat .dash/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):$(cat .dash/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") $(cat .dash/proxy/run_command 2> /dev/null || echo \"\") | xargs docker run --name dash-proxy --network dash --detach --restart unless-stopped --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy --label org.dash.proxy-config-digest=abc123 --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config",
       new_command.run(digest: "abc123").join(" ")
   end
 
@@ -249,7 +255,7 @@ class CommandsProxyTest < ActiveSupport::TestCase
 
   test "stop with timeout" do
     assert_equal \
-      "docker container stop --time 40 kamal-proxy",
+      "docker container stop --time 40 dash-proxy",
       new_command.stop(timeout: 40).join(" ")
   end
 
@@ -268,127 +274,127 @@ class CommandsProxyTest < ActiveSupport::TestCase
 
   test "list" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy list",
+      "docker exec dash-proxy dash-proxy list",
       new_command.list.join(" ")
   end
 
   test "list json" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy list --json",
+      "docker exec dash-proxy dash-proxy list --json",
       new_command.list(json: true).join(" ")
   end
 
   test "cache stats" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy cache stats",
+      "docker exec dash-proxy dash-proxy cache stats",
       new_command.cache_stats.join(" ")
   end
 
   test "cache stats with count and json" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy cache stats --count --json",
+      "docker exec dash-proxy dash-proxy cache stats --count --json",
       new_command.cache_stats(count: true, json: true).join(" ")
   end
 
   test "cache purge" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy cache purge app-web",
+      "docker exec dash-proxy dash-proxy cache purge app-web",
       new_command.cache_purge("app-web").join(" ")
   end
 
   test "cache purge with path prefix" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy cache purge app-web --path-prefix \"/assets\"",
+      "docker exec dash-proxy dash-proxy cache purge app-web --path-prefix \"/assets\"",
       new_command.cache_purge("app-web", path_prefix: "/assets").join(" ")
   end
 
   test "mount_destinations" do
     assert_equal \
-      "docker inspect kamal-proxy --format '{{range .Mounts}}{{println .Destination}}{{end}}'",
+      "docker inspect dash-proxy --format '{{range .Mounts}}{{println .Destination}}{{end}}'",
       new_command.mount_destinations.join(" ")
   end
 
   test "config_digest reads the new label and falls back to the legacy one" do
     assert_equal \
-      "docker inspect kamal-proxy --format '{{ with index .Config.Labels \"org.dash.proxy-config-digest\" }}{{ . }}{{ else }}{{ index .Config.Labels \"org.kamal.proxy-config-digest\" }}{{ end }}'",
+      "docker inspect dash-proxy --format '{{ with index .Config.Labels \"org.dash.proxy-config-digest\" }}{{ . }}{{ else }}{{ index .Config.Labels \"org.kamal.proxy-config-digest\" }}{{ end }}'",
       new_command.config_digest.join(" ")
   end
 
   test "container_id" do
     assert_equal \
-      "docker container ls --all --filter 'name=^kamal-proxy$' --quiet",
+      "docker container ls --all --filter 'name=^dash-proxy$' --quiet",
       new_command.container_id.join(" ")
   end
 
   test "run with port_holder joins the holder namespace without publishing" do
     @config[:proxy] = { "run" => { "port_holder" => true } }
     assert_equal \
-      "docker run --name kamal-proxy --network container:kamal-proxy-net --detach --restart unless-stopped --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore --reuse-port",
+      "docker run --name dash-proxy --network container:dash-proxy-net --detach --restart unless-stopped --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy run --recheck-targets-on-restore --reuse-port",
       new_command.run.join(" ")
   end
 
   test "run with a custom container name" do
     @config[:proxy] = { "run" => { "port_holder" => true } }
     assert_match \
-      "docker run --name kamal-proxy-next --network container:kamal-proxy-net",
-      new_command.run(name: "kamal-proxy-next").join(" ")
+      "docker run --name dash-proxy-next --network container:dash-proxy-net",
+      new_command.run(name: "dash-proxy-next").join(" ")
   end
 
   test "run_holder" do
     @config[:proxy] = { "run" => { "port_holder" => true } }
     assert_equal \
-      "docker run --name kamal-proxy-net --network kamal --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy hold",
+      "docker run --name dash-proxy-net --network dash --detach --restart unless-stopped --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy hold",
       new_command.run_holder.join(" ")
   end
 
   test "start_holder_or_run" do
     @config[:proxy] = { "run" => { "port_holder" => true } }
     assert_match \
-      "docker container start kamal-proxy-net || docker run --name kamal-proxy-net",
+      "docker container start dash-proxy-net || docker run --name dash-proxy-net",
       new_command.start_holder_or_run.join(" ")
   end
 
   test "holder_container_id" do
     @config[:proxy] = { "run" => { "port_holder" => true } }
     assert_equal \
-      "docker container ls --filter 'name=^kamal-proxy-net$' --quiet",
+      "docker container ls --filter 'name=^dash-proxy-net$' --quiet",
       new_command.holder_container_id.join(" ")
   end
 
   test "disable_restart" do
     assert_equal \
-      "docker update --restart=no kamal-proxy",
+      "docker update --restart=no dash-proxy",
       new_command.disable_restart.join(" ")
   end
 
   test "drain" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy drain --drain-timeout=30s",
+      "docker exec dash-proxy dash-proxy drain --drain-timeout=30s",
       new_command.drain(timeout: 30).join(" ")
   end
 
   test "wait_for_exit" do
     assert_equal \
-      "docker wait kamal-proxy",
+      "docker wait dash-proxy",
       new_command.wait_for_exit.join(" ")
   end
 
   test "remove_stopped_container" do
     assert_equal \
-      "docker container rm kamal-proxy-next",
-      new_command.remove_stopped_container(name: "kamal-proxy-next").join(" ")
+      "docker container rm dash-proxy-next",
+      new_command.remove_stopped_container(name: "dash-proxy-next").join(" ")
   end
 
   test "promote_next_container" do
     assert_equal \
-      "docker container rename kamal-proxy-next kamal-proxy",
+      "docker container rename dash-proxy-next dash-proxy",
       new_command.promote_next_container.join(" ")
   end
 
   test "list with a custom container name" do
     assert_equal \
-      "docker exec kamal-proxy-next kamal-proxy list",
-      new_command.list(name: "kamal-proxy-next").join(" ")
+      "docker exec dash-proxy-next dash-proxy list",
+      new_command.list(name: "dash-proxy-next").join(" ")
   end
 
   # Certificate store transfer (dash proxy export_certs / import_certs). The
@@ -397,7 +403,7 @@ class CommandsProxyTest < ActiveSupport::TestCase
 
   test "export certs through the running proxy" do
     assert_equal \
-      "docker exec kamal-proxy kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
+      "docker exec dash-proxy dash-proxy export certs /home/dash-proxy/.apps-config/certs-export.tar.gz",
       new_command.export_certs.join(" ")
   end
 
@@ -405,20 +411,20 @@ class CommandsProxyTest < ActiveSupport::TestCase
     @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
 
     assert_equal \
-      "docker run --rm --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy " \
-      "--volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config " \
+      "docker run --rm --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy " \
+      "--volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config " \
       "ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} " \
-      "kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
+      "dash-proxy export certs /home/dash-proxy/.apps-config/certs-export.tar.gz",
       new_command.export_certs_offline.join(" ")
   end
 
   test "export certs offline falls back to the boot config image without a run config" do
     assert_equal \
-      "docker run --rm --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy " \
-      "--volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config " \
+      "docker run --rm --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy " \
+      "--volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config " \
       "$(cat .dash/proxy/image 2> /dev/null || echo \"ghcr.io/zoolutions/dash-proxy\"):" \
       "$(cat .dash/proxy/image_version 2> /dev/null || echo \"#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}\") " \
-      "kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
+      "dash-proxy export certs /home/dash-proxy/.apps-config/certs-export.tar.gz",
       new_command.export_certs_offline.join(" ")
   end
 
@@ -429,9 +435,9 @@ class CommandsProxyTest < ActiveSupport::TestCase
     @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
 
     assert_equal \
-      "docker run --rm --interactive --volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy " \
+      "docker run --rm --interactive --volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy " \
       "ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} " \
-      "sh -c 'cat > /tmp/kamal-cert-import && kamal-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\"' " \
+      "sh -c 'cat > /tmp/kamal-cert-import && dash-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\"' " \
       "< .dash/proxy/certs-import",
       new_command.import_certs(traefik_acme: true).join(" ")
   end
@@ -439,7 +445,7 @@ class CommandsProxyTest < ActiveSupport::TestCase
   test "import certs with a resolver" do
     @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
 
-    assert_match "kamal-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\" --resolver=\"letsencrypt\"",
+    assert_match "dash-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\" --resolver=\"letsencrypt\"",
       new_command.import_certs(traefik_acme: true, resolver: "letsencrypt").join(" ")
   end
 
@@ -457,14 +463,14 @@ class CommandsProxyTest < ActiveSupport::TestCase
   test "import certs restores an archive with force" do
     @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
 
-    assert_match "kamal-proxy import certs --archive=\"/tmp/kamal-cert-import\" --force",
+    assert_match "dash-proxy import certs --archive=\"/tmp/kamal-cert-import\" --force",
       new_command.import_certs(force: true).join(" ")
   end
 
   test "import certs verifies an archive" do
     @config[:proxy] = { "run" => { "log_max_size" => "10m" } }
 
-    assert_match "kamal-proxy import certs --archive=\"/tmp/kamal-cert-import\" --verify",
+    assert_match "dash-proxy import certs --archive=\"/tmp/kamal-cert-import\" --verify",
       new_command.import_certs(verify: true).join(" ")
   end
 
@@ -479,4 +485,49 @@ class CommandsProxyTest < ActiveSupport::TestCase
     def new_command
       Dash::Commands::Proxy.new(Dash::Configuration.new(@config, version: "123"), host: "1.1.1.1")
     end
+
+  # --- Stage 3c migrations -------------------------------------------------
+
+  # The guard is negated and leads the chain because shell && and || share
+  # precedence and associate left: written as `exists || legacy && create &&
+  # copy` it parses as `((exists || legacy) && create) && copy`, which re-copies
+  # the legacy volume over live state on every deploy.
+  test "copy_legacy_config_volume skips itself once the new volume exists" do
+    command = new_command.copy_legacy_config_volume.join(" ")
+
+    assert command.start_with?("! docker volume inspect dash-proxy-config"),
+      "the guard must lead the chain, or the copy runs even when the volume already exists"
+    assert command.end_with?("|| true"),
+      "a host with neither volume must not fail its deploy"
+  end
+
+  test "copy_legacy_config_volume copies the pre-rename volume verbatim" do
+    command = new_command.copy_legacy_config_volume.join(" ")
+
+    assert_match "docker volume inspect kamal-proxy-config", command
+    assert_match "docker volume create dash-proxy-config", command
+    assert_match "--volume kamal-proxy-config:/from", command
+    assert_match "--volume dash-proxy-config:/to", command
+    assert_match "cp -a /from/. /to/", command
+    assert_match "--user root", command, "the image's own user cannot write the destination volume"
+  end
+
+  # A rename means the old container has to release ports 80/443 before the new
+  # one can claim them; no port-holder handoff spans two container names.
+  test "remove_legacy_container stops and removes the pre-rename container" do
+    command = new_command.remove_legacy_container(timeout: 30).join(" ")
+
+    assert_match "docker container inspect kamal-proxy > /dev/null 2>&1", command
+    assert_match "docker container stop --time=30 kamal-proxy", command
+    assert_match "docker container rm kamal-proxy", command
+    assert command.end_with?("|| true"), "a host with no legacy container must not fail its deploy"
+  end
+
+  test "remove_legacy_holder_container removes the pre-rename port holder" do
+    command = new_command.remove_legacy_holder_container.join(" ")
+
+    assert_match "docker container inspect kamal-proxy-net", command
+    assert_match "docker container rm --force kamal-proxy-net", command
+    assert command.end_with?("|| true")
+  end
 end

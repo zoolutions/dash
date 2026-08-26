@@ -28,7 +28,7 @@ class Dash::Commands::Proxy < Dash::Commands::Base
         *proxy_run_config.network_args,
         "--detach",
         "--restart", "unless-stopped",
-        "--volume", "kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy",
+        "--volume", "dash-proxy-config:/home/dash-proxy/.config/dash-proxy",
         *config_digest_label_args(digest),
         *proxy_run_config.docker_options_args,
         *proxy_run_config.image,
@@ -36,6 +36,58 @@ class Dash::Commands::Proxy < Dash::Commands::Base
     else
       pipe boot_config, xargs(docker_run(digest: digest))
     end
+  end
+
+  # Stage 3c migrations. All three are idempotent and guarded on the
+  # destination not existing, so a second deploy is a no-op. Stage 3d deletes
+  # them along with the legacy constants they read.
+
+  # Copies the pre-rename config volume into the new one, before anything
+  # starts. The volume holds the routing table and the ACME account and
+  # certificate cache; losing it means re-issuing every certificate and
+  # spending Let's Encrypt rate limits to get back where we were.
+  #
+  # Runs in the dash-proxy image itself — already pulled by this point in the
+  # boot sequence, and its ubuntu base has sh and cp. `--user root` because the
+  # image's own user cannot write the destination volume; `cp -a` preserves the
+  # uid, which the rename leaves at 1001.
+  # The guard is negated and leads the chain, with `|| true` last, because
+  # shell `&&` and `||` share precedence and associate left: written as
+  # `exists || legacy_exists && create && copy` it would parse as
+  # `((exists || legacy_exists) && create) && copy` and re-copy the legacy
+  # volume over live state on every deploy. Leading with `! exists` makes the
+  # whole chain a single left-associative AND, which short-circuits correctly.
+  def copy_legacy_config_volume(volume: Dash::Configuration::Proxy::CONFIG_VOLUME, legacy: Dash::Configuration::Proxy::LEGACY_CONFIG_VOLUME)
+    any \
+      combine(
+        negate(volume_exists(volume)),
+        volume_exists(legacy),
+        docker(:volume, :create, volume),
+        copy_between_volumes(legacy, volume)
+      ),
+      [ :true ]
+  end
+
+  # Stops and removes a pre-rename proxy container so the renamed one can claim
+  # ports 80/443. No port-holder handoff spans two container names, which is
+  # why this stage accepts a brief outage per host.
+  def remove_legacy_container(timeout: nil)
+    any \
+      combine(
+        container_exists(Dash::Configuration::Proxy::LEGACY_CONTAINER_NAME),
+        docker(:container, :stop, *("--time=#{timeout}" if timeout), Dash::Configuration::Proxy::LEGACY_CONTAINER_NAME),
+        docker(:container, :rm, Dash::Configuration::Proxy::LEGACY_CONTAINER_NAME)
+      ),
+      [ :true ]
+  end
+
+  def remove_legacy_holder_container
+    any \
+      combine(
+        container_exists(Dash::Configuration::Proxy::LEGACY_HOLDER_CONTAINER_NAME),
+        docker(:container, :rm, "--force", Dash::Configuration::Proxy::LEGACY_HOLDER_CONTAINER_NAME)
+      ),
+      [ :true ]
   end
 
   def start
@@ -77,15 +129,15 @@ class Dash::Commands::Proxy < Dash::Commands::Base
   end
 
   def list(name: container_name, json: false)
-    docker :exec, name, "kamal-proxy", :list, *("--json" if json)
+    docker :exec, name, "dash-proxy", :list, *("--json" if json)
   end
 
   def cache_stats(count: false, json: false)
-    docker :exec, container_name, "kamal-proxy", :cache, :stats, *optionize({ count: count || nil, json: json || nil }.compact)
+    docker :exec, container_name, "dash-proxy", :cache, :stats, *optionize({ count: count || nil, json: json || nil }.compact)
   end
 
   def cache_purge(service, path_prefix: nil)
-    docker :exec, container_name, "kamal-proxy", :cache, :purge, service, *optionize({ "path-prefix": path_prefix }.compact)
+    docker :exec, container_name, "dash-proxy", :cache, :purge, service, *optionize({ "path-prefix": path_prefix }.compact)
   end
 
   # One mount destination per line - what the running container was actually
@@ -108,12 +160,12 @@ class Dash::Commands::Proxy < Dash::Commands::Base
     docker \
       :run,
       "--name", proxy_run_config.holder_container_name,
-      "--network", "kamal",
+      "--network", "dash",
       "--detach",
       "--restart", "unless-stopped",
       *proxy_run_config.holder_docker_args,
       *proxy_run_config.image,
-      "kamal-proxy", "hold"
+      "dash-proxy", "hold"
   end
 
   def start_holder_or_run
@@ -131,7 +183,7 @@ class Dash::Commands::Proxy < Dash::Commands::Base
   end
 
   def drain(timeout: nil)
-    docker :exec, container_name, "kamal-proxy", :drain, *("--drain-timeout=#{timeout}s" if timeout)
+    docker :exec, container_name, "dash-proxy", :drain, *("--drain-timeout=#{timeout}s" if timeout)
   end
 
   def wait_for_exit(name: container_name)
@@ -161,15 +213,24 @@ class Dash::Commands::Proxy < Dash::Commands::Base
 
   # `retry` takes a host, or --all; the rest take no arguments.
   def domains(subcommand, *args)
-    docker :exec, container_name, "kamal-proxy", "domains", subcommand, *args
+    docker :exec, container_name, "dash-proxy", "domains", subcommand, *args
   end
 
+  # Docker ANDs multiple `--filter label=` values, so matching both the current
+  # and the pre-rename image title takes two commands rather than one filter
+  # with two values. Without the legacy pass, `dash proxy remove` on a host that
+  # has not yet been through the rename silently leaves the old container and
+  # image behind. Stage 3d drops the legacy half.
   def remove_container
-    docker :container, :prune, "--force", "--filter", "label=org.opencontainers.image.title=kamal-proxy"
+    combine \
+      prune_containers_titled(Dash::Configuration::Proxy::IMAGE_TITLE),
+      prune_containers_titled(Dash::Configuration::Proxy::LEGACY_IMAGE_TITLE)
   end
 
   def remove_image
-    docker :image, :prune, "--all", "--force", "--filter", "label=org.opencontainers.image.title=kamal-proxy"
+    combine \
+      prune_images_titled(Dash::Configuration::Proxy::IMAGE_TITLE),
+      prune_images_titled(Dash::Configuration::Proxy::LEGACY_IMAGE_TITLE)
   end
 
   def cleanup_traefik
@@ -245,7 +306,7 @@ class Dash::Commands::Proxy < Dash::Commands::Base
     end
 
     def cert_store_volume_args
-      [ "--volume", "kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy" ]
+      [ "--volume", "dash-proxy-config:/home/dash-proxy/.config/dash-proxy" ]
     end
 
     # Same fallback as #pull: without a run config the image comes from the
@@ -262,14 +323,52 @@ class Dash::Commands::Proxy < Dash::Commands::Base
       [ "--label", "#{CONFIG_DIGEST_LABEL}=#{digest}" ] if digest
     end
 
+    def negate(command)
+      [ "!", *command ]
+    end
+
+    def volume_exists(name)
+      docker :volume, :inspect, name, ">", "/dev/null", "2>&1"
+    end
+
+    def container_exists(name)
+      docker :container, :inspect, name, ">", "/dev/null", "2>&1"
+    end
+
+    def copy_between_volumes(from, to)
+      docker \
+        :run, "--rm", "--user", "root", "--entrypoint", "sh",
+        "--volume", "#{from}:/from",
+        "--volume", "#{to}:/to",
+        proxy_image,
+        "-c", "'cp -a /from/. /to/'"
+    end
+
+    # The image the volume copy borrows. The proxy this gem is pinned to is
+    # already pulled by the time the copy runs, and `rake release` gates on
+    # MINIMUM_VERSION being published, so this is always resolvable — unlike
+    # the legacy boot path's image, which is read from a file on the host.
+    def proxy_image
+      proxy_run_config&.image ||
+        "#{config.proxy_boot.image_default}:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}"
+    end
+
+    def prune_containers_titled(title)
+      docker :container, :prune, "--force", "--filter", "label=org.opencontainers.image.title=#{title}"
+    end
+
+    def prune_images_titled(title)
+      docker :image, :prune, "--all", "--force", "--filter", "label=org.opencontainers.image.title=#{title}"
+    end
+
     def docker_run(digest: nil)
       docker \
         :run,
         "--name", container_name,
-        "--network", "kamal",
+        "--network", "dash",
         "--detach",
         "--restart", "unless-stopped",
-        "--volume", "kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy",
+        "--volume", "dash-proxy-config:/home/dash-proxy/.config/dash-proxy",
         *config_digest_label_args(digest),
         *config.proxy_boot.apps_volume.docker_args
     end

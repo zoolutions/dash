@@ -1,6 +1,6 @@
 require "test_helper"
 
-# proxy/deny_ips and proxy/deny_user_agents: kamal-proxy's --deny-ip and
+# proxy/deny_ips and proxy/deny_user_agents: dash-proxy's --deny-ip and
 # --deny-user-agent. Edge disposition, beside allow_ips and rate_limit — behind
 # a loadbalancer the per-host proxies only ever see the LB as their peer.
 class ConfigurationProxyDenyListTest < ActiveSupport::TestCase
@@ -70,7 +70,7 @@ class ConfigurationProxyDenyListTest < ActiveSupport::TestCase
     assert_raises(Dash::ConfigurationError) { configuration "deny_user_agents" => [ 42 ] }
   end
 
-  # kamal-proxy serves the health check path without any of the address checks,
+  # dash-proxy serves the health check path without any of the address checks,
   # so a root health path would leave the whole service open to denied clients.
   test "a root healthcheck path is rejected alongside deny_ips" do
     assert_raises(Dash::ConfigurationError) do

@@ -1,7 +1,7 @@
-# ACME configuration for the kamal-proxy container, including the DNS-01
+# ACME configuration for the dash-proxy container, including the DNS-01
 # challenge credentials.
 #
-# Everything here except the credentials becomes a `kamal-proxy run` flag, so it
+# Everything here except the credentials becomes a `dash-proxy run` flag, so it
 # lands in the run command and therefore in Proxy::Run#config_digest — changing
 # the block reboots the proxy on the next deploy.
 #
@@ -9,14 +9,14 @@
 # API token can rewrite your zone; `docker run --env TOKEN=...` would put it in
 # the host's process listing and in kamal's own audit log.
 class Dash::Configuration::Proxy::Acme
-  # The canonical provider names kamal-proxy MINIMUM_VERSION advertises. Kept in
+  # The canonical provider names dash-proxy MINIMUM_VERSION advertises. Kept in
   # step with the proxy by test/proxy_flag_coverage_test.rb, which compares this
   # list against the manifest bin/sync-proxy-flags generates from the image.
   DNS_PROVIDERS = %w[
     auto cloudflare digitalocean gcloud godaddy hetzner namecheap none route53 vultr
   ].freeze
 
-  # Short forms kamal-proxy's ParseProviderName accepts but does not advertise,
+  # Short forms dash-proxy's ParseProviderName accepts but does not advertise,
   # so they cannot be generated from --help and are not drift-checked.
   DNS_PROVIDER_ALIASES = %w[ cf do gcp google googledns gd hz nc aws r53 vr ].freeze
 
@@ -70,7 +70,7 @@ class Dash::Configuration::Proxy::Acme
 
   private
     # The hash form pins zones to the DNS host that serves them; `default`
-    # covers unmatched zones. kamal-proxy takes repeatable --acme-dns-provider
+    # covers unmatched zones. dash-proxy takes repeatable --acme-dns-provider
     # entries — zone=provider pairs plus at most one bare default — so the hash
     # becomes an array and Utils.optionize repeats the flag. The string form
     # passes through untouched and keeps meaning what it always has.

@@ -1,6 +1,6 @@
 require "test_helper"
 
-# proxy/redirects_source: the dynamic redirect map (kamal-proxy --redirects-source /
+# proxy/redirects_source: the dynamic redirect map (dash-proxy --redirects-source /
 # --redirects-interval). Edge disposition — redirects answer at the loadbalancer,
 # like ssl_domains and canonical_host.
 class ConfigurationProxyRedirectsSourceTest < ActiveSupport::TestCase
@@ -65,7 +65,7 @@ class ConfigurationProxyRedirectsSourceTest < ActiveSupport::TestCase
     end
   end
 
-  # kamal-proxy rejects an interval below MinRedirectsInterval (10s) after the
+  # dash-proxy rejects an interval below MinRedirectsInterval (10s) after the
   # SSH round trip; catch it at config time instead.
   test "redirects_source interval must be an integer of at least 10 seconds" do
     [ 0, -300, "300", 1.5, 9 ].each do |interval|

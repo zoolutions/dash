@@ -103,7 +103,7 @@ class Dash::Configuration::Proxy::Run
   end
 
   def container_name
-    "kamal-proxy"
+    "dash-proxy"
   end
 
   # Zero-downtime reboots: a minimal long-lived holder container owns the
@@ -114,14 +114,14 @@ class Dash::Configuration::Proxy::Run
   end
 
   def holder_container_name
-    "kamal-proxy-net"
+    "dash-proxy-net"
   end
 
   def network_args
     if port_holder?
       [ "--network", "container:#{holder_container_name}" ]
     else
-      [ "--network", "kamal" ]
+      [ "--network", "dash" ]
     end
   end
 
@@ -136,7 +136,7 @@ class Dash::Configuration::Proxy::Run
   end
 
   def run_command
-    [ "kamal-proxy", "run", *optionize(run_command_options), *acme.run_command_args ].join(" ")
+    [ "dash-proxy", "run", *optionize(run_command_options), *acme.run_command_args ].join(" ")
   end
 
   def metrics_port
@@ -158,7 +158,7 @@ class Dash::Configuration::Proxy::Run
       .compact.merge(cache_options).merge(server_options)
   end
 
-  # Anything kamal-proxy accepts that has no key of its own yet. Values are
+  # Anything dash-proxy accepts that has no key of its own yet. Values are
   # optionized as written - `true` is a bare flag, anything else takes a value -
   # because the point of an escape hatch is that the gem holds no opinion about
   # the flag it is forwarding.
@@ -189,7 +189,7 @@ class Dash::Configuration::Proxy::Run
     ].compact
   end
 
-  # The flag only tells kamal-proxy where to look inside its own container, so
+  # The flag only tells dash-proxy where to look inside its own container, so
   # without this mount the socket is not there and a sleeping service never
   # wakes - which the operator sees as one hung request, not as a misconfiguration.
   def docker_socket_args
@@ -224,7 +224,7 @@ class Dash::Configuration::Proxy::Run
   end
 
   def apps_container_directory
-    "/home/kamal-proxy/.apps-config"
+    "/home/dash-proxy/.apps-config"
   end
 
   def apps_volume
@@ -288,7 +288,7 @@ class Dash::Configuration::Proxy::Run
     end
 
     # A passthrough flag that a named key already emits would be optionized
-    # twice, and kamal-proxy would silently take the last one. Refuse instead.
+    # twice, and dash-proxy would silently take the last one. Refuse instead.
     # Only Proxy::Run knows which flags the named keys produce, so the check
     # cannot live in the validator with the rest.
     def ensure_no_conflicting_flags
@@ -303,7 +303,7 @@ class Dash::Configuration::Proxy::Run
     # than of any one service - the policy that fills the cache is per service,
     # in proxy/cache. The store itself is deliberately absent: a store URL may
     # embed credentials, so it travels as CACHE_STORE in the secrets env file
-    # (kamal-proxy reads it as the --cache-store default) rather than on a
+    # (dash-proxy reads it as the --cache-store default) rather than on a
     # command line that lands in process listings and the audit log.
     def cache_options
       cache = run_config["cache"] || {}

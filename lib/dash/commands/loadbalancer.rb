@@ -14,7 +14,7 @@ class Dash::Commands::Loadbalancer < Dash::Commands::Base
     docker \
       :run,
       "--name", container_name,
-      "--network", "kamal",
+      "--network", "dash",
       "--detach",
       "--restart", "unless-stopped",
       "--label", label,
@@ -38,28 +38,28 @@ class Dash::Commands::Loadbalancer < Dash::Commands::Base
   end
 
   def deploy(targets: [])
-    docker :exec, container_name, "kamal-proxy", "deploy", loadbalancer_config.config.service,
+    docker :exec, container_name, "dash-proxy", "deploy", loadbalancer_config.config.service,
       *loadbalancer_config.deploy_command_args(targets: targets)
   end
 
   # `retry` takes a host, or --all; the rest take no arguments.
   def domains(subcommand, *args)
-    docker :exec, container_name, "kamal-proxy", "domains", subcommand, *args
+    docker :exec, container_name, "dash-proxy", "domains", subcommand, *args
   end
 
   def list(json: false)
-    docker :exec, container_name, "kamal-proxy", :list, *("--json" if json)
+    docker :exec, container_name, "dash-proxy", :list, *("--json" if json)
   end
 
   # Cache policy is edge-only under load balancing (see the layering contract),
   # so the cache admin surface lives here - registered under the bare service
   # name, unlike the per-role services on the proxy hosts.
   def cache_stats(count: false, json: false)
-    docker :exec, container_name, "kamal-proxy", :cache, :stats, *optionize({ count: count || nil, json: json || nil }.compact)
+    docker :exec, container_name, "dash-proxy", :cache, :stats, *optionize({ count: count || nil, json: json || nil }.compact)
   end
 
   def cache_purge(service, path_prefix: nil)
-    docker :exec, container_name, "kamal-proxy", :cache, :purge, service, *optionize({ "path-prefix": path_prefix }.compact)
+    docker :exec, container_name, "dash-proxy", :cache, :purge, service, *optionize({ "path-prefix": path_prefix }.compact)
   end
 
   def config_digest
@@ -94,16 +94,24 @@ class Dash::Commands::Loadbalancer < Dash::Commands::Base
   end
 
   # Prune by the label the container was actually created with - on a shared
-  # proxy host that is the kamal-proxy title, and pruning by the loadbalancer
-  # title would leave the container behind for `run` to collide with.
+  # proxy host that is the dash-proxy title, and pruning by the loadbalancer
+  # title would leave the container behind for `run` to collide with. Both the
+  # current and the pre-rename title are pruned, so a container created before
+  # the rename is not left behind to collide either.
   def remove_container
-    docker :container, :prune, "--force", "--filter", "label=#{label}"
+    combine \
+      prune_containers_titled(image_title),
+      prune_containers_titled(legacy_image_title)
   end
 
   # Image label filters match labels baked into the image, and the load balancer
-  # runs the kamal-proxy image whichever host it sits on.
+  # runs the dash-proxy image whichever host it sits on. Both titles are matched
+  # so a host still carrying a pre-rename image is cleaned up too; Docker ANDs
+  # multiple `--filter label=` values, so that is two commands.
   def remove_image
-    docker :image, :prune, "--all", "--force", "--filter", "label=org.opencontainers.image.title=kamal-proxy"
+    combine \
+      prune_images_titled(Dash::Configuration::Proxy::IMAGE_TITLE),
+      prune_images_titled(Dash::Configuration::Proxy::LEGACY_IMAGE_TITLE)
   end
 
   def ensure_directory
@@ -153,28 +161,50 @@ class Dash::Commands::Loadbalancer < Dash::Commands::Base
       loadbalancer_config.on_proxy_host?
     end
 
+    # The full `key=value` the container is created with, so `--label #{label}`
+    # stays correct. The prune helpers take a bare title instead.
     def label
+      "org.opencontainers.image.title=#{image_title}"
+    end
+
+    def image_title
       if on_proxy_host?
-        "org.opencontainers.image.title=kamal-proxy"
+        Dash::Configuration::Proxy::IMAGE_TITLE
       else
-        "org.opencontainers.image.title=kamal-loadbalancer"
+        Dash::Configuration::Proxy::LOADBALANCER_IMAGE_TITLE
       end
     end
 
-    # kamal-proxy keeps its state under /home/kamal-proxy/.config/kamal-proxy
+    def legacy_image_title
+      if on_proxy_host?
+        Dash::Configuration::Proxy::LEGACY_IMAGE_TITLE
+      else
+        Dash::Configuration::Proxy::LEGACY_LOADBALANCER_IMAGE_TITLE
+      end
+    end
+
+    def prune_containers_titled(title)
+      docker :container, :prune, "--force", "--filter", "label=org.opencontainers.image.title=#{title}"
+    end
+
+    def prune_images_titled(title)
+      docker :image, :prune, "--all", "--force", "--filter", "label=org.opencontainers.image.title=#{title}"
+    end
+
+    # dash-proxy keeps its state under /home/dash-proxy/.config/dash-proxy
     # whichever host it runs on - only the volume name differs, so a dedicated
     # load balancer and a shared proxy host never fight over the same volume.
     # (The apps-config mount comes with run_args, via the proxy's run surface.)
     def config_volume
       if on_proxy_host?
-        [ "--volume", "kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy" ]
+        [ "--volume", "dash-proxy-config:/home/dash-proxy/.config/dash-proxy" ]
       else
-        [ "--volume", "kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy" ]
+        [ "--volume", "dash-loadbalancer-config:/home/dash-proxy/.config/dash-proxy" ]
       end
     end
 
     # The certificate store lives in whichever config volume this loadbalancer
-    # actually mounts — the shared kamal-proxy one on a proxy host.
+    # actually mounts — the shared dash-proxy one on a proxy host.
     def cert_store_volume_args
       config_volume
     end

@@ -12,16 +12,16 @@ class ProxyTest < IntegrationTest
     output = kamal :proxy, :reboot, "-y", "--verbose", capture: true
     assert_proxy_running
     assert_hooks_ran "pre-proxy-reboot", "post-proxy-reboot"
-    assert_match /Rebooting kamal-proxy on vm1,vm2.../, output
-    assert_match /Rebooted kamal-proxy on vm1,vm2/, output
+    assert_match /Rebooting dash-proxy on vm1,vm2.../, output
+    assert_match /Rebooted dash-proxy on vm1,vm2/, output
 
     output = kamal :proxy, :reboot, "--rolling", "-y", "--verbose", capture: true
     assert_proxy_running
     assert_hooks_ran "pre-proxy-reboot", "post-proxy-reboot"
-    assert_match /Rebooting kamal-proxy on vm1.../, output
-    assert_match /Rebooted kamal-proxy on vm1/, output
-    assert_match /Rebooting kamal-proxy on vm2.../, output
-    assert_match /Rebooted kamal-proxy on vm2/, output
+    assert_match /Rebooting dash-proxy on vm1.../, output
+    assert_match /Rebooted dash-proxy on vm1/, output
+    assert_match /Rebooting dash-proxy on vm2.../, output
+    assert_match /Rebooted dash-proxy on vm2/, output
 
     kamal :proxy, :boot
     assert_proxy_running
@@ -43,7 +43,7 @@ class ProxyTest < IntegrationTest
     kamal :proxy, :restart
     assert_proxy_running
 
-    # Since kamal-proxy v0.9.2.2 state is flushed on every shutdown, so any
+    # Since dash-proxy v0.9.2.2 state is flushed on every shutdown, so any
     # boot after the first restores it rather than reporting no previous state.
     logs = kamal :proxy, :logs, capture: true
     assert_match /Restored saved state/, logs
@@ -68,7 +68,7 @@ class ProxyTest < IntegrationTest
     kamal :proxy, :boot_config, :set, "--metrics-port", "9099"
 
     output = kamal :deploy, "--verbose", capture: true
-    assert_match /kamal-proxy configuration changed, rebooting on vm1/, output
+    assert_match /dash-proxy configuration changed, rebooting on vm1/, output
     assert_hooks_ran "pre-proxy-reboot", "post-proxy-reboot"
 
     assert_proxy_running
@@ -84,7 +84,7 @@ class ProxyTest < IntegrationTest
 
   private
     def proxy_container_id
-      docker_compose("exec vm1 docker ps --filter 'name=^kamal-proxy$' --quiet", capture: true).strip
+      docker_compose("exec vm1 docker ps --filter 'name=^dash-proxy$' --quiet", capture: true).strip
     end
     def assert_docker_options_in_file
       boot_config = kamal :proxy, :boot_config, :get, capture: true
@@ -94,6 +94,6 @@ class ProxyTest < IntegrationTest
     def assert_docker_options_in_container
       assert_equal \
         "{\"net.ipv4.ip_local_port_range\":\"10000 60999\"}",
-        docker_compose("exec vm1 docker inspect --format '{{ json .HostConfig.Sysctls }}' kamal-proxy", capture: true).strip
+        docker_compose("exec vm1 docker inspect --format '{{ json .HostConfig.Sysctls }}' dash-proxy", capture: true).strip
     end
 end

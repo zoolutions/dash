@@ -45,7 +45,7 @@ module Dash::Utils
     options.flatten.compact
   end
 
-  # kamal-proxy takes durations as Go duration strings; deploy.yml takes plain
+  # dash-proxy takes durations as Go duration strings; deploy.yml takes plain
   # seconds. Zero is a real value (it disables the timeout), so only nil drops out.
   #
   # A value that already carries a unit is passed through untouched. Appending

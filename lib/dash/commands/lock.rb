@@ -4,7 +4,7 @@ require "base64"
 
 class Dash::Commands::Lock < Dash::Commands::Base
   # The deploy lock is scoped to service+destination, so two destinations can
-  # deploy at once. Server-scoped resources — above all the single kamal-proxy
+  # deploy at once. Server-scoped resources — above all the single dash-proxy
   # container a host runs for every destination on it — need a lock that every
   # destination contends for, hence :server.
   SCOPES = %i[ destination server ].freeze

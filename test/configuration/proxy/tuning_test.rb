@@ -123,7 +123,7 @@ class ConfigurationProxyTuningTest < ActiveSupport::TestCase
   end
 
   # Sibling consistency: request_timeout already refuses negatives, and
-  # kamal-proxy clamps a negative --target-timeout just as silently.
+  # dash-proxy clamps a negative --target-timeout just as silently.
   test "a negative response_timeout is rejected" do
     error = assert_raises(Dash::ConfigurationError) { configuration "response_timeout" => -1 }
 
@@ -144,7 +144,7 @@ class ConfigurationProxyTuningTest < ActiveSupport::TestCase
     assert_no_match(/max_idle_conns/, out)
   end
 
-  # kamal-proxy's parsePathTimeouts rejects these; both maps go through it.
+  # dash-proxy's parsePathTimeouts rejects these; both maps go through it.
   test "a negative path timeout is rejected in either map" do
     assert_equal "proxy/path_response_timeouts: '/uploads' cannot be negative",
       assert_raises(Dash::ConfigurationError) { configuration "path_response_timeouts" => { "/uploads" => -1 } }.message

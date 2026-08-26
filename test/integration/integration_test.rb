@@ -328,11 +328,11 @@ class IntegrationTest < ActiveSupport::TestCase
     end
 
     def assert_proxy_running
-      assert_container_running(host: "vm1", name: "kamal-proxy")
+      assert_container_running(host: "vm1", name: "dash-proxy")
     end
 
     def assert_proxy_not_running
-      assert_container_not_running(host: "vm1", name: "kamal-proxy")
+      assert_container_not_running(host: "vm1", name: "dash-proxy")
     end
 
     def app_host(app = @app)

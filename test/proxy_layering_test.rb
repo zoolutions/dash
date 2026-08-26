@@ -20,7 +20,7 @@ class ProxyLayeringTest < ActiveSupport::TestCase
   DISPOSITIONS = Dash::Configuration::Proxy::DEPLOY_OPTION_DISPOSITIONS
 
   # Same pair as the flag coverage canary: some options are mutually exclusive
-  # (kamal-proxy forbids on-demand TLS alongside hosts, a custom certificate or
+  # (dash-proxy forbids on-demand TLS alongside hosts, a custom certificate or
   # ssl_domains), so one fixture cannot emit every key. Coverage is the union.
   MAXIMAL_FIXTURES = %w[ deploy_with_every_proxy_option deploy_with_on_demand_tls ].freeze
 

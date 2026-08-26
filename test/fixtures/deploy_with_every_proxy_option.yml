@@ -1,6 +1,6 @@
 # Every proxy option the gem can express, in one config.
 #
-# test/proxy_flag_coverage_test.rb generates the kamal-proxy commands from this
+# test/proxy_flag_coverage_test.rb generates the dash-proxy commands from this
 # fixture and treats the flags that come out as the gem's real coverage. So a key
 # only counts as "mapped" if setting it here actually produces a flag — a config
 # accessor that exists but is never wired into deploy_options does not pass.
@@ -96,7 +96,7 @@ proxy:
       set:
         Strict-Transport-Security: max-age=31536000
       add:
-        X-Served-By: kamal-proxy
+        X-Served-By: dash-proxy
       remove:
         - Server
   redirects:
@@ -178,11 +178,11 @@ proxy:
     write_timeout: 30
     idle_timeout: 60
     shutdown_timeout: 15
-    # Deliberately a name kamal-proxy will never have. run.flags forwards
+    # Deliberately a name dash-proxy will never have. run.flags forwards
     # anything, so a real flag here would fake coverage for it — see the note on
     # R7_BACKLOG in test/proxy_flag_coverage_test.rb.
     flags:
-      not-a-real-kamal-proxy-flag: value
+      not-a-real-dash-proxy-flag: value
     acme:
       email: admin@example.com
       # The hash form (per-zone DNS-01 providers); the string shorthand is

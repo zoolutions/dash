@@ -2,7 +2,7 @@ require "test_helper"
 
 # Stage 2 of the rename (issue #117): the gem's Ruby identity is Dash::, and
 # the old Kamal:: namespace is gone — no compat alias. The remaining server
-# artifacts (kamal-proxy container, kamal network, KAMAL_* env) are stage 3c
+# artifacts (dash-proxy container, kamal network, KAMAL_* env) are stage 3c
 # and unaffected; the run directory became .dash/ in 3b.
 class NamespaceTest < ActiveSupport::TestCase
   test "the gem loads under the Dash namespace" do

@@ -8,7 +8,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
       # provides the hostnames at runtime.
       # On-demand TLS joins loadbalancer and ssl_domains as a source of hostnames
       # that only exist at handshake time - demanding a static host here would
-      # reject the one shape kamal-proxy requires for it.
+      # reject the one shape dash-proxy requires for it.
       if config["host"].blank? && config["hosts"].blank? && config["ssl"] && config["loadbalancer"].blank? &&
          config.dig("ssl_domains", "source").blank? && ssl_config["on_demand_url"].blank?
         error "Must set a host to enable automatic SSL"
@@ -113,7 +113,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
       end
     end
 
-    # Same source shape as ssl_domains. The interval minimum is kamal-proxy's
+    # Same source shape as ssl_domains. The interval minimum is dash-proxy's
     # own (MinRedirectsInterval, 10s) - it rejects a smaller one after the SSH
     # round trip, so catch it here at config time.
     def validate_redirects_source!(redirects_source)
@@ -132,7 +132,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
       end
     end
 
-    # kamal-proxy only logs a warning for a DNS provider it does not recognise
+    # dash-proxy only logs a warning for a DNS provider it does not recognise
     # and then carries on with no provider at all, so the symptom is a
     # certificate that never issues rather than a failed boot. Catch it here,
     # before any host is contacted.
@@ -185,7 +185,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
     end
 
     # The whole TLS surface lives in the one `ssl` hash: certificate material,
-    # on-demand issuance and the mTLS client CA. kamal-proxy rejects the
+    # on-demand issuance and the mTLS client CA. dash-proxy rejects the
     # on-demand combinations outright rather than picking a winner
     # (ServiceOptions.Validate), so there is no precedence to document - only
     # a deploy that would fail after the SSH round-trip. Fail here.
@@ -231,13 +231,13 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
 
     # An RFC 9110 token, which is both a valid header field name and a valid
     # cookie name. For a header, a space or a colon would also break the
-    # '<name>: <value>' encoding kamal-proxy cuts at the first colon.
+    # '<name>: <value>' encoding dash-proxy cuts at the first colon.
     TOKEN = /\A[!#$%&'*+\-.^_`|~0-9A-Za-z]+\z/
 
     POOL_KEYS = %w[ max_conns max_idle_conns idle_conn_timeout dial_timeout try_duration try_interval ].freeze
 
     # A zero is meaningful for most of these, so only negatives are refused.
-    # kamal-proxy clamps them rather than failing when it reads saved state, and
+    # dash-proxy clamps them rather than failing when it reads saved state, and
     # rejects them from a client — this is the client.
     def validate_tuning!
       target = config["target"] || {}
@@ -258,13 +258,13 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
         with_context("request_timeout") { error "cannot be negative" }
       end
 
-      # Sibling consistency: kamal-proxy clamps a negative --target-timeout as
+      # Sibling consistency: dash-proxy clamps a negative --target-timeout as
       # silently as a negative --request-timeout.
       if config["response_timeout"].to_f.negative?
         with_context("response_timeout") { error "cannot be negative" }
       end
 
-      # Both maps reach kamal-proxy's one parsePathTimeouts, which refuses a
+      # Both maps reach dash-proxy's one parsePathTimeouts, which refuses a
       # negative duration.
       %w[ path_response_timeouts path_request_timeouts ].each do |key|
         with_context(key) do
@@ -312,7 +312,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
       end
     end
 
-    # kamal-proxy rejects canonical_host + on-demand TLS after the SSH round
+    # dash-proxy rejects canonical_host + on-demand TLS after the SSH round
     # trip (canonical redirection needs a fixed host, on-demand TLS has none),
     # and a canonical host outside the host list redirects every request to a
     # hostname this service does not serve.
@@ -393,7 +393,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
       end
 
       # Go carries the request host in Request.Host rather than the header map,
-      # so kamal-proxy refuses the rule instead of silently doing nothing.
+      # so dash-proxy refuses the rule instead of silently doing nothing.
       if direction == "request" && name.to_s.downcase == "host"
         return error "cannot rewrite the Host header"
       end
@@ -408,7 +408,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
 
     # The pattern is deliberately not compiled: Go's RE2 and Ruby's Onigmo differ
     # at the edges (Ruby rejects Go's `(?P<name>...)`), and refusing a pattern
-    # kamal-proxy would have accepted is worse than finding out at deploy time.
+    # dash-proxy would have accepted is worse than finding out at deploy time.
     def validate_path_rules!(key, redirect:)
       Array(config[key]).each_with_index do |rule, index|
         with_context(key) do
@@ -419,7 +419,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
               next error "needs both from and to"
             end
 
-            # The wire format is '<from>=<to>' and kamal-proxy cuts at the
+            # The wire format is '<from>=<to>' and dash-proxy cuts at the
             # FIRST '=', so an '=' inside the pattern silently builds a rule
             # for a different path.
             if rule["from"].to_s.include?("=")
@@ -443,7 +443,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
       end
     end
 
-    # kamal-proxy's --rate-limit is a Float64, so half a request per second is a
+    # dash-proxy's --rate-limit is a Float64, so half a request per second is a
     # legal rate. The docs example can only demonstrate one numeric type, and an
     # Integer there would reject 0.5 — so the shape is checked by hand instead.
     def validate_key_override!(key, value)
@@ -488,7 +488,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
     end
 
     # Rate limiting and the IP allow list are only as correct as the address they
-    # key on, so kamal-proxy ties the three settings together with rules that
+    # key on, so dash-proxy ties the three settings together with rules that
     # otherwise surface only once the deploy has reached a host.
     def validate_access_control!
       allow_ips = Array(config["allow_ips"])
@@ -531,7 +531,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
           error "trusted_proxies has no effect without allow_ips, deny_ips or rate_limit"
         end
 
-        # Unconditional: even without allow_ips/rate_limit, kamal-proxy rewrites
+        # Unconditional: even without allow_ips/rate_limit, dash-proxy rewrites
         # the client address (and X-Forwarded-For) from this header, so honoring
         # it from untrusted peers is a client-spoofable identity.
         if client_ip["header"].present? && trusted_proxies.empty?
@@ -549,7 +549,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
         end
       end
 
-      # kamal-proxy serves the health check path without an address check and
+      # dash-proxy serves the health check path without an address check and
       # without a rate limit so deploys keep working, which makes '/' a hole
       # straight through all three features.
       if (allow_ips.any? || deny_ips.any? || rate_limited) && config.dig("healthcheck", "path") == "/"
@@ -618,7 +618,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
 
         Array(compress["content_types"]).each do |content_type|
           # A main-type wildcard would match everything the proxy cannot see
-          # inside, so kamal-proxy allows a wildcard only in the subtype.
+          # inside, so dash-proxy allows a wildcard only in the subtype.
           unless content_type.to_s.match?(%r{\A[^/*\s]+/[^/\s]+\z})
             error "content_types entry '#{content_type}' must be a media type such as text/html or text/*"
           end
@@ -632,7 +632,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
     REFUSED_TLS_VERSIONS = %w[ 1.0 1.1 ].freeze
     RUN_TIMEOUTS = %w[ read_header_timeout read_timeout write_timeout idle_timeout shutdown_timeout ].freeze
 
-    # kamal-proxy validates these three in preRun, so a typo does not fail the
+    # dash-proxy validates these three in preRun, so a typo does not fail the
     # deploy - it stops the proxy container from booting at all.
     def validate_run_server_options!(run_config)
       with_context("run") do
@@ -656,7 +656,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
       end
     end
 
-    # Accepts the spellings kamal-proxy's normalizeTLSVersion reduces - a `tls`
+    # Accepts the spellings dash-proxy's normalizeTLSVersion reduces - a `tls`
     # or `tlsv` prefix, and `_` for `.` - so a config written for upstream is not
     # rejected here and accepted there.
     def validate_min_tls!(value)
@@ -673,7 +673,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
       end
     end
 
-    # kamal-proxy reads the cache policy only when --cache is set and ignores it
+    # dash-proxy reads the cache policy only when --cache is set and ignores it
     # otherwise, so a tuned block with no `enabled` is a cache that silently
     # never caches - this issue's own predicted first support question.
     def validate_cache!(cache)
@@ -682,12 +682,12 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
       with_context("cache") do
         if (orphaned = cache.keys - [ "enabled" ]).any?
           error "#{orphaned.first} has no effect without enabled: true - " \
-            "kamal-proxy ignores the cache policy entirely when --cache is absent"
+            "dash-proxy ignores the cache policy entirely when --cache is absent"
         end
       end
     end
 
-    # An unsupported store is rejected in kamal-proxy's preRun, which means the
+    # An unsupported store is rejected in dash-proxy's preRun, which means the
     # proxy container exits at boot rather than a deploy failing. Catch it before
     # the fleet loses its proxy.
     def validate_cache_store!(cache)
@@ -708,7 +708,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
         if basic_auth["username"].blank?
           error "Missing username setting (required when basic_auth is set)"
         elsif basic_auth["username"].to_s.include?(":")
-          # kamal-proxy cuts <username>:<password> at the first colon, so a
+          # dash-proxy cuts <username>:<password> at the first colon, so a
           # colon in the username would silently truncate it.
           error "Invalid username: cannot contain a colon"
         end

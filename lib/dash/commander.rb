@@ -110,7 +110,7 @@ class Dash::Commander
     @commands[:lock] ||= Dash::Commands::Lock.new(config)
   end
 
-  # Guards the kamal-proxy container, which a host runs once for every
+  # Guards the dash-proxy container, which a host runs once for every
   # destination deployed onto it. Every destination contends for this one.
   def server_lock
     @commands[:server_lock] ||= Dash::Commands::Lock.new(config, scope: :server)

@@ -45,7 +45,7 @@ services:
 
   # Docker Hub pull-through cache. The deployer and vm inner daemons point their
   # registry-mirrors here (see their boot.sh), so base images (registry:3, nginx,
-  # busybox, traefik, basecamp/kamal-proxy) are fetched from Docker Hub at most
+  # busybox, traefik, basecamp/dash-proxy) are fetched from Docker Hub at most
   # once per run instead of on every test, dodging Hub rate limits.
   #
   # The cache fetches from Docker Hub on its own (anonymous by default — separate

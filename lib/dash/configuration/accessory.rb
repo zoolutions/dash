@@ -1,7 +1,7 @@
 class Dash::Configuration::Accessory
   include Dash::Configuration::Validation
 
-  DEFAULT_NETWORK = "kamal"
+  DEFAULT_NETWORK = "dash"
 
   delegate :argumentize, :optionize, to: Dash::Utils
 
@@ -129,7 +129,7 @@ class Dash::Configuration::Accessory
 
     # The load balancer fans the app's own service out to role targets only
     # (see Dash::Cli::Proxy#loadbalancer), so an accessory is never behind it
-    # and must keep the host/TLS it registers with kamal-proxy directly.
+    # and must keep the host/TLS it registers with dash-proxy directly.
     def initialize_proxy
       Dash::Configuration::Proxy.new \
         config: config,

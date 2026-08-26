@@ -12,33 +12,33 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     }
   end
 
-  # The load balancer is a kamal-proxy container, so it boots with the proxy's
-  # full run surface: state volume at the path kamal-proxy actually reads,
+  # The load balancer is a dash-proxy container, so it boots with the proxy's
+  # full run surface: state volume at the path dash-proxy actually reads,
   # apps-config mount, and the explicit run command.
   test "run" do
     assert_equal \
-      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name load-balancer --network dash --detach --restart unless-stopped --label org.opencontainers.image.title=dash-loadbalancer #{digest_label} --volume dash-loadbalancer-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "run honors proxy.run.publish false and options" do
     @config[:proxy]["run"] = { "publish" => false, "options" => { "label" => [ "traefik.enable=true" ] } }
     assert_equal \
-      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --log-opt max-size=10m --label \"traefik.enable=true\" ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name load-balancer --network dash --detach --restart unless-stopped --label org.opencontainers.image.title=dash-loadbalancer #{digest_label} --volume dash-loadbalancer-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --log-opt max-size=10m --label \"traefik.enable=true\" ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   test "run honors custom publish ports" do
     @config[:proxy]["run"] = { "http_port" => 8080, "https_port" => 8443 }
     assert_equal \
-      "docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 8080:80 --publish 8443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker run --name load-balancer --network dash --detach --restart unless-stopped --label org.opencontainers.image.title=dash-loadbalancer #{digest_label} --volume dash-loadbalancer-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --publish 8080:80 --publish 8443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy run --recheck-targets-on-restore",
       new_command.run.join(" ")
   end
 
   # B3 of the layering work: the edge terminates TLS and owns the cache, so it
   # must be able to issue certificates (acme) and reach the cache store — both
   # ride in the run command and the env file, which the LB never got before.
-  test "run carries the kamal-proxy run command surface to the load balancer" do
+  test "run carries the dash-proxy run command surface to the load balancer" do
     @config[:proxy]["run"] = {
       "metrics_port" => 9090,
       "cache" => { "store" => "redis://cache.example.com:6379/0" },
@@ -49,7 +49,7 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
 
     assert_match "--expose=9090", command
     assert_match "--env-file .dash/proxy/secrets.env", command
-    assert_match "kamal-proxy run --metrics-port \"9090\" --recheck-targets-on-restore --acme-email=\"admin@example.com\"", command
+    assert_match "dash-proxy run --metrics-port \"9090\" --recheck-targets-on-restore --acme-email=\"admin@example.com\"", command
 
     # The store reaches the edge through the env file, not the command line.
     assert_no_match(/cache.example.com/, command)
@@ -74,10 +74,10 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
 
     command = new_command.run.join(" ")
 
-    assert_match "docker run --name kamal-proxy", command
-    assert_match "--label org.opencontainers.image.title=kamal-proxy", command
-    assert_match "--volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", command
-    assert_match "--volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config", command
+    assert_match "docker run --name dash-proxy", command
+    assert_match "--label org.opencontainers.image.title=dash-proxy", command
+    assert_match "--volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy", command
+    assert_match "--volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config", command
   end
 
   # The digest must move when anything the container was booted with moves —
@@ -105,27 +105,27 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
 
   test "start_or_run" do
     assert_equal \
-      "docker container start load-balancer || docker run --name load-balancer --network kamal --detach --restart unless-stopped --label org.opencontainers.image.title=kamal-loadbalancer #{digest_label} --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy --volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} kamal-proxy run --recheck-targets-on-restore",
+      "docker container start load-balancer || docker run --name load-balancer --network dash --detach --restart unless-stopped --label org.opencontainers.image.title=dash-loadbalancer #{digest_label} --volume dash-loadbalancer-config:/home/dash-proxy/.config/dash-proxy --volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config --publish 80:80 --publish 443:443 --log-opt max-size=10m ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} dash-proxy run --recheck-targets-on-restore",
       new_command.start_or_run.join(" ")
   end
 
   test "deploy with targets" do
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec load-balancer dash-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
   end
 
   test "deploy with targets and ssl" do
     @config[:proxy]["ssl"] = true
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec load-balancer dash-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
   end
 
   test "deploy with multiple hosts" do
     @config[:proxy]["hosts"] = [ "app1.example.com", "app2.example.com" ]
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80\" --host=\"app1.example.com\" --host=\"app2.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec load-balancer dash-proxy deploy app --target=\"1.1.1.1:80\" --host=\"app1.example.com\" --host=\"app2.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(targets: [ "1.1.1.1" ]).join(" ")
   end
 
@@ -136,7 +136,7 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
   test "deploy targets the per-host proxies published http port, not app_port" do
     @config[:proxy]["app_port"] = 3000
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec load-balancer dash-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
   end
 
@@ -151,11 +151,11 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     @config[:proxy]["response_timeout"] = 10
     @config[:proxy]["path_prefix"] = "/api"
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --health-check-interval=\"2s\" --health-check-timeout=\"5s\" --health-check-path=\"/healthz\" --target-timeout=\"10s\" --buffer-requests --buffer-responses --path-prefix=\"/api\" --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec load-balancer dash-proxy deploy app --target=\"1.1.1.1:80\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --health-check-interval=\"2s\" --health-check-timeout=\"5s\" --health-check-path=\"/healthz\" --target-timeout=\"10s\" --buffer-requests --buffer-responses --path-prefix=\"/api\" --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       new_command.deploy(targets: [ "1.1.1.1" ]).join(" ")
   end
 
-  # The per-app proxies must NOT also get --basic-auth: kamal-proxy deletes the
+  # The per-app proxies must NOT also get --basic-auth: dash-proxy deletes the
   # Authorization header once a service enforces it, so the load balancer would
   # authenticate the client and then forward a credential-less request.
   test "deploy propagates basic auth to the load balancer only" do
@@ -164,7 +164,7 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     command = new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ])
 
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --basic-auth=\"admin:s3cr3t\" --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
+      "docker exec load-balancer dash-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --basic-auth=\"admin:s3cr3t\" --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
       command.join(" ")
 
     # Printed output redacts the credential, here as on the per-app deploy.
@@ -178,7 +178,7 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
     @config[:proxy]["ssl"] = true
     @config[:proxy]["ssl_domains"] = { "source" => "/api/v1/kamal/domains", "interval" => 300, "batch_size" => 5 }
     assert_equal \
-      "docker exec load-balancer kamal-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --tls-domains-source=\"/api/v1/kamal/domains\" --tls-domains-interval=\"300s\" --tls-domains-batch-size=\"5\"",
+      "docker exec load-balancer dash-proxy deploy app --target=\"1.1.1.1:80,1.1.1.2:80\" --host=\"app.example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\" --tls-domains-source=\"/api/v1/kamal/domains\" --tls-domains-interval=\"300s\" --tls-domains-batch-size=\"5\"",
       new_command.deploy(targets: [ "1.1.1.1", "1.1.1.2" ]).join(" ")
   end
 
@@ -244,19 +244,19 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
   # lives on the load balancer - registered under the bare service name.
   test "cache stats" do
     assert_equal \
-      "docker exec load-balancer kamal-proxy cache stats --count",
+      "docker exec load-balancer dash-proxy cache stats --count",
       new_command.cache_stats(count: true).join(" ")
   end
 
   test "cache purge" do
     assert_equal \
-      "docker exec load-balancer kamal-proxy cache purge app",
+      "docker exec load-balancer dash-proxy cache purge app",
       new_command.cache_purge("app").join(" ")
   end
 
   test "domains" do
     assert_equal \
-      "docker exec load-balancer kamal-proxy domains list",
+      "docker exec load-balancer dash-proxy domains list",
       new_command.domains("list").join(" ")
   end
 
@@ -314,40 +314,47 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
       new_command.follow_logs(host: "lb.example.com", grep: "error")
   end
 
-  test "remove_container" do
+  # Both the current and the pre-rename title are pruned, or a container
+  # created before stage 3c survives and the following `docker run` collides on
+  # the name. Docker ANDs multiple `--filter label=` values, so it is two
+  # chained commands rather than one filter with two values.
+  test "remove_container prunes both the current and the legacy title" do
     assert_equal \
+      "docker container prune --force --filter label=org.opencontainers.image.title=dash-loadbalancer && " \
       "docker container prune --force --filter label=org.opencontainers.image.title=kamal-loadbalancer",
       new_command.remove_container.join(" ")
   end
 
-  # On a shared proxy host the container is created with the kamal-proxy title
-  # label, so pruning by the kamal-loadbalancer label would leave it behind and
+  # On a shared proxy host the container is created with the dash-proxy title
+  # label, so pruning by the dash-loadbalancer label would leave it behind and
   # the following `docker run` would collide on the container name.
   test "remove_container on a proxy host prunes by the label it was created with" do
     @config[:proxy]["loadbalancer"] = "1.1.1.1"
 
     assert_equal \
+      "docker container prune --force --filter label=org.opencontainers.image.title=dash-proxy && " \
       "docker container prune --force --filter label=org.opencontainers.image.title=kamal-proxy",
       new_command.remove_container.join(" ")
   end
 
   # Image label filters match labels baked into the image, and the load balancer
-  # runs the kamal-proxy image - kamal-loadbalancer never matched anything.
-  test "remove_image prunes the kamal-proxy image" do
+  # runs the dash-proxy image - dash-loadbalancer never matched anything.
+  test "remove_image prunes the dash-proxy image, current and legacy title" do
     assert_equal \
+      "docker image prune --all --force --filter label=org.opencontainers.image.title=dash-proxy && " \
       "docker image prune --all --force --filter label=org.opencontainers.image.title=kamal-proxy",
       new_command.remove_image.join(" ")
   end
 
   test "list" do
     assert_equal \
-      "docker exec load-balancer kamal-proxy list",
+      "docker exec load-balancer dash-proxy list",
       new_command.list.join(" ")
   end
 
   test "list json" do
     assert_equal \
-      "docker exec load-balancer kamal-proxy list --json",
+      "docker exec load-balancer dash-proxy list --json",
       new_command.list(json: true).join(" ")
   end
 
@@ -430,39 +437,39 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
 
   test "export certs through the running loadbalancer" do
     assert_equal \
-      "docker exec load-balancer kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
+      "docker exec load-balancer dash-proxy export certs /home/dash-proxy/.apps-config/certs-export.tar.gz",
       new_command.export_certs.join(" ")
   end
 
   test "export certs offline via a one-off container" do
     assert_equal \
-      "docker run --rm --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy " \
-      "--volume $PWD/.dash/proxy/apps-config:/home/kamal-proxy/.apps-config " \
+      "docker run --rm --volume dash-loadbalancer-config:/home/dash-proxy/.config/dash-proxy " \
+      "--volume $PWD/.dash/proxy/apps-config:/home/dash-proxy/.apps-config " \
       "ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} " \
-      "kamal-proxy export certs /home/kamal-proxy/.apps-config/certs-export.tar.gz",
+      "dash-proxy export certs /home/dash-proxy/.apps-config/certs-export.tar.gz",
       new_command.export_certs_offline.join(" ")
   end
 
-  # A loadbalancer sharing a proxy host shares the kamal-proxy container and
+  # A loadbalancer sharing a proxy host shares the dash-proxy container and
   # its config volume, so the transfer must target those.
   test "cert transfer targets the shared volume on a proxy host" do
     @config[:proxy]["loadbalancer"] = "1.1.1.1"
 
-    assert_match "docker exec kamal-proxy kamal-proxy export certs", new_command.export_certs.join(" ")
-    assert_match "--volume kamal-proxy-config:/home/kamal-proxy/.config/kamal-proxy", new_command.export_certs_offline.join(" ")
+    assert_match "docker exec dash-proxy dash-proxy export certs", new_command.export_certs.join(" ")
+    assert_match "--volume dash-proxy-config:/home/dash-proxy/.config/dash-proxy", new_command.export_certs_offline.join(" ")
   end
 
   test "import certs from a traefik acme.json" do
     assert_equal \
-      "docker run --rm --interactive --volume kamal-loadbalancer-config:/home/kamal-proxy/.config/kamal-proxy " \
+      "docker run --rm --interactive --volume dash-loadbalancer-config:/home/dash-proxy/.config/dash-proxy " \
       "ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} " \
-      "sh -c 'cat > /tmp/kamal-cert-import && kamal-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\"' " \
+      "sh -c 'cat > /tmp/kamal-cert-import && dash-proxy import certs --traefik-acme=\"/tmp/kamal-cert-import\"' " \
       "< .dash/proxy/certs-import",
       new_command.import_certs(traefik_acme: true).join(" ")
   end
 
   test "import certs restores an archive" do
-    assert_match "kamal-proxy import certs --archive=\"/tmp/kamal-cert-import\"",
+    assert_match "dash-proxy import certs --archive=\"/tmp/kamal-cert-import\"",
       new_command.import_certs.join(" ")
   end
 

@@ -38,7 +38,7 @@ class Dash::Cli::Proxy::LoadbalancerReboot
     wait_until_ready
     verify_service if re_register_service
 
-    # kamal-proxy keeps its service state in the config volume, which the
+    # dash-proxy keeps its service state in the config volume, which the
     # replacement container re-mounts - every app's routes survive.
     services = capture_with_info(*DASH.loadbalancer.list).strip
     info "Services registered on the load balancer at #{host} after reboot:\n#{services}"
