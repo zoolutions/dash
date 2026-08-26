@@ -478,7 +478,7 @@ class Dash::Configuration
       return true if offenders.empty?
 
       warn "Host(s) #{offenders.sort.join(", ")}: proxy_protocol is enabled without proxy_protocol_allow_ips, " \
-        "so kamal-proxy honours a PROXY header from any peer that can reach the port. That header sets the client " \
+        "so dash-proxy honours a PROXY header from any peer that can reach the port. That header sets the client " \
         "address `allow_ips`, `rate_limit` and the access log all use. Name the load balancers you actually run."
 
       true
@@ -503,11 +503,11 @@ class Dash::Configuration
       return true if offenders.empty?
 
       raise Dash::ConfigurationError, "Role(s) #{offenders.map(&:name).join(", ")}: " \
-        "proxy/sleep requires proxy/run/docker_socket - kamal-proxy can only stop and start containers " \
+        "proxy/sleep requires proxy/run/docker_socket - dash-proxy can only stop and start containers " \
         "through the container runtime socket, and it is not mounted into the proxy without it"
     end
 
-    # kamal-proxy resolves a zero max_idle_conns to its default of 100
+    # dash-proxy resolves a zero max_idle_conns to its default of 100
     # (target_pool.go resolves defaults from zeros), so the one value an
     # operator writes to mean "keep none" is the one value that cannot mean it.
     # Legal, so warn rather than raise.
@@ -518,14 +518,14 @@ class Dash::Configuration
       return true if offenders.empty?
 
       warn "Role(s) #{offenders.map(&:name).join(", ")}: target/max_idle_conns: 0 means the proxy default of 100, " \
-        "not \"keep none\" - kamal-proxy resolves its defaults from zeros. Leave it unset for the default, " \
+        "not \"keep none\" - dash-proxy resolves its defaults from zeros. Leave it unset for the default, " \
         "or set 1 for the practical minimum."
 
       true
     end
 
     # `intercept_errors` discards the app's error body and renders the proxy's own
-    # page instead. With no pages to render, kamal-proxy falls back to a bare
+    # page instead. With no pages to render, dash-proxy falls back to a bare
     # plaintext status line — so the app's error page is thrown away and replaced
     # by the words "Bad Gateway". Legal, and almost never the intent.
     def ensure_intercepted_errors_have_pages
@@ -535,7 +535,7 @@ class Dash::Configuration
       return true if offenders.empty?
 
       warn "Role(s) #{offenders.map(&:name).join(", ")}: intercept_errors is set but no error_pages_path is " \
-        "configured, so kamal-proxy replaces the app's error page with a bare plaintext status line. " \
+        "configured, so dash-proxy replaces the app's error page with a bare plaintext status line. " \
         "Set `error_pages_path:` to serve your own pages, or remove `intercept_errors` to let the app's through."
 
       true
@@ -543,7 +543,7 @@ class Dash::Configuration
 
     # Rate limiting and IP deny rules are only as correct as the address they key
     # on. `forward_headers: true` says something sits in front of the proxy, and
-    # without `trusted_proxies` kamal-proxy keys on that something's address
+    # without `trusted_proxies` dash-proxy keys on that something's address
     # rather than the client's — so the limiter throttles the whole world as one
     # client (or nobody), and a deny list denies nobody it was written for. Warn
     # rather than raise: the config is legal, just almost certainly not what was
@@ -568,7 +568,7 @@ class Dash::Configuration
 
       offenders.each do |role_name, features|
         warn "Role #{role_name}: #{features.join(" and ")} is set with forward_headers, " \
-          "but no proxy/client_ip/trusted_proxies. kamal-proxy will key on the address of " \
+          "but no proxy/client_ip/trusted_proxies. dash-proxy will key on the address of " \
           "whatever sits in front of it, not on the client's — so the rules apply to every " \
           "visitor as one client, or to none of them. Declare the proxies in front with " \
           "`client_ip: trusted_proxies:`."

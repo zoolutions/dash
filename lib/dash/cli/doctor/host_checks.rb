@@ -127,13 +127,13 @@ class Dash::Cli::Doctor::HostChecks
         if mounted.include?(expected)
           result :proxy_socket, :ok, "docker socket #{expected} is mounted"
         elsif sleep_configured?
-          result :proxy_socket, :fail, "the running kamal-proxy has no #{expected} mount, so sleeping services never wake - run `dash proxy reboot`"
+          result :proxy_socket, :fail, "the running dash-proxy has no #{expected} mount, so sleeping services never wake - run `dash proxy reboot`"
         else
           # Nothing sleeps yet, so nothing hangs - drift rather than breakage.
-          result :proxy_socket, :warn, "the running kamal-proxy has no #{expected} mount - run `dash proxy reboot` to apply the current configuration"
+          result :proxy_socket, :warn, "the running dash-proxy has no #{expected} mount - run `dash proxy reboot` to apply the current configuration"
         end
       elsif (stray = mounted.grep(DOCKER_SOCKET_PATTERN).first)
-        result :proxy_socket, :warn, "the running kamal-proxy mounts #{stray} but the config no longer asks for it - " \
+        result :proxy_socket, :warn, "the running dash-proxy mounts #{stray} but the config no longer asks for it - " \
           "the socket is root-equivalent host access; `dash proxy reboot` removes it"
       else
         result :proxy_socket, :ok, "no docker socket configured or mounted"
@@ -154,7 +154,7 @@ class Dash::Cli::Doctor::HostChecks
       https_port = run_config&.https_port || Dash::Configuration::Proxy::Run::DEFAULT_HTTPS_PORT
 
       if proxy_running
-        result :ports, :ok, "ports #{http_port}/#{https_port} held by the running kamal-proxy"
+        result :ports, :ok, "ports #{http_port}/#{https_port} held by the running dash-proxy"
       elsif (busy = busy_ports(http_port, https_port)).any?
         result :ports, :fail, "port(s) #{busy.join(", ")} already in use by another process"
       else

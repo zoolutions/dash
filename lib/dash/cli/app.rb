@@ -283,7 +283,7 @@ class Dash::Cli::App < Dash::Cli::Base
     end
   end
 
-  desc "rollout <deploy|set|stop>", "Manage a canary rollout of a new version through kamal-proxy"
+  desc "rollout <deploy|set|stop>", "Manage a canary rollout of a new version through dash-proxy"
   option :percent, type: :numeric, desc: "Percentage of traffic to send to the rollout target"
   option :list, type: :array, desc: "Send requests whose kamal-rollout cookie matches these values to the rollout target"
   def rollout(action)

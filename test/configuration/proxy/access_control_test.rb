@@ -111,7 +111,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
       "trusting every address means trusting every client to speak for someone else", error.message
   end
 
-  # Dependency rules kamal-proxy enforces after the deploy reaches a host
+  # Dependency rules dash-proxy enforces after the deploy reaches a host
 
   test "trusted_proxies without allow_ips or rate_limit is rejected" do
     error = assert_raises(Dash::ConfigurationError) do
@@ -130,7 +130,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
       "or the header would be ignored while appearing to be honored", error.message
   end
 
-  # Unconditionally, not only when allow_ips/rate_limit key on it: kamal-proxy
+  # Unconditionally, not only when allow_ips/rate_limit key on it: dash-proxy
   # rewrites the client address (and X-Forwarded-For) from the header for
   # logging and everything downstream, so honoring it from untrusted peers is
   # a client-spoofable identity - exactly what the shipped docs say it is not.
@@ -165,7 +165,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
       assert_raises(Dash::ConfigurationError) { configuration "rate_limit" => { "requests" => 100, "burst" => -1 } }.message
   end
 
-  # kamal-proxy serves the health check path without an address check or a rate
+  # dash-proxy serves the health check path without an address check or a rate
   # limit, so leaving it at / would quietly unrestrict the whole service.
   test "a root healthcheck path is rejected alongside access control" do
     error = assert_raises(Dash::ConfigurationError) do

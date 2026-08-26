@@ -34,8 +34,8 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
     proxy = configuration("ssl" => { "client_ca_pem" => "CLIENT_CA_PEM" }, "host" => "example.com").proxy
 
     assert_equal ".dash/proxy/apps-config/app/tls/client-ca.pem", proxy.host_client_ca
-    assert_equal "/home/kamal-proxy/.apps-config/app/tls/client-ca.pem", proxy.container_client_ca
-    assert_equal "/home/kamal-proxy/.apps-config/app/tls/client-ca.pem", proxy.deploy_options[:"tls-client-ca-path"]
+    assert_equal "/home/dash-proxy/.apps-config/app/tls/client-ca.pem", proxy.container_client_ca
+    assert_equal "/home/dash-proxy/.apps-config/app/tls/client-ca.pem", proxy.deploy_options[:"tls-client-ca-path"]
     assert proxy.client_ca?
   end
 
@@ -46,7 +46,7 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
     )
 
     assert_equal ".dash/proxy/apps-config/app/tls/web/client-ca.pem", config.role(:web).proxy.host_client_ca
-    assert_equal "/home/kamal-proxy/.apps-config/app/tls/web/client-ca.pem", config.role(:web).proxy.container_client_ca
+    assert_equal "/home/dash-proxy/.apps-config/app/tls/web/client-ca.pem", config.role(:web).proxy.container_client_ca
   end
 
   # Resolved at upload time, not config time - `dash app logs` and `rollback`
@@ -74,7 +74,7 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
     assert_not configuration("ssl" => true, "host" => "example.com").proxy.client_ca?
   end
 
-  # kamal-proxy hard-rejects each of these combinations rather than picking a
+  # dash-proxy hard-rejects each of these combinations rather than picking a
   # winner, so the gem fails at config time with the same rules.
   test "on_demand_url cannot be combined with hosts" do
     error = assert_raises(Dash::ConfigurationError) do
@@ -130,7 +130,7 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
     assert_not config.proxy.deploy_options.key?(:"tls-client-ca-path")
 
     loadbalancer = Dash::Configuration::Loadbalancer.new config: config, proxy_config: proxy_config, secrets: config.secrets
-    assert_equal "/home/kamal-proxy/.apps-config/app/tls/client-ca.pem", loadbalancer.deploy_options[:"tls-client-ca-path"]
+    assert_equal "/home/dash-proxy/.apps-config/app/tls/client-ca.pem", loadbalancer.deploy_options[:"tls-client-ca-path"]
   end
 
   private

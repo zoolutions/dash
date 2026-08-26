@@ -58,7 +58,7 @@ class Dash::Cli::App::Boot
         raise Dash::Cli::BootError, "Failed to get endpoint for #{role} on #{host}, did the container boot?" if endpoint.empty?
 
         run_hook "pre-proxy-deploy", hosts: host.to_s, role: role.name
-        info "Deploying #{role} on #{host} via kamal-proxy (waiting up to #{DASH.config.deploy_timeout}s for it to become healthy)..."
+        info "Deploying #{role} on #{host} via dash-proxy (waiting up to #{DASH.config.deploy_timeout}s for it to become healthy)..."
         execute *app.deploy(target: endpoint)
         run_hook "post-proxy-deploy", hosts: host.to_s, role: role.name
       else
@@ -84,7 +84,7 @@ class Dash::Cli::App::Boot
     end
 
     # Every failed boot gets the container log, and the health probe history when the
-    # container declares a healthcheck — non-primary roles have no kamal-proxy report to fall back on.
+    # container declares a healthcheck — non-primary roles have no dash-proxy report to fall back on.
     def dump_diagnostics
       error capture_with_info(*app.logs(container_id: app.container_id_for_version(version)))
 

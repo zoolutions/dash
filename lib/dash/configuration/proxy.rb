@@ -2,11 +2,33 @@ class Dash::Configuration::Proxy
   include Dash::Configuration::Validation
 
   DEFAULT_LOG_REQUEST_HEADERS = [ "Cache-Control", "Last-Modified", "User-Agent" ]
-  CONTAINER_NAME = "kamal-proxy"
-  LOADBALANCER_CONTAINER_NAME = "kamal-loadbalancer"
+  CONTAINER_NAME = "dash-proxy"
+  LOADBALANCER_CONTAINER_NAME = "dash-loadbalancer"
   CLIENT_CA_FILENAME = "client-ca.pem"
 
-  # What `compress: true` offers. kamal-proxy has no "on" state without an
+  # The image label the prune filters key on, set by dash-proxy's publish
+  # workflow.
+  IMAGE_TITLE = "dash-proxy"
+  LOADBALANCER_IMAGE_TITLE = "dash-loadbalancer"
+
+  NETWORK = "dash"
+  CONFIG_VOLUME = "dash-proxy-config"
+  LOADBALANCER_CONFIG_VOLUME = "dash-loadbalancer-config"
+
+  # Pre-rename names, kept only so the stage-3c migration can find what a host
+  # already has: the container to replace, the volume to copy, the network to
+  # bridge, and the image label to keep pruning by. Nothing constructs a
+  # resource with these — stage 3d deletes them.
+  LEGACY_CONTAINER_NAME = "kamal-proxy"
+  LEGACY_LOADBALANCER_CONTAINER_NAME = "kamal-loadbalancer"
+  LEGACY_HOLDER_CONTAINER_NAME = "kamal-proxy-net"
+  LEGACY_NETWORK = "kamal"
+  LEGACY_CONFIG_VOLUME = "kamal-proxy-config"
+  LEGACY_LOADBALANCER_CONFIG_VOLUME = "kamal-loadbalancer-config"
+  LEGACY_IMAGE_TITLE = "kamal-proxy"
+  LEGACY_LOADBALANCER_IMAGE_TITLE = "kamal-loadbalancer"
+
+  # What `compress: true` offers. dash-proxy has no "on" state without an
   # explicit list - --compress *is* the list - so the shorthand has to pick.
   # Best ratio first, matching the proxy's own default ordering; the client's
   # Accept-Encoding q-values still outrank this preference.
@@ -14,7 +36,7 @@ class Dash::Configuration::Proxy
 
   SUPPORTED_COMPRESSION_ENCODINGS = %w[ gzip br zstd ].freeze
 
-  # kamal-proxy maps `brotli` onto the `br` token that travels in Content-Encoding.
+  # dash-proxy maps `brotli` onto the `br` token that travels in Content-Encoding.
   COMPRESSION_ENCODING_ALIASES = { "brotli" => "br" }.freeze
 
   # The layering contract. When the fork's load balancer fronts the per-host
@@ -32,7 +54,7 @@ class Dash::Configuration::Proxy
   # Without load balancing the single proxy is every layer at once and the
   # whole surface applies to it.
   DEPLOY_OPTION_DISPOSITIONS = {
-    # --- Edge: TLS terminates where the handshake happens, and kamal-proxy
+    # --- Edge: TLS terminates where the handshake happens, and dash-proxy
     # gates TLSRedirect on TLSEnabled, so the whole family travels together.
     host: :edge,
     tls: :edge,
@@ -59,7 +81,7 @@ class Dash::Configuration::Proxy
     "rate-limit-burst": :edge,
     "rate-limit-exempt": :edge,
 
-    # --- Edge: kamal-proxy deletes the Authorization header once a service
+    # --- Edge: dash-proxy deletes the Authorization header once a service
     # enforces basic auth, so an inner proxy would 401 the credential-less
     # request the load balancer forwards. Credentials belong at the edge only.
     "basic-auth": :edge,
@@ -311,7 +333,7 @@ class Dash::Configuration::Proxy
     proxy_config["path_prefixes"] || proxy_config["path_prefix"]&.split(",") || []
   end
 
-  # Nil when unset: the default lives in kamal-proxy, not here.
+  # Nil when unset: the default lives in dash-proxy, not here.
   def healthcheck_path
     proxy_config.dig("healthcheck", "path")
   end
@@ -370,7 +392,7 @@ class Dash::Configuration::Proxy
     optionize ({ target: "#{target}:#{app_port}" }).merge(deploy_options), with: "="
   end
 
-  # kamal-proxy rollout deploy only accepts the target and the timeouts - the service already
+  # dash-proxy rollout deploy only accepts the target and the timeouts - the service already
   # exists, so it keeps the host, TLS, buffering and logging options of the live deploy.
   def rollout_deploy_options
     {
@@ -426,7 +448,7 @@ class Dash::Configuration::Proxy
       primary_role.present? && primary_role.running_proxy? && Array(primary_role.hosts).size > 1
     end
 
-    # Flags for kamal-proxy's dynamic domain source (runtime TLS hostnames).
+    # Flags for dash-proxy's dynamic domain source (runtime TLS hostnames).
     # TLS terminates wherever these flags land — :edge in the layering contract.
     def ssl_domains_options
       {
@@ -449,7 +471,7 @@ class Dash::Configuration::Proxy
     # The connection pool between the proxy and this app's containers, and how
     # hard the proxy tries to place a request on a healthy one.
     #
-    # Every value is passed through exactly as written. kamal-proxy resolves its
+    # Every value is passed through exactly as written. dash-proxy resolves its
     # own defaults from a zero (target_pool.go), and it has to do that server
     # side because restored state and older RPC clients never see the CLI — so
     # substituting a default here would be both redundant and wrong.
@@ -517,7 +539,7 @@ class Dash::Configuration::Proxy
       proxy_config["headers"] || {}
     end
 
-    # kamal-proxy cuts a rule at the first colon, so a value carrying colons of
+    # dash-proxy cuts a rule at the first colon, so a value carrying colons of
     # its own arrives intact.
     def header_rules(direction, verb)
       (headers_config.dig(direction, verb) || {}).map { |name, value| "#{name}: #{value}" }.presence
@@ -574,7 +596,7 @@ class Dash::Configuration::Proxy
 
     # The cache policy, which is per service - the store it writes into is
     # proxy-wide and lives in proxy/run/cache. Only --cache is derived from a
-    # truthy key; every other default stays in kamal-proxy, so an unset key emits
+    # truthy key; every other default stays in dash-proxy, so an unset key emits
     # nothing rather than restating a default the gem would then have to track.
     def cache_options
       cache = proxy_config["cache"] || {}
@@ -600,7 +622,7 @@ class Dash::Configuration::Proxy
       File.join([ directory, role_name, filename ].compact)
     end
 
-    # kamal-proxy takes the credential as <username>:<password> and cuts at the
+    # dash-proxy takes the credential as <username>:<password> and cuts at the
     # first colon, so a password may contain colons but a username may not (the
     # validator enforces that). The password is read from .dash/secrets when
     # password_secret names it, so it need not live in deploy.yml.
@@ -628,7 +650,7 @@ class Dash::Configuration::Proxy
       Dash::Utils.sensitive("#{basic_auth["username"]}:#{password}")
     end
 
-    # Serves both --path-timeout and --path-request-timeout, which kamal-proxy
+    # Serves both --path-timeout and --path-request-timeout, which dash-proxy
     # reads with one parser. A duration may be a Go string ("5m") or plain
     # seconds; 0 is a value, meaning no limit for that prefix.
     def path_timeout_args(key)

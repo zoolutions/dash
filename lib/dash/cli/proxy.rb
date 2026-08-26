@@ -21,6 +21,10 @@ class Dash::Cli::Proxy < Dash::Cli::Base
       on(proxy_hosts) do |host|
         execute *DASH.registry.login
 
+        # Before anything reads the new container, volume or network: bring a
+        # host still on pre-rename identity across. A no-op once it has been.
+        Dash::Cli::Proxy::LegacyRename.new(host, self).run
+
         proxy = DASH.proxy(host)
         drift = Dash::Cli::Proxy::Drift.new(host, self)
 
@@ -33,7 +37,7 @@ class Dash::Cli::Proxy < Dash::Cli::Base
           version = capture_with_info(*proxy.version).strip.presence
 
           if version && Dash::Utils.older_version?(version, Dash::Configuration::Proxy::Run::MINIMUM_VERSION)
-            raise "kamal-proxy version #{version} is too old, run `dash proxy reboot` in order to update to at least #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}"
+            raise "dash-proxy version #{version} is too old, run `dash proxy reboot` in order to update to at least #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}"
           end
 
           if (run_config = proxy.proxy_run_config)&.secrets?
@@ -51,12 +55,12 @@ class Dash::Cli::Proxy < Dash::Cli::Base
       end
 
       if stale_hosts.any?
-        say "kamal-proxy on #{stale_hosts.sort.join(", ")} is running with a configuration that no longer matches the deploy config. " \
+        say "dash-proxy on #{stale_hosts.sort.join(", ")} is running with a configuration that no longer matches the deploy config. " \
             "Automatic reboot is disabled (proxy: reboot_on_deploy: false) - run `dash proxy reboot` to apply the new configuration.", :yellow
       end
 
       drifted_hosts.sort.each do |host|
-        say "kamal-proxy configuration changed, rebooting on #{host}...", :magenta
+        say "dash-proxy configuration changed, rebooting on #{host}...", :magenta
         run_hook "pre-proxy-reboot", hosts: host
         on(host) do |h|
           Dash::Cli::Proxy::Reboot.new(h, self).run
@@ -129,7 +133,7 @@ class Dash::Cli::Proxy < Dash::Cli::Base
     end
   end
 
-  desc "boot_config <set|get|reset>", "Manage kamal-proxy boot configuration"
+  desc "boot_config <set|get|reset>", "Manage dash-proxy boot configuration"
   option :publish, type: :boolean, default: true, desc: "Publish the proxy ports on the host"
   option :publish_host_ip, type: :string, repeatable: true, default: nil, desc: "Host IP address to bind HTTP/HTTPS traffic to. Defaults to all interfaces"
   option :http_port, type: :numeric, default: Dash::Configuration::Proxy::Run::DEFAULT_HTTP_PORT, desc: "HTTP port to publish on the host"
@@ -163,7 +167,7 @@ class Dash::Cli::Proxy < Dash::Cli::Base
       image_version = options[:image_version]
 
       run_command_options = { debug: options[:debug] || nil, "metrics-port": options[:metrics_port] }.compact
-      run_command = "kamal-proxy run #{Dash::Utils.optionize(run_command_options).join(" ")}" if run_command_options.any?
+      run_command = "dash-proxy run #{Dash::Utils.optionize(run_command_options).join(" ")}" if run_command_options.any?
 
       on(DASH.proxy_hosts) do |host|
         proxy = DASH.proxy(host)
@@ -229,7 +233,7 @@ class Dash::Cli::Proxy < Dash::Cli::Base
           host_list = Array(hosts).join(",")
           run_hook "pre-proxy-reboot", hosts: host_list
           on(hosts) do |host|
-            info "Rebooting kamal-proxy on #{host}..."
+            info "Rebooting dash-proxy on #{host}..."
             Dash::Cli::Proxy::Reboot.new(host, self).run
           end
           run_hook "post-proxy-reboot", hosts: host_list
@@ -249,7 +253,7 @@ class Dash::Cli::Proxy < Dash::Cli::Base
     end
   end
 
-  desc "upgrade", "Upgrade to kamal-proxy on servers (stop container, remove container, start new container, reboot app)", hide: true
+  desc "upgrade", "Upgrade to dash-proxy on servers (stop container, remove container, start new container, reboot app)", hide: true
   option :rolling, type: :boolean, default: false, desc: "Reboot proxy on hosts in sequence, rather than in parallel"
   option :confirmed, aliases: "-y", type: :boolean, default: false, desc: "Proceed without confirmation question"
   def upgrade
@@ -269,7 +273,7 @@ class Dash::Cli::Proxy < Dash::Cli::Base
           info "Stopping and removing Traefik on #{host}, if running..."
           execute *proxy.cleanup_traefik
 
-          info "Stopping and removing kamal-proxy on #{host}, if running..."
+          info "Stopping and removing dash-proxy on #{host}, if running..."
           execute *proxy.stop, raise_on_non_zero_exit: false
           execute *proxy.remove_container
           execute *proxy.remove_image
@@ -566,7 +570,7 @@ class Dash::Cli::Proxy < Dash::Cli::Base
       on(cert_store_host) do |host|
         commands = load_balancing ? DASH.loadbalancer : DASH.proxy(host)
 
-        # kamal-proxy import runs offline against the data directory - importing
+        # dash-proxy import runs offline against the data directory - importing
         # under a live proxy risks a torn store. --verify only reads the archive.
         unless verify
           if capture_with_info(*commands.container_id(only_running: true), raise_on_non_zero_exit: false).strip.present?
@@ -652,7 +656,7 @@ class Dash::Cli::Proxy < Dash::Cli::Base
       DASH.config.proxy.load_balancing? ? DASH.config.proxy.effective_loadbalancer : DASH.primary_host
     end
 
-    # Mirrors kamal-proxy's own flag groups (import.go), so a contradictory
+    # Mirrors dash-proxy's own flag groups (import.go), so a contradictory
     # invocation fails before anything is uploaded.
     def validate_import_certs_options!
       if options[:traefik_acme].present? == options[:archive].present?

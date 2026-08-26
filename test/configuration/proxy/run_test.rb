@@ -86,7 +86,7 @@ class ConfigurationProxyRunTest < ActiveSupport::TestCase
     config = Dash::Configuration.new(base_deploy)
     run = Dash::Configuration::Proxy::Run.new(config, run_config: {})
 
-    assert_equal "kamal-proxy run --recheck-targets-on-restore", run.run_command
+    assert_equal "dash-proxy run --recheck-targets-on-restore", run.run_command
   end
 
   test "port_holder defaults to false with kamal network and published ports" do
@@ -94,7 +94,7 @@ class ConfigurationProxyRunTest < ActiveSupport::TestCase
     run = Dash::Configuration::Proxy::Run.new(config, run_config: {})
 
     assert_not run.port_holder?
-    assert_equal [ "--network", "kamal" ], run.network_args
+    assert_equal [ "--network", "dash" ], run.network_args
     assert_match "--publish 80:80", run.docker_options_args.join(" ")
     assert_no_match(/--reuse-port/, run.run_command)
   end
@@ -104,8 +104,8 @@ class ConfigurationProxyRunTest < ActiveSupport::TestCase
     run = Dash::Configuration::Proxy::Run.new(config, run_config: { "port_holder" => true })
 
     assert run.port_holder?
-    assert_equal "kamal-proxy-net", run.holder_container_name
-    assert_equal [ "--network", "container:kamal-proxy-net" ], run.network_args
+    assert_equal "dash-proxy-net", run.holder_container_name
+    assert_equal [ "--network", "container:dash-proxy-net" ], run.network_args
     assert_no_match(/--publish/, run.docker_options_args.join(" "))
     assert_match "--publish 80:80 --publish 443:443", run.holder_docker_args.join(" ")
     assert_match "--reuse-port", run.run_command

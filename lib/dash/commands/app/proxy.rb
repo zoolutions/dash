@@ -39,6 +39,6 @@ module Dash::Commands::App::Proxy
 
   private
     def proxy_exec(*command)
-      docker :exec, proxy_container_name, "kamal-proxy", *command
+      docker :exec, proxy_container_name, "dash-proxy", *command
     end
 end

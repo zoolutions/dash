@@ -18,7 +18,7 @@ module Dash::Commands::Proxy::CertTransfer
   # Through the RPC socket of the running container, under the proxy's own
   # certificate write lock, so a backup taken mid-renewal is never torn.
   def export_certs
-    docker :exec, container_name, "kamal-proxy", :export, :certs, certs_archive_container_path
+    docker :exec, container_name, "dash-proxy", :export, :certs, certs_archive_container_path
   end
 
   # Reads the data directory offline over the config volume — only safe when
@@ -28,10 +28,10 @@ module Dash::Commands::Proxy::CertTransfer
       *cert_store_volume_args,
       *config.proxy_boot.apps_volume.docker_args,
       *one_off_image,
-      "kamal-proxy", :export, :certs, certs_archive_container_path
+      "dash-proxy", :export, :certs, certs_archive_container_path
   end
 
-  # Offline by design (kamal-proxy import has no RPC path): the one-off
+  # Offline by design (dash-proxy import has no RPC path): the one-off
   # container mounts the config volume — creating it when no proxy has booted
   # yet, which is the Traefik-migration case — and the staged source streams
   # through stdin.
@@ -42,7 +42,7 @@ module Dash::Commands::Proxy::CertTransfer
     # run whatever follows on the target host.
     import_command = shell [
       "cat > #{CONTAINER_IMPORT_PATH} &&",
-      "kamal-proxy import certs",
+      "dash-proxy import certs",
       *optionize({ source_flag => CONTAINER_IMPORT_PATH, resolver: resolver, force: force || nil, verify: verify || nil }.compact, with: "=")
     ]
 

@@ -12,7 +12,7 @@ class ConfigurationProxyRunFlagsTest < ActiveSupport::TestCase
   end
 
   test "no new keys leave the run command byte-identical" do
-    assert_equal "kamal-proxy run --recheck-targets-on-restore", run_config({}).run_command
+    assert_equal "dash-proxy run --recheck-targets-on-restore", run_config({}).run_command
   end
 
   test "the named run keys become flags" do
@@ -48,7 +48,7 @@ class ConfigurationProxyRunFlagsTest < ActiveSupport::TestCase
   end
 
   test "booleans left false emit nothing, matching the proxy defaults" do
-    assert_equal "kamal-proxy run --recheck-targets-on-restore",
+    assert_equal "dash-proxy run --recheck-targets-on-restore",
       run_config("http3" => false, "reuse_port" => false, "proxy_protocol" => false).run_command
   end
 
@@ -72,7 +72,7 @@ class ConfigurationProxyRunFlagsTest < ActiveSupport::TestCase
     end
   end
 
-  # The escape hatch — run.flags is kamal-proxy run, run.options is docker run
+  # The escape hatch — run.flags is dash-proxy run, run.options is docker run
 
   test "run.flags are optionized onto the run command" do
     command = run_config("flags" => { "some-new-flag" => "value", "another-new-flag" => true }).run_command
@@ -126,7 +126,7 @@ class ConfigurationProxyRunFlagsTest < ActiveSupport::TestCase
     assert_no_match(/exclude-metrics-path/, run_config({}).run_command)
   end
 
-  # Validation — kamal-proxy rejects these in preRun, which kills the container
+  # Validation — dash-proxy rejects these in preRun, which kills the container
   # at boot rather than failing the deploy.
 
   test "an unknown log_format is rejected" do
@@ -154,7 +154,7 @@ class ConfigurationProxyRunFlagsTest < ActiveSupport::TestCase
       proxy_error("min_tls" => "1.0")
   end
 
-  test "min_tls accepts the spellings kamal-proxy normalizes" do
+  test "min_tls accepts the spellings dash-proxy normalizes" do
     assert proxy_config("min_tls" => "tls1_2")
     assert proxy_config("min_tls" => 1.3)
   end

@@ -148,7 +148,7 @@ class Dash::Configuration::Role
   def readiness_description
     case readiness_source
     when :proxy
-      [ "kamal-proxy health check", proxy.healthcheck_path ].compact.join(" ")
+      [ "dash-proxy health check", proxy.healthcheck_path ].compact.join(" ")
     when :healthcheck
       healthcheck.port ? "healthcheck #{healthcheck.path}:#{healthcheck.port}" : "healthcheck (custom cmd)"
     when :healthcheck_exec
@@ -168,7 +168,7 @@ class Dash::Configuration::Role
   end
 
   def stop_args
-    # When deploying with the proxy, kamal-proxy will drain request before returning so we don't need to wait.
+    # When deploying with the proxy, dash-proxy will drain request before returning so we don't need to wait.
     timeout = stop_timeout || (running_proxy? ? nil : config.drain_timeout)
 
     [ *argumentize("-t", timeout) ]

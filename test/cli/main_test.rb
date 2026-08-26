@@ -32,7 +32,7 @@ class CliMainTest < CliTestCase
       # deploy
       assert_match /Acquiring the deploy lock/, output
       assert_match /Pull app image/, output
-      assert_match /Ensure kamal-proxy is running/, output
+      assert_match /Ensure dash-proxy is running/, output
       assert_match /Detect stale containers/, output
       assert_match /Prune old containers and images/, output
       assert_match /Releasing the deploy lock/, output
@@ -55,7 +55,7 @@ class CliMainTest < CliTestCase
         assert_hook_ran "pre-connect", output
         assert_match /Build and push app image/, output
         assert_hook_ran "pre-deploy", output
-        assert_match /Ensure kamal-proxy is running/, output
+        assert_match /Ensure dash-proxy is running/, output
         assert_match /Detect stale containers/, output
         assert_match /Prune old containers and images/, output
         assert_hook_ran "post-deploy", output
@@ -79,7 +79,7 @@ class CliMainTest < CliTestCase
       assert_match /Ensure Docker is installed.../, output
       # deploy
       assert_match /Build and push app image/, output
-      assert_match /Ensure kamal-proxy is running/, output
+      assert_match /Ensure dash-proxy is running/, output
       assert_match /Detect stale containers/, output
       assert_match /Prune old containers and images/, output
     end
@@ -101,7 +101,7 @@ class CliMainTest < CliTestCase
         assert_hook_ran "pre-connect", output
         assert_match /Build and push app image/, output
         assert_hook_ran "pre-deploy", output
-        assert_match /Ensure kamal-proxy is running/, output
+        assert_match /Ensure dash-proxy is running/, output
         assert_match /Detect stale containers/, output
         assert_match /Prune old containers and images/, output
         assert_hook_ran "post-deploy", output
@@ -121,7 +121,7 @@ class CliMainTest < CliTestCase
     run_command("deploy", "--skip_push").tap do |output|
       assert_match /Acquiring the deploy lock/, output
       assert_match /Pull app image/, output
-      assert_match /Ensure kamal-proxy is running/, output
+      assert_match /Ensure dash-proxy is running/, output
       assert_match /Detect stale containers/, output
       assert_match /Prune old containers and images/, output
       assert_match /Releasing the deploy lock/, output
@@ -139,7 +139,7 @@ class CliMainTest < CliTestCase
 
     run_command("deploy", "--no-cache").tap do |output|
       assert_match /Build and push app image/, output
-      assert_match /Ensure kamal-proxy is running/, output
+      assert_match /Ensure dash-proxy is running/, output
       assert_match /Detect stale containers/, output
       assert_match /Prune old containers and images/, output
     end
@@ -309,7 +309,7 @@ class CliMainTest < CliTestCase
       run_command("deploy").tap do |output|
         assert_no_match /Acquiring the deploy lock/, output
         assert_match /Build and push app image/, output
-        assert_match /Ensure kamal-proxy is running/, output
+        assert_match /Ensure dash-proxy is running/, output
         assert_match /Detect stale containers/, output
         assert_match /Prune old containers and images/, output
         assert_no_match /Releasing the deploy lock/, output
@@ -828,9 +828,9 @@ class CliMainTest < CliTestCase
 
   test "remove with confirmation" do
     run_command("remove", "-y", config_file: "deploy_with_accessories").tap do |output|
-      assert_match /docker container stop kamal-proxy/, output
-      assert_match /docker container prune --force --filter label=org.opencontainers.image.title=kamal-proxy/, output
-      assert_match /docker image prune --all --force --filter label=org.opencontainers.image.title=kamal-proxy/, output
+      assert_match /docker container stop dash-proxy/, output
+      assert_match /docker container prune --force --filter label=org.opencontainers.image.title=dash-proxy/, output
+      assert_match /docker image prune --all --force --filter label=org.opencontainers.image.title=dash-proxy/, output
 
       assert_match /docker ps --quiet --filter label=service=app | xargs docker stop/, output
       assert_match /docker container prune --force --filter label=service=app/, output
@@ -1029,7 +1029,7 @@ class CliMainTest < CliTestCase
     Dash::Cli::Main.any_instance.expects(:invoke).at_least_once
 
     run_command("deploy", config_file: "deploy_with_readiness_sources").tap do |output|
-      assert_match /web: 1 host \(1\.1\.1\.1\) — readiness: kamal-proxy health check \/healthz/, output
+      assert_match /web: 1 host \(1\.1\.1\.1\) — readiness: dash-proxy health check \/healthz/, output
       assert_match /workers: 1 host \(1\.1\.1\.3\) — readiness: NONE \(old container stops 7s after boot\)/, output
       assert_match /pulse: 1 host \(1\.1\.1\.4\) — readiness: docker healthcheck \(options: health-cmd\)/, output
       assert_match /listener: 1 host \(1\.1\.1\.5\) — readiness: healthcheck \/readyz:7434/, output
@@ -1043,7 +1043,7 @@ class CliMainTest < CliTestCase
     Dash::Cli::Main.any_instance.expects(:invoke).at_least_once
 
     run_command("deploy").tap do |output|
-      assert_match /web: 2 hosts \(1\.1\.1\.1, 1\.1\.1\.2\) — readiness: kamal-proxy health check$/, output
+      assert_match /web: 2 hosts \(1\.1\.1\.1, 1\.1\.1\.2\) — readiness: dash-proxy health check$/, output
     end
   end
 

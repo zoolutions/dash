@@ -1,11 +1,11 @@
 require "test_helper"
 
-# kamal-proxy grows flags faster than deploy.yml grows keys, and nothing noticed:
+# dash-proxy grows flags faster than deploy.yml grows keys, and nothing noticed:
 # 23 `feat` commits landed between v0.9.2.2 and v1.0.0.0 and the gem's config
 # surface never moved. A flag the gem cannot emit is a feature that ships in the
 # image and is unreachable from deploy.yml.
 #
-# So: every flag kamal-proxy accepts must either be emitted by the gem, or be
+# So: every flag dash-proxy accepts must either be emitted by the gem, or be
 # waived here with a reason. New flags fail the build at the MINIMUM_VERSION bump
 # — the moment someone is already thinking about gem/proxy compatibility.
 #
@@ -22,13 +22,13 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
   NEVER_EXPOSED = {
     "deploy" => {
       "force" => "CLI-level concern (dash proxy deploy), not operator config",
-      "tls-acme-cache-path" => "cut for 3.0 (#93 D4) - kamal-proxy's default already persists ACME assets in the kamal-proxy-config volume, so the knob only offered ways to break that",
+      "tls-acme-cache-path" => "cut for 3.0 (#93 D4) - dash-proxy's default already persists ACME assets in the dash-proxy-config volume, so the knob only offered ways to break that",
       "scope-cookie-paths" => "cut for 3.0 (#93 D4) - niche cookie-path rewriting under path_prefix; re-expose post-3.0 if someone asks for it"
     },
     "run" => {
       "http-port" => "the gem publishes host:container ports via docker; the proxy listens on its default inside",
       "https-port" => "same as --http-port",
-      "data-dir" => "fixed by the kamal-proxy-config volume mount in Dash::Commands::Proxy#run",
+      "data-dir" => "fixed by the dash-proxy-config volume mount in Dash::Commands::Proxy#run",
       "cache-store" => "delivered as CACHE_STORE via the 0600 proxy secrets env file - a store URL may embed credentials that must stay out of process listings and the audit log",
       "cache-lease-ttl" => "cut for 3.0 (#93 D4) - cross-node coalescing tuning with sane proxy defaults; proxy/run/flags remains the escape hatch",
       "cache-lease-wait" => "same as --cache-lease-ttl"
@@ -41,7 +41,7 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
   # in the generated command or this test fails — which is the point. The waiver
   # list shrinking to empty is what "R7 is done" means.
   #
-  # It is empty. Every flag kamal-proxy accepts is now either emitted from a
+  # It is empty. Every flag dash-proxy accepts is now either emitted from a
   # deploy.yml key or waived above with a reason. A new proxy release that adds
   # one fails this test at the MINIMUM_VERSION bump, which is the only moment
   # anyone is thinking about gem/proxy compatibility.
@@ -65,7 +65,7 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
 
   test "the flag manifest tracks MINIMUM_VERSION" do
     assert_equal Dash::Configuration::Proxy::Run::MINIMUM_VERSION, MANIFEST["proxy_version"], <<~MESSAGE
-      test/fixtures/kamal_proxy_flags.yml was generated for kamal-proxy #{MANIFEST["proxy_version"]},
+      test/fixtures/kamal_proxy_flags.yml was generated for dash-proxy #{MANIFEST["proxy_version"]},
       but MINIMUM_VERSION is now #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}.
 
       Refresh it:  bin/sync-proxy-flags
@@ -75,22 +75,22 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
     MESSAGE
   end
 
-  test "every kamal-proxy deploy flag is exposed in deploy.yml or waived" do
+  test "every dash-proxy deploy flag is exposed in deploy.yml or waived" do
     assert_covered "deploy", emitted_deploy_flags
   end
 
-  test "every kamal-proxy run flag is exposed in deploy.yml or waived" do
+  test "every dash-proxy run flag is exposed in deploy.yml or waived" do
     assert_covered "run", emitted_run_flags
   end
 
   # Unlike a flag the gem cannot emit, a provider the gem does not know is not a
   # missing feature — it is a rejected deploy. proxy/run/acme/dns_provider is
-  # validated against Acme::DNS_PROVIDERS, so a provider kamal-proxy grew and the
+  # validated against Acme::DNS_PROVIDERS, so a provider dash-proxy grew and the
   # gem did not fails config validation for an operator who is holding it right.
-  test "the gem's DNS provider allowlist matches what kamal-proxy advertises" do
+  test "the gem's DNS provider allowlist matches what dash-proxy advertises" do
     assert_equal MANIFEST.fetch("acme_dns_providers").sort,
       Dash::Configuration::Proxy::Acme::DNS_PROVIDERS.sort, <<~MESSAGE
-        kamal-proxy #{MANIFEST["proxy_version"]} and Dash::Configuration::Proxy::Acme::DNS_PROVIDERS
+        dash-proxy #{MANIFEST["proxy_version"]} and Dash::Configuration::Proxy::Acme::DNS_PROVIDERS
         disagree about which DNS providers exist.
 
         Refresh the manifest (bin/sync-proxy-flags), then bring DNS_PROVIDERS in
@@ -98,17 +98,17 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
         configure and the gem would reject; providers it lost are ones the gem
         still accepts and the proxy will silently ignore.
 
-        Short aliases (cf, r53, ...) live in DNS_PROVIDER_ALIASES — kamal-proxy
+        Short aliases (cf, r53, ...) live in DNS_PROVIDER_ALIASES — dash-proxy
         accepts them but does not advertise them, so they are not checked here.
       MESSAGE
   end
 
-  test "no waiver names a flag kamal-proxy no longer accepts" do
+  test "no waiver names a flag dash-proxy no longer accepts" do
     WAIVED.each do |subcommand, waivers|
       stale = waivers.keys - MANIFEST.fetch("flags").fetch(subcommand)
 
       assert_empty stale, <<~MESSAGE
-        These #{subcommand} waivers name flags kamal-proxy #{MANIFEST["proxy_version"]} does not
+        These #{subcommand} waivers name flags dash-proxy #{MANIFEST["proxy_version"]} does not
         accept: #{stale.join(", ")}.
 
         The flag was renamed or removed upstream. Drop the waiver, and check
@@ -123,7 +123,7 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
       uncovered = flags - emitted - WAIVED.fetch(subcommand).keys
 
       assert_empty uncovered, <<~MESSAGE
-        kamal-proxy #{MANIFEST["proxy_version"]} accepts #{uncovered.size} #{subcommand} flag(s) the gem can
+        dash-proxy #{MANIFEST["proxy_version"]} accepts #{uncovered.size} #{subcommand} flag(s) the gem can
         neither emit nor account for:
 
         #{uncovered.map { |flag| "  --#{flag}" }.join("\n")}
@@ -157,7 +157,7 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
       Array(args).join(" ").scan(/--([a-z0-9-]+)/).flatten.uniq
     end
 
-    # More than one, because some options are mutually exclusive: kamal-proxy
+    # More than one, because some options are mutually exclusive: dash-proxy
     # forbids on-demand TLS alongside a host list, a custom certificate or
     # ssl_domains, so one fixture cannot hold every key. Coverage is the union.
     def maximal_configs

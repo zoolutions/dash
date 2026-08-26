@@ -1,7 +1,7 @@
 require_relative "cli_test_case"
 
 class CliDoctorTest < CliTestCase
-  PROXY_VERSION_CAPTURE_ARGS = [ :docker, :inspect, "kamal-proxy", "--format '{{.Config.Image}}'", "|", :awk, "-F:", "'{print $NF}'" ]
+  PROXY_VERSION_CAPTURE_ARGS = [ :docker, :inspect, "dash-proxy", "--format '{{.Config.Image}}'", "|", :awk, "-F:", "'{print $NF}'" ]
 
   setup do
     Thread.report_on_exception = false
@@ -38,7 +38,7 @@ class CliDoctorTest < CliTestCase
 
     run_command("doctor").tap do |output|
       assert_match "OK 1.1.1.1: #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} (minimum #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION})", output
-      assert_match "OK 1.1.1.1: ports 80/443 held by the running kamal-proxy", output
+      assert_match "OK 1.1.1.1: ports 80/443 held by the running dash-proxy", output
     end
   end
 
@@ -152,7 +152,7 @@ class CliDoctorTest < CliTestCase
   # service never wakes. The doctor inspects what is actually mounted.
   test "doctor reports a mounted docker socket" do
     stub_proxy_version Dash::Configuration::Proxy::Run::MINIMUM_VERSION
-    stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy\n/var/run/docker.sock"
+    stub_proxy_mounts "/home/dash-proxy/.config/dash-proxy\n/var/run/docker.sock"
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
 
@@ -163,7 +163,7 @@ class CliDoctorTest < CliTestCase
 
   test "doctor fails when sleep is configured but the running proxy lacks the socket mount" do
     stub_proxy_version Dash::Configuration::Proxy::Run::MINIMUM_VERSION
-    stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy"
+    stub_proxy_mounts "/home/dash-proxy/.config/dash-proxy"
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
 
@@ -175,12 +175,12 @@ class CliDoctorTest < CliTestCase
   # Without sleep nothing hangs yet, so a missing mount is drift, not breakage.
   test "doctor warns when the socket is configured without sleep and not mounted" do
     stub_proxy_version Dash::Configuration::Proxy::Run::MINIMUM_VERSION
-    stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy"
+    stub_proxy_mounts "/home/dash-proxy/.config/dash-proxy"
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
 
     run_command("doctor", fixture: "deploy_with_doctor_socket_only").tap do |output|
-      assert_match "WARN 1.1.1.1: the running kamal-proxy has no /var/run/docker.sock mount", output
+      assert_match "WARN 1.1.1.1: the running dash-proxy has no /var/run/docker.sock mount", output
       assert_match "ready to deploy", output
     end
   end
@@ -188,12 +188,12 @@ class CliDoctorTest < CliTestCase
   # Root-equivalent access the config no longer asks for deserves a flag.
   test "doctor warns about a mounted socket the config no longer asks for" do
     stub_proxy_version Dash::Configuration::Proxy::Run::MINIMUM_VERSION
-    stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy\n/var/run/docker.sock"
+    stub_proxy_mounts "/home/dash-proxy/.config/dash-proxy\n/var/run/docker.sock"
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
 
     run_command("doctor").tap do |output|
-      assert_match "WARN 1.1.1.1: the running kamal-proxy mounts /var/run/docker.sock but the config no longer asks for it", output
+      assert_match "WARN 1.1.1.1: the running dash-proxy mounts /var/run/docker.sock but the config no longer asks for it", output
       assert_match "ready to deploy", output
     end
   end
@@ -213,7 +213,7 @@ class CliDoctorTest < CliTestCase
 
   test "doctor stays quiet about sockets when none is configured or mounted" do
     stub_proxy_version Dash::Configuration::Proxy::Run::MINIMUM_VERSION
-    stub_proxy_mounts "/home/kamal-proxy/.config/kamal-proxy"
+    stub_proxy_mounts "/home/dash-proxy/.config/dash-proxy"
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
 
@@ -243,7 +243,7 @@ class CliDoctorTest < CliTestCase
   test "doctor reports the readiness source of every role" do
     run_command("doctor", fixture: "deploy_with_readiness_sources").tap do |output|
       assert_match "Readiness", output
-      assert_match "OK web: kamal-proxy health check /healthz", output
+      assert_match "OK web: dash-proxy health check /healthz", output
       assert_match "OK pulse: docker healthcheck (options: health-cmd)", output
       assert_match "OK listener: healthcheck /readyz:7434", output
       assert_match "OK ticker: healthcheck (custom cmd)", output
@@ -300,7 +300,7 @@ class CliDoctorTest < CliTestCase
 
     def stub_proxy_mounts(destinations)
       SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
-        .with(:docker, :inspect, "kamal-proxy", "--format", "'{{range .Mounts}}{{println .Destination}}{{end}}'", raise_on_non_zero_exit: false)
+        .with(:docker, :inspect, "dash-proxy", "--format", "'{{range .Mounts}}{{println .Destination}}{{end}}'", raise_on_non_zero_exit: false)
         .returns(destinations)
     end
 

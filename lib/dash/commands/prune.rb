@@ -15,7 +15,7 @@ class Dash::Commands::Prune < Dash::Commands::Base
 
   # Scoped to one role so a busy sibling role cannot push another role's newest
   # container past the retain window. That matters beyond disk hygiene: a
-  # container kamal-proxy has put to sleep is `exited`, so it is a removal
+  # container dash-proxy has put to sleep is `exited`, so it is a removal
   # candidate, and once it is gone every wake 404s. With `retain >= 1` a role's
   # newest container always survives, and the slept one is always the newest —
   # sleeping happens to the current release.

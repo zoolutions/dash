@@ -396,7 +396,7 @@ class ConfigurationRoleTest < ActiveSupport::TestCase
   test "readiness description names the proxy health check path" do
     @deploy_with_roles[:proxy] = { "healthcheck" => { "path" => "/healthz" } }
 
-    assert_equal "kamal-proxy health check /healthz", config_with_roles.role(:web).readiness_description
+    assert_equal "dash-proxy health check /healthz", config_with_roles.role(:web).readiness_description
   end
 
   test "readiness description names the healthcheck port and path" do

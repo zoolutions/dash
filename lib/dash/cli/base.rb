@@ -170,7 +170,7 @@ module Dash::Cli
         raw ? DASH.with_verbosity(:error, &block) : block.call
       end
 
-      # kamal-proxy is one container per host, shared by every destination
+      # dash-proxy is one container per host, shared by every destination
       # deployed there, but the deploy lock is per-destination — so two
       # destinations deploying at once take different locks and both mutate the
       # same proxy. Anything touching the proxy takes this lock as well.

@@ -39,7 +39,7 @@ class Dash::Cli::Main < Dash::Cli::Base
         modify(lock: true) do
           run_hook "pre-deploy", secrets: true
 
-          say "Ensure kamal-proxy is running...", :magenta
+          say "Ensure dash-proxy is running...", :magenta
           invoke "dash:cli:proxy:boot", [], invoke_options
 
           invoke "dash:cli:accessory:boot", [ "all" ], invoke_options if boot_accessories
@@ -63,7 +63,7 @@ class Dash::Cli::Main < Dash::Cli::Base
     end
   end
 
-  desc "redeploy", "Deploy app to servers without bootstrapping servers, starting kamal-proxy and pruning"
+  desc "redeploy", "Deploy app to servers without bootstrapping servers, starting dash-proxy and pruning"
   option :skip_push, aliases: "-P", type: :boolean, default: false, desc: "Skip image build and push"
   option :no_cache, type: :boolean, default: false, desc: "Build without using Docker's build cache"
   def redeploy
@@ -226,7 +226,7 @@ class Dash::Cli::Main < Dash::Cli::Base
     end
   end
 
-  desc "remove", "Remove kamal-proxy, app, accessories, and registry session from servers"
+  desc "remove", "Remove dash-proxy, app, accessories, and registry session from servers"
   option :confirmed, aliases: "-y", type: :boolean, default: false, desc: "Proceed without confirmation question"
   def remove
     confirming "This will remove all containers and images. Are you sure?" do
@@ -249,7 +249,7 @@ class Dash::Cli::Main < Dash::Cli::Base
   option :confirmed, aliases: "-y", type: :boolean, default: false, desc: "Proceed without confirmation question"
   option :rolling, type: :boolean, default: false, desc: "Upgrade one host at a time"
   def upgrade
-    confirming "This will replace Traefik with kamal-proxy and restart all accessories" do
+    confirming "This will replace Traefik with dash-proxy and restart all accessories" do
       modify(lock: true) do
         if options[:rolling]
           DASH.hosts.each do |host|
@@ -293,7 +293,7 @@ class Dash::Cli::Main < Dash::Cli::Base
   desc "lock", "Manage the deploy lock"
   subcommand "lock", Dash::Cli::Lock
 
-  desc "proxy", "Manage kamal-proxy"
+  desc "proxy", "Manage dash-proxy"
   subcommand "proxy", Dash::Cli::Proxy
 
   desc "prune", "Prune old application images and containers"

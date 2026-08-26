@@ -1,6 +1,6 @@
 class Dash::Configuration::Loadbalancer < Dash::Configuration::Proxy
   CONTAINER_NAME = "load-balancer".freeze
-  SHARED_CONTAINER_NAME = "kamal-proxy".freeze
+  SHARED_CONTAINER_NAME = "dash-proxy".freeze
 
   def self.validation_config_key
     "proxy"
@@ -34,7 +34,7 @@ class Dash::Configuration::Loadbalancer < Dash::Configuration::Proxy
     File.join config.run_directory, "loadbalancer"
   end
 
-  # The load balancer is a kamal-proxy container, so proxy/run applies to it
+  # The load balancer is a dash-proxy container, so proxy/run applies to it
   # exactly as it does to the per-host proxies. Without a run block it still
   # needs the default surface (published ports, log rotation, the apps-config
   # mount and the run command) to boot from, so fall back to an empty config

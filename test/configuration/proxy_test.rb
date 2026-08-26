@@ -245,8 +245,8 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
       proxy = config.proxy
       assert_equal ".dash/proxy/apps-config/app/tls/cert.pem", proxy.host_tls_cert
       assert_equal ".dash/proxy/apps-config/app/tls/key.pem", proxy.host_tls_key
-      assert_equal "/home/kamal-proxy/.apps-config/app/tls/cert.pem", proxy.container_tls_cert
-      assert_equal "/home/kamal-proxy/.apps-config/app/tls/key.pem", proxy.container_tls_key
+      assert_equal "/home/dash-proxy/.apps-config/app/tls/cert.pem", proxy.container_tls_cert
+      assert_equal "/home/dash-proxy/.apps-config/app/tls/key.pem", proxy.container_tls_key
     end
   end
 
@@ -263,8 +263,8 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
       proxy = config.proxy
       options = proxy.deploy_options
       assert_equal true, options[:tls]
-      assert_equal "/home/kamal-proxy/.apps-config/app/tls/cert.pem", options[:"tls-certificate-path"]
-      assert_equal "/home/kamal-proxy/.apps-config/app/tls/key.pem", options[:"tls-private-key-path"]
+      assert_equal "/home/dash-proxy/.apps-config/app/tls/cert.pem", options[:"tls-certificate-path"]
+      assert_equal "/home/dash-proxy/.apps-config/app/tls/key.pem", options[:"tls-private-key-path"]
     end
   end
 
@@ -348,7 +348,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
   # Session affinity: both layers used to pin with the same cookie name but
   # separate HMAC keys, so the inner proxy clobbered the edge pin every other
   # request — the edge is the only layer whose pin can stick.
-  # Canonical host and redirects consult r.TLS only (kamal-proxy
+  # Canonical host and redirects consult r.TLS only (dash-proxy
   # redirectURLIfNeeded), so behind the LB they emitted http:// Locations to
   # HTTPS clients. Cache policy and read routing are edge decisions.
   test "deploy_options strips session affinity, canonical host, redirects, cache and read routing when load balancing" do
@@ -386,7 +386,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     assert_includes options.keys, :compress
   end
 
-  # kamal-proxy gates TLSRedirect on TLSEnabled, and tls is already stripped
+  # dash-proxy gates TLSRedirect on TLSEnabled, and tls is already stripped
   # per-app — the whole TLS family terminates at the edge.
   test "deploy_options strips ssl staging and ssl redirect when load balancing" do
     @deploy[:proxy] = {
@@ -636,7 +636,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     end
   end
 
-  # Basic auth is an edge concern. kamal-proxy deletes the Authorization header
+  # Basic auth is an edge concern. dash-proxy deletes the Authorization header
   # once a service enforces basic auth, so emitting the flag on BOTH the load
   # balancer and the per-app proxy would have the load balancer authenticate,
   # strip the header, and the app proxy 401 every forwarded request.

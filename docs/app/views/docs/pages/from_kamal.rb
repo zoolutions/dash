@@ -46,7 +46,7 @@ class Views::Docs::Pages::FromKamal < DocsUI::Page
           [ [ :code, "config/deploy.yml" ], [ :md, "Keys unchanged — dash's config is a superset of kamal 2.x; every dash-only key is optional. ERB that calls into the gem needs `Kamal::` renamed to `Dash::` (see below)." ] ],
           [ [ :code, ".kamal/secrets" ], [ :md, "Still read — the default is now `.dash/secrets`, but dash falls back to `.kamal/` when that is the only directory present. Run `dash migrate` to move it." ] ],
           [ [ :md, "`.kamal/` on the servers" ], [ :md, "Renamed to `.dash/` in 3.4 — dash moves it for you, in place, the first time it takes a lock on the host. Locks, audit log, proxy boot files and app env all come along; nothing is rebooted." ] ],
-          [ [ :md, "`kamal-proxy` container" ], [ :md, "Same container name; dash manages the one kamal booted." ] ],
+          [ [ :md, "`kamal-proxy` container" ], [ :md, "Renamed to `dash-proxy` in 4.0, along with the `kamal` network and the `kamal-proxy-config` volume. dash migrates each host on the next deploy: it copies the config volume so certificates are not re-issued, joins everything on the `kamal` network to `dash`, then replaces the container. **Replacing it costs a short outage on that host** — the old container has to release ports 80/443 before the new one can bind them." ] ],
           [ [ :md, "`KAMAL_*` env vars & secrets" ], [ :md, "Still set — dash writes `DASH_*` and `KAMAL_*` side by side, so existing hooks and apps keep working. The `KAMAL_*` names go away in dash 5.0." ] ],
           [ [ :md, "Hooks (`.kamal/hooks/`)" ], [ :md, "Still read — same hook names, same environment, with `.dash/hooks/` as the new default location." ] ]
         ]
@@ -68,7 +68,8 @@ class Views::Docs::Pages::FromKamal < DocsUI::Page
         [dash-proxy](https://github.com/zoolutions/dash-proxy)
         (`ghcr.io/zoolutions/dash-proxy`) — a superset of kamal-proxy that adds
         load balancing, SAN batching, wildcard certs, caching, and traffic
-        shaping. The container keeps the `kamal-proxy` name.
+        shaping. From 4.0 the container is named `dash-proxy`; dash renames an
+        existing `kamal-proxy` container for you on the next deploy.
 
         dash reads the running proxy's version from its image tag and compares
         it with the minimum version this gem requires. On your first

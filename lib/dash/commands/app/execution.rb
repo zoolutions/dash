@@ -13,7 +13,7 @@ module Dash::Commands::App::Execution
       ("--detach" if detach),
       ("--rm" unless detach),
       "--name", container_name_for_exec,
-      "--network", "kamal",
+      "--network", "dash",
       *role&.env_args(host),
       *argumentize("--env", env),
       *role.logging_args,

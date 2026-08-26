@@ -122,7 +122,7 @@ class ConfigurationProxyLifecycleTest < ActiveSupport::TestCase
   test "sleep without a docker socket names the key that is missing" do
     error = assert_raises(Dash::ConfigurationError) { configuration "sleep" => { "after" => 300 } }
 
-    assert_equal "Role(s) web: proxy/sleep requires proxy/run/docker_socket - kamal-proxy can only stop and " \
+    assert_equal "Role(s) web: proxy/sleep requires proxy/run/docker_socket - dash-proxy can only stop and " \
       "start containers through the container runtime socket, and it is not mounted into the proxy without it",
       error.message
   end

@@ -70,7 +70,7 @@ class ConfigurationProxyCompressTest < ActiveSupport::TestCase
     assert_empty deploy_options({}).keys.grep(/compress/)
   end
 
-  # Validation — kamal-proxy rejects each of these, after the SSH round-trip
+  # Validation — dash-proxy rejects each of these, after the SSH round-trip
 
   test "min_length without compression is a config error" do
     error = assert_raises(Dash::ConfigurationError) { configuration "compress" => { "min_length" => 1024 } }

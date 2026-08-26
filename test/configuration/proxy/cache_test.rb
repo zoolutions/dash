@@ -22,7 +22,7 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
   end
 
   # Everything but --cache stays out until its key is set: the defaults live in
-  # kamal-proxy, the same convention healthcheck_path follows.
+  # dash-proxy, the same convention healthcheck_path follows.
   test "enabled alone emits only --cache" do
     options = deploy_options "enabled" => true
 
@@ -60,18 +60,18 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
   # Store — proxy.run.cache, proxy-wide
 
   test "no run cache block leaves the run command unchanged" do
-    assert_equal "kamal-proxy run --recheck-targets-on-restore", run_config({}).run_command
+    assert_equal "dash-proxy run --recheck-targets-on-restore", run_config({}).run_command
   end
 
-  test "store tuning becomes kamal-proxy run flags, the store itself never does" do
+  test "store tuning becomes dash-proxy run flags, the store itself never does" do
     run = run_config "store" => "redis://cache.example.com:6379/0", "store_timeout" => 2, "memory_size" => 134_217_728
 
-    assert_equal "kamal-proxy run --recheck-targets-on-restore " \
+    assert_equal "dash-proxy run --recheck-targets-on-restore " \
       "--cache-store-timeout \"2s\" --cache-memory-size \"134217728\"", run.run_command
   end
 
   # A store URL may carry credentials, and the run command lands in host
-  # process listings and kamal's audit log. kamal-proxy reads CACHE_STORE from
+  # process listings and kamal's audit log. dash-proxy reads CACHE_STORE from
   # its environment as the --cache-store default, so the URL travels in the
   # 0600 proxy secrets env file instead - the acme mechanism made shared.
   test "the store travels in the proxy secrets env file, never on the command line" do
@@ -114,7 +114,7 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
     error = assert_raises(Dash::ConfigurationError) { configuration "cache" => { "max_ttl" => 300 } }
 
     assert_equal "proxy/cache: max_ttl has no effect without enabled: true - " \
-      "kamal-proxy ignores the cache policy entirely when --cache is absent", error.message
+      "dash-proxy ignores the cache policy entirely when --cache is absent", error.message
   end
 
   test "enabled false with policy keys is the same error" do
@@ -123,7 +123,7 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
     end
 
     assert_equal "proxy/cache: vary_cookies has no effect without enabled: true - " \
-      "kamal-proxy ignores the cache policy entirely when --cache is absent", error.message
+      "dash-proxy ignores the cache policy entirely when --cache is absent", error.message
   end
 
   test "an unsupported store fails at config time" do

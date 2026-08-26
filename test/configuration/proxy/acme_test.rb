@@ -7,16 +7,16 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
   end
 
   test "no acme block leaves the run command untouched" do
-    assert_equal "kamal-proxy run --recheck-targets-on-restore", run_config({}).run_command
+    assert_equal "dash-proxy run --recheck-targets-on-restore", run_config({}).run_command
   end
 
-  test "acme settings become kamal-proxy run flags" do
+  test "acme settings become dash-proxy run flags" do
     run = run_config \
       "email" => "admin@example.com",
       "dns_provider" => "cloudflare",
       "directory" => "https://acme-staging-v02.api.letsencrypt.org/directory"
 
-    assert_equal "kamal-proxy run --recheck-targets-on-restore " \
+    assert_equal "dash-proxy run --recheck-targets-on-restore " \
       "--acme-email=\"admin@example.com\" --acme-dns-provider=\"cloudflare\" " \
       "--acme-directory=\"https://acme-staging-v02.api.letsencrypt.org/directory\"",
       run.run_command
@@ -103,7 +103,7 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
 
     assert_equal Dash::Configuration::Proxy::Run.digest(
       "ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}",
-      "kamal-proxy run --recheck-targets-on-restore",
+      "dash-proxy run --recheck-targets-on-restore",
       *Dash::Configuration::Proxy::Run.new(config, run_config: {}).docker_options_args
     ), Dash::Configuration::Proxy::Run.new(config, run_config: {}).config_digest
   end
@@ -148,7 +148,7 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
       "platform.example" => "cloudflare", "legacy.example" => "hetzner", "default" => "route53"
     }
 
-    assert_equal "kamal-proxy run --recheck-targets-on-restore " \
+    assert_equal "dash-proxy run --recheck-targets-on-restore " \
       "--acme-email=\"admin@example.com\" " \
       "--acme-dns-provider=\"platform.example=cloudflare\" " \
       "--acme-dns-provider=\"legacy.example=hetzner\" " \

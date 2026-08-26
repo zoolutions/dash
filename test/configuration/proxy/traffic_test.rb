@@ -41,7 +41,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
 
     flag = args.find { |arg| arg.start_with?("--set-response-header=") }
 
-    # What the shell will hand kamal-proxy, once it has removed the quoting.
+    # What the shell will hand dash-proxy, once it has removed the quoting.
     assert_equal "X-Test: #{value}", unshell(flag.delete_prefix("--set-response-header="))
   end
 
@@ -62,7 +62,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
     assert_equal "proxy/headers/request/set: 'X Bad Name' is not a valid header name", error.message
   end
 
-  # Go carries the host in Request.Host, not the header map, so kamal-proxy
+  # Go carries the host in Request.Host, not the header map, so dash-proxy
   # refuses the rule rather than letting it silently do nothing.
   test "a request rule naming Host is rejected" do
     error = assert_raises(Dash::ConfigurationError) do
@@ -145,7 +145,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
     assert_equal "www.example.com", options[:"canonical-host"]
   end
 
-  # kamal-proxy rejects the pair (canonical redirection needs a fixed host,
+  # dash-proxy rejects the pair (canonical redirection needs a fixed host,
   # on-demand TLS has none) - today the deploy fails after the SSH round-trip.
   test "canonical_host cannot be combined with on_demand_url" do
     error = assert_raises(Dash::ConfigurationError) do
@@ -175,7 +175,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
     assert configuration("canonical_host" => "www.example.com")
   end
 
-  # The wire format is '<from>=<to>' and kamal-proxy cuts at the FIRST '=', so
+  # The wire format is '<from>=<to>' and dash-proxy cuts at the FIRST '=', so
   # an '=' inside the pattern silently builds a rule for the wrong path.
   test "redirect and rewrite from cannot contain an equals sign" do
     %w[ redirects rewrites ].each do |key|
@@ -216,7 +216,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
 
   # The load balancer forwards to the per-host proxies, so applying headers and
   # rewrites twice would duplicate an added header and rewrite a path twice
-  # over — they stay per-app. Canonical host goes the other way: kamal-proxy's
+  # over — they stay per-app. Canonical host goes the other way: dash-proxy's
   # redirectURLIfNeeded consults r.TLS, so a per-app redirect behind the LB
   # would emit http:// Locations to HTTPS clients — it moves to the edge.
   test "traffic shaping stays off the load balancer, canonical host moves to it" do
@@ -248,7 +248,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
     end
 
     # Round-trips one shell word through the shell, so the assertion is about
-    # what kamal-proxy actually receives rather than about the quoting style.
+    # what dash-proxy actually receives rather than about the quoting style.
     def unshell(word)
       `printf %s #{word}`
     end

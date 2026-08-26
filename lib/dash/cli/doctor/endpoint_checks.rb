@@ -2,7 +2,7 @@ require "resolv"
 require "socket"
 require "openssl"
 
-# Local (no SSH) readiness checks for the domains kamal-proxy will serve:
+# Local (no SSH) readiness checks for the domains dash-proxy will serve:
 # DNS resolution against the configured hosts and TLS certificate expiry.
 class Dash::Cli::Doctor::EndpointChecks
   CERTIFICATE_EXPIRY_WARN_DAYS = 14
