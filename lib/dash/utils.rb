@@ -47,8 +47,18 @@ module Dash::Utils
 
   # kamal-proxy takes durations as Go duration strings; deploy.yml takes plain
   # seconds. Zero is a real value (it disables the timeout), so only nil drops out.
+  #
+  # A value that already carries a unit is passed through untouched. Appending
+  # "s" to it would not just be redundant, it would change the meaning: "5m"
+  # would become "5ms", which Go parses happily as five milliseconds. An
+  # operator who writes a Go duration should get the duration they wrote or an
+  # error from the proxy, never a silently different one.
+  NUMERIC_DURATION = /\A-?\d+(\.\d+)?\z/
+
   def seconds_duration(value)
-    "#{value}s" if value
+    return if value.nil?
+
+    value.to_s.match?(NUMERIC_DURATION) ? "#{value}s" : value.to_s
   end
 
   # Flattens a one-to-many structure into an array of two-element arrays each containing a key-value pair

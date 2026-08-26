@@ -39,6 +39,34 @@ class ConfigurationProxyAcmeTest < ActiveSupport::TestCase
     assert_match(/--acme-http-fallback(?!=)/, run.run_command)
   end
 
+  # How often the proxy re-checks held domains, which is what decides how long
+  # after a DNS repoint the certificate appears.
+  test "release probe interval becomes a duration flag" do
+    run = run_config "email" => "admin@example.com", "release_probe_interval" => 30
+
+    assert_match %(--acme-release-probe-interval="30s"), run.run_command
+  end
+
+  test "release probe interval accepts a duration string" do
+    run = run_config "email" => "admin@example.com", "release_probe_interval" => "5m"
+
+    assert_match %(--acme-release-probe-interval="5m"), run.run_command
+  end
+
+  # A negative interval is how the proxy is told to stop release probing at all,
+  # so it has to survive rather than be treated as absent.
+  test "release probe interval passes a negative value through" do
+    run = run_config "email" => "admin@example.com", "release_probe_interval" => "-1s"
+
+    assert_match %(--acme-release-probe-interval="-1s"), run.run_command
+  end
+
+  test "no release probe interval leaves the flag off entirely" do
+    run = run_config "email" => "admin@example.com"
+
+    assert_no_match(/--acme-release-probe-interval/, run.run_command)
+  end
+
   test "credentials are read from secrets and never reach the command line" do
     with_test_secrets("secrets" => "LOOPIA_API_USER=user\nLOOPIA_API_PASSWORD=s3cr3t") do
       run = run_config "email" => "admin@example.com", "dns_provider" => "auto",
