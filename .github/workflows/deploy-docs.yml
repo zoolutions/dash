@@ -13,6 +13,15 @@ name: Deploy docs
 # which is what the `gem "dash", path: ".."` path dependency needs — so the
 # caller only passes image + service. Deploying on release keeps the site's
 # version badge (Dash::VERSION) in step with the published gem.
+# The pinned docs-kit SHA below matters more than it looks. That reusable
+# workflow installed the UPSTREAM kamal gem until 2026-08-27, and upstream kamal
+# only ever reads `.kamal/secrets` — it knows nothing about `.dash/`. So while
+# this file pinned a pre-dash SHA, stage 3a's move of docs/.kamal/ to .dash/
+# silently broke the deploy with "Secret 'KAMAL_REGISTRY_PASSWORD' not found".
+# Current docs-kit main installs `dash ~> 4.0` and runs `dash deploy`, which
+# reads `.dash/secrets`. Keep the pin at or after d4936833 — or move
+# docs/.dash/ back to .kamal/ — but not neither.
+
 on:
   release:
     types: [published]
@@ -27,12 +36,12 @@ permissions:
 
 jobs:
   deploy:
-    # Pinned to a docs-kit main commit (2026-08-24) — this repo's zizmor gate
+    # Pinned to a docs-kit main commit (2026-08-27) — this repo's zizmor gate
     # hash-pins every action ref. Bump the SHA to pick up fleet deploy changes.
     # secrets: inherit is deliberate and stays: DEPLOY_HOST/DEPLOY_DOMAIN are
     # `docs`-environment secrets that only resolve inside the called workflow's
     # `environment: docs` job — explicit named passing cannot see them.
-    uses: zoolutions/docs-kit/.github/workflows/deploy.yml@7d0ef07c87c3ed1fab6e972e4aad8dd7b0eacdce # zizmor: ignore[secrets-inherit]
+    uses: zoolutions/docs-kit/.github/workflows/deploy.yml@d4936833e4cedf0814fc6fc2716037d06f8b91ea # zizmor: ignore[secrets-inherit]
     with:
       image: zoolutions/dash
       service: dash
