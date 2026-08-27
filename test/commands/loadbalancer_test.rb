@@ -318,6 +318,23 @@ class CommandsLoadbalancerTest < ActiveSupport::TestCase
   # created before stage 3c survives and the following `docker run` collides on
   # the name. Docker ANDs multiple `--filter label=` values, so it is two
   # chained commands rather than one filter with two values.
+  test "copy_legacy_config_volume adopts kamal-loadbalancer-config on a dedicated host" do
+    command = new_command.copy_legacy_config_volume.join(" ")
+
+    assert_equal \
+      "docker volume inspect dash-loadbalancer-config > /dev/null 2>&1 || ! docker volume inspect kamal-loadbalancer-config > /dev/null 2>&1 || ( docker volume create dash-loadbalancer-config && docker run --rm --user root --entrypoint sh --volume kamal-loadbalancer-config:/from --volume dash-loadbalancer-config:/to ghcr.io/zoolutions/dash-proxy:#{Dash::Configuration::Proxy::Run::MINIMUM_VERSION} -c 'cp -a /from/. /to/' )",
+      command
+  end
+
+  test "copy_legacy_config_volume on a proxy host adopts the proxy's own volume" do
+    @config[:proxy]["loadbalancer"] = "1.1.1.1"
+
+    command = new_command.copy_legacy_config_volume.join(" ")
+
+    assert_match "docker volume inspect dash-proxy-config > /dev/null 2>&1 || ! docker volume inspect kamal-proxy-config", command
+    assert_match "--volume kamal-proxy-config:/from --volume dash-proxy-config:/to", command
+  end
+
   test "remove_container prunes both the current and the legacy title" do
     assert_equal \
       "docker container prune --force --filter label=org.opencontainers.image.title=dash-loadbalancer && " \

@@ -51,21 +51,18 @@ class Dash::Commands::Proxy < Dash::Commands::Base
   # boot sequence, and its ubuntu base has sh and cp. `--user root` because the
   # image's own user cannot write the destination volume; `cp -a` preserves the
   # uid, which the rename leaves at 1001.
-  # The guard is negated and leads the chain, with `|| true` last, because
-  # shell `&&` and `||` share precedence and associate left: written as
-  # `exists || legacy_exists && create && copy` it would parse as
-  # `((exists || legacy_exists) && create) && copy` and re-copy the legacy
-  # volume over live state on every deploy. Leading with `! exists` makes the
-  # whole chain a single left-associative AND, which short-circuits correctly.
+  #
+  # Shape: `exists || ! legacy_exists || ( create && copy )`. The chain has to
+  # start with a real program: SSHKit prefixes the first word with
+  # `/usr/bin/env`, and `env !` is "No such file or directory" (exit 127), not
+  # shell negation. 4.0.0 led with `! docker volume inspect …`, so the whole
+  # chain failed silently into `|| true`, the proxy booted onto a volume docker
+  # created empty, and every host lost its routing table and ACME cache on the
+  # first deploy. The subshell groups create-and-copy because `&&` and `||`
+  # share precedence and associate left — without it a host that already has
+  # the new volume would still run the copy over live state.
   def copy_legacy_config_volume(volume: Dash::Configuration::Proxy::CONFIG_VOLUME, legacy: Dash::Configuration::Proxy::LEGACY_CONFIG_VOLUME)
-    any \
-      combine(
-        negate(volume_exists(volume)),
-        volume_exists(legacy),
-        docker(:volume, :create, volume),
-        copy_between_volumes(legacy, volume)
-      ),
-      [ :true ]
+    copy_legacy_volume(legacy: legacy, volume: volume, image: proxy_image)
   end
 
   # Stops and removes a pre-rename proxy container so the renamed one can claim
@@ -326,25 +323,8 @@ class Dash::Commands::Proxy < Dash::Commands::Base
       [ "--label", "#{CONFIG_DIGEST_LABEL}=#{digest}" ] if digest
     end
 
-    def negate(command)
-      [ "!", *command ]
-    end
-
-    def volume_exists(name)
-      docker :volume, :inspect, name, ">", "/dev/null", "2>&1"
-    end
-
     def container_exists(name)
       docker :container, :inspect, name, ">", "/dev/null", "2>&1"
-    end
-
-    def copy_between_volumes(from, to)
-      docker \
-        :run, "--rm", "--user", "root", "--entrypoint", "sh",
-        "--volume", "#{from}:/from",
-        "--volume", "#{to}:/to",
-        proxy_image,
-        "-c", "'cp -a /from/. /to/'"
     end
 
     # The image the volume copy borrows. The proxy this gem is pinned to is

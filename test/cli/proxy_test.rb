@@ -9,6 +9,29 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  test "boot adopts the pre-rename volume on a dedicated loadbalancer host before creating the container" do
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    run_command("boot", fixture: :with_loadbalancer).tap do |output|
+      copy = output.index("docker volume inspect dash-loadbalancer-config > /dev/null 2>&1 || ! docker volume inspect kamal-loadbalancer-config")
+      run = output.index("docker container start load-balancer || docker run --name load-balancer")
+
+      assert copy, "the loadbalancer host must adopt kamal-loadbalancer-config: #{output}"
+      assert run, output
+      assert copy < run, "the copy has to land before docker run creates the volume empty"
+    end
+  end
+
+  # SSHKit prefixes the first word of every command with /usr/bin/env, and
+  # `env !` is exit 127 — so no chain the gem emits may start with `!`.
+  test "no command sent to a host starts with shell negation" do
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    run_command("boot", fixture: :with_loadbalancer).tap do |output|
+      refute_match(/Running (\/usr\/bin\/env )?! /, output)
+    end
+  end
+
   test "boot takes the server lock so concurrent destinations serialise on the shared proxy" do
     run_command("boot").tap do |output|
       assert_match "Acquiring the server lock...", output
