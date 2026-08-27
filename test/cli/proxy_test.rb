@@ -58,6 +58,29 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  test "a mid-acquire failure that isn't contention rolls back the hosts already locked" do
+    # Deploy lock takes, the first server-lock host takes, the second raises on a
+    # pooled SSH connection that died - the failure mode from a long lock wait.
+    Dash::Cli::Proxy.any_instance.stubs(:execute_lock_acquire)
+      .returns(true)
+      .then.returns(true)
+      .then.raises(Errno::ECONNRESET)
+
+    stub_lock_release
+    expect_lock_release(host: "1.1.1.1").once
+
+    assert_raises(Errno::ECONNRESET) { run_command("boot") }
+    assert_not DASH.holding_server_lock?
+  end
+
+  test "a release that fails on one host still releases the others" do
+    stub_lock_release
+    expect_lock_release(host: "1.1.1.1").once.raises(Errno::ECONNRESET)
+    expect_lock_release(host: "1.1.1.2").once
+
+    assert_raises(Errno::ECONNRESET) { run_command("boot") }
+  end
+
   test "boot with run config" do
     run_command("boot", fixture: :with_proxy_run_config).tap do |output|
       assert_match "docker login", output
@@ -1438,6 +1461,17 @@ class CliProxyTest < CliTestCase
       SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
         .with(:docker, :inspect, "dash-proxy", "--format", Dash::Commands::Proxy::CONFIG_DIGEST_FORMAT, raise_on_non_zero_exit: false)
         .returns("stale-digest")
+    end
+
+    # Swallow the deploy-lock release; the server-lock hosts get their own
+    # expectations, which mocha matches ahead of this one.
+    def stub_lock_release
+      Dash::Cli::Proxy.any_instance.stubs(:execute_lock_release).with { |lock: nil, hosts: nil| true }.returns(true)
+    end
+
+    def expect_lock_release(host:)
+      Dash::Cli::Proxy.any_instance.expects(:execute_lock_release)
+        .with { |lock: nil, hosts: nil| lock&.scope == :server && hosts == host }
     end
 
     def assert_match_with_digest(expected, output)
