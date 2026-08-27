@@ -20,6 +20,10 @@ sshkit:
   #
   # Kamal sets a long idle timeout of 900 seconds on connections to try to avoid
   # re-connection storms after an idle period, such as building an image or waiting for CI.
+  #
+  # A pooled connection that the network dropped while idle is evicted and the command
+  # retried once on a fresh connection, so a long wait elsewhere (a server-lock poll, a
+  # loadbalancer reboot) does not fail the next command on another host.
   pool_idle_timeout: 300
 
   # DNS retry settings
