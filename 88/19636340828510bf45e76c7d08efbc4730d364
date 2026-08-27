@@ -1,0 +1,30 @@
+lib/dash/cli/base.rb
+  s_608491bea962a4::t_407f74c0d72881 220,251-257,264-272,283-286,288-289,294-295,297-298
+test/cli/proxy_test.rb
+  s_608491bea962a4::t_93e3de2c4fd7af 78,81
+  s_608491bea962a4::t_694b87c47b0311 61,64-68,71-75,80,82-83
+  s_608491bea962a4::t_311a24821b3093 76
+  s_608491bea962a4::t_771559c0b04444 62-63,69-70,77,79,1466-1474
+lib/dash/cli/lock.rb
+  s_608491bea962a4::t_963286ea32438a 3,5-10,26,28-35,45-62
+test/cli/lock_test.rb
+  s_608491bea962a4::t_a2ef84edcb98aa 34-69
+docs/app/views/docs/pages/commands.rb
+  s_608491bea962a4::t_263220c8982be4 77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "8819636340828510bf45e76c7d08efbc4730d364",
+  "prompts": {},
+  "sessions": {
+    "s_608491bea962a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "345228c3-1f81-43f1-a448-15fd78358136",
+        "model": "claude-opus-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
