@@ -74,7 +74,7 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     [ "dash server bootstrap", "Set up Docker to run dash apps" ],
     [ "dash server exec", "Run a custom command on the server" ],
     [ "dash registry <setup|remove|login|logout>", "Manage the local registry or remote registry sessions" ],
-    [ "dash lock <status|acquire|release>", "Manage the deploy lock" ],
+    [ "dash lock <status|acquire|release>", "Manage the deploy lock; --server targets the shared server lock instead" ],
     [ "dash prune <all|images|containers>", "Prune old application images and stopped containers" ],
     [ "dash secrets <fetch|extract|print>", "Helpers for extracting secrets from a vault" ]
   ].freeze

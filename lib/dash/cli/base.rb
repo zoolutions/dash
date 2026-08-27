@@ -217,7 +217,7 @@ module Dash::Cli
 
             break
           rescue LockHeldError
-            release_server_lock_on(held)
+            roll_back_server_lock(held)
 
             unless details_shown
               # The holder can release between our failed mkdir and this read.
@@ -248,10 +248,26 @@ module Dash::Cli
 
             say "Waiting #{interval}s for the server lock (#{remaining}s remaining)...", :magenta
             sleep [ interval, remaining ].min
+          rescue StandardError
+            # Anything else - a dropped SSH connection on a host that idled
+            # through the wait, a full disk - leaves the hosts we did take
+            # locked. holding_server_lock? is still false, so with_server_lock's
+            # ensure never runs and nothing else would ever release them.
+            roll_back_server_lock(held)
+            raise
           end
         end
 
         DASH.holding_server_lock = true
+      end
+
+      # Never raises: on the contention path a raise here would abandon the
+      # locks it was rolling back, and on the failure path it would replace the
+      # error the operator needs to see.
+      def roll_back_server_lock(held)
+        release_server_lock_on(held)
+      rescue StandardError => e
+        say "Error releasing the server lock on #{Array(held).join(", ")}: #{e.message}", :red
       end
 
       def release_server_lock
@@ -264,12 +280,22 @@ module Dash::Cli
       # Only ever called with hosts this process actually locked, so a missing
       # directory means someone already cleaned up, not that we may delete
       # another deploy's lock.
+      #
+      # Every host is attempted even after one fails - stopping at the first
+      # error would strand the remaining locks with no one left to release them
+      # - and the first error is re-raised once the sweep is done.
       def release_server_lock_on(hosts)
+        error = nil
+
         Array(hosts).each do |host|
           execute_lock_release(lock: DASH.server_lock, hosts: host)
         rescue LockMissingError
           nil
+        rescue StandardError => e
+          error ||= e
         end
+
+        raise error if error
       end
 
       def server_lock_hosts
