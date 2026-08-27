@@ -22,6 +22,62 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  # A dedicated loadbalancer host is not in DASH.hosts, so nothing else ever
+  # creates the network there - and docker run against a missing network fails
+  # after the old container was already stopped (zoolutions/dash#140).
+  test "boot creates the network on a dedicated loadbalancer host before touching its container" do
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    run_command("boot", fixture: :with_loadbalancer).tap do |output|
+      create = output.index("docker network create dash on lb.example.com")
+      run = output.index("docker container start load-balancer || docker run --name load-balancer")
+
+      assert create, "the loadbalancer host must get the dash network: #{output}"
+      assert run, output
+      assert create < run, "the network has to exist before the loadbalancer container is created"
+    end
+  end
+
+  test "boot bridges the legacy network on a dedicated loadbalancer host before adopting the volume" do
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    run_command("boot", fixture: :with_loadbalancer).tap do |output|
+      bridge = output.index(/docker network inspect kamal > \/dev\/null 2>&1 && docker network inspect kamal .* on lb\.example\.com/)
+      copy = output.index("docker volume inspect dash-loadbalancer-config > /dev/null 2>&1 || ! docker volume inspect kamal-loadbalancer-config")
+
+      assert bridge, "the loadbalancer host must bridge the kamal network: #{output}"
+      assert copy, output
+      assert bridge < copy, "the network bridge has to land before the volume copy"
+    end
+  end
+
+  test "boot with drifted loadbalancer creates the network before stopping the old container" do
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_loadbalancer_drift
+
+    run_command("boot", fixture: :with_loadbalancer).tap do |output|
+      create = output.index("docker network create dash on lb.example.com")
+      stop = output.index("docker container stop load-balancer on lb.example.com")
+
+      assert create, output
+      assert stop, output
+      assert create < stop, "a missing network must not take the edge down: create it before the old container is stopped"
+    end
+  end
+
+  test "reboot with loadbalancer creates the network before stopping the old container" do
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    run_command("reboot", "-y", fixture: :with_loadbalancer).tap do |output|
+      create = output.index("docker network create dash on lb.example.com")
+      stop = output.index("docker container stop load-balancer on lb.example.com")
+
+      assert create, "reboot must ensure the network on the loadbalancer host: #{output}"
+      assert stop, output
+      assert create < stop, "the network has to exist before the old loadbalancer container is stopped"
+    end
+  end
+
   # SSHKit prefixes the first word of every command with /usr/bin/env, and
   # `env !` is exit 127 — so no chain the gem emits may start with `!`.
   test "no command sent to a host starts with shell negation" do
