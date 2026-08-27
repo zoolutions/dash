@@ -13,6 +13,16 @@ name: Deploy docs
 # which is what the `gem "dash", path: ".."` path dependency needs — so the
 # caller only passes image + service. Deploying on release keeps the site's
 # version badge (Dash::VERSION) in step with the published gem.
+# NOTE: docs/ deliberately keeps a `.kamal/` directory, not `.dash/`.
+#
+# The reusable workflow below installs the UPSTREAM kamal gem (`gem install
+# kamal`) and runs `kamal deploy`, because it is shared by every docs-kit site,
+# most of which have nothing to do with dash. Upstream kamal only ever looks for
+# `.kamal/secrets` — it knows nothing about `.dash/`. Stage 3a moved this
+# directory to `.dash/` as a dogfooding gesture and silently broke this deploy;
+# it went unnoticed because the build step was failing first for an unrelated
+# reason. Renaming it again requires teaching docs-kit to deploy with dash.
+
 on:
   release:
     types: [published]
