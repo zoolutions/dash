@@ -170,6 +170,50 @@ class SSHKit::Backend::Netssh
       end
   end
   prepend LimitConcurrentStartsInstance
+
+  # A pooled session that sat idle while dash was busy elsewhere (a server-lock
+  # wait, a loadbalancer reboot) gets dropped by NATs and cloud networks without
+  # either end noticing: net-ssh only sends keepalives from inside its event
+  # loop, and the pool's liveness probe is a non-blocking `process(0)`, so the
+  # session looks fine until the first command on it dies. Evict that session
+  # and rerun the block once on a fresh connection.
+  #
+  # The block is rerun, so a drop *mid-command* runs the command twice. That
+  # is accepted: the errors here are the idle-drop ones, where nothing reached
+  # the server, and the alternative is the deploy failing on the next host.
+  module ReconnectOnStaleConnection
+    STALE_CONNECTION_ERRORS = [ Errno::ECONNRESET, Errno::EPIPE, Net::SSH::Disconnect, Net::SSH::Timeout ].freeze
+
+    private
+      def with_ssh
+        reconnected = false
+
+        begin
+          super do |ssh|
+            yield ssh
+          rescue *STALE_CONNECTION_ERRORS
+            evict_stale_session(ssh)
+            raise
+          end
+        rescue *STALE_CONNECTION_ERRORS => e
+          raise if reconnected
+
+          reconnected = true
+          SSHKit.config.output.warn("Reconnecting to #{host}: #{e.message}")
+          retry
+        end
+      end
+
+      # `close` waits for channel-close acknowledgements, which never come over
+      # a dead socket. `shutdown!` just closes the socket, and a closed session
+      # is what makes the pool drop it instead of caching it again.
+      def evict_stale_session(ssh)
+        ssh.shutdown!
+      rescue StandardError
+        nil
+      end
+  end
+  prepend ReconnectOnStaleConnection
 end
 
 class SSHKit::Runner::Parallel
