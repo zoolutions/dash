@@ -88,7 +88,7 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 | Hardcode proxy version in tests | Interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` |
 | Commit to `main` | Feature branches root off `main`, merge back into `main` |
 | Skip tests | TDD — minitest + mocha first, at every layer touched |
-| Chase Apple-Silicon builder test failures as regressions | Known host-arch-dependent; pass in CI |
+| Dismiss a test failure as an environment artifact | The suite is host-independent; failures are real |
 
 ## Verification Checklist
 

@@ -108,7 +108,7 @@ Invoke `/github-review-pr <PR>` (via the Skill tool). It runs **conflicts (A0) �
 
 Wait for it to finish. If it reports a persistent failure it could not fix (or a conflict it could not resolve without a decision), surface that for this PR and move it to a `needs-user` state — do not block the whole queue on one stuck PR; note it and continue to the next PR, then return.
 
-Watch for the two known **Apple-Silicon-only** `test/commands/builder_test.rb` failures (`.claude/rules/testing.md`) — those are host-arch artifacts, not PR defects. Confirm against CI; never "fix" the assertion to make them pass locally.
+Treat every `test/commands/builder_test.rb` failure as real (`.claude/rules/testing.md`) — those are host-arch artifacts, not PR defects. Confirm against CI; never "fix" the assertion to make them pass locally.
 
 ### 2e. Verify merge-ready
 

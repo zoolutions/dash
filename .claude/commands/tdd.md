@@ -131,7 +131,7 @@ Only when the change touches deploy/proxy/boot flow — needs Docker and the pub
 bin/test
 ```
 
-Two builder tests are known-failing on Apple Silicon only (host-arch dependent); they pass in CI. Don't chase them.
+The suite is host-independent — `test_helper.rb` pins the Docker architecture — so a local failure is a real failure, not an arch artifact.
 
 ## Coverage Requirements
 

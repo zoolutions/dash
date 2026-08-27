@@ -70,7 +70,7 @@ Before pushing `main`-bound work or opening a PR, run the full suite (needs Dock
 bin/test
 ```
 
-Two builder tests are known-failing on Apple Silicon only (host-arch dependent) — they pass in CI. Don't chase them locally.
+The suite is host-independent: `test_helper.rb` pins the Docker architecture and stubs the one helper that shelled out to a real build, so a local failure is a real failure.
 
 ## Tags & Releases
 

@@ -12,6 +12,13 @@ class IntegrationTest < ActiveSupport::TestCase
   COMPOSE_PROJECT = "kamal-test-#{Digest::SHA256.hexdigest(File.expand_path("../..", __dir__))[0, 8]}"
 
   setup do
+    # test_helper pins docker_arch and included_files so the unit suite does not
+    # depend on a running daemon. Integration is the opposite case: it compares
+    # against `dash config` run inside a real dind container, so the expectation
+    # has to come from the same daemon the container reports. Restore both.
+    Dash::Utils.unstub(:docker_arch)
+    Dash::Docker.unstub(:included_files)
+
     # Once the build has failed outright for two tests running, every remaining
     # test would pay the same doomed retry ladder for nothing. Bail out cheaply.
     skip build_circuit.trip_message if build_circuit.tripped?

@@ -163,7 +163,7 @@ git blame <file>
 
 Don't just look at the method that failed:
 - Use Grep to find all call sites across `lib/dash/cli/`, `lib/dash/commands/`, `lib/dash/configuration/`
-- Does the error only happen with the loadbalancer active, or only on Apple Silicon (two known builder-test failures are host-arch-dependent, not real bugs — confirm CI passes before chasing those)?
+- Does the error only happen with the loadbalancer active? The suite no longer varies with host architecture, so a failure is not an environment artifact.
 
 ### Five Whys
 
@@ -205,7 +205,7 @@ bundle exec rubocop --parallel                                                  
 bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'  # Unit tests
 ```
 
-Run the full suite (`bin/test`, needs Docker + the published proxy image at `MINIMUM_VERSION`) only if the change touches deploy/proxy/integration paths. Two builder tests are known to fail on Apple Silicon only — confirm via CI, don't chase them locally.
+Run the full suite (`bin/test`, needs Docker + the published proxy image at `MINIMUM_VERSION`) only if the change touches deploy/proxy/integration paths. The suite is host-independent, so any local failure is real.
 
 ### Solution Verification
 
