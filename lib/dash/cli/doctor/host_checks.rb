@@ -61,12 +61,17 @@ class Dash::Cli::Doctor::HostChecks
 
     def proxy_checks
       version, version_error = capture_proxy_version
+      # A host that has not been through the stage-3c rename is still running
+      # kamal-proxy. Without asking about it too, the version check reports "not
+      # running" and the ports check blames a foreign process for the ports that
+      # container legitimately holds — failing the very deploy that migrates it.
+      legacy_version = version.present? ? nil : capture_legacy_proxy_version
 
       {
         proxy_image: proxy_image_check,
-        proxy_version: proxy_version_check(version, version_error),
+        proxy_version: proxy_version_check(version, version_error, legacy_version),
         proxy_socket: proxy_socket_check(proxy_running: version.present?),
-        ports: ports_check(proxy_running: version.present?)
+        ports: ports_check(proxy_running: version.present?, legacy_proxy_running: legacy_version.present?)
       }
     end
 
@@ -74,6 +79,14 @@ class Dash::Cli::Doctor::HostChecks
       [ capture_with_info(*DASH.proxy(host).version).strip.presence, nil ]
     rescue StandardError => e
       [ nil, e ]
+    end
+
+    # Best-effort: a host with no legacy container simply reports nothing, and
+    # any error here must not turn into a failing check of its own.
+    def capture_legacy_proxy_version
+      capture_with_info(*DASH.proxy(host).version(name: Dash::Configuration::Proxy::LEGACY_CONTAINER_NAME)).strip.presence
+    rescue StandardError
+      nil
     end
 
     def proxy_image_check
@@ -88,11 +101,15 @@ class Dash::Cli::Doctor::HostChecks
       result :proxy_image, :fail, "#{e.class}: #{e.message}"
     end
 
-    def proxy_version_check(version, error)
+    def proxy_version_check(version, error, legacy_version = nil)
       minimum = Dash::Configuration::Proxy::Run::MINIMUM_VERSION
 
       if error
         result :proxy_version, :warn, "could not determine the running version (#{error.message})"
+      elsif version.nil? && legacy_version.present?
+        result :proxy_version, :ok,
+          "#{Dash::Configuration::Proxy::LEGACY_CONTAINER_NAME} #{legacy_version} is running; it is renamed to " \
+          "#{Dash::Configuration::Proxy::CONTAINER_NAME} on the next deploy, which briefly interrupts this host"
       elsif version.nil?
         result :proxy_version, :ok, "not running (will be started on deploy)"
       elsif Dash::Utils.older_version?(version, minimum)
@@ -146,7 +163,7 @@ class Dash::Cli::Doctor::HostChecks
       DASH.config.roles.any? { |role| role.running_proxy? && role.proxy.proxy_config["sleep"].present? }
     end
 
-    def ports_check(proxy_running:)
+    def ports_check(proxy_running:, legacy_proxy_running: false)
       run_config = DASH.config.proxy_run(host)
       return result(:ports, :ok, "proxy ports are not published, nothing to check") if run_config && !run_config.publish?
 
@@ -155,6 +172,10 @@ class Dash::Cli::Doctor::HostChecks
 
       if proxy_running
         result :ports, :ok, "ports #{http_port}/#{https_port} held by the running dash-proxy"
+      elsif legacy_proxy_running
+        result :ports, :ok,
+          "ports #{http_port}/#{https_port} held by the running #{Dash::Configuration::Proxy::LEGACY_CONTAINER_NAME}, " \
+          "replaced on the next deploy"
       elsif (busy = busy_ports(http_port, https_port)).any?
         result :ports, :fail, "port(s) #{busy.join(", ")} already in use by another process"
       else

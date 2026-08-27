@@ -106,9 +106,12 @@ class Dash::Commands::Proxy < Dash::Commands::Base
     docker :ps, "--filter", "'name=^#{container_name}$'"
   end
 
-  def version
+  # `name:` so the doctor can also ask about the pre-rename container: during
+  # the stage-3c transition a host still runs kamal-proxy, and a check that only
+  # ever looks at dash-proxy concludes no proxy is running.
+  def version(name: container_name)
     pipe \
-      docker(:inspect, container_name, "--format '{{.Config.Image}}'"),
+      docker(:inspect, name, "--format '{{.Config.Image}}'"),
       [ :awk, "-F:", "'{print \$NF}'" ]
   end
 
