@@ -70,7 +70,7 @@ bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each 
 bin/test   # full suite incl. integration — needs Docker + published proxy image; only if PR touches proxy/deploy paths
 ```
 
-Two builder tests are known-failing on Apple Silicon only (host-arch dependent) — do not flag them as PR-introduced regressions; confirm against `main` first if unsure.
+The suite is host-independent (`test_helper.rb` pins the Docker architecture), so any test failure is a real one worth flagging.
 
 ## Output Format
 

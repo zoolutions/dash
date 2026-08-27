@@ -95,13 +95,18 @@ See `.claude/rules/upstream-sync.md` for why this constant moves and how release
 
 Run unit tests continuously during TDD. Run `bin/test` (full suite) before pushing `main` and always before `rake release`, per `.claude/rules/upstream-sync.md`.
 
-## Known Arch-Dependent Failures
+## The suite must not depend on the host
 
-Two tests in `test/commands/builder_test.rb` compare against the *local* Docker buildx arch (`local_arch`/`remote_arch` helpers) and **fail on Apple Silicon** — they pass in CI and on a pristine `amd64` runner. Do not "fix" them by changing assertions; this is a pre-existing host-arch artifact, not a regression. Confirm any builder-test failure is one of these two before investigating further:
+Unit tests are green with the Docker daemon stopped. Two paths used to break that, and both are pinned in `test_helper.rb`:
 
-```bash
-bundle exec ruby -Itest test/commands/builder_test.rb 2>&1 | grep -A3 "target remote when\|target local when"
-```
+| Path | What it did | Now |
+|---|---|---|
+| `Dash::Utils.docker_arch` | shelled out to `docker info` for the host architecture, which tests derived their expected `--platform` from | stubbed to `amd64`, matching CI |
+| `Dash::Docker.included_files` | ran a real `docker buildx build` over the repo | stubbed to `[]` |
+
+This is what the long-standing "two builder tests fail on Apple Silicon" caveat actually was: the tests were reading the local daemon's architecture. With the daemon *stopped* it returned `""` and five more tests failed with it, which is why the suite looked intermittently flaky. Both are now deterministic.
+
+**A local failure is a real failure.** If a test starts varying by machine again, look for a new call that reaches outside the process — Docker, the network, the clock — rather than adding it to a known-failures list.
 
 ## New Multi-Host Fixtures
 
@@ -115,5 +120,5 @@ If a deploy fixture under `test/fixtures/` gets a primary role with more than on
 - [ ] Full suite passes before pushing `main` or releasing: `bin/test`
 - [ ] Any proxy version in an assertion is `Dash::Configuration::Proxy::Run::MINIMUM_VERSION`, not a literal
 - [ ] New multi-host fixtures set `loadbalancer: false` if not testing that feature
-- [ ] Builder-test failures checked against the two known Apple-Silicon cases before treating as a bug
+- [ ] Any test failure treated as real — the suite no longer varies by host
 - [ ] Coverage meets requirements (80% / 100% for critical-path components above)

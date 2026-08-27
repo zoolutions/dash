@@ -82,7 +82,7 @@ Gem tags are plain `vX.Y.Z` (own semver, 3.x line). Historical `dash-v*` tags ar
 
 ## Testing
 
-- Unit: everything under `test/` except `test/integration` — no Docker needed. Two builder tests fail on Apple Silicon (host-arch dependent; they pass in CI).
+- Unit: everything under `test/` except `test/integration` — genuinely no Docker needed. `test_helper.rb` pins `Dash::Utils.docker_arch` and stubs `Dash::Docker.included_files`, so the suite is green whether or not a daemon is running. The old "two builder tests fail on Apple Silicon" caveat is gone — they were reading the local daemon's architecture.
 - Integration: real deploys against Docker-in-Docker VMs; pulls `ghcr.io/zoolutions/dash-proxy:$MINIMUM_VERSION` — the tag must be published or the suite fails.
 - CI: rubocop + actionlint/zizmor + Ruby 3.2–4.0 matrix on `main`.
 - Multi-host fixtures with a >1-host primary role need `loadbalancer: false` under `proxy:` — the loadbalancer auto-activates and the dind harness can't support it.

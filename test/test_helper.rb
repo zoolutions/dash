@@ -48,6 +48,30 @@ class ActiveSupport::TestCase
   include ActiveSupport::Testing::Stream
   extend Rails::LineFiltering
 
+  # Unit tests must not touch Docker — but two paths did, and both reached a
+  # real daemon:
+  #
+  #   Dash::Utils.docker_arch shells out to `docker info` to learn the host
+  #   architecture. Tests derive their expected --platform from it, so the
+  #   answer decided whether they passed. On Apple Silicon it returned arm64
+  #   against fixtures written for amd64 (the "two known builder failures"), and
+  #   with the daemon stopped it returned "" and took five more tests down with
+  #   it. That is what made the suite look seed-flaky: it was tracking whether
+  #   Docker happened to be running.
+  #
+  #   Dash::Docker.included_files runs an actual `docker buildx build` over the
+  #   repo to list what a build would include. `dash build dev` calls it, so
+  #   three CLI tests were building a busybox image on every run.
+  #
+  # Pin both. amd64 is what CI runs on, so local and CI now agree, and the suite
+  # no longer cares whether a daemon is up.
+  DOCKER_ARCH = "amd64".freeze
+
+  setup do
+    Dash::Utils.stubs(:docker_arch).returns(DOCKER_ARCH)
+    Dash::Docker.stubs(:included_files).returns([])
+  end
+
   # Dash::Commands::Base#ensure_run_directory — the one-shot .kamal -> .dash
   # migration plus the mkdir. Every command that can be the first to touch the
   # run directory emits exactly this, so it is spelled out once here and any

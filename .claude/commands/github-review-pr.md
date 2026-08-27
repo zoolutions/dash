@@ -46,7 +46,7 @@ gh pr view <PR_NUMBER> --json title,state,url,baseRefName
 - `CLAUDE.md` — architecture (Thor CLI layer cake: `bin` → `Dash::Cli` → `Commander` → `Commands` → `Configuration` → `SSHKit`), tooling, critical rules
 - `.claude/rules/upstream-sync.md` — sync/release runbook, conflict playbook
 - `.claude/rules/git-workflow.md` — branch model, tags, release ordering
-- `.claude/rules/testing.md` — Minitest + Mocha conventions, `MINIMUM_VERSION` interpolation, known Apple-Silicon builder-test failures
+- `.claude/rules/testing.md` — Minitest + Mocha conventions, `MINIMUM_VERSION` interpolation, the host-independence contract
 
 Non-negotiables that apply to every fix in both phases below:
 
@@ -117,7 +117,7 @@ gh pr view <PR_NUMBER> --json mergeable,mergeStateStatus,baseRefName
    ```
 3. **Diagnose root cause per failure.** Common categories on this repo:
    - **Rubocop** (`rubocop-rails-omakase`) — style violation, fastest to fix
-   - **Unit test failure** — check first whether it's one of the two known Apple-Silicon-only `test/commands/builder_test.rb` failures (`.claude/rules/testing.md`); if so, confirm it also fails on a clean checkout of the PR's base and note it as pre-existing, don't "fix" the assertion
+   - **Unit test failure** — treat it as real — the suite is host-independent (`.claude/rules/testing.md`); if so, confirm it also fails on a clean checkout of the PR's base and note it as pre-existing, don't "fix" the assertion
    - **Integration test failure** — needs Docker + the published proxy image at `ghcr.io/zoolutions/kamal-proxy:$MINIMUM_VERSION`; if the image tag named by `MINIMUM_VERSION` isn't published yet, that's an environment/ordering issue, not a code bug — see `.claude/rules/upstream-sync.md` release ordering
    - **actionlint / zizmor** — workflow YAML issue in `.github/workflows/*`
    - **Multi-host fixture** — a new/changed fixture under `test/fixtures/` with a primary role that has >1 host must set `loadbalancer: false` under `proxy:`, or the loadbalancer auto-activates and the Docker-in-Docker harness can't resolve inner VM hostnames
@@ -141,7 +141,7 @@ One of these must be true before moving to Phase B:
 
 - All CI checks are green on the latest pushed commit. OR
 - All CI checks are pending on the latest pushed commit, and none failed on the most recently completed run for that commit. OR
-- A persistent failure exists that is **not caused by this branch's changes** (flaky `main`/`dash` job, an unpublished proxy tag blocking integration through no fault of this PR, a known Apple-Silicon builder-test artifact reproducible on base too). Report this explicitly and proceed to Phase B with the caveat noted.
+- A persistent failure exists that is **not caused by this branch's changes** (flaky `main`/`dash` job, an unpublished proxy tag blocking integration through no fault of this PR, any failure you can reproduce on the base branch too). Report this explicitly and proceed to Phase B with the caveat noted.
 
 If failures persist that trace to this branch's changes, **do not proceed to Phase B**. Report what's failing, what's been tried, and ask the user how to proceed.
 
@@ -197,7 +197,7 @@ If failures persist that trace to this branch's changes, **do not proceed to Pha
 Before reporting, re-check mergeability once more (`gh pr view <PR> --json mergeable`, or the local `git merge-tree` check if UNKNOWN) — the base can move underneath a long pass. If a NEW conflict appeared, loop back to Phase A0.
 
 1. **Phase A0 summary** — whether the branch was conflicted, which files conflicted, how each was resolved (and the merge commit SHA) — or "clean merge, no action".
-2. **Phase A summary** — which CI failures were diagnosed and fixed, with commit SHAs. Note any failure attributed to environment/pre-existing causes (unpublished proxy tag, known Apple-Silicon builder tests) instead of fixed.
+2. **Phase A summary** — which CI failures were diagnosed and fixed, with commit SHAs. Note any failure attributed to environment/pre-existing causes (unpublished proxy tag, known host-specific test artifacts) instead of fixed.
 3. **Phase B summary** — which comments were accepted (with SHAs), which were pushed back on (with reasoning), final unresolved-thread count (should be 0).
 4. **End state** — final mergeability + CI status on the latest commit.
 5. **Outstanding work** — e.g. CI still pending after the last push, or a proxy-image release needed on `../kamal-proxy` before integration can go green (release ordering: proxy image before gem, per `.claude/rules/upstream-sync.md`).

@@ -117,7 +117,7 @@ end
   bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'
   ```
 - Integration tests (`test/integration`) run real deploys in Docker and need `ghcr.io/zoolutions/dash-proxy:$MINIMUM_VERSION` published first. Run the full suite with `bin/test`.
-- Two builder tests are known-failing on Apple Silicon only (host-arch dependent) — don't chase them locally, they pass in CI.
+- The suite no longer depends on the host's Docker: `test_helper.rb` pins the architecture and stubs the real-build helper, so a local failure is a real failure.
 
 ## Code Quality Checklist
 

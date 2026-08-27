@@ -119,7 +119,7 @@ For each unresolved comment, read the full body and categorise it:
 | "Hardcode the proxy version string in the test" | Must interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` -- see `.claude/rules/testing.md` |
 | "Use a `-dash.1` style suffix for the proxy tag" | `Gem::Version` parses `-` as a prerelease marker, sorts BELOW the base, breaks `kamal proxy boot`'s version check |
 | "Rebase your branch onto `dash`" | Feature branches root off `main` and merge it forward; never rebase a published branch |
-| "This builder test failure needs fixing" | If it's one of the two known Apple-Silicon arch-dependent failures in `test/commands/builder_test.rb`, it's not a regression -- confirm via `.claude/rules/testing.md` before touching assertions |
+| "This builder test failure needs fixing" | Agree and fix it — the suite is host-independent, so builder failures are real |
 | "This multi-host fixture doesn't need `loadbalancer: false`" | The fork auto-activates the loadbalancer for any primary role with >1 web host; Docker-in-Docker integration VMs can't resolve each other's hostnames without it disabled |
 
 ---
@@ -161,7 +161,7 @@ For all comments you've decided to accept:
    git push
    ```
 
-Ignore the two known-failing Apple-Silicon builder tests (`test/commands/builder_test.rb`) if they appear -- they're host-arch artifacts, not regressions; do not "fix" them by changing assertions.
+Every builder test should pass; the suite no longer varies by host, so do not wave a failure away as an arch artifact.
 
 ---
 

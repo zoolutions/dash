@@ -46,7 +46,7 @@ From the failing job's full log (`--log` if `--log-failed` is too thin), extract
 "Intermittent across builds" is compatible with "deterministic on any given commit". Checks, in order:
 
 1. **Run the failing test on the run's branch**: `bin/test <file>` (repeat 3×). If it fails every time, this is a **regression, not a flake** — find the commit pair whose interaction broke it: `git log` the test file AND the code it exercises; look for an upstream sync (`git merge main`) that landed between the last green and first red.
-2. **Check the two known Apple-Silicon builder failures.** Two tests in `test/commands/builder_test.rb` are host-arch-dependent: they fail locally on Apple Silicon and pass in CI. If your "flake" is one of those, stop — it's neither flaky nor a bug.
+2. **Rule out a stale environment assumption.** The suite used to track whether Docker was running: `Dash::Utils.docker_arch` shelled out to `docker info`, and `Dash::Docker.included_files` ran a real build. Both are pinned in `test_helper.rb` now. If a test starts varying again, look first for a new call that reaches outside the process.
 3. **Check the matrix cell.** A failure only on `rails_edge` or only on Ruby 4.0 is a compatibility break, not a flake — fix it as a regression against that version.
 
 ## Phase 4: Classify the signature

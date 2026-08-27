@@ -178,7 +178,7 @@ If there are still pending checks, report which checks are running and what was 
 
 | Failure | Cause | Action |
 |---|---|---|
-| `test/commands/builder_test.rb` (2 tests) fail locally, pass in CI | Apple-Silicon-only: host-arch-dependent buildx assertions | Flag as expected on Apple Silicon; do not alter assertions |
+| A test passes locally but fails in CI (or vice versa) | Look for a call that reaches outside the process — Docker, the network, the clock. `test_helper.rb` pins the two that used to do this |
 | Integration suite fails pulling `ghcr.io/zoolutions/kamal-proxy:<MINIMUM_VERSION>` | Tag not yet published to ghcr.io, or `MINIMUM_VERSION` was bumped without a matching proxy release | Check `docker buildx imagetools inspect ghcr.io/zoolutions/kamal-proxy:<tag>`; if unpublished, this is a release-ordering issue, not a code bug — see `.claude/rules/upstream-sync.md` |
 | Any check failing on a PR whose base is `main` | `main` must stay a pristine fast-forward mirror of upstream | Flag it; the PR should retarget `dash` |
 
