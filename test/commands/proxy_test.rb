@@ -489,16 +489,24 @@ class CommandsProxyTest < ActiveSupport::TestCase
   # --- Stage 3c migrations -------------------------------------------------
 
   # The guard is negated and leads the chain because shell && and || share
-  # precedence and associate left: written as `exists || legacy && create &&
-  # copy` it parses as `((exists || legacy) && create) && copy`, which re-copies
-  # the legacy volume over live state on every deploy.
-  test "copy_legacy_config_volume skips itself once the new volume exists" do
+  # The chain must start with a program: SSHKit prefixes the first word with
+  # /usr/bin/env, and `env !` exits 127 instead of negating — which is how
+  # 4.0.0 skipped the copy on every host and booted proxies onto empty volumes.
+  test "copy_legacy_config_volume leads with docker, never with shell negation" do
     command = new_command.copy_legacy_config_volume.join(" ")
 
-    assert command.start_with?("! docker volume inspect dash-proxy-config"),
-      "the guard must lead the chain, or the copy runs even when the volume already exists"
-    assert command.end_with?("|| true"),
-      "a host with neither volume must not fail its deploy"
+    assert command.start_with?("docker volume inspect dash-proxy-config > /dev/null 2>&1 || ! docker volume inspect kamal-proxy-config > /dev/null 2>&1 || ( docker volume create dash-proxy-config && docker run"),
+      "guard first, legacy check second, create-and-copy grouped last: #{command}"
+    assert command.end_with?("'cp -a /from/. /to/' )"), command
+    refute_match "|| true", command, "a failed copy must fail the deploy, not vanish into || true"
+  end
+
+  # `A || ! B || ( C && D )`: A true → skip; B absent → skip; else C && D.
+  test "copy_legacy_config_volume is one chain with the copy grouped in a subshell" do
+    command = new_command.copy_legacy_config_volume.join(" ")
+
+    assert_equal 2, command.scan("||").size, command
+    assert_equal 1, command.scan("&&").size, command
   end
 
   test "copy_legacy_config_volume copies the pre-rename volume verbatim" do

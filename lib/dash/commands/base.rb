@@ -126,6 +126,34 @@ module Dash::Commands
         [ :sh, "-c", "'#{command.flatten.join(" ").gsub("'", "'\\\\''")}'" ]
       end
 
+      # Adopts a pre-rename docker volume: creates `volume` from `legacy` if, and
+      # only if, `volume` is absent and `legacy` is present. A host with neither
+      # exits 0. The first word must be a program, never `!` — see
+      # Dash::Commands::Proxy#copy_legacy_config_volume.
+      def copy_legacy_volume(legacy:, volume:, image:)
+        any \
+          volume_exists(volume),
+          negate(volume_exists(legacy)),
+          [ "(", *combine(docker(:volume, :create, volume), copy_between_volumes(legacy, volume, image: image)), ")" ]
+      end
+
+      def negate(command)
+        [ "!", *command ]
+      end
+
+      def volume_exists(name)
+        docker :volume, :inspect, name, ">", "/dev/null", "2>&1"
+      end
+
+      def copy_between_volumes(from, to, image:)
+        docker \
+          :run, "--rm", "--user", "root", "--entrypoint", "sh",
+          "--volume", "#{from}:/from",
+          "--volume", "#{to}:/to",
+          image,
+          "-c", "'cp -a /from/. /to/'"
+      end
+
       def docker(*args)
         args.compact.unshift :docker
       end

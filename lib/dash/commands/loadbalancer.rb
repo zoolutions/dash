@@ -37,6 +37,16 @@ class Dash::Commands::Loadbalancer < Dash::Commands::Base
     combine start, run, by: "||"
   end
 
+  # A dedicated load balancer host went through the 4.0 rename with nothing
+  # adopting its `kamal-loadbalancer-config` volume: the per-host proxies got
+  # Dash::Cli::Proxy::LegacyRename, the load balancer got a fresh empty volume
+  # and lost its routing table, dynamic domains and ACME cache. On a shared
+  # proxy host the volume is the proxy's own and LegacyRename already copied
+  # it, so this is a no-op there.
+  def copy_legacy_config_volume
+    copy_legacy_volume(legacy: legacy_config_volume_name, volume: config_volume_name, image: loadbalancer_config.run.image)
+  end
+
   def deploy(targets: [])
     docker :exec, container_name, "dash-proxy", "deploy", loadbalancer_config.config.service,
       *loadbalancer_config.deploy_command_args(targets: targets)
@@ -196,11 +206,15 @@ class Dash::Commands::Loadbalancer < Dash::Commands::Base
     # load balancer and a shared proxy host never fight over the same volume.
     # (The apps-config mount comes with run_args, via the proxy's run surface.)
     def config_volume
-      if on_proxy_host?
-        [ "--volume", "dash-proxy-config:/home/dash-proxy/.config/dash-proxy" ]
-      else
-        [ "--volume", "dash-loadbalancer-config:/home/dash-proxy/.config/dash-proxy" ]
-      end
+      [ "--volume", "#{config_volume_name}:/home/dash-proxy/.config/dash-proxy" ]
+    end
+
+    def config_volume_name
+      on_proxy_host? ? Dash::Configuration::Proxy::CONFIG_VOLUME : Dash::Configuration::Proxy::LOADBALANCER_CONFIG_VOLUME
+    end
+
+    def legacy_config_volume_name
+      on_proxy_host? ? Dash::Configuration::Proxy::LEGACY_CONFIG_VOLUME : Dash::Configuration::Proxy::LEGACY_LOADBALANCER_CONFIG_VOLUME
     end
 
     # The certificate store lives in whichever config volume this loadbalancer

@@ -76,6 +76,10 @@ class Dash::Cli::Proxy < Dash::Cli::Base
           info "Starting loadbalancer on #{host}..."
           execute *DASH.registry.login
 
+          # Bring a pre-rename volume across before the container can be created
+          # against an empty one. A no-op once it has been.
+          execute *DASH.loadbalancer.copy_legacy_config_volume
+
           # The load balancer terminates TLS and owns the cache, so its host
           # needs the proxy secrets (acme credentials, cache store) just like
           # the proxy hosts do.
