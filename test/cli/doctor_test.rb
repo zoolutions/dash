@@ -2,6 +2,7 @@ require_relative "cli_test_case"
 
 class CliDoctorTest < CliTestCase
   PROXY_VERSION_CAPTURE_ARGS = [ :docker, :inspect, "dash-proxy", "--format '{{.Config.Image}}'", "|", :awk, "-F:", "'{print $NF}'" ]
+  LEGACY_PROXY_VERSION_CAPTURE_ARGS = [ :docker, :inspect, "kamal-proxy", "--format '{{.Config.Image}}'", "|", :awk, "-F:", "'{print $NF}'" ]
 
   setup do
     Thread.report_on_exception = false
@@ -51,6 +52,40 @@ class CliDoctorTest < CliTestCase
     assert_includes exception.message, "v0.0.1 is older than the minimum #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}"
   end
 
+  # A host that has not yet been through the stage-3c rename is still running
+  # kamal-proxy, which holds 80/443. Reporting that as "in use by another
+  # process" fails the doctor and blocks the very deploy that would migrate it —
+  # which is what broke the first real 4.0.0 docs deploy.
+  test "doctor treats a running legacy proxy as the port holder, not a foreign process" do
+    stub_proxy_version nil, legacy: Dash::Configuration::Proxy::Run::MINIMUM_VERSION
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.first == :ss }
+      .returns("LISTEN 0 4096 0.0.0.0:80 0.0.0.0:*")
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+
+    run_command("doctor").tap do |output|
+      assert_match "held by the running kamal-proxy", output
+      assert_match "replaced on the next deploy", output
+      assert_no_match(/already in use by another process/, output)
+      assert_match "ready to deploy", output
+    end
+  end
+
+  # The version check should name what is actually running, rather than
+  # reporting "not running" because it only ever looked at dash-proxy.
+  test "doctor reports a running legacy proxy by name" do
+    stub_proxy_version nil, legacy: Dash::Configuration::Proxy::Run::MINIMUM_VERSION
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+
+    run_command("doctor").tap do |output|
+      assert_match "kamal-proxy", output
+      assert_match(/renamed to dash-proxy on the next deploy/, output)
+    end
+  end
+
+  # With no proxy of either name, an occupied port is still a real failure.
   test "doctor with ports in use" do
     stub_proxy_version nil
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
@@ -287,10 +322,14 @@ class CliDoctorTest < CliTestCase
       end
     end
 
-    def stub_proxy_version(version)
+    def stub_proxy_version(version, legacy: nil)
       SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
         .with(*PROXY_VERSION_CAPTURE_ARGS)
         .returns(version.to_s)
+
+      SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+        .with(*LEGACY_PROXY_VERSION_CAPTURE_ARGS)
+        .returns(legacy.to_s)
 
       # A running proxy also gets its mounts inspected; default to none so
       # tests that do not care about the socket check stay quiet. Call
