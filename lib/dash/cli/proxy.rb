@@ -2,7 +2,7 @@ class Dash::Cli::Proxy < Dash::Cli::Base
   desc "boot", "Boot proxy on servers"
   def boot
     modify(lock: true, server_lock: true) do
-      on(DASH.hosts) do |host|
+      on(network_hosts) do |host|
         execute *DASH.docker.create_network
       rescue SSHKit::Command::Failed => e
         raise unless e.message.include?("already exists")
@@ -76,8 +76,10 @@ class Dash::Cli::Proxy < Dash::Cli::Base
           info "Starting loadbalancer on #{host}..."
           execute *DASH.registry.login
 
-          # Bring a pre-rename volume across before the container can be created
-          # against an empty one. A no-op once it has been.
+          # Bring a pre-rename host across before the container can be created
+          # against an empty volume or a network nothing else joined. A no-op
+          # once it has been.
+          execute *DASH.docker.connect_legacy_network_containers
           execute *DASH.loadbalancer.copy_legacy_config_volume
 
           # The load balancer terminates TLS and owns the cache, so its host
@@ -653,6 +655,15 @@ class Dash::Cli::Proxy < Dash::Cli::Base
   end
 
   private
+    # Every host that runs a container on the proxy network. A dedicated
+    # loadbalancer host is not in DASH.hosts, and nothing else creates the
+    # network there (zoolutions/dash#140).
+    def network_hosts
+      hosts = DASH.hosts
+      hosts |= [ DASH.config.proxy.effective_loadbalancer ] if DASH.config.proxy.load_balancing?
+      hosts
+    end
+
     # The host that owns TLS, and so the certificate store: the loadbalancer
     # host when load balancing (TLS terminates at the edge), else the primary
     # host - the same host `loadbalancer: true` would resolve to.

@@ -19,6 +19,7 @@ class Dash::Cli::Proxy::LoadbalancerReboot
   def run
     execute *DASH.auditor.record("Rebooted loadbalancer"), verbosity: :debug
     execute *DASH.registry.login
+    ensure_network
 
     info "Stopping and removing #{DASH.loadbalancer.container_name} on #{host}, if running..."
     execute *DASH.loadbalancer.stop, raise_on_non_zero_exit: false
@@ -45,6 +46,16 @@ class Dash::Cli::Proxy::LoadbalancerReboot
   end
 
   private
+    # Before the old container is stopped: `docker run` against a missing
+    # network would otherwise fail with the edge already down. A dedicated
+    # loadbalancer host has no other path that creates the network
+    # (zoolutions/dash#140).
+    def ensure_network
+      execute *DASH.docker.create_network
+    rescue SSHKit::Command::Failed => e
+      raise unless e.message.include?("already exists")
+    end
+
     def wait_until_ready
       deadline = Time.now + READY_TIMEOUT
 
