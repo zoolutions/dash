@@ -32,7 +32,7 @@ class Views::Docs::Pages::TrafficShaping < DocsUI::Page
         the client. **List every hop** — a chain the proxy cannot resolve
         denies the request rather than falling back.
       MD
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         proxy:
           client_ip:
             header: CF-Connecting-IP    # only honoured with trusted_proxies set
@@ -50,7 +50,7 @@ class Views::Docs::Pages::TrafficShaping < DocsUI::Page
         clients are counted per /64, since one client can pick any address
         inside its own.
       MD
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         proxy:
           rate_limit:
             requests: 100    # per second, may be fractional (0.5 = one per 2s)
@@ -63,7 +63,7 @@ class Views::Docs::Pages::TrafficShaping < DocsUI::Page
 
   def ip_and_agent_lists
     DocsUI::Section("Allow, deny, and user-agent lists") do
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         proxy:
           allow_ips:            # serve only these; everything else gets a 403
             - 10.0.0.0/8
@@ -100,7 +100,7 @@ class Views::Docs::Pages::TrafficShaping < DocsUI::Page
         never trips `response_timeout`, because the app answered promptly.
         WebSocket and event-stream responses are exempt from `request_timeout`.
       MD
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         proxy:
           response_timeout: 10   # default 30s
           request_timeout: 30    # default 0 = no limit
@@ -126,7 +126,7 @@ class Views::Docs::Pages::TrafficShaping < DocsUI::Page
         `writer_affinity_timeout` keeps a client's reads on the writer briefly
         after it writes, so clients always read their own writes.
       MD
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         proxy:
           read_routing:
             targets:
@@ -157,7 +157,7 @@ class Views::Docs::Pages::TrafficShaping < DocsUI::Page
         healthy. Health checks and the proxy's own TLS probes are not traffic
         and never wake a sleeping service.
       MD
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         proxy:
           sleep:
             after: 300         # idle seconds before stopping
