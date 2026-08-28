@@ -34,6 +34,13 @@ Rails.application.config.to_prepare do
     c.code_theme      = "Rouge::Themes::Github"  # light themes
     c.code_theme_dark = "Rouge::Themes::Monokai" # dark themes
 
+    # The shipped themes that are dark, so code_theme_dark scopes to them. Set
+    # explicitly because docs-kit's DEFAULT_DARK_THEMES omits `nord`, which
+    # otherwise fell back to the light Github palette. Keep in sync with `themes`.
+    # Monokai's own container background is overridden per dark theme in
+    # application.tailwind.css so the block matches the page palette.
+    c.dark_themes = %w[dark synthwave dracula night nord sunset]
+
     # A link to the source repo in the topbar, rendered with the shipped GitHub
     # brand mark.
     c.topbar_links = [
