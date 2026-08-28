@@ -50,7 +50,7 @@ class Views::Docs::Pages::Guide < DocsUI::Page
         sub-headings *inside* a Section.
       MD
 
-      DocsUI::Code(<<~RUBY, filename: "config/routes.rb")
+      DocsUI::Code(<<~RUBY, filename: "config/routes.rb", lexer: :ruby)
         Rails.application.routes.draw { mount DocsKit::Engine, at: "/docs" }
       RUBY
     end
@@ -70,6 +70,9 @@ end
   needs no parens: `md <<~'MD' … MD`, `prose { … }`, `example { |ex| … }`,
   `operation "operationId"`. (A bare `DocsUI::Prose do` is a Ruby SyntaxError; the
   helpers sidestep it.)
+- **`DocsUI::Code` needs `lexer:` for anything that is not Ruby** — `filename:`
+  is only the title bar; `lexer: :yaml` / `:shell` selects the highlighter, and
+  the request spec fails a `.yml`-named block lexed as anything else.
 - **Reference material has dedicated helpers** — reach for these before prose:
   `DocsUI::PropTable`, `DocsUI::FieldTable`, `DocsUI::RequestExample`,
   `DocsUI::Callout(:note | :tip | :warning)`.

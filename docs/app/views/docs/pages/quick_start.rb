@@ -24,7 +24,7 @@ class Views::Docs::Pages::QuickStart < DocsUI::Page
         your deployment in `config/deploy.yml`. The minimum is a service name,
         an image, servers, and a registry:
       MD
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         # The name of your application, used to identify containers on the servers.
         service: myapp
 
@@ -65,7 +65,7 @@ class Views::Docs::Pages::QuickStart < DocsUI::Page
         Secrets are read from `.dash/secrets` — dotenv format, with command
         substitution for password managers:
       MD
-      DocsUI::Code(<<~SHELL, filename: ".dash/secrets")
+      DocsUI::Code(<<~SHELL, filename: ".dash/secrets", lexer: :shell)
         DASH_REGISTRY_PASSWORD=$DASH_REGISTRY_PASSWORD
       SHELL
       md <<~'MD'

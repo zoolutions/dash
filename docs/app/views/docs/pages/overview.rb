@@ -62,7 +62,7 @@ class Views::Docs::Pages::Overview < DocsUI::Page
         servers, no lock-in. The entire deployment is described in one file,
         `config/deploy.yml`.
       MD
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         service: myapp
         image: my-user/myapp
 

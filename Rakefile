@@ -82,17 +82,24 @@ task :release, %i[version force] do |_t, args|
     success "Updated #{version_file}"
   end
 
-  # Step 1b: Bump the path-gem pin in Gemfile.lock in place. The only thing a
+  # Step 1b: Bump the path-gem pin in both lockfiles in place — the root one and
+  # the docs site's (docs/Gemfile declares `gem "dash", path: ".."`, so it pins
+  # the same version and drifts on every release otherwise). The only thing a
   # version bump changes there is the dash pin, so a targeted edit beats a full
   # `bundle lock` re-resolve (which can trip over unrelated platform gems).
-  header "Gemfile.lock pin"
-  lock_content = File.read("Gemfile.lock")
-  bumped = lock_content.gsub(/^(\s+dash) \([^)]*\)$/, "\\1 (#{new_version})")
-  if bumped == lock_content
-    skip "Gemfile.lock — no dash pin to bump"
-  else
-    File.write("Gemfile.lock", bumped)
-    success "Bumped dash pin in Gemfile.lock"
+  header "Gemfile.lock pins"
+  lockfiles = %w[ Gemfile.lock docs/Gemfile.lock ]
+  lockfiles.each do |lockfile|
+    next skip "#{lockfile} — not found" unless File.exist?(lockfile)
+
+    lock_content = File.read(lockfile)
+    bumped = lock_content.gsub(/^(\s+dash) \([^)]*\)$/, "\\1 (#{new_version})")
+    if bumped == lock_content
+      skip "#{lockfile} — no dash pin to bump"
+    else
+      File.write(lockfile, bumped)
+      success "Bumped dash pin in #{lockfile}"
+    end
   end
 
   # Step 2: Verify gem builds cleanly
@@ -103,7 +110,7 @@ task :release, %i[version force] do |_t, args|
 
   # Step 3: Commit version bump
   header "Git commit"
-  paths_to_stage = [ version_file, "Gemfile.lock" ]
+  paths_to_stage = [ version_file, *lockfiles ]
   staged_changes = paths_to_stage.any? do |path|
     !`git diff #{path}`.strip.empty? || !`git diff --cached #{path}`.strip.empty?
   end

@@ -52,7 +52,7 @@ class Views::Docs::Pages::Certificates < DocsUI::Page
         Encrypt certificates for it automatically. With `source` set,
         `ssl: true` is allowed without `host`/`hosts`.
       MD
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         proxy:
           ssl: true
           ssl_domains:
@@ -87,7 +87,7 @@ class Views::Docs::Pages::Certificates < DocsUI::Page
         HTTP-01 only, so credentials visible in the proxy's environment can
         never arm DNS-01 on their own.
       MD
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         proxy:
           run:
             acme:
@@ -138,7 +138,7 @@ class Views::Docs::Pages::Certificates < DocsUI::Page
         - `client_ca_pem` — mutual TLS: clients must present a certificate
           signed by this CA bundle.
       MD
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         proxy:
           ssl:
             certificate_pem: CERTIFICATE_PEM

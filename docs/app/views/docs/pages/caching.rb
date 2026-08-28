@@ -48,7 +48,7 @@ class Views::Docs::Pages::Caching < DocsUI::Page
         Only `enabled` is required; everything else keeps dash-proxy's own
         default until you set it:
       MD
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         proxy:
           cache:
             enabled: true
@@ -74,7 +74,7 @@ class Views::Docs::Pages::Caching < DocsUI::Page
 
   def the_storage
     DocsUI::Section("The storage (proxy-wide)") do
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         proxy:
           run:
             cache:

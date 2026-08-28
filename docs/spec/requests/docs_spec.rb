@@ -16,6 +16,25 @@ RSpec.describe "Docs pages", type: :request do
       expect(response.body).to include(CGI.escapeHTML(doc.title)).or include(doc.title)
     end
 
+    # DocsUI::Code defaults to the Ruby lexer and uses `filename:` only for the
+    # title bar, so a deploy.yml example without `lexer: :yaml` is silently
+    # highlighted as Ruby (and its .md twin gets a ```ruby fence). Guard both the
+    # symptom (Rouge Error tokens) and the cause (a YAML-named block lexed as
+    # something else) until docs-kit infers the lexer from the filename.
+    it "highlights every code block on #{doc.slug} with the right lexer" do
+      get "/docs/#{doc.slug}"
+      html = Nokogiri::HTML(response.body)
+
+      expect(html.css(".code-highlight .err")).to be_empty, "#{doc.slug}: Rouge Error tokens in a code block"
+
+      html.css(".code-highlight").each do |block|
+        filename = block.previous_element&.at_css("span")&.text.to_s
+        next unless filename.match?(/\.ya?ml\z/)
+
+        expect(block["data-md-lang"]).to eq("yaml"), "#{doc.slug}: #{filename} block is lexed as #{block["data-md-lang"]}"
+      end
+    end
+
     it "serves a Markdown twin for #{doc.slug}" do
       get "/docs/#{doc.slug}.md"
       expect(response).to have_http_status(:ok)

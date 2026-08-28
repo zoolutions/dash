@@ -39,7 +39,7 @@ class Views::Docs::Pages::LoadBalancing < DocsUI::Page
       md <<~'MD'
         Three forms of `proxy: loadbalancer:`:
       MD
-      DocsUI::Code(<<~YAML, filename: "config/deploy.yml")
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         proxy:
           # A dedicated machine (outside `servers:`) or one of the web hosts —
           # on a web host, the loadbalancer takes over that host's proxy container.

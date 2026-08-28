@@ -42,8 +42,12 @@ the printed line by hand.
   interpolation; Phlex escapes author text). Markdown `###` is only for
   sub-headings inside a Section.
 - Reference material: `DocsUI::PropTable`, `DocsUI::FieldTable`,
-  `DocsUI::RequestExample`, `DocsUI::Code(source, filename:)`,
+  `DocsUI::RequestExample`, `DocsUI::Code(source, filename:, lexer:)`,
   `DocsUI::Callout(:note | :tip | :warning)`.
+- **Always pass `lexer:` for non-Ruby sources** (`lexer: :yaml`, `:shell`).
+  `filename:` only labels the title bar — without `lexer:` the block is
+  highlighted as Ruby, and `spec/requests/docs_spec.rb` fails on a `.yml`
+  block lexed as anything but YAML.
 - OpenAPI-backed endpoints (when `c.openapi` is set): `operation "createInvoice"`
   renders one operation as a full endpoint reference; append prose with a block —
   `operation "createInvoice" do |op| op.md("…") end` — and filter tabs with
