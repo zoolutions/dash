@@ -128,7 +128,10 @@ class ConfigDoc
   end
 
   # YAML example lines, keeping interior blanks and any deeply-indented comment
-  # that continues a trailing comment from the line above.
+  # that continues a trailing comment from the line above. The block is dedented
+  # to column zero (common leading indent removed, relative indent kept): the
+  # examples sit under their parent keys in the source file, and a highlighter
+  # given the raw columns renders a staggered, mis-lexed block.
   def consume_yaml_block(lines, index, nodes)
     block = []
     while (line = lines[index])
@@ -145,8 +148,13 @@ class ConfigDoc
       end
       index += 1
     end
-    nodes << Node.new(kind: :yaml, text: block.join("\n"))
+    nodes << Node.new(kind: :yaml, text: dedent(block).join("\n"))
     index
+  end
+
+  def dedent(block)
+    indent = block.reject(&:blank?).map { |line| line[/\A */].size }.min.to_i
+    block.map { |line| line.blank? ? "" : line[indent..] }
   end
 
   def heading?(block)

@@ -15,6 +15,22 @@
 @source "../../../public/*.html";
 @import "./tailwind.sources.css";
 
+/* Code blocks on dark themes: keep the Monokai TOKEN colours docs-kit emits
+   (scoped as `[data-theme=X] .code-highlight`, inline in the page) but replace
+   Monokai's olive container background with the theme's own base-200 so the
+   block sits in the page palette. Same selector as docs-kit's, but its <style>
+   is inline in the body and therefore later in the cascade than this stylesheet,
+   so `!important` is needed to win. The list MUST match `dark_themes` in
+   config/initializers/docs_kit.rb. */
+[data-theme="dark"] .code-highlight,
+[data-theme="synthwave"] .code-highlight,
+[data-theme="dracula"] .code-highlight,
+[data-theme="night"] .code-highlight,
+[data-theme="nord"] .code-highlight,
+[data-theme="sunset"] .code-highlight {
+  background-color: var(--color-base-200) !important;
+}
+
 /* daisyUI Drawer classes are emitted at render time (never literal) — force them
    so the shell isn't tree-shaken. */
 @source inline("drawer drawer-content drawer-side drawer-toggle drawer-overlay {lg:}drawer-open drawer-end");
