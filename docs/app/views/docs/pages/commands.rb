@@ -19,6 +19,7 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     [ "dash doctor", "Diagnose deploy readiness of servers, registry, proxy, ports, DNS, certificates, and per-role readiness gates" ],
     [ "dash init", "Create config stub in config/deploy.yml and secrets stub in .dash" ],
     [ "dash remove", "Remove the proxy, app, accessories, and registry session from servers" ],
+    [ "dash migrate", "Move this project's .kamal directory to .dash" ],
     [ "dash upgrade", "Upgrade from Kamal 1.x to 2.0" ],
     [ "dash version", "Show dash version" ]
   ].freeze
@@ -32,7 +33,7 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     [ "containers / images", "Show app containers / images on servers" ],
     [ "stale_containers", "Detect app stale containers" ],
     [ "live / maintenance", "Switch the app between live and maintenance mode" ],
-    [ "rollout <deploy|set|stop>", "Manage a canary rollout of a new version through the proxy" ],
+    [ "rollout <deploy|set|stop>", "Manage a canary rollout of a new version through the proxy — see Canary rollout" ],
     [ "remove", "Remove app containers and images from servers" ],
     [ "version", "Show app version currently running on servers" ]
   ].freeze
@@ -98,6 +99,12 @@ class Views::Docs::Pages::Commands < DocsUI::Page
         `rollback` when it goes wrong, `doctor` when you are not sure it will
         go right. `dash docs` prints the same configuration reference the
         [Configuration](/docs/configuration) pages here are generated from.
+        `migrate` renames a kamal project's `.kamal/` to `.dash/` — see
+        [From kamal](/docs/from-kamal).
+
+        `--rolling` on `upgrade`, `proxy reboot`, and `proxy upgrade` walks the
+        hosts one at a time instead of in parallel — see
+        [Rolling restarts](/docs/worker-roles#rolling-restarts).
       MD
     end
   end

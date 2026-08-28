@@ -69,8 +69,9 @@ class Views::Docs::Pages::QuickStart < DocsUI::Page
         DASH_REGISTRY_PASSWORD=$DASH_REGISTRY_PASSWORD
       SHELL
       md <<~'MD'
-        See the [Environment](/docs/env) reference for secret env vars and the
-        adapters `dash secrets fetch` supports.
+        See the [Environment](/docs/env) reference for secret env vars and
+        [Secrets adapters](/docs/secrets) for the vaults `dash secrets fetch`
+        supports.
       MD
     end
   end
