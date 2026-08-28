@@ -82,7 +82,7 @@ asset_path: /path/to/assets
 # Hooks path
 #
 # Path to hooks, defaults to `.dash/hooks` (`.kamal/hooks` is still read when only that exists).
-# See https://kamal-deploy.org/docs/hooks for more information:
+# See https://dash.zoolutions.llc/docs/hooks for every hook, when it fires, and its environment:
 hooks_path: /user_home/kamal/hooks
 
 # Hook output

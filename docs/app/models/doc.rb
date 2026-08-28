@@ -15,8 +15,9 @@
 # The Configuration group is GENERATED: one page per commented-YAML doc in
 # ../lib/dash/configuration/docs (the same files `dash docs` prints), rendered
 # through ConfigDoc + Views::Docs::Pages::ConfigPage. The drift spec
-# (spec/config_docs_spec.rb) fails when a doc YAML has no page here or a page
-# here has no YAML.
+# (spec/config_docs_spec.rb) fails when a doc YAML has no page here or a
+# ConfigPage here has no YAML. Hand-written pages may sit in the group too
+# (Secrets adapters) — they are not ConfigPages and the spec skips them.
 class Doc
   extend DocsKit::Registry
   path_prefix    "/docs"
@@ -30,6 +31,11 @@ class Doc
   # Migrate
   page "From kamal", group: "Migrate", slug: "from-kamal", view: "FromKamal"
 
+  # Deploying — narrative guides for the deploy path
+  page "Worker roles",   group: "Deploying", slug: "worker-roles", view: "WorkerRoles"
+  page "Hooks",          group: "Deploying"
+  page "Canary rollout", group: "Deploying", slug: "rollout", view: "CanaryRollout"
+
   # Proxy — the dash-only features upstream kamal does not have
   page "Load balancing",           group: "Proxy", slug: "load-balancing", view: "LoadBalancing"
   page "SAN batching & wildcards", group: "Proxy", slug: "certificates", view: "Certificates"
@@ -42,6 +48,7 @@ class Doc
   page "Roles",            group: "Configuration", slug: "role", view: "Config::Role"
   page "Proxy",            group: "Configuration", slug: "proxy", view: "Config::Proxy"
   page "Environment",      group: "Configuration", slug: "env", view: "Config::Env"
+  page "Secrets adapters", group: "Configuration", slug: "secrets", view: "SecretsAdapters" # hand-written, not YAML-generated
   page "Builder",          group: "Configuration", slug: "builder", view: "Config::Builder"
   page "Registry",         group: "Configuration", slug: "registry", view: "Config::Registry"
   page "Accessories",      group: "Configuration", slug: "accessory", view: "Config::Accessory"

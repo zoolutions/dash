@@ -8,11 +8,13 @@ require "rails_helper"
 # directions, so the reference can't silently drift from the gem:
 #
 #   1. Every doc YAML must have a registered Configuration page.
-#   2. Every Configuration page must point at a real doc YAML.
+#   2. Every generated (ConfigPage) Configuration page must point at a real doc YAML.
 #   3. The parser must extract a title and content from every file.
 RSpec.describe "Config docs drift", type: :model do
   let(:yaml_slugs) { ConfigDoc.slugs.sort }
-  let(:config_pages) { Doc.grouped.fetch("Configuration") }
+  # Hand-written pages may sit in the Configuration group (Secrets adapters);
+  # only ConfigPage subclasses are bound to a YAML.
+  let(:config_pages) { Doc.grouped.fetch("Configuration").select { |page| page.view_class < Views::Docs::Pages::ConfigPage } }
   let(:page_slugs) { config_pages.map(&:slug).sort }
 
   it "registers a Configuration page for every gem doc YAML" do
