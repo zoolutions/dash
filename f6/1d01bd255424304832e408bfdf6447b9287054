@@ -1,0 +1,43 @@
+docs/Gemfile.lock
+  ai_agent 4,448
+docs/spec/config_docs_spec.rb
+  s_d2f619ff4e9788::t_a6cee4770a6688 11,15-17
+docs/app/views/docs/pages/quick_start.rb
+  s_d2f619ff4e9788::t_a6cee4770a6688 72-74
+lib/dash/configuration/docs/configuration.yml
+  s_d2f619ff4e9788::t_a6cee4770a6688 85
+docs/app/views/docs/pages/hooks.rb
+  s_d2f619ff4e9788::t_6d8bab7e219489 1-2,5-8,10,29,81,133,145-147
+  s_d2f619ff4e9788::t_de9cf9f2daad84 3-4,9,11-28,30-80,82-132,134-144
+docs/app/views/docs/pages/canary_rollout.rb
+  s_d2f619ff4e9788::t_d1a9090d51c46d 3-4,9,12-93,95-106,108-112
+  s_d2f619ff4e9788::t_6d8bab7e219489 1-2,5-8,10-11,94,107,113-115
+docs/app/views/docs/pages/secrets_adapters.rb
+  s_d2f619ff4e9788::t_6d8bab7e219489 1-2,5-8,10,23,130,171,175-177
+  s_d2f619ff4e9788::t_d1a9090d51c46d 3-4,9,11-22,24-129,131-170,172-174
+docs/app/models/doc.rb
+  s_d2f619ff4e9788::t_a6cee4770a6688 18-20,34-38,51
+docs/app/views/docs/pages/commands.rb
+  s_d2f619ff4e9788::t_a6cee4770a6688 22,36,102-107
+docs/app/views/docs/pages/worker_roles.rb
+  s_d2f619ff4e9788::t_6d8bab7e219489 1-2,7-10,12-13,337-340
+  s_d2f619ff4e9788::t_5c0daace3c619a 3-6,11,14-336
+lib/dash/configuration/docs/env.yml
+  s_d2f619ff4e9788::t_a6cee4770a6688 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f61d01bd255424304832e408bfdf6447b9287054",
+  "prompts": {},
+  "sessions": {
+    "s_d2f619ff4e9788": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf8205c4-807d-4a8e-96f9-b081bc7f0adc",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
