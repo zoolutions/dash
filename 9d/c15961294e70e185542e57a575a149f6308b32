@@ -1,0 +1,37 @@
+lib/dash/configuration.rb
+  s_96be1e82e52535::t_b8e94bf0f5d565 595,600
+  s_96be1e82e52535::t_c643f5432bf398 605
+test/configuration_test.rb
+  s_96be1e82e52535::t_472b60465d6280 560-564
+test/configuration/boot_test.rb
+  s_96be1e82e52535::t_472b60465d6280 80-116
+lib/dash/configuration/docs/boot.yml
+  s_96be1e82e52535::t_b8e94bf0f5d565 29-42
+test/fixtures/deploy_with_boot_canary.yml
+  s_96be1e82e52535::t_c643f5432bf398 1-26
+test/fixtures/deploy_with_boot_canary_and_limit.yml
+  s_96be1e82e52535::t_c643f5432bf398 1-26
+lib/dash/configuration/boot.rb
+  s_96be1e82e52535::t_b8e94bf0f5d565 11,39-54,77-92
+test/cli/app_test.rb
+  s_96be1e82e52535::t_c643f5432bf398 101-132,135,137-170
+  s_96be1e82e52535::t_7e21f217247416 134
+lib/dash/cli/app.rb
+  s_96be1e82e52535::t_7e21f217247416 429-431,434-436,438-447
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "9dc15961294e70e185542e57a575a149f6308b32",
+  "prompts": {},
+  "sessions": {
+    "s_96be1e82e52535": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "060d72be-493e-4410-85fe-c11f2fe091f2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
