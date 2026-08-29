@@ -11,6 +11,7 @@ class Views::Docs::Pages::LoadBalancing < DocsUI::Page
     the_idea
     activation
     option_layering
+    rolling_out
     sharing
     operating
   end
@@ -84,6 +85,31 @@ class Views::Docs::Pages::LoadBalancing < DocsUI::Page
         Without a load balancer, the single proxy is every layer at once and
         the whole surface applies to it. See the generated
         [Proxy reference](/docs/proxy) for each option.
+      MD
+    end
+  end
+
+  def rolling_out
+    DocsUI::Section("Rolling out behind it") do
+      md <<~'MD'
+        Each web host keeps serving its old container until the new one passes
+        dash-proxy's health check, so booting hosts in parallel never reduces
+        the fleet's capacity. What a serial `boot: limit: 1` buys is blast
+        radius — proving the image on one host before the rest — and it pays
+        for it with a full boot per host. A **canary** keeps the proof and
+        drops the serialisation:
+      MD
+      DocsUI::Code(<<~YAML, lexer: :yaml)
+        boot:
+          canary: 1   # first web host boots alone; the other hosts, all roles, boot together
+      YAML
+      md <<~'MD'
+        A failed canary stops the deploy before any other host is touched.
+        `limit` and `wait` still apply to the hosts after the canary. Every
+        deploy ends with a timing table under `Finished all in` — one row per
+        phase and per host, with how long each host waited to become healthy —
+        so the effect of `canary`, `wait`, and `proxy/healthcheck/interval` is
+        visible rather than guessed. See the [Booting reference](/docs/boot).
       MD
     end
   end
