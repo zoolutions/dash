@@ -8,6 +8,9 @@ class CliAppTest < CliTestCase
       assert_match /docker run --detach --restart unless-stopped --name app-web-latest --network dash --hostname 1.1.1.1-[0-9a-f]{12} /, output
       assert_match "docker container ls --all --filter 'name=^app-web-123$' --quiet | xargs docker stop", output
     end
+
+    # Printed by deploy's print_runtime, not by app boot itself — assert the entry it records.
+    assert_match(/\A    web 1\.1\.1\.1\s+\d+\.\ds \(healthy after \d+\.\ds\)\z/, DASH.timings.lines.sole)
   end
 
   test "boot will rename if same version is already running" do

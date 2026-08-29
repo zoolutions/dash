@@ -8,7 +8,7 @@ class Dash::Cli::Main < Dash::Cli::Base
         invoke_options = deploy_options
 
         say "Ensure Docker is installed...", :magenta
-        invoke "dash:cli:server:bootstrap", [], invoke_options
+        timed("Ensure Docker is installed") { invoke "dash:cli:server:bootstrap", [], invoke_options }
 
         deploy(boot_accessories: true)
       end
@@ -30,32 +30,32 @@ class Dash::Cli::Main < Dash::Cli::Base
 
         if options[:skip_push]
           say "Pull app image...", :magenta
-          invoke "dash:cli:build:pull", [], invoke_options
+          timed("Pull app image") { invoke "dash:cli:build:pull", [], invoke_options }
         else
           say "Build and push app image...", :magenta
-          invoke "dash:cli:build:deliver", [], invoke_options
+          timed("Build and push app image") { invoke "dash:cli:build:deliver", [], invoke_options }
         end
 
         modify(lock: true) do
           run_hook "pre-deploy", secrets: true
 
           say "Ensure dash-proxy is running...", :magenta
-          invoke "dash:cli:proxy:boot", [], invoke_options
+          timed("Ensure dash-proxy") { invoke "dash:cli:proxy:boot", [], invoke_options }
 
-          invoke "dash:cli:accessory:boot", [ "all" ], invoke_options if boot_accessories
+          timed("Boot accessories") { invoke "dash:cli:accessory:boot", [ "all" ], invoke_options } if boot_accessories
 
           say "Detect stale containers...", :magenta
-          invoke "dash:cli:app:stale_containers", [], invoke_options.merge(stop: true)
+          timed("Detect stale containers") { invoke "dash:cli:app:stale_containers", [], invoke_options.merge(stop: true) }
 
-          invoke "dash:cli:app:boot", [], invoke_options
+          timed("Boot") { invoke "dash:cli:app:boot", [], invoke_options }
 
           if DASH.config.proxy.load_balancing?
             say "Updating loadbalancer configuration...", :magenta
-            invoke "dash:cli:proxy:loadbalancer", [ "deploy" ], invoke_options
+            timed("Loadbalancer") { invoke "dash:cli:proxy:loadbalancer", [ "deploy" ], invoke_options }
           end
 
           say "Prune old containers and images...", :magenta
-          invoke "dash:cli:prune:all", [], invoke_options
+          timed("Prune") { invoke "dash:cli:prune:all", [], invoke_options }
         end
       end
 
@@ -78,23 +78,23 @@ class Dash::Cli::Main < Dash::Cli::Base
 
         if options[:skip_push]
           say "Pull app image...", :magenta
-          invoke "dash:cli:build:pull", [], invoke_options
+          timed("Pull app image") { invoke "dash:cli:build:pull", [], invoke_options }
         else
           say "Build and push app image...", :magenta
-          invoke "dash:cli:build:deliver", [], invoke_options
+          timed("Build and push app image") { invoke "dash:cli:build:deliver", [], invoke_options }
         end
 
         modify(lock: true) do
           run_hook "pre-deploy", secrets: true
 
           say "Detect stale containers...", :magenta
-          invoke "dash:cli:app:stale_containers", [], invoke_options.merge(stop: true)
+          timed("Detect stale containers") { invoke "dash:cli:app:stale_containers", [], invoke_options.merge(stop: true) }
 
-          invoke "dash:cli:app:boot", [], invoke_options
+          timed("Boot") { invoke "dash:cli:app:boot", [], invoke_options }
 
           if DASH.config.proxy.load_balancing?
             say "Updating loadbalancer configuration...", :magenta
-            invoke "dash:cli:proxy:loadbalancer", [ "deploy" ], invoke_options
+            timed("Loadbalancer") { invoke "dash:cli:proxy:loadbalancer", [ "deploy" ], invoke_options }
           end
         end
       end
@@ -117,7 +117,7 @@ class Dash::Cli::Main < Dash::Cli::Base
           if container_available?(version)
             run_hook "pre-deploy", secrets: true
 
-            invoke "dash:cli:app:boot", [], invoke_options.merge(version: version)
+            timed("Boot") { invoke "dash:cli:app:boot", [], invoke_options.merge(version: version) }
             rolled_back = true
           else
             say "The app version '#{version}' is not available as a container (use 'dash app containers' for available versions)", :red

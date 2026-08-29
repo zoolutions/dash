@@ -36,6 +36,10 @@ class CliMainTest < CliTestCase
       assert_match /Detect stale containers/, output
       assert_match /Prune old containers and images/, output
       assert_match /Releasing the deploy lock/, output
+      # setup nests deploy's print_runtime inside its own; each reports a total, only the outer prints the table
+      assert_equal 2, output.scan("Finished all in").size
+      assert_equal 1, output.scan(/^  Prune\s+\d+\.\ds$/).size
+      assert_match /Finished all in \d+\.\d seconds\n  Ensure Docker is installed\s+\d+\.\ds\n  Pull app image\s+\d+\.\ds\n  Ensure dash-proxy\s+\d+\.\ds\n  Boot accessories\s+\d+\.\ds\n  Detect stale containers\s+\d+\.\ds\n  Boot\s+\d+\.\ds\n  Prune\s+\d+\.\ds/, output
     end
   end
 
@@ -125,6 +129,7 @@ class CliMainTest < CliTestCase
       assert_match /Detect stale containers/, output
       assert_match /Prune old containers and images/, output
       assert_match /Releasing the deploy lock/, output
+      assert_match /Finished all in \d+\.\d seconds\n  Pull app image\s+\d+\.\ds\n  Ensure dash-proxy\s+\d+\.\ds\n  Detect stale containers\s+\d+\.\ds\n  Boot\s+\d+\.\ds\n  Prune\s+\d+\.\ds/, output
     end
   end
 
