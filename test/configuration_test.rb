@@ -557,6 +557,11 @@ class ConfigurationTest < ActiveSupport::TestCase
     assert_match "servers/workers/boot/wait is set to 5 but servers/workers/boot/limit is not", warning
   end
 
+  test "does not warn when boot wait is paired with a canary" do
+    # A canary creates groups too, so the wait has a gap to fill.
+    assert_equal "", stderred { Dash::Configuration.new(@deploy_with_roles.merge(boot: { "canary" => 1, "wait" => 10 })) }
+  end
+
   test "does not warn when boot wait is paired with a limit" do
     assert_equal "", stderred { Dash::Configuration.new(@deploy_with_roles.merge(boot: { "limit" => 2, "wait" => 10 })) }
   end

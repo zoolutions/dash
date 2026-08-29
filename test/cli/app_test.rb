@@ -98,6 +98,76 @@ class CliAppTest < CliTestCase
     run_command("boot", "--roles", "web", config: :with_percentage_boot_limit, host: nil)
   end
 
+  test "boot with a canary boots the first primary host alone, then the rest together" do
+    all_hosts = [ "1.1.1.1", "1.1.1.2", "1.1.1.3", "1.1.1.4" ]
+    Dash::Cli::App.any_instance.stubs(:on).with("1.1.1.1")
+    Dash::Cli::App.any_instance.stubs(:on).with(all_hosts)
+
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.1" ]).with_block_given
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.2", "1.1.1.3", "1.1.1.4" ]).with_block_given
+    # Two groups: one gap, paced by the wait.
+    Object.any_instance.expects(:sleep).with(2).once
+
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+
+    run_command("boot", config: :with_boot_canary, host: nil).tap do |output|
+      assert_hook_ran "pre-app-boot", output, count: 2
+      assert_hook_ran "post-app-boot", output, count: 2
+    end
+  end
+
+  test "a canary with a limit slices the remaining hosts" do
+    all_hosts = [ "1.1.1.1", "1.1.1.2", "1.1.1.3", "1.1.1.4" ]
+    Dash::Cli::App.any_instance.stubs(:on).with("1.1.1.1")
+    Dash::Cli::App.any_instance.stubs(:on).with(all_hosts)
+
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.1" ]).with_block_given
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.2", "1.1.1.3" ]).with_block_given
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.4" ]).with_block_given
+
+    run_command("boot", config: :with_boot_canary_and_limit, host: nil)
+  end
+
+  test "a canary narrows with --roles" do
+    # workers only: no primary host in the run, so there is no canary and a single group.
+    # Every fan-out (assets, the one boot group, the latest tag) covers that single host.
+    Dash::Cli::App.any_instance.stubs(:on).with("1.1.1.4")
+
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.4" ]).with_block_given.at_least_once
+    Object.any_instance.expects(:sleep).never
+
+    run_command("boot", "--roles", "workers", config: :with_boot_canary, host: nil)
+  end
+
+  test "a failing canary stops the deploy before the next group boots" do
+    Dash::Cli::App.any_instance.stubs(:on).with("1.1.1.1")
+    Dash::Cli::App.any_instance.stubs(:on).with([ "1.1.1.1", "1.1.1.2", "1.1.1.3", "1.1.1.4" ])
+
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.1" ]).with_block_given
+      .raises(SSHKit::Runner::ExecuteError.new(Dash::Cli::BootError.new("canary is unhealthy")))
+    Dash::Cli::App.any_instance.expects(:on).with([ "1.1.1.2", "1.1.1.3", "1.1.1.4" ]).never
+    Object.any_instance.expects(:sleep).never
+
+    assert_raises(SSHKit::Runner::ExecuteError) do
+      run_command("boot", config: :with_boot_canary, host: nil)
+    end
+  end
+
+  test "a canary opens the barrier for the roles booting after it" do
+    Object.any_instance.stubs(:sleep)
+
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("123") # old version
+
+    SSHKit::Backend::Abstract.any_instance.expects(:capture_with_info)
+      .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-workers-latest$'", "--quiet", "|", :xargs, :docker, :inspect, "--format", Dash::Commands::Base::DOCKER_HEALTH_STATUS_FORMAT)
+      .returns("no-healthcheck:running").at_least_once # workers health check
+
+    run_command("boot", config: :with_boot_canary, host: nil).tap do |output|
+      assert_match "First web container is healthy on 1.1.1.1, booting any other roles", output
+      assert_match "First web container is healthy, booting workers on 1.1.1.4", output
+    end
+  end
+
   test "boot without parallel roles" do
     # Without parallel_roles: on() called with all hosts, roles sequential per host
     Dash::Cli::App.any_instance.expects(:on).with("1.1.1.1").with_block_given.twice
