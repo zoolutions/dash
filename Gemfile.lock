@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    dash (4.0.4)
+    dash (4.0.5)
       activesupport (>= 7.0, < 10)
       base64 (~> 0.2)
       bcrypt_pbkdf (~> 1.0)
