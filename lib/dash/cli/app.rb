@@ -426,10 +426,24 @@ class Dash::Cli::App < Dash::Cli::Base
       end
     end
 
+    # Canary hosts each form a group of one and go first; whatever is left is sliced by
+    # `limit` (a percentage counts those remaining hosts, the set it actually slices) or
+    # boots as a single group. No canary and no limit is the one-group default.
     def host_boot_groups
       hosts = DASH.app_hosts
-      limit = DASH.config.boot.limit_for(hosts)
+      canary_hosts = canary_boot_hosts(hosts)
+      rest = hosts - canary_hosts
+      limit = DASH.config.boot.limit_for(rest)
 
-      limit ? hosts.each_slice(limit).to_a : [ hosts ]
+      rest_groups = limit ? rest.each_slice(limit).to_a : [ rest ]
+
+      canary_hosts.map { |host| [ host ] } + rest_groups.reject(&:empty?)
+    end
+
+    # The first N primary-role hosts of this run. `--roles`/`--hosts` may leave none, in
+    # which case there is nothing to prove ahead of the others and no canary group.
+    def canary_boot_hosts(hosts)
+      count = DASH.config.boot.canary
+      count ? (DASH.primary_role.hosts & hosts).first(count) : []
     end
 end

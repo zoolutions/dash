@@ -14,22 +14,26 @@ class Dash::Cli::App::Boot
   end
 
   def run
-    old_version = old_version_renamed_if_clashing
+    DASH.timings.phase("#{role} #{host}", depth: 1) do |timing|
+      @timing = timing
 
-    wait_at_barrier if queuer?
+      old_version = old_version_renamed_if_clashing
 
-    begin
-      start_new_version
-    rescue => e
-      close_barrier if gatekeeper?
-      stop_new_version
-      raise
-    end
+      wait_at_barrier if queuer?
 
-    release_barrier if gatekeeper?
+      begin
+        start_new_version
+      rescue => e
+        close_barrier if gatekeeper?
+        stop_new_version
+        raise
+      end
 
-    if old_version
-      stop_old_version(old_version)
+      release_barrier if gatekeeper?
+
+      if old_version
+        stop_old_version(old_version)
+      end
     end
   end
 
@@ -59,10 +63,10 @@ class Dash::Cli::App::Boot
 
         run_hook "pre-proxy-deploy", hosts: host.to_s, role: role.name
         info "Deploying #{role} on #{host} via dash-proxy (waiting up to #{DASH.config.deploy_timeout}s for it to become healthy)..."
-        execute *app.deploy(target: endpoint)
+        timing_healthy { execute *app.deploy(target: endpoint) }
         run_hook "post-proxy-deploy", hosts: host.to_s, role: role.name
       else
-        Dash::Cli::Healthcheck::Poller.wait_for_healthy(role: role) { health_status }
+        timing_healthy { Dash::Cli::Healthcheck::Poller.wait_for_healthy(role: role) { health_status } }
       end
     rescue => e
       error "Failed to boot #{role} on #{host}"
@@ -134,6 +138,15 @@ class Dash::Cli::App::Boot
       if barrier.close
         info "First #{DASH.primary_role} container is unhealthy on #{host}, not booting any other roles"
       end
+    end
+
+    # The readiness wait is the part of a host's boot an operator can actually tune
+    # (health check interval, app boot time), so it gets called out on the host's entry.
+    def timing_healthy
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      yield
+    ensure
+      @timing.detail = format("healthy after %.1fs", Process.clock_gettime(Process::CLOCK_MONOTONIC) - started)
     end
 
     def barrier_role?

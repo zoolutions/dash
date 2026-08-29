@@ -6,7 +6,7 @@ require "active_support/notifications"
 
 class Dash::Commander
   attr_accessor :verbosity, :holding_lock, :holding_server_lock, :connected, :logging, :lock_wait, :lock_wait_timeout, :lock_wait_interval
-  attr_reader :specific_roles, :specific_hosts
+  attr_reader :specific_roles, :specific_hosts, :timings
   delegate :hosts, :roles, :primary_host, :primary_role, :roles_on, :app_hosts, :proxy_hosts, :accessory_hosts, to: :specifics
 
   def initialize
@@ -23,6 +23,7 @@ class Dash::Commander
     self.lock_wait_timeout = 900
     self.lock_wait_interval = 15
     @modify_depth = 0
+    @timings = Dash::Timings.new
     @specifics = @specific_roles = @specific_hosts = nil
     @config = @config_kwargs = nil
     @output_logger = nil

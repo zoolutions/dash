@@ -26,6 +26,20 @@ boot:
   # moves on as soon as the last host is up.
   wait: 10
 
+  # The number of primary-role hosts to boot one at a time before the rest of the hosts boot.
+  #
+  # A canary is the gate people reach for `limit: 1` to get — prove the new version on one host
+  # before touching the fleet — without serialising every host after it. The first N hosts of the
+  # primary role each boot alone; a boot failure there stops the deploy before any other host is
+  # touched. The remaining hosts of every role then boot together, or in groups when `limit` is
+  # also set (a percentage limit counts those remaining hosts). `wait` paces canary and remaining
+  # groups alike. Behind dash-proxy this never reduces capacity: each host keeps serving the old
+  # container until the new one passes its health check.
+  #
+  # Top-level only. A role-scoped `boot` refuses it: the canary slices the primary role's hosts
+  # ahead of every other role, which a single role cannot express.
+  canary: 1
+
   # Whether to boot roles in parallel on a host.
   #
   # If a host has multiple roles, control whether they are booted in parallel or sequentially on that host.

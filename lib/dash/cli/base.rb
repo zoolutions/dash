@@ -140,13 +140,22 @@ module Dash::Cli
         end
       end
 
+      # `setup` wraps `deploy`, so this nests. Each level reports its own total; the phase
+      # table belongs to the outermost, which is the one that saw every phase.
       def print_runtime
         started_at = Time.now
+        @print_runtime_depth = @print_runtime_depth.to_i + 1
         yield
         Time.now - started_at
       ensure
+        @print_runtime_depth -= 1
         runtime = Time.now - started_at
         puts "  Finished all in #{sprintf("%.1f seconds", runtime)}"
+        puts DASH.timings.lines if @print_runtime_depth.zero? && DASH.timings.any?
+      end
+
+      def timed(name, depth: 0, &block)
+        DASH.timings.phase(name, depth: depth, &block)
       end
 
       # Deploy lock outside, server lock inside. Every caller acquires in that

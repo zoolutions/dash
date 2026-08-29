@@ -8,6 +8,7 @@ class Dash::Configuration::Boot
   def initialize(config:, boot_config: nil, context: nil)
     @boot_config = boot_config || config.raw_config.boot || {}
     validate! @boot_config, context: context
+    validate_canary!(context || self.class.validation_config_key)
   end
 
   # The group size to slice `hosts` by. A percentage only means something against the set
@@ -35,6 +36,22 @@ class Dash::Configuration::Boot
     boot_config["wait"]
   end
 
+  # How many primary-role hosts boot alone, one at a time, before the rest boot together.
+  # Whole-deploy only — Cli::App#host_boot_groups is the sole consumer.
+  def canary
+    boot_config["canary"]
+  end
+
+  def canary?
+    canary.present?
+  end
+
+  # Whether this config splits hosts into more than one group at all — what `wait` needs
+  # in order to mean anything.
+  def groups?
+    limit? || canary?
+  end
+
   def parallel_roles
     boot_config["parallel_roles"]
   end
@@ -57,4 +74,20 @@ class Dash::Configuration::Boot
       { in: :groups, limit: limit, wait: wait.to_i }
     end
   end
+
+  private
+    # The example-driven validator has already checked the type; the range and the
+    # top-level-only rule are ours. A role-scoped Boot always carries a context.
+    def validate_canary!(context)
+      return unless canary?
+
+      if context != self.class.validation_config_key
+        raise Dash::ConfigurationError, "#{context}/canary is only supported at the top-level boot: " \
+          "it slices the primary role's hosts ahead of every other role"
+      end
+
+      if canary < 1
+        raise Dash::ConfigurationError, "#{context}/canary must be at least 1, got #{canary}"
+      end
+    end
 end

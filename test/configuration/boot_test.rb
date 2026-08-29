@@ -77,6 +77,43 @@ class ConfigurationBootTest < ActiveSupport::TestCase
     assert_equal({ in: :sequence, wait: 0 }, boot.runner_options_for(%w[ 1.1.1.1 1.1.1.2 ]))
   end
 
+  test "canary is nil by default" do
+    config = config_with_boot(nil)
+
+    assert_nil config.boot.canary
+    assert_not config.boot.canary?
+  end
+
+  test "canary reads an integer" do
+    config = config_with_boot("canary" => 2)
+
+    assert_equal 2, config.boot.canary
+    assert config.boot.canary?
+  end
+
+  test "canary below one is rejected" do
+    error = assert_raises(Dash::ConfigurationError) { config_with_boot("canary" => 0) }
+
+    assert_match "boot/canary must be at least 1", error.message
+  end
+
+  test "canary must be an integer" do
+    error = assert_raises(Dash::ConfigurationError) { config_with_boot("canary" => "1") }
+
+    assert_match "boot/canary", error.message
+  end
+
+  test "a role-scoped boot rejects canary" do
+    config = config_with_boot(nil)
+
+    error = assert_raises(Dash::ConfigurationError) do
+      Dash::Configuration::Boot.new \
+        config: config, boot_config: { "canary" => 1 }, context: "servers/workers/boot"
+    end
+
+    assert_match "servers/workers/boot/canary is only supported at the top-level boot", error.message
+  end
+
   test "role-scoped boot reports its own context on a validation error" do
     config = config_with_boot(nil)
 

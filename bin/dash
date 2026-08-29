@@ -3,6 +3,11 @@
 # Prevent failures from being reported twice.
 Thread.report_on_exception = false
 
+# Ruby block-buffers stdout when it is not a TTY, which is every CI runner. Line-by-line
+# writes keep the runner's timestamps attributable to the command that printed them.
+$stdout.sync = true
+$stderr.sync = true
+
 require "dash"
 
 begin
