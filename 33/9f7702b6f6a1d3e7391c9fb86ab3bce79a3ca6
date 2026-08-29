@@ -1,0 +1,9 @@
+bin/dash
+  ai_agent 6-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "339f7702b6f6a1d3e7391c9fb86ab3bce79a3ca6",
+  "prompts": {}
+}
