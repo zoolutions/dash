@@ -1,0 +1,28 @@
+test/configuration/registry_test.rb
+  s_5288ef4706d07f::t_6593048dab3c32 5
+  s_5288ef4706d07f::t_76f242191bd9ac 42,71,73
+  s_5288ef4706d07f::t_b4dba4021a1ab6 74
+  s_5288ef4706d07f::t_e41dee30099c6b 1-4,6-12,14-21,23-31,33-41,43-50,52-58,60-62,64-70,72,75-77
+  s_5288ef4706d07f::t_cda7ffd87c62af 13,22,32
+  s_5288ef4706d07f::t_d0e1cee8071367 51
+  s_5288ef4706d07f::t_08262ed33f2b21 59,63
+lib/dash/configuration/registry.rb
+  s_5288ef4706d07f::t_a468c04f09e395 32,34-36,38-51,53-56,58
+  s_5288ef4706d07f::t_05c07fc8c84a1a 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2e3c2c91383400b3ab4852b13b14132123526c56",
+  "prompts": {},
+  "sessions": {
+    "s_5288ef4706d07f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "06dab469-ea01-45c3-b690-c55cae941704",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
