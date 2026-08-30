@@ -1,8 +1,12 @@
-# Kamal deploy → the oss-infrastructure server (Cloudflare Tunnel + kamal-proxy).
+# Kamal deploy â the oss-infrastructure server (Cloudflare Tunnel + kamal-proxy).
 # service/image = the repo OWNER/REPO so the ghcr package auto-links to the
 # repo and GITHUB_TOKEN can push + pull it (no PAT). See docs-kit's README.
 service: dash
 image: zoolutions/dash
+
+# dash 4 renamed the on-host proxy (kamal-proxy → dash-proxy) and migrates a
+# host in place; an older CLI must not deploy this config.
+minimum_version: 4.0.7
 
 servers:
   web:
