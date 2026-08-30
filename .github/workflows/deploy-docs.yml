@@ -18,7 +18,7 @@ name: Deploy docs
 # only ever reads `.kamal/secrets` — it knows nothing about `.dash/`. So while
 # this file pinned a pre-dash SHA, stage 3a's move of docs/.kamal/ to .dash/
 # silently broke the deploy with "Secret 'KAMAL_REGISTRY_PASSWORD' not found".
-# Current docs-kit main installs `dash ~> 4.0` and runs `dash deploy`, which
+# Current docs-kit main installs `dash ~> 4.0.7` and runs `dash deploy`, which
 # reads `.dash/secrets`. Keep the pin at or after d4936833 — or move
 # docs/.dash/ back to .kamal/ — but not neither.
 
@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   deploy:
-    # Pinned to a docs-kit main commit (2026-08-27) — this repo's zizmor gate
+    # Pinned to a docs-kit main commit (2026-08-30, dash 4.0.7 floor) — this repo's zizmor gate
     # hash-pins every action ref. Bump the SHA to pick up fleet deploy changes.
     # secrets: inherit is deliberate and stays: DEPLOY_HOST/DEPLOY_DOMAIN are
     # `docs`-environment secrets that only resolve inside the called workflow's
