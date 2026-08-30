@@ -113,12 +113,29 @@ class Dash::Cli::Doctor::HostChecks
       elsif version.nil?
         result :proxy_version, :ok, "not running (will be started on deploy)"
       elsif Dash::Utils.older_version?(version, minimum)
-        result :proxy_version, :fail, "#{version} is older than the minimum #{minimum}, run `dash proxy reboot` to update"
+        if deploy_reboots_proxy?
+          result :proxy_version, :ok,
+            "#{version} is older than the minimum #{minimum}; the next deploy reboots the proxy to update it"
+        else
+          result :proxy_version, :fail, "#{version} is older than the minimum #{minimum}, run `dash proxy reboot` to update"
+        end
       else
         result :proxy_version, :ok, "#{version} (minimum #{minimum})"
       end
     rescue ArgumentError
       result :proxy_version, :warn, "running image tag #{version} is not a version number"
+    end
+
+    # Mirrors `proxy boot`: with reboot_on_deploy enabled it reboots a drifted
+    # proxy on its own, and a MINIMUM_VERSION bump moves the expected config
+    # digest, so a merely-stale proxy is converged by the very deploy this
+    # doctor gates. Only a version the deploy would not touch — pinned in the
+    # config, or with automatic reboots disabled — is a real failure. Any error
+    # probing drift falls back to the conservative answer.
+    def deploy_reboots_proxy?
+      DASH.config.proxy.reboot_on_deploy? && Dash::Cli::Proxy::Drift.new(host, sshkit).drifted?
+    rescue StandardError
+      false
     end
 
     # What a container path has to look like to count as a container runtime
