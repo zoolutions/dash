@@ -1,0 +1,24 @@
+lib/dash/cli/proxy.rb
+  s_278d2369970e58::t_e437ba96b32160 5,79-82,658-666
+test/cli/proxy_test.rb
+  s_278d2369970e58::t_944218165ed5c4 25-44,46-80
+  s_278d2369970e58::t_e437ba96b32160 45
+lib/dash/cli/proxy/loadbalancer_reboot.rb
+  s_278d2369970e58::t_e437ba96b32160 22,49-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "90bc86f93db98f811e0ddc2cd21d4aa325b13857",
+  "prompts": {},
+  "sessions": {
+    "s_278d2369970e58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "54052ece-7ae1-481f-b9f7-84bed3112c7d",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}

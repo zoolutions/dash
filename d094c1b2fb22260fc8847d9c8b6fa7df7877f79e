@@ -1,0 +1,9 @@
+docs/app/views/docs/pages/load_balancing.rb
+  ai_agent 14,92-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d094c1b2fb22260fc8847d9c8b6fa7df7877f79e",
+  "prompts": {}
+}

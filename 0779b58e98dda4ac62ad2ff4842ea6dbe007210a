@@ -1,0 +1,37 @@
+docs/app/views/docs/pages/certificates.rb
+  s_d2f619ff4e9788::t_f4ece8afa8f83e 55,90,141
+docs/app/views/docs/pages/overview.rb
+  s_d2f619ff4e9788::t_f4ece8afa8f83e 65
+docs/AGENTS.md
+  s_d2f619ff4e9788::t_f4ece8afa8f83e 53,73-75
+docs/app/views/docs/pages/caching.rb
+  s_d2f619ff4e9788::t_f4ece8afa8f83e 51,77
+docs/app/views/docs/pages/load_balancing.rb
+  s_d2f619ff4e9788::t_f4ece8afa8f83e 42
+Rakefile
+  s_d2f619ff4e9788::t_68c12bae1df2ca 85-87,90-102,113
+docs/app/views/docs/pages/quick_start.rb
+  s_d2f619ff4e9788::t_f4ece8afa8f83e 27,68
+docs/app/views/docs/pages/traffic_shaping.rb
+  s_d2f619ff4e9788::t_f4ece8afa8f83e 35,53,66,103,129,160
+docs/.claude/skills/write-docs-page/SKILL.md
+  s_d2f619ff4e9788::t_f4ece8afa8f83e 45,47-50
+docs/spec/requests/docs_spec.rb
+  s_d2f619ff4e9788::t_68c12bae1df2ca 19-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0779b58e98dda4ac62ad2ff4842ea6dbe007210a",
+  "prompts": {},
+  "sessions": {
+    "s_d2f619ff4e9788": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf8205c4-807d-4a8e-96f9-b081bc7f0adc",
+        "model": "claude-fable-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
