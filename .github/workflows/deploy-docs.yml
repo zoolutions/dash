@@ -41,7 +41,7 @@ jobs:
     # secrets: inherit is deliberate and stays: DEPLOY_HOST/DEPLOY_DOMAIN are
     # `docs`-environment secrets that only resolve inside the called workflow's
     # `environment: docs` job — explicit named passing cannot see them.
-    uses: zoolutions/docs-kit/.github/workflows/deploy.yml@d4936833e4cedf0814fc6fc2716037d06f8b91ea # zizmor: ignore[secrets-inherit]
+    uses: zoolutions/docs-kit/.github/workflows/deploy.yml@833b23a566f48956143df4fb8f5f224d843e1c37 # zizmor: ignore[secrets-inherit]
     with:
       image: zoolutions/dash
       service: dash
