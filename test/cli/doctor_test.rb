@@ -43,13 +43,44 @@ class CliDoctorTest < CliTestCase
     end
   end
 
-  test "doctor with proxy version too old" do
+  # An old version the deploy would not touch — the config pins it, so there is
+  # no drift for `proxy boot` to converge — stays a hard failure.
+  test "doctor with proxy version too old and no drift to converge it" do
     stub_proxy_version "v0.0.1"
+    stub_proxy_drift false
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
 
     exception = assert_raises(Dash::Cli::DoctorError) { run_command("doctor") }
     assert_includes exception.message, "v0.0.1 is older than the minimum #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}"
+  end
+
+  # A MINIMUM_VERSION bump moves the expected config digest, so a merely-stale
+  # proxy reads as drifted and `proxy boot` reboots it during the very deploy
+  # this doctor gates. Failing here would block the deploy that fixes it.
+  test "doctor passes an old proxy that the next deploy reboots onto the new version" do
+    stub_proxy_version "v0.0.1"
+    stub_proxy_drift true
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+
+    run_command("doctor").tap do |output|
+      assert_match "OK 1.1.1.1: v0.0.1 is older than the minimum #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}; the next deploy reboots the proxy to update it", output
+      assert_match "ready to deploy", output
+    end
+  end
+
+  # With reboot_on_deploy disabled the deploy only warns about drift, so the
+  # stale proxy would survive it — that still needs an operator.
+  test "doctor fails an old proxy when automatic reboots are disabled" do
+    stub_proxy_version "v0.0.1"
+    stub_proxy_drift true
+    Dash::Configuration::Proxy.any_instance.stubs(:reboot_on_deploy?).returns(false)
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+
+    exception = assert_raises(Dash::Cli::DoctorError) { run_command("doctor") }
+    assert_includes exception.message, "run `dash proxy reboot` to update"
   end
 
   # A host that has not yet been through the stage-3c rename is still running
@@ -335,6 +366,10 @@ class CliDoctorTest < CliTestCase
       # tests that do not care about the socket check stay quiet. Call
       # stub_proxy_mounts after this to override.
       stub_proxy_mounts ""
+    end
+
+    def stub_proxy_drift(drifted)
+      Dash::Cli::Proxy::Drift.any_instance.stubs(:drifted?).returns(drifted)
     end
 
     def stub_proxy_mounts(destinations)
