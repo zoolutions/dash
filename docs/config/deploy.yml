@@ -1,4 +1,4 @@
-# Kamal deploy â the oss-infrastructure server (Cloudflare Tunnel + kamal-proxy).
+# Kamal deploy → the oss-infrastructure server (Cloudflare Tunnel + kamal-proxy).
 # service/image = the repo OWNER/REPO so the ghcr package auto-links to the
 # repo and GITHUB_TOKEN can push + pull it (no PAT). See docs-kit's README.
 service: dash
