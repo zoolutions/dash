@@ -8,7 +8,7 @@ Everything the shared workflow skills (`/lode:lfg`, `/lode:review-pr`, `/lode:fi
 |---|---|---|
 | fast loop (one file) | `bundle exec ruby -Itest test/<path>_test.rb` | no Docker, no network; `test/dockerfile/parser_test.rb` runs 22 tests in ~0.04s |
 | full suite | `bin/test` | **needs Docker** (Docker-in-Docker deployer VMs) and pulls `ghcr.io/zoolutions/dash-proxy:$MINIMUM_VERSION`, which fails if that tag is unpublished. Not safe in two worktrees at once: the integration harness binds fixed ports and fills the docker disk |
-| unit suite only | `bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { \|f\| require File.expand_path(f) }'` | 97 files, 1,919 tests, no Docker; safe in parallel worktrees |
+| unit suite only | `bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { \|f\| require File.expand_path(f) }'` | 97 files, 1,926 tests (Minitest's own count; a line-based count of `test "…"` says 1,919 because three files build tests in `each` loops), no Docker; safe in parallel worktrees |
 | lint | `bundle exec rubocop --parallel` | rubocop-rails-omakase; `.rubocop.yml` at the root **excludes `docs/**/*`** |
 | one CI cell locally | `BUNDLE_GEMFILE=gemfiles/rails_edge.gemfile bundle install && BUNDLE_GEMFILE=gemfiles/rails_edge.gemfile bin/test` | the matrix's only non-default dimension is the gemfile |
 | docs build / check | `cd docs && bundle exec rake lint && bundle exec rspec` (add `bun install && bun run build:css` when CSS changed) | separate bundle; run from inside `docs/` |
