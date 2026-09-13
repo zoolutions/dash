@@ -2,6 +2,10 @@
 
 **dash** (`zoolutions/dash`) — deploy web apps anywhere. Began as a fork of [basecamp/kamal](https://github.com/basecamp/kamal); made a clean break in 2026-08 (issue #115) and now moves independently — no upstream remote, no sync, no contributions back. Published on rubygems.org as `dash`; the executable is `dash` and the Ruby namespace is `Dash::` (stage 2, issue #117). The server run directory is `.dash/` as of stage 3b; the remaining on-server artifacts (`kamal-proxy` container, `kamal` network, `KAMAL_*` env vars) keep their names until stage 3c ships (see Staged rename below).
 
+## Memory
+
+Durable project memory lives in `lode/` (index: `lode/lode-map.md`). Read it before exploring the code. `lode/review/` holds accepted review findings as rules about the system; `/lode:gate` enforces them before any push, and `/lode:learn` adds to them. `lode/workflow.md` is the profile the shared `/lode:*` workflow skills read.
+
 ## Tech Stack
 
 - **Ruby**: 3.2–4.0 (CI matrix), Thor CLI, SSHKit + net-ssh, Zeitwerk
@@ -92,26 +96,27 @@ Gem tags are plain `vX.Y.Z` (own semver, 3.x line). Historical `dash-v*` tags ar
 
 | Command | Purpose |
 |---------|---------|
-| `/lfg` | Full autonomous workflow: branch off `main` → understand → plan → TDD → verify → PR into `main` |
-| `/plan` | Read-only planning → GitHub issue or `docs/plans/` markdown (execute with `/lfg`) |
+| `/lode:lfg` | Full autonomous workflow: branch off `main` → understand → plan → TDD → verify → gate → PR |
+| `/lode:plan` | Read-only planning → a GitHub issue (this repo keeps plans in issues, not in `docs/`) |
+| `/lode:tdd` | Enforce RED → GREEN → REFACTOR with Minitest + Mocha |
+| `/lode:review-pr` | Full PR pass: resolve conflicts with the base, then CI failures, then review comments |
+| `/lode:finish-prs` | Drive a set of open PRs to merge-ready, one at a time, in order |
+| `/lode:debug-flaky` | Root-cause an intermittent test failure — evidence → repro → stress-proofed fix; never skip/retry |
+| `/lode:gate` | The pre-PR gate: fresh-context review against the rules and `lode/review/`, looping until clean |
+| `/lode:learn` | Write accepted review findings into `lode/review/` |
+| `/lode:sync` | Keep `lode/` true to the code after a change |
 | `/architect` | Coordinate multi-layer work across the Thor CLI → Commander → Commands → Configuration cake |
-| `/tdd` | Enforce RED → GREEN → REFACTOR with Minitest + Mocha |
 | `/security` | Audit SSH command construction, secret handling, shell escaping, error-page paths |
 | `/perf` | Baseline vs `main` in a worktree — command construction only (dash has no bench suite) |
-| `/review-pr` | Review a PR for pattern + project-constraint compliance |
-| `/github-review-pr` | Full PR pass: fix CI failures, then process review comments |
-| `/github-review-failures` | Diagnose + fix CI failures until green |
-| `/github-review-comments` | Process unresolved PR review comments |
-| `/finish-prs` | Drive a set of open PRs to merge-ready, one at a time |
-| `/debug-flaky` | Root-cause an intermittent test failure — evidence → repro → stress-proofed fix; never skip/retry |
+| `/review-pr` | Local single-pass review against this repo's patterns and constraints |
 
-Commands pin a model tier via frontmatter aliases (`sonnet` implementation, `opus` orchestration/security/review, `fable` read-only planning) so they track the latest model per tier.
+The `/lode:*` commands come from the `lode@zoolutions` plugin (enabled in `.claude/settings.json`) and read `lode/workflow.md` for everything repo-specific. The four local commands that remain pin a model tier via frontmatter aliases (`sonnet` implementation, `opus` orchestration/security/review) so they track the latest model per tier.
 
 ## More Documentation
 
 - `docs/` — the documentation site: a self-contained docs-kit Rails app (own bundle, RSpec, CI job `docs-ci.yml`), deployed to https://dash.zoolutions.llc by `deploy-docs.yml` on each release. The Configuration pages are GENERATED from `lib/dash/configuration/docs/*.yml` (parsed by `docs/app/models/config_doc.rb`); a new doc YAML fails `docs/spec/config_docs_spec.rb` until registered in `docs/app/models/doc.rb`.
 - `ROADMAP.md` — evidence-linked improvement roadmap
 - `.claude/rules/` — coding-style, git-workflow, testing, agents, performance, striving-for-excellence, upstream-sync (historical)
-- `.claude/commands/` — the slash commands above
+- `.claude/commands/` — the four local slash commands above; the workflow ones now come from the `lode@zoolutions` plugin
 - Proxy repo: `../kamal-proxy/CLAUDE.md` — cross-repo release ordering
 - Upstream kamal docs (shared basics): https://kamal-deploy.org
