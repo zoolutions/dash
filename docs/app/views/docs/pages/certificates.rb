@@ -114,6 +114,19 @@ class Views::Docs::Pages::Certificates < DocsUI::Page
         While working out a DNS setup, point `directory` at Let's Encrypt's
         staging environment so failed attempts don't burn production rate
         limits.
+
+        A `host`/`hosts` name is grouped into a wildcard from the name itself.
+        A name learned from `ssl_domains` is tenant-owned and may sit in a zone
+        you don't run DNS for, so the proxy never guesses a wildcard for it:
+        from proxy v1.1.0.2, it collapses only under a zone the hash form of
+        `dns_provider` maps **explicitly** — mapping a zone is you asserting
+        DNS control over it. Under a mapped zone, every single-label name is
+        ordered as that zone's wildcard; the apex and deeper names ride the
+        same order as concrete identifiers. `default` and `auto` never collapse
+        a dynamic name. If the wildcard order fails, its names retry once as
+        concrete identifiers, where `http_fallback` can still answer — a
+        failing DNS-01 degrades the zone to per-name orders instead of taking
+        it off the air.
       MD
       DocsUI::Callout(:warning) do
         plain "A DNS API token can rewrite your zone. Rotating a credential value does not change the proxy's config digest — run "

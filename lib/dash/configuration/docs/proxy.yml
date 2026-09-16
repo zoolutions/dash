@@ -834,7 +834,7 @@ proxy:
                                    # below already embeds its ghcr.io host
     repository: ghcr.io/zoolutions/dash-proxy # Container repository for the
                                    # dash-proxy image (this is the default)
-    version: v1.1.0.1              # Version tag of the dash-proxy image to use.
+    version: v1.1.0.2              # Version tag of the dash-proxy image to use.
                                    # Defaults to the minimum version this gem
                                    # requires - only pin it to roll forward early,
                                    # never below the default
@@ -875,6 +875,16 @@ proxy:
     # `prefer_wildcard` asks for a wildcard certificate when the DNS provider
     # supports one, and `http_fallback` falls back to an HTTP-01 challenge when
     # DNS-01 fails. Both default to true in the proxy.
+    #
+    # For `host`/`hosts` names the proxy infers the zone from the name itself.
+    # Names learned from `ssl_domains` are tenant-owned and may sit in a zone you
+    # do not run DNS for, so from proxy v1.1.0.2 they collapse into a wildcard
+    # only where the hash form of `dns_provider` maps their zone explicitly -
+    # mapping a zone is you asserting DNS control over it. Under a mapped zone
+    # every single-label name is ordered as that zone's wildcard, while the apex
+    # and deeper names ride the same order as concrete identifiers. `default` and
+    # `auto` assert nothing about a specific zone, so they never collapse a
+    # dynamic name.
     #
     # `directory` overrides the ACME directory URL - point it at Let's Encrypt's
     # staging environment while you are working out a DNS setup, so you do not
