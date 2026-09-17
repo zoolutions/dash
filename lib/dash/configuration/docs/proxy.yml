@@ -328,11 +328,13 @@ proxy:
   # `interval` is the poll interval in seconds (proxy default 300, minimum 10).
   #
   # Authentication tokens live in the PROXY's environment, not the app's: polls
-  # send `KAMAL_PROXY_REDIRECTS_TOKEN` as a bearer token when set, and
+  # send `DASH_PROXY_REDIRECTS_TOKEN` as a bearer token when set, and
   # `POST /.dash-proxy/redirects/refresh` nudges an immediate re-poll when
-  # authenticated with `KAMAL_PROXY_REFRESH_TOKEN`. Set both via
-  # `proxy.run.options.env`, next to `KAMAL_PROXY_DOMAINS_TOKEN` — never as
-  # deploy flags, which leak into process listings and audit logs.
+  # authenticated with `DASH_PROXY_REFRESH_TOKEN`. Set both via
+  # `proxy.run.options.env`, next to `DASH_PROXY_DOMAINS_TOKEN` — never as
+  # deploy flags, which leak into process listings and audit logs. The
+  # `KAMAL_PROXY_`-prefixed names are still read as a fallback, so a proxy
+  # container that already carries them keeps working.
   #
   # When a loadbalancer is configured the map answers at the loadbalancer, same
   # as `ssl_domains` and `canonical_host` — the per-host proxies never see it.
@@ -422,10 +424,11 @@ proxy:
   # proxy default) issues per-domain certs; 2-25 enables stable SAN batching.
   #
   # Authentication tokens for the poll endpoint and the refresh nudge are
-  # read by the proxy from the `KAMAL_PROXY_DOMAINS_TOKEN` and
-  # `KAMAL_PROXY_REFRESH_TOKEN` environment variables. Set them on the proxy
-  # container via `proxy.run.options.env` — never as deploy flags, which
-  # leak into process listings and audit logs.
+  # read by the proxy from the `DASH_PROXY_DOMAINS_TOKEN` and
+  # `DASH_PROXY_REFRESH_TOKEN` environment variables (the `KAMAL_PROXY_`
+  # names are still read as a fallback). Set them on the proxy container via
+  # `proxy.run.options.env` — never as deploy flags, which leak into process
+  # listings and audit logs.
   ssl_domains:
     source: /api/v1/kamal/domains
     interval: 300
@@ -834,7 +837,7 @@ proxy:
                                    # below already embeds its ghcr.io host
     repository: ghcr.io/zoolutions/dash-proxy # Container repository for the
                                    # dash-proxy image (this is the default)
-    version: v1.1.0.2              # Version tag of the dash-proxy image to use.
+    version: v1.1.0.3              # Version tag of the dash-proxy image to use.
                                    # Defaults to the minimum version this gem
                                    # requires - only pin it to roll forward early,
                                    # never below the default

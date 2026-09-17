@@ -66,9 +66,10 @@ class Views::Docs::Pages::Certificates < DocsUI::Page
         doesn't reshuffle every other domain's certificate.
 
         Authentication tokens for the poll endpoint and the refresh nudge are
-        read from `KAMAL_PROXY_DOMAINS_TOKEN` and `KAMAL_PROXY_REFRESH_TOKEN`
-        on the proxy container — set them via `proxy.run.options.env`, never as
-        deploy flags. Operate the domain list with:
+        read from `DASH_PROXY_DOMAINS_TOKEN` and `DASH_PROXY_REFRESH_TOKEN`
+        on the proxy container (the `KAMAL_PROXY_` names still work as a
+        fallback) — set them via `proxy.run.options.env`, never as deploy
+        flags. Operate the domain list with:
       MD
       DocsUI::Code(<<~SHELL, lexer: :shell)
         dash proxy domains list      # what the proxy currently serves
