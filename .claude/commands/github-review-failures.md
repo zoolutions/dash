@@ -189,7 +189,7 @@ If there are still pending checks, report which checks are running and what was 
 - **Read before fixing** — always read the actual failing code before attempting a fix
 - **Fix the root cause** — don't add `# rubocop:disable` or `//nolint` to bypass lint; fix the actual issue
 - **Don't fix unrelated failures** — if a test was already failing on `dash` before this PR, note it but don't fix it here
-- **Never rename frozen server artifacts** to chase a fix — `.kamal/`, the `kamal-proxy` container, `KAMAL_*` env vars, and the image title label wait for the staged rename bridge (CLAUDE.md); if a fix seems to require touching one, the real fix is elsewhere
+- **Never rename frozen server artifacts** to chase a fix — `.kamal/`, the `kamal-proxy` container, `KAMAL_*` env vars, and the image title label wait for the staged rename bridge (AGENTS.md); if a fix seems to require touching one, the real fix is elsewhere
 - **Flaky vs environmental** — a test that passes locally but fails in CI (or vice versa) may be one of the Known/Expected Failures above; check that table first
 - **Genuinely intermittent failures** — if a failure looks flaky (passed on re-run, fails only sometimes, only one matrix cell), hand off to `/debug-flaky` instead of adding workarounds; it owns the reproduction ladder and the knowledge base (`docs/flaky-tests.md`)
 - **Don't retry CI blindly** — diagnose first, fix, then push. Each push triggers a full CI run (and the gem matrix alone is 4 Ruby versions × 2 Gemfiles)

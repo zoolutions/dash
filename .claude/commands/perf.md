@@ -11,7 +11,7 @@ Measure, don't guess. This command produces a **same-machine before/after** so
 any performance claim is backed by numbers. It covers both repos in the fork —
 pick the one the change actually touches.
 
-See `CLAUDE.md` (architecture) and `.claude/rules/upstream-sync.md` (worktree/branch
+See `AGENTS.md` (architecture) and `.claude/rules/upstream-sync.md` (worktree/branch
 constraints) — this command follows their branch model, it doesn't repeat it.
 
 ## The non-negotiable rule

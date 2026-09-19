@@ -38,7 +38,7 @@ Use the Explore agent (subagent_type=Explore) instead of direct Glob/Grep when:
 - Open-ended exploration across the layer cake (`bin/ -> Cli -> Commander -> Commands -> Configuration -> SSHKit`)
 - Searching for patterns across `lib/dash/cli/`, `lib/dash/commands/`, `lib/dash/configuration/`
 - Answering "how does kamal do X" questions (e.g. how `deploy.yml` becomes a docker command)
-- Finding every fork-owned divergence point (cross-check against the table in `CLAUDE.md`)
+- Finding every fork-owned divergence point (cross-check against the table in `AGENTS.md`)
 
 ## When NOT to Use Agents
 

@@ -26,7 +26,7 @@ This command runs from whichever repo you're in — `zoolutions/dash` (the `dash
 - **Read-only for source code.** Never edit `lib/`, `test/`, gemspecs, or workflow files. Never commit, never create branches. The only file you may `Write` is a new plan markdown under `docs/plans/`.
 - **Never reproduce secrets** (SSH keys, registry tokens, `KAMAL_REGISTRY_PASSWORD`, ACME credentials) in the plan, even redacted, if encountered while reading `deploy.yml` fixtures or config.
 - **Dedupe before creating an issue**: `gh issue list --repo zoolutions/dash --search "<keywords>"` (or `--repo zoolutions/dash-proxy`) — if an existing issue covers this, extend it in your summary instead of duplicating. Also check `ROADMAP.md` — the item may already be scoped there under an R1–R5 release bucket.
-- **Respect the staged-rename boundary.** Never plan renames of frozen server artifacts (`.kamal/`, `kamal-proxy` container, `KAMAL_*` env, image title label) without a rolling-upgrade bridge (see `CLAUDE.md` → Staged rename). Gem tags are plain `vX.Y.Z` via `rake release`; proxy image tags `v<base>.<n>`; never `-suffix` tags.
+- **Respect the staged-rename boundary.** Never plan renames of frozen server artifacts (`.kamal/`, `kamal-proxy` container, `KAMAL_*` env, image title label) without a rolling-upgrade bridge (see `AGENTS.md` → Staged rename). Gem tags are plain `vX.Y.Z` via `rake release`; proxy image tags `v<base>.<n>`; never `-suffix` tags.
 
 ## Phase 1 — Investigate
 
@@ -34,7 +34,7 @@ Protect this session's context: delegate mechanical exploration to cheaper subag
 
 1. Fan out Explore agents (`model: haiku`) for file discovery and naming-convention sweeps; use `model: sonnet` agents when a subsystem needs to be read and summarized. Launch independent explorations in parallel.
 2. Read the load-bearing files yourself — the ones the design decision actually hinges on. Don't design from subagent summaries alone.
-3. Walk the architecture layer cake in `CLAUDE.md` (`bin/kamal` → `Dash::Cli::*` → `Dash::Commander` → `Dash::Commands::*` → `Dash::Configuration` → SSHKit) and read the matching source files for the layer(s) this change touches — past decisions and gotchas live there.
+3. Walk the architecture layer cake in `AGENTS.md` (`bin/kamal` → `Dash::Cli::*` → `Dash::Commander` → `Dash::Commands::*` → `Dash::Configuration` → SSHKit) and read the matching source files for the layer(s) this change touches — past decisions and gotchas live there.
 4. Check `ROADMAP.md` for the relevant release bucket (R1–R5) and cross-repo sequencing notes — don't re-derive scope that's already evidence-linked there.
 5. Check `git log` for recent related work; the design should extend it, not fight it.
 6. If the change touches proxy defaults or version pinning, read `lib/dash/configuration/proxy/run.rb` (`MINIMUM_VERSION`, repository default) and `lib/dash/configuration/proxy/boot.rb` — these are fork-identity files with a documented conflict resolution in `.claude/rules/upstream-sync.md`.
@@ -49,7 +49,7 @@ Investigation tells you what the codebase says; this phase finds what the REQUES
    - anything with no precedent in this repo or in `ROADMAP.md` — flag it explicitly as unknown-unknown territory
    - whether the change spans both repos (gem + proxy), which forces release ordering
 2. **Interview the user** with AskUserQuestion, one question at a time, prioritized by blast radius: architecture-changing answers first, then operator-facing surface (`deploy.yml` keys, CLI flags, output), then ergonomics. Rules:
-   - Skip anything the codebase, `CLAUDE.md`, `ROADMAP.md`, or an existing issue already answers.
+   - Skip anything the codebase, `AGENTS.md`, `ROADMAP.md`, or an existing issue already answers.
    - 2–5 questions is the sweet spot; zero is fine when the request is genuinely unambiguous — say so rather than inventing questions.
    - Every question offers concrete options with a recommended default, never an open-ended essay prompt.
 3. **Record the answers** in the plan's Decision section as `Settled in interview:` bullets — constraints the executor must not re-litigate.

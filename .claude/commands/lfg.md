@@ -7,7 +7,7 @@ allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), 
 
 # LFG - Full Autonomous Workflow
 
-Execute a complete engineering workflow with verification at each phase. This is a fork: `main` mirrors basecamp/kamal and is never committed to directly. All work happens on a feature branch rooted off `main`, merged back into `main`. See `CLAUDE.md` and `.claude/rules/upstream-sync.md` for the branch model and release ordering — do not duplicate them here.
+Execute a complete engineering workflow with verification at each phase. This is a fork: `main` mirrors basecamp/kamal and is never committed to directly. All work happens on a feature branch rooted off `main`, merged back into `main`. See `AGENTS.md` and `.claude/rules/upstream-sync.md` for the branch model and release ordering — do not duplicate them here.
 
 ## Phase 0: Branch Setup
 
@@ -79,7 +79,7 @@ Create a TaskCreate todo list with specific implementation steps.
 
 1. List files to modify with specific changes
 2. List new files to create with purpose
-3. Identify whether this touches `lib/dash/version.rb` (only `rake release` writes it) or frozen server-artifact names (`.kamal/`, `kamal-proxy` container, `KAMAL_*` env) — if so, STOP and check CLAUDE.md's staged-rename table
+3. Identify whether this touches `lib/dash/version.rb` (only `rake release` writes it) or frozen server-artifact names (`.kamal/`, `kamal-proxy` container, `KAMAL_*` env) — if so, STOP and check AGENTS.md's staged-rename table
 4. Plan test coverage (TDD: tests FIRST), using minitest + mocha idioms already in `test/` — no RSpec
 5. Update task list with implementation steps
 6. Consider backwards compatibility with existing `deploy.yml` configs and the dash/upstream conflict playbook in `upstream-sync.md`
@@ -115,7 +115,7 @@ Write the MINIMUM code to make the test pass. Follow project patterns:
 | Never Do | Always Do |
 |----------|-----------|
 | Hardcode a proxy version string in code or tests | Interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` |
-| Rename a frozen server artifact (`.kamal/`, `kamal-proxy` container, `KAMAL_*`) | Wait for the staged rename bridge — see CLAUDE.md |
+| Rename a frozen server artifact (`.kamal/`, `kamal-proxy` container, `KAMAL_*`) | Wait for the staged rename bridge — see AGENTS.md |
 | Add a `v*` git tag | Use `dash-v<version>` (gem) or coordinate with proxy's `v<base>.<n>` (image) |
 | Skip Thor command conventions | Follow existing `lib/dash/cli/*.rb` patterns (options, hooks, `Dash::Cli::Base`) |
 | Bypass `Dash::Commander` for target/config resolution | Route through `DASH` singleton (`Dash::Commander`) |

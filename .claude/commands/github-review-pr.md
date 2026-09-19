@@ -43,7 +43,7 @@ gh pr view <PR_NUMBER> --json title,state,url,baseRefName
 
 **Before touching anything**, load the fork rules — they change what "correct" looks like on almost every file:
 
-- `CLAUDE.md` — architecture (Thor CLI layer cake: `bin` → `Dash::Cli` → `Commander` → `Commands` → `Configuration` → `SSHKit`), tooling, critical rules
+- `AGENTS.md` — architecture (Thor CLI layer cake: `bin` → `Dash::Cli` → `Commander` → `Commands` → `Configuration` → `SSHKit`), tooling, critical rules
 - `.claude/rules/upstream-sync.md` — sync/release runbook, conflict playbook
 - `.claude/rules/git-workflow.md` — branch model, tags, release ordering
 - `.claude/rules/testing.md` — Minitest + Mocha conventions, `MINIMUM_VERSION` interpolation, the host-independence contract
@@ -53,7 +53,7 @@ Non-negotiables that apply to every fix in both phases below:
 | Rule | Why |
 |---|---|
 | `baseRefName` must be `dash`, never `main` | `main` is a fast-forward-only mirror of `basecamp/kamal` — no commits, ever |
-| Never rename frozen server artifacts (`.kamal/`, `kamal-proxy` container, `KAMAL_*`) | they wait for the staged rename bridge — see CLAUDE.md |
+| Never rename frozen server artifacts (`.kamal/`, `kamal-proxy` container, `KAMAL_*`) | they wait for the staged rename bridge — see AGENTS.md |
 | Never hardcode a proxy version in a test | interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` — see `.claude/rules/testing.md` |
 | Never `git push --tags` | gem tags are plain `vX.Y.Z` via `rake release`; proxy tags `v<base>.<n>`; push one tag at a time |
 | Never rebase `main`, `dash`, or a shared `feat/*` | merge forward only, history is shared |
@@ -166,7 +166,7 @@ If failures persist that trace to this branch's changes, **do not proceed to Pha
      }' -f owner=mhenrixon -f repo=kamal -F pr=<PR_NUMBER>
    ```
 2. **Categorise each unresolved thread**: valid fix / invalid suggestion / unclear (ask the user for unclear ones).
-3. **Implement accepted fixes**, respecting the architecture layers in `CLAUDE.md` — e.g. a Thor-option change belongs in `lib/dash/cli/*`, a docker-command-string change in `lib/dash/commands/*`, a deploy.yml-shape change in `lib/dash/configuration/*`. Write/update the test first (RED → GREEN), per `.claude/rules/testing.md`.
+3. **Implement accepted fixes**, respecting the architecture layers in `AGENTS.md` — e.g. a Thor-option change belongs in `lib/dash/cli/*`, a docker-command-string change in `lib/dash/commands/*`, a deploy.yml-shape change in `lib/dash/configuration/*`. Write/update the test first (RED → GREEN), per `.claude/rules/testing.md`.
 4. **Verify locally**:
    ```bash
    bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'
@@ -175,7 +175,7 @@ If failures persist that trace to this branch's changes, **do not proceed to Pha
 5. **Commit all fixes together** with a clear conventional-commit message; push.
 6. **Reply to every thread**:
    - Accepted fix → reply with the commit SHA.
-   - Rejected suggestion → reply with technical reasoning (cite the project rule if one applies, e.g. "the kamal-proxy container name is frozen until the staged rename bridge per CLAUDE.md").
+   - Rejected suggestion → reply with technical reasoning (cite the project rule if one applies, e.g. "the kamal-proxy container name is frozen until the staged rename bridge per AGENTS.md").
    ```bash
    gh api graphql -f query='mutation($id:ID!,$body:String!){ addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$id, body:$body}) { comment { id } } }' -f id=<THREAD_ID> -f body="Fixed in <SHA>."
    ```

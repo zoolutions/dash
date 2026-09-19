@@ -9,7 +9,7 @@ allowed-tools: Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Ba
 
 You are reviewing and responding to all unresolved review comments on a GitHub pull request against `zoolutions/dash` (gem published as `dash`). Apply technical rigour -- evaluate each comment against the actual codebase before accepting or rejecting it.
 
-**Fork context**: this repo is a maintained fork (see `CLAUDE.md`, `.claude/rules/upstream-sync.md`). A reviewer suggestion may be technically correct in general but wrong here because it collides with a fork constraint. Check the constraints table below before implementing anything.
+**Fork context**: this repo is a maintained fork (see `AGENTS.md`, `.claude/rules/upstream-sync.md`). A reviewer suggestion may be technically correct in general but wrong here because it collides with a fork constraint. Check the constraints table below before implementing anything.
 
 ## Phase 0: Determine the PR Number
 
@@ -103,10 +103,10 @@ For each unresolved comment, read the full body and categorise it:
 
 **Before categorising**, always:
 1. Read the actual file and line being commented on
-2. Check if the suggestion is technically correct for THIS codebase (Thor CLI -> Commander -> Commands -> Configuration -> SSHKit layering, per `CLAUDE.md`)
+2. Check if the suggestion is technically correct for THIS codebase (Thor CLI -> Commander -> Commands -> Configuration -> SSHKit layering, per `AGENTS.md`)
 3. Check if it would break existing functionality or an integration fixture
 4. Check if existing patterns/conventions contradict the suggestion
-5. Check `CLAUDE.md`, `.claude/rules/*.md` -- project conventions override reviewer preferences
+5. Check `AGENTS.md`, `.claude/rules/*.md` -- project conventions override reviewer preferences
 6. Check the fork constraints table below -- a suggestion that's fine upstream can be wrong here
 
 ### Fork constraints (reject on sight if a comment proposes these)
@@ -114,7 +114,7 @@ For each unresolved comment, read the full body and categorise it:
 | Reviewer suggestion | Why it's wrong here |
 |---|---|
 | "Just commit this fix to `main`" | `main` is a fast-forward-only mirror of `basecamp/kamal` -- never commit there |
-| "Rename `.kamal/` / the `kamal-proxy` container / `KAMAL_*` env vars" | Frozen server artifacts — they wait for the staged rename bridge (see CLAUDE.md) |
+| "Rename `.kamal/` / the `kamal-proxy` container / `KAMAL_*` env vars" | Frozen server artifacts — they wait for the staged rename bridge (see AGENTS.md) |
 | "Tag this `dash-v3.2.0`" | Gem tags are plain `vX.Y.Z` via `rake release`; `dash-v*` is frozen history |
 | "Hardcode the proxy version string in the test" | Must interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` -- see `.claude/rules/testing.md` |
 | "Use a `-dash.1` style suffix for the proxy tag" | `Gem::Version` parses `-` as a prerelease marker, sorts BELOW the base, breaks `kamal proxy boot`'s version check |
@@ -186,7 +186,7 @@ Reply with technical reasoning -- when the rejection is a fork constraint, cite 
 ```bash
 gh api "repos/zoolutions/dash/pulls/<PR>/comments/<COMMENT_ID>/replies" \
   --method POST \
-  -f 'body=<Technical explanation, e.g. "Not applying -- the kamal-proxy container name is frozen until the staged rename ships a rolling-upgrade bridge (CLAUDE.md).">'
+  -f 'body=<Technical explanation, e.g. "Not applying -- the kamal-proxy container name is frozen until the staged rename ships a rolling-upgrade bridge (AGENTS.md).">'
 ```
 
 ### Resolving threads (via GraphQL):
@@ -250,7 +250,7 @@ When pushing back:
 
 - Use technical reasoning grounded in the actual codebase
 - Reference existing patterns if the suggestion contradicts them
-- Reference `CLAUDE.md` / `.claude/rules/*.md` when applicable -- name the file
+- Reference `AGENTS.md` / `.claude/rules/*.md` when applicable -- name the file
 - Explain what would break (e.g. "breaks the upstream sync", "sorts below `MINIMUM_VERSION`", "fails the dind integration harness") or what edge case the reviewer missed
 - If the suggestion is valid in principle but wrong for this fork, say so explicitly and point at the constraint
 
@@ -261,7 +261,7 @@ When pushing back:
 - Always read the actual code before evaluating a comment -- reviewers sometimes misread diffs
 - If a comment reveals a genuine bug you missed, fix it without defensiveness
 - If multiple comments suggest the same change, implement it once and reference the fix in all replies
-- Bot reviewers (CodeRabbit, etc.) sometimes suggest changes that conflict with fork conventions -- verify against `CLAUDE.md` and the constraints table above before accepting
+- Bot reviewers (CodeRabbit, etc.) sometimes suggest changes that conflict with fork conventions -- verify against `AGENTS.md` and the constraints table above before accepting
 - Bot reviewers will frequently suggest renaming frozen server artifacts, retagging with `dash-v*`, or fixing the arch-dependent builder tests -- these are the most common false positives; check the constraints table first
 - If a new round of review comments appears after your push (from re-review), report that to the user rather than entering an infinite loop
 
