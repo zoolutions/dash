@@ -1,0 +1,26 @@
+lib/dash/configuration/docs/proxy.yml
+  s_ee237db84a5313::t_5411c7733ef773 837
+  s_ee237db84a5313::t_318cf94863ce56 879-888
+test/fixtures/kamal_proxy_flags.yml
+  s_ee237db84a5313::t_ba698d2c77f4d3 5
+lib/dash/configuration/proxy/run.rb
+  s_ee237db84a5313::t_0f1041327af294 2
+docs/app/views/docs/pages/certificates.rb
+  s_ee237db84a5313::t_9d1ba0b9bc123e 117-129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "735e5c83a17e69e4ed0a8b7ae4815ac573bc9763",
+  "prompts": {},
+  "sessions": {
+    "s_ee237db84a5313": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a16ca164-e53d-4688-bfde-b954b8f3378d",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
