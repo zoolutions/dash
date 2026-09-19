@@ -8,7 +8,7 @@
 - 200-400 lines typical
 - 800 lines maximum per file
 - Extract complex logic to dedicated classes under `lib/dash/`
-- Organize by layer (`cli`, `commander`, `commands`, `configuration`) — see the layer cake in `CLAUDE.md`
+- Organize by layer (`cli`, `commander`, `commands`, `configuration`) — see the layer cake in `AGENTS.md`
 
 ## Ruby Style
 
@@ -86,7 +86,7 @@ If you must accumulate results across hosts, use `SSHKit::Backend::Abstract#capt
 
 ## Fork-specific rules
 
-These are on top of the general rules above — see `CLAUDE.md` and `.claude/rules/upstream-sync.md` for the full list.
+These are on top of the general rules above — see `AGENTS.md` and `.claude/rules/upstream-sync.md` for the full list.
 
 - **The gemspec is `dash.gemspec`** and releases go through `bin/release` (a wrapper around `rake release[X.Y.Z]`) — the upstream-owned duplicates (`kamal.gemspec`, the upstream `bin/release`, `bin/kamal`) were deleted in the 2026-08 clean break; today's `bin/release` is dash-owned.
 - **Interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` in tests** — never hardcode a proxy tag like `"v0.9.2.1"` in an assertion; see `test/commands/proxy_test.rb`.
@@ -126,7 +126,7 @@ Before marking work complete:
 - [ ] Methods are small (<30 lines ideal, <50 max)
 - [ ] Files are focused (<800 lines)
 - [ ] No deep nesting (>4 levels)
-- [ ] CLI/Commands/Configuration layers not mixed (see `CLAUDE.md` architecture)
+- [ ] CLI/Commands/Configuration layers not mixed (see `AGENTS.md` architecture)
 - [ ] Proper error handling — rescue specific SSHKit/Docker errors, not `StandardError`
 - [ ] Docker/shell args built via `Dash::Commands::*` + `argumentize`/`optionize`, not inline strings
 - [ ] Tests use Minitest + Mocha; proxy version assertions interpolate `MINIMUM_VERSION`

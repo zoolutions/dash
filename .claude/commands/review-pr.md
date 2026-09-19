@@ -13,7 +13,7 @@ Review PR for pattern compliance, fork-constraint violations, and issues. Be con
 
 1. Fetch PR details and diff via `mcp__github__pull_request_read` (repo: `zoolutions/dash`)
 2. Identify target branch — `main` or `dash`? (see Fork Constraints below)
-3. Categorize changed files by layer (see CLAUDE.md architecture)
+3. Categorize changed files by layer (see AGENTS.md architecture)
 4. Check for pattern violations and fork-constraint violations
 5. Run `bundle exec rubocop --parallel` and unit tests locally against the PR diff if feasible
 6. Output structured review
@@ -23,7 +23,7 @@ Review PR for pattern compliance, fork-constraint violations, and issues. Be con
 | Check | Violation | Why it matters |
 |---|---|---|
 | Base branch | PR targets anything other than `main` | `main` is the only long-lived branch since the 2026-08 clean break |
-| Frozen server-artifact names touched | Renames of `.kamal/`, the `kamal-proxy` container, `KAMAL_*` env vars, or the image title label | These wait for the staged rename bridge — see `CLAUDE.md` |
+| Frozen server-artifact names touched | Renames of `.kamal/`, the `kamal-proxy` container, `KAMAL_*` env vars, or the image title label | These wait for the staged rename bridge — see `AGENTS.md` |
 | Tag grammar (if PR touches release scripts/docs) | New `dash-v*` tags or `-suffix` prerelease tags | Gem tags are plain `vX.Y.Z` via `rake release`; `dash-v*` is frozen history |
 | `git push --tags` in any script/workflow | Bulk tag pushes | Always push single tags; `rake release` handles gem tags via `gh release create` |
 | Proxy version literals | Hardcoded `"v0.9.2.1"` (or similar) in tests/specs instead of interpolating `MINIMUM_VERSION` | `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` is the single source of truth |
@@ -116,6 +116,6 @@ bin/test                         -> Full suite (Docker + proxy image required)
 
 ## Cross-References
 
-- `CLAUDE.md` — Critical Rules, architecture layers, fork identity table
+- `AGENTS.md` — Critical Rules, architecture layers, fork identity table
 - `.claude/rules/git-workflow.md` — branch roles, tags, release ordering
 - `ROADMAP.md` — whether this PR maps to a planned release item

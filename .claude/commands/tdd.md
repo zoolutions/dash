@@ -26,7 +26,7 @@ REPEAT:   Next scenario
 - Adding Configuration objects or options under `lib/dash/configuration/`
 - Fixing bugs — write the test that reproduces the bug FIRST
 - Touching the loadbalancer auto-activation path (`lib/dash/configuration/proxy/`)
-- Refactoring anything in the layer cake (see `CLAUDE.md` Architecture)
+- Refactoring anything in the layer cake (see `AGENTS.md` Architecture)
 
 **NOT for**: `lib/dash/version.rb` — only `rake release` writes it.
 
@@ -167,7 +167,7 @@ The suite is host-independent — `test_helper.rb` pins the Docker architecture 
 - Run tests and verify they FAIL before implementing
 - Write MINIMAL code to make tests pass
 - Refactor only after tests are green
-- Interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` in assertions — never hardcode a proxy tag (see `CLAUDE.md` Critical Rules #3)
+- Interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` in assertions — never hardcode a proxy tag (see `AGENTS.md` Critical Rules #3)
 - Use `AnyClass.any_instance.stubs(:method)` for boundaries you don't own (network, threads, `sleep`) — mirror `test/otel_shipper_test.rb`
 
 **DON'T:**
@@ -177,7 +177,7 @@ The suite is host-independent — `test_helper.rb` pins the Docker architecture 
 - Ignore failing tests
 - Test private/implementation details — test the public behavior of the Configuration/Command object
 - Skip testing error paths (`Dash::ConfigurationError`, `SSHKit::Runner::ExecuteError`)
-- Rename a frozen server artifact to make a test pass — fix the actual bug instead (see CLAUDE.md staged-rename table)
+- Rename a frozen server artifact to make a test pass — fix the actual bug instead (see AGENTS.md staged-rename table)
 
 ## Checklist
 

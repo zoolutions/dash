@@ -11,7 +11,7 @@ You are now in **Architect Mode** — coordinating development across dash's lay
 
 ## Why This Skill Exists
 
-Dash spans a Thor CLI layer cake in this repo, and a separate cmd -> rpc -> server layer cake in `../kamal-proxy`. Without coordination, developers touch `Cli` without `Configuration`, add a proxy flag with no gem-side plumbing, or release the gem before the proxy image exists (`rake release` gates on the published proxy image). See `CLAUDE.md` for the fork identity table and `.claude/rules/git-workflow.md` for release ordering.
+Dash spans a Thor CLI layer cake in this repo, and a separate cmd -> rpc -> server layer cake in `../kamal-proxy`. Without coordination, developers touch `Cli` without `Configuration`, add a proxy flag with no gem-side plumbing, or release the gem before the proxy image exists (`rake release` gates on the published proxy image). See `AGENTS.md` for the fork identity table and `.claude/rules/git-workflow.md` for release ordering.
 
 ## Dash Architecture Layers (this repo)
 

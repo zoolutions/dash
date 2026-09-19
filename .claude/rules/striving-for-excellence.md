@@ -45,7 +45,7 @@ Not "expand scope to fix unrelated things." If your task is "fix the healthcheck
 
 Not "spend a week on the perfect abstraction when a small fix is correct." Excellence is doing the right thing within the work, not creating new work. If the small fix IS the right shape, the small fix is excellence.
 
-Not license to break staged-migration boundaries. If the wrongness lives in code frozen for compatibility (rare since the 2026-08 clean break — e.g. on-server artifact names awaiting the staged rename bridge, see `CLAUDE.md`), make it a deliberate, documented change. Escalate to the user.
+Not license to break staged-migration boundaries. If the wrongness lives in code frozen for compatibility (rare since the 2026-08 clean break — e.g. on-server artifact names awaiting the staged rename bridge, see `AGENTS.md`), make it a deliberate, documented change. Escalate to the user.
 
 The litmus test: would a reviewer reading the PR feel the diff tells a coherent story, or that you've bundled unrelated cleanup? If the helper fix makes the feature commits cleaner, it's part of the same story. If you're "while I'm here" cleaning up something disconnected, it's separate work.
 

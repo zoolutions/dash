@@ -1,0 +1,104 @@
+# Project-local RTK filters (https://github.com/rtk-ai/rtk#custom-filters).
+#
+# The `rtk hook claude` PreToolUse hook rewrites a matching command to
+# `rtk <cmd>`; rtk runs it and drops the lines listed here before the agent
+# sees the output. Filters are line-based: they strip noise, never reformat.
+#
+# `match_command` is matched against the command with the first word reduced
+# to its basename, so `bin/validate_all`, `./bin/validate_all` and
+# `validate_all` all hit `^validate_all\b`.
+#
+# Trust is a SHA-256 of this file: after every edit run `rtk trust --yes`
+# (see AGENTS.md), then `rtk verify` to run the inline tests.
+schema_version = 1
+
+[filters.dash-unit-tests]
+filter_stderr = true
+description = "bundle exec ruby -Itest (unit tests, AGENTS.md verification command): drop duplicate-gem-load warnings, minitest boilerplate, and repeated deploy.yml advisory warnings; never touch a line carrying a minitest E/F/S marker"
+match_command = "^bundle\\s+exec\\s+ruby\\b.*-Itest\\b"
+strip_lines_matching = [
+  "^\\s*$",
+  "^Run options:",
+  "^# Running:",
+  "^\\.+$",
+  "^Finished in ",
+  "^/\\S+: warning: already initialized constant \\S+$",
+  "^/\\S+: warning: previous definition of \\S+ was here$",
+  "^\\.*Non-proxied role\\(s\\) \\S+ have no healthcheck\\. Without one, dash accepts the container as ready \\d+s after it merely starts and then stops the previous container — traffic can be dropped\\. Add a `healthcheck:` block, or opt out explicitly with `healthcheck: false`\\. This warning will become an error in a future release\\.$",
+  "^\\.*Role\\(s\\) web: intercept_errors is set but no error_pages_path is configured, so dash-proxy replaces the app's error page with a bare plaintext status line\\. Set `error_pages_path:` to serve your own pages, or remove `intercept_errors` to let the app's through\\.$",
+  "^\\.*boot/wait is set to \\d+ but boot/limit is not, so it does nothing\\. `wait` paces one group of hosts against the next, and without a limit every host boots in a single group\\. Set `boot/limit` or `boot/canary` to stagger the boot, or remove `boot/wait`\\.$",
+  "^\\.*Role\\(s\\) web: target/max_idle_conns: 0 means the proxy default of 100, not \\\"keep none\\\" - dash-proxy resolves its defaults from zeros\\. Leave it unset for the default, or set 1 for the practical minimum\\.$",
+]
+on_empty = "dash unit tests: ok"
+
+[[tests.dash-unit-tests]]
+name = "drops duplicate-load warnings, boilerplate and advisory noise; keeps the E marker and the failure block"
+input = """/Users/mhenrixon/.gem/ruby/4.0.7/gems/bundler-2.6.5/lib/bundler/rubygems_ext.rb:64: warning: already initialized constant Gem::Platform::JAVA
+/Users/mhenrixon/.rubies/ruby-4.0.7/lib/ruby/4.0.0/rubygems/platform.rb:279: warning: previous definition of JAVA was here
+Run options: --seed 12166
+
+# Running:
+
+.........Non-proxied role(s) jobs have no healthcheck. Without one, dash accepts the container as ready 7s after it merely starts and then stops the previous container — traffic can be dropped. Add a `healthcheck:` block, or opt out explicitly with `healthcheck: false`. This warning will become an error in a future release.
+......................E...........................fatal: not a git repository (or any of the parent directories): .git
+...................
+
+Finished in 145.219355s, 13.2627 runs/s, 39.8845 assertions/s.
+
+  1) Error:
+CliMainTest#test_migrate_moves_the_legacy_project_directory_with_git_mv:
+Errno::ENOTEMPTY: Directory not empty @ dir_s_rmdir - /var/folders/86/hzn4d2ms61s_2kvx28ccx91r0000gn/T/d20260919-38288-r28jfo/.git/objects
+    test/cli/main_test.rb:1329:in 'CliMainTest#in_dummy_git_repo'
+
+1926 runs, 5792 assertions, 0 failures, 1 errors, 0 skips
+"""
+expected = """......................E...........................fatal: not a git repository (or any of the parent directories): .git
+  1) Error:
+CliMainTest#test_migrate_moves_the_legacy_project_directory_with_git_mv:
+Errno::ENOTEMPTY: Directory not empty @ dir_s_rmdir - /var/folders/86/hzn4d2ms61s_2kvx28ccx91r0000gn/T/d20260919-38288-r28jfo/.git/objects
+    test/cli/main_test.rb:1329:in 'CliMainTest#in_dummy_git_repo'
+1926 runs, 5792 assertions, 0 failures, 1 errors, 0 skips"""
+
+[filters.rake-verify]
+filter_stderr = true
+description = "rake verify: drop duplicate-gem-load warnings (gem build/unpack shell out to a second ruby process), keep the gem metadata and the full file listing"
+match_command = "^bundle\\s+exec\\s+rake\\s+verify\\b"
+strip_lines_matching = [
+  "^\\s*$",
+  "^/\\S+: warning: already initialized constant \\S+$",
+  "^/\\S+: warning: previous definition of \\S+ was here$",
+]
+on_empty = "rake verify: ok"
+
+[[tests.rake-verify]]
+name = "drops duplicate-load warnings, keeps gem metadata and file listing"
+input = """/Users/mhenrixon/.gem/ruby/4.0.7/gems/bundler-2.6.5/lib/bundler/rubygems_ext.rb:64: warning: already initialized constant Gem::Platform::JAVA
+/Users/mhenrixon/.rubies/ruby-4.0.7/lib/ruby/4.0.0/rubygems/platform.rb:279: warning: previous definition of JAVA was here
+/Users/mhenrixon/.gem/ruby/4.0.7/gems/rdoc-7.0.3/lib/rdoc/markdown.rb:16420: warning: previous definition of Rules was here
+  Successfully built RubyGem
+  Name: dash
+  Version: 4.1.3
+  File: dash-4.1.3.gem
+gem unpack dash-4.1.3.gem --target /tmp/gem-verify
+Unpacked gem: '/tmp/gem-verify/dash-4.1.3'
+find /tmp/gem-verify -type f | sort
+
+=== Gem contents ===
+/tmp/gem-verify/dash-4.1.3/bin/dash
+/tmp/gem-verify/dash-4.1.3/lib/dash.rb
+/tmp/gem-verify/dash-4.1.3/README.md
+rm -rf /tmp/gem-verify dash-4.1.3.gem
+"""
+expected = """  Successfully built RubyGem
+  Name: dash
+  Version: 4.1.3
+  File: dash-4.1.3.gem
+gem unpack dash-4.1.3.gem --target /tmp/gem-verify
+Unpacked gem: '/tmp/gem-verify/dash-4.1.3'
+find /tmp/gem-verify -type f | sort
+=== Gem contents ===
+/tmp/gem-verify/dash-4.1.3/bin/dash
+/tmp/gem-verify/dash-4.1.3/lib/dash.rb
+/tmp/gem-verify/dash-4.1.3/README.md
+rm -rf /tmp/gem-verify dash-4.1.3.gem"""
+

@@ -13,7 +13,7 @@ gem "rouge"
 
 # The gem this site documents. Path dep on the repo root (the app lives at docs/)
 # — used ONLY for c.version_badge (Dash::VERSION; the Ruby namespace is still
-# Dash:: until the staged rename, see the repo CLAUDE.md). `require:
+# Dash:: until the staged rename, see the repo AGENTS.md). `require:
 # "dash/version"` loads just the version constant; the CLI never boots inside
 # the docs app. The config-reference pages read the doc YAMLs straight from
 # ../lib/dash/configuration/docs/ (see app/models/config_doc.rb), not through
