@@ -18,7 +18,6 @@ description = "bundle exec ruby -Itest (unit tests, AGENTS.md verification comma
 match_command = "^bundle\\s+exec\\s+ruby\\b.*-Itest\\b"
 strip_lines_matching = [
   "^\\s*$",
-  "^Run options:",
   "^# Running:",
   "^\\.+$",
   "^Finished in ",
@@ -29,7 +28,7 @@ strip_lines_matching = [
   "^\\.*boot/wait is set to \\d+ but boot/limit is not, so it does nothing\\. `wait` paces one group of hosts against the next, and without a limit every host boots in a single group\\. Set `boot/limit` or `boot/canary` to stagger the boot, or remove `boot/wait`\\.$",
   "^\\.*Role\\(s\\) web: target/max_idle_conns: 0 means the proxy default of 100, not \\\"keep none\\\" - dash-proxy resolves its defaults from zeros\\. Leave it unset for the default, or set 1 for the practical minimum\\.$",
 ]
-on_empty = "dash unit tests: ok"
+on_empty = "dash unit tests: no output left after filtering (check the exit code)"
 
 [[tests.dash-unit-tests]]
 name = "drops duplicate-load warnings, boilerplate and advisory noise; keeps the E marker and the failure block"
@@ -52,7 +51,8 @@ Errno::ENOTEMPTY: Directory not empty @ dir_s_rmdir - /var/folders/86/hzn4d2ms61
 
 1926 runs, 5792 assertions, 0 failures, 1 errors, 0 skips
 """
-expected = """......................E...........................fatal: not a git repository (or any of the parent directories): .git
+expected = """Run options: --seed 12166
+......................E...........................fatal: not a git repository (or any of the parent directories): .git
   1) Error:
 CliMainTest#test_migrate_moves_the_legacy_project_directory_with_git_mv:
 Errno::ENOTEMPTY: Directory not empty @ dir_s_rmdir - /var/folders/86/hzn4d2ms61s_2kvx28ccx91r0000gn/T/d20260919-38288-r28jfo/.git/objects
@@ -68,7 +68,7 @@ strip_lines_matching = [
   "^/\\S+: warning: already initialized constant \\S+$",
   "^/\\S+: warning: previous definition of \\S+ was here$",
 ]
-on_empty = "rake verify: ok"
+on_empty = "rake verify: no output left after filtering (check the exit code)"
 
 [[tests.rake-verify]]
 name = "drops duplicate-load warnings, keeps gem metadata and file listing"
