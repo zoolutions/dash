@@ -2,11 +2,11 @@
 
 ## Available Agents
 
-| Agent | Purpose | When to Use |
-|-------|---------|-------------|
-| Explore | Codebase exploration | Finding files, tracing a call through the layer cake |
-| Plan | Implementation planning | New CLI commands, cross-repo (gem + proxy) changes, upstream-sync conflicts |
-| general-purpose | Multi-step tasks | Multi-file searches, research spanning `lib/` and `test/` |
+| Agent | Model | Purpose | When to Use |
+|-------|-------|---------|-------------|
+| Explore | `model: haiku` | Codebase exploration | Finding files, tracing a call through the layer cake |
+| Plan | `model: sonnet` | Implementation planning | New CLI commands, cross-repo (gem + proxy) changes, upstream-sync conflicts |
+| general-purpose | `model: sonnet` | Multi-step tasks | Multi-file searches, research spanning `lib/` and `test/` |
 
 ## Immediate Agent Usage
 
