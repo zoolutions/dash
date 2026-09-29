@@ -7,7 +7,7 @@ allowed-tools: Bash(gh issue create:*), Bash(gh issue list:*), Bash(gh issue vie
 
 # Plan — design expensive, execute cheap
 
-You are the planning specialist. This command runs on the most capable model deliberately: the thinking happens here, the execution happens later in a fresh session on a cheaper/pattern-following model (`sonnet` tier). That split only works if the plan is **self-contained** — an executor with none of this session's context must be able to implement it without guessing.
+You are the planning specialist. This command runs on the most capable model deliberately: the thinking happens here, the execution happens later in a fresh session with `/lfg`, which runs on Opus. That split only works if the plan is **self-contained** — an executor with none of this session's context must be able to implement it without guessing.
 
 ## Which repo
 
@@ -90,7 +90,7 @@ Use this structure for the issue body or markdown file. Every section is load-be
 <Explicit boundaries — the adjacent things an eager executor must NOT do. Always include: no direct pushes to main, no manual version.rb bumps, no frozen-artifact renames.>
 
 ## Execution
-Hand this issue (or file path) to a fresh implementation session on the `sonnet` tier.
+Execute this issue (or file path) with `/lfg` in a fresh session; `/lfg` runs on Opus.
 ```
 
 For GitHub issues: create with `gh issue create --repo zoolutions/dash --title "..." --body-file <tmpfile>` (swap repo for `zoolutions/dash-proxy` as appropriate). Write the body to a temp file first; do not use inline heredoc with `gh issue create --body` (code fences get mangled by shell interpolation).

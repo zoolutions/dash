@@ -2,7 +2,7 @@
 description: "Coordinates development across dash's layer cake (gem + proxy). Use when planning multi-layer features, orchestrating implementation order, or designing new subsystems."
 model: opus
 argument-hint: "feature or task to coordinate"
-allowed-tools: Read, Grep, Glob, Bash(bundle exec rubocop --parallel), Bash(bin/test), Bash(bundle exec ruby -Itest -e:*), Bash(git *), Task
+allowed-tools: Read, Grep, Glob, Bash(bundle exec rubocop --parallel), Bash(bin/test), Bash(bundle exec ruby -Itest -e:*), Bash(git *), Task, Agent
 ---
 
 # Dash Architect Mode
@@ -45,7 +45,7 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 
 ## When to Delegate vs. Do Directly
 
-**Delegate (Task tool, Explore/Plan agents — see `.claude/rules/agents.md`) when**:
+**Delegate (Task tool, Explore agents with `model: haiku` / Plan agents with `model: sonnet` — see `.claude/rules/agents.md`) when**:
 - A new Thor command touches `Cli`, `Configuration`, and `Commands` together
 - Deep domain expertise is needed (SSHKit internals, proxy RPC contract, Docker buildx)
 - Work is cross-repo (gem + proxy) and needs sequencing
@@ -102,6 +102,7 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 - [ ] `bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'` passes (unit)
 - [ ] `bin/test` passes if the change is integration-relevant (needs Docker + published proxy image)
 - [ ] Release ordering respected if this ships a version bump: proxy image before `rake release`
+- [ ] If this session implemented a change (a plan-only run has an empty diff, and the validator BLOCKs an empty change): run the `fable-validator` agent on the combined diff first, with the task or PR body (`gh pr view <PR> --json body`) as the issue and the base branch. On BLOCK do not open or merge: report the blockers instead of calling it ready.
 
 ## Handoff
 

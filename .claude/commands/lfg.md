@@ -65,7 +65,7 @@ Create a TaskCreate todo list with specific implementation steps.
 
 ## Phase 2: Explore
 
-1. Find related files (Glob/Grep or Explore agent)
+1. Find related files (Glob/Grep or Explore agent, `model: haiku`)
 2. Read existing patterns in similar CLI commands under `lib/dash/cli/`
 3. Understand dependencies and integration points across the layer cake (`lib/dash/commander.rb`, `lib/dash/commands/`, `lib/dash/configuration/`)
 4. Check existing test coverage under `test/` (mirrors `lib/` structure; skip `test/integration` unless the change is deploy-path-sensitive)
@@ -218,6 +218,12 @@ Re-read the original requirements and verify:
 
 ---
 
+## Phase 6.5: Fable validation
+
+Spawn the `fable-validator` agent (it is pinned to Fable) with the issue, the acceptance criteria from Phase 1 and the base branch. On **BLOCK**, fix every blocker (back to Phase 4 for code, with a failing test first), re-verify, and run the validator again. On **PASS WITH NOTES**, fix the risks you agree with (if those fixes change the diff, re-verify and run the validator again) and list the rest in the pull request under "Accepted risks". Put the validator's one-line verdict and its "Not verified" list in the pull request body. Do not open the pull request before a PASS or PASS WITH NOTES.
+
+---
+
 ## Phase 7: Commit & PR
 
 ### Commit
@@ -254,6 +260,12 @@ gh pr create --base main --title "feat(scope): brief description" --body "$(cat 
 - Key change 2
 
 Closes #<issue_number>
+
+## Fable validation
+<the validator's one-line verdict, and its "Not verified" list>
+
+## Accepted risks
+<risks the validator raised that were not fixed, and why; or "None">
 
 ## Test plan
 - [ ] Scenario 1
@@ -307,6 +319,7 @@ The tests prove the CODE is right; this phase keeps the USER's mental model righ
 - [ ] Tests written BEFORE implementation
 - [ ] `bundle exec rubocop --parallel` passes
 - [ ] Unit test suite passes (full `bin/test` if proxy/deploy paths touched)
+- [ ] `fable-validator` returned PASS or PASS WITH NOTES; its verdict and "Not verified" list are in the PR body
 - [ ] Backwards compatibility with existing `deploy.yml` maintained
 - [ ] No manual bump of `lib/dash/version.rb` (only `rake release` writes it), no frozen-artifact renames
 - [ ] Branch rooted off `main`, PR opened against `main`
