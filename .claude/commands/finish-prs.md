@@ -32,7 +32,7 @@ This is a fork, and its branch model changes what "sync the PR" means. Read `.cl
 `$ARGUMENTS` may be:
 
 - A space/comma-separated ordered list of PR numbers: `12 14 15 18` (also accepts `#12`, `PR12`).
-- The word `automerge` anywhere in the args → enable `gh pr merge --auto --squash` on each PR once it is green + approved (still respects branch protection; GitHub merges when gates pass). Strip it out before parsing numbers.
+- The word `automerge` anywhere in the args → merge each PR with `gh pr merge --squash` once every check is finished and green and it is approved (not `--auto`, which waits only for the required checks). Strip it out before parsing numbers.
 - Empty → auto-discover:
 
   ```bash
@@ -118,7 +118,7 @@ gh pr view <PR> --json mergeable,mergeStateStatus,reviewDecision,baseRefName \
 gh pr checks <PR>
 ```
 
-Merge-ready means: `baseRefName=dash`, `mergeable=MERGEABLE`, no failing checks (green or pending-green), and `reviewDecision` is `APPROVED` or empty (not `CHANGES_REQUESTED`). A `BLOCKED` mergeStateStatus with everything else green usually means "awaiting required approval" — expected, not a defect.
+Merge-ready means: `baseRefName=dash`, `mergeable=MERGEABLE`, every check finished and green (`gh pr checks <PR> --json name,bucket`: each bucket `pass` or `skipping`, none `pending`, none `fail`; wait while any is pending), and `reviewDecision` is `APPROVED` or empty (not `CHANGES_REQUESTED`). A `BLOCKED` mergeStateStatus with everything else green usually means "awaiting required approval" — expected, not a defect.
 
 `mergeable=UNKNOWN` is common right after a push and can persist for minutes. Don't poll it; verify locally per the `git merge-tree --write-tree --name-only origin/dash FETCH_HEAD` recipe in `/github-review-pr` Phase A0.
 
@@ -126,7 +126,7 @@ Merge-ready means: `baseRefName=dash`, `mergeable=MERGEABLE`, no failing checks 
 
 Run the `fable-validator` agent on the combined diff first. On BLOCK do not open or merge: mark it `needs-user` and report the blockers instead of calling it ready.
 
-- **`automerge` mode:** `gh pr merge <PR> --auto --squash` (GitHub merges when gates pass). Then go to Phase 3 to wait for the merge to land before advancing.
+- **`automerge` mode:** `gh pr merge <PR> --squash`, only once every check is finished and green as above. Do not arm `--auto`: GitHub would merge as soon as the *required* checks pass, while a check that is not required (RuboCop, GitHub Actions audit, Gitar) may still be pending or about to fail. Then go to Phase 3 to wait for the merge to land before advancing.
 - **Default (pause) mode:** report this PR as ✅ merge-ready with its URL and a one-line "what's in it," and tell the user it's ready to merge. Then **wait** (Phase 3).
 
 Mark the PR's task `completed` (merge-ready) — or `needs-user` via a metadata note if it got stuck in 2d.
