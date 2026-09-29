@@ -102,7 +102,7 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 - [ ] `bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'` passes (unit)
 - [ ] `bin/test` passes if the change is integration-relevant (needs Docker + published proxy image)
 - [ ] Release ordering respected if this ships a version bump: proxy image before `rake release`
-- [ ] Run the `fable-validator` agent on the combined diff first. On BLOCK do not open or merge: report the blockers instead of calling it ready.
+- [ ] If this session implemented a change (a plan-only run has an empty diff, and the validator BLOCKs an empty change): run the `fable-validator` agent on the combined diff first, with the task or PR body (`gh pr view <PR> --json body`) as the issue and the base branch. On BLOCK do not open or merge: report the blockers instead of calling it ready.
 
 ## Handoff
 
