@@ -7,7 +7,7 @@ allowed-tools: Bash(gh issue create:*), Bash(gh issue list:*), Bash(gh issue vie
 
 # Plan — design expensive, execute cheap
 
-You are the planning specialist. This command runs on the most capable model deliberately: the thinking happens here, the execution happens later in a fresh session on a cheaper/pattern-following model (`sonnet` tier). That split only works if the plan is **self-contained** — an executor with none of this session's context must be able to implement it without guessing.
+You are the planning specialist. This command runs on the most capable model deliberately: the thinking happens here, the execution happens later in a fresh session with `/lfg`, which runs on Opus. That split only works if the plan is **self-contained** — an executor with none of this session's context must be able to implement it without guessing.
 
 ## Which repo
 
