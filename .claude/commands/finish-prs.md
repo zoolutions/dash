@@ -124,7 +124,7 @@ Merge-ready means: `baseRefName=dash`, `mergeable=MERGEABLE`, every check finish
 
 ### 2f. Hand off for merge
 
-Run the `fable-validator` agent on the combined diff first, giving it the PR's linked issue, its acceptance criteria and the PR's base branch (`gh pr view <PR> --json baseRefName`). On BLOCK do not open or merge: mark it `needs-user` and report the blockers instead of calling it ready.
+Run the `fable-validator` agent on the combined diff first, giving it the PR's linked issue, its acceptance criteria and the PR's base branch (`gh pr view <PR> --json baseRefName`), with the PR body (`gh pr view <PR> --json body`) as the issue when none is linked. On BLOCK do not open or merge: mark it `needs-user` and report the blockers instead of calling it ready.
 
 - **`automerge` mode:** `gh pr merge <PR> --squash`, only once every check is finished and green as above and `reviewDecision` is `APPROVED` (the base branch's ruleset requires one approving review; a `BLOCKED` PR awaiting it cannot be merged: mark it `needs-user` and report it instead). Read the checks and `reviewDecision` again right before the merge. Do not arm `--auto`: GitHub would merge as soon as the *required* checks pass, while a check that is not required (RuboCop, GitHub Actions audit, Gitar) may still be pending or about to fail. If `gh pr merge` exits non-zero, mark the PR `needs-user` with the reason and do not enter Phase 3. Otherwise go to Phase 3 to wait for the merge to land before advancing.
 - **Default (pause) mode:** report this PR as ✅ merge-ready with its URL and a one-line "what's in it," and tell the user it's ready to merge. Then **wait** (Phase 3).
