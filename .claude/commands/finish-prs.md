@@ -15,11 +15,11 @@ This is a fork, and its branch model changes what "sync the PR" means. Read `.cl
 
 | Rule | Consequence for this command |
 |---|---|
-| PRs target `dash`, never `main` | The base you sync against is `origin/dash`. A PR with `baseRefName: main` is a bug — report it, don't process it. |
-| **Never rebase a published branch** | Every branch here has a PR, so it is published. Sync with **`git merge origin/dash`**, never `git rebase`. There is therefore **no force-push anywhere in this command** — merge commits push cleanly. |
-| Merging a PR lands on `dash`, not `main` | `main` doesn't move when a PR merges, so the *upstream* base is stable. What each merge invalidates is the others' relationship to `dash` — that's what the re-sync in Phase 2a absorbs. |
+| PRs target `main` | The base you sync against is `origin/main`. A PR with any other `baseRefName` is a bug — report it, don't process it. |
+| **Never rebase a published branch** | Every branch here has a PR, so it is published. Sync with **`git merge origin/main`**, never `git rebase`. There is therefore **no force-push anywhere in this command** — merge commits push cleanly. |
+| Merging a PR lands on `main` | Each merge moves `origin/main`, which invalidates the other PRs' relationship to it — that's what the re-sync in Phase 2a absorbs. |
 | `git rerere` is enabled | Previously-seen conflicts auto-replay their recorded resolutions. Always `git diff --staged` before trusting a replay — a resolution recorded in a different context can be wrong. |
-| `feat/*` branches root off `main` | Merging `dash` forward into them is the normal, expected operation — it costs nothing and needs no note in the report. Upstreaming later extracts the feature's own diff (`git diff dash...feat/<feature>`, see `upstream-sync.md`), which already excludes everything `dash` contributed. |
+| `feat/*` branches root off `main` | Merging `origin/main` forward into them is the normal, expected operation — it costs nothing and needs no note in the report. |
 
 **This command does NOT merge PRs itself** unless the user passed `automerge`. Default behavior: make each PR merge-ready, then pause and let the user merge; when a merge lands, re-sync the remaining PRs and continue.
 
@@ -42,9 +42,9 @@ This is a fork, and its branch model changes what "sync the PR" means. Read `.cl
 
   Order **oldest-first** (`createdAt` ascending). The explicit `--limit` matters — `gh pr list` defaults to 30, so without it discovery silently drops older PRs once the queue grows past 30. Oldest-first is the safe default: the earliest PR is usually the one others were cut alongside, so merging it first minimizes downstream re-syncs. Show the discovered order and proceed.
 
-**Verify every PR's base is `dash`.** Any PR based on `main` is a mistake in the fork model — surface it immediately and exclude it from the queue rather than processing it.
+**Verify every PR's base is `main`.** Any PR based on another branch is a mistake — surface it immediately and exclude it from the queue rather than processing it.
 
-**Order matters.** Each merge into `main` invalidates the others' merge base against `main`. Processing in a fixed order means you merge the base forward into each remaining PR exactly once per upstream merge, not repeatedly. If the user gave an explicit order, honor it exactly — they may know a dependency the metadata doesn't show (e.g. a proxy-side change that must land first).
+**Order matters.** Each merge into `main` invalidates the others' merge base against `main`. Processing in a fixed order means you merge the base forward into each remaining PR exactly once per merge, not repeatedly. If the user gave an explicit order, honor it exactly — they may know a dependency the metadata doesn't show (e.g. a proxy-side change that must land first).
 
 Create a task list (TaskCreate) with one task per PR, in order, so progress is visible. Mark the current PR `in_progress`.
 
@@ -67,12 +67,12 @@ Never merge into a branch that is currently checked out in the **main working di
 
 Process PRs strictly in order. For the current PR:
 
-### 2a. Sync the branch onto the latest `dash`
+### 2a. Sync the branch onto the latest `main`
 
 ```bash
 git fetch origin main --quiet
 cd <worktree>
-git merge origin/dash
+git merge origin/main
 ```
 
 **Merge, never rebase.** If the merge conflicts, do NOT resolve it here — `/github-review-pr` Phase A0 owns conflict resolution and carries the per-file playbook (`lib/dash/version.rb` → base's side; `Gemfile.lock` → take either side then `bundle install`; `proxy/run.rb` → keep `ghcr.io/zoolutions/dash-proxy` and treat a `MINIMUM_VERSION` conflict as a release-ordering question; new multi-host fixtures → `loadbalancer: false`). Abort the merge (`git merge --abort`), and let step 2d handle it — Phase A0 runs first inside that command by design.
@@ -102,7 +102,7 @@ git push origin <branch>
 
 Invoke `/github-review-pr <PR>` (via the Skill tool). It runs **conflicts (A0) → CI failures (A) → review comments (B)** — do not re-implement any of it. It will:
 
-- Resolve any merge conflict with `dash` semantically, per the conflict playbook, and push the merge commit.
+- Resolve any merge conflict with `main` semantically, per the conflict playbook, and push the merge commit.
 - Fix red CI checks (rubocop, unit tests, and `bin/test` when the change touches proxy/deploy paths) and push.
 - Address every unresolved review thread: implement valid fixes, push back with reasoning on wrong ones, resolve threads.
 
@@ -118,9 +118,9 @@ gh pr view <PR> --json mergeable,mergeStateStatus,reviewDecision,baseRefName \
 gh pr checks <PR>
 ```
 
-Merge-ready means: `baseRefName=dash`, `mergeable=MERGEABLE`, every check finished and green (`gh pr checks <PR> --json name,bucket`: each bucket `pass` or `skipping`, none `pending`, none `fail`; wait while any is pending), and `reviewDecision` is `APPROVED` or empty (not `CHANGES_REQUESTED`). A `BLOCKED` mergeStateStatus with everything else green usually means "awaiting required approval" — expected, not a defect.
+Merge-ready means: `baseRefName=main`, `mergeable=MERGEABLE`, every check finished and green (`gh pr checks <PR> --json name,bucket`: each bucket `pass` or `skipping`, none `pending`, none `fail`; wait while any is pending), and `reviewDecision` is `APPROVED` or empty (not `CHANGES_REQUESTED`). A `BLOCKED` mergeStateStatus with everything else green usually means "awaiting required approval" — expected, not a defect.
 
-`mergeable=UNKNOWN` is common right after a push and can persist for minutes. Don't poll it; verify locally per the `git merge-tree --write-tree --name-only origin/dash FETCH_HEAD` recipe in `/github-review-pr` Phase A0.
+`mergeable=UNKNOWN` is common right after a push and can persist for minutes. Don't poll it; verify locally per the `git merge-tree --write-tree --name-only origin/main FETCH_HEAD` recipe in `/github-review-pr` Phase A0.
 
 ### 2f. Hand off for merge
 
@@ -140,18 +140,17 @@ The loop is **gated on the target PR merging**, because each merge into `main` i
 - **automerge mode:** poll `gh pr view <PR> --json state --jq .state` until `MERGED`. Use `ScheduleWakeup` with a delay matched to CI duration (unit + rubocop run a few minutes; `bin/test` with integration is much longer — poll ~300s, or ~900s if integration ran) rather than a busy sleep. When merged, advance.
 - **default mode:** the user merges manually and will tell you (or you are re-invoked). On the next turn, re-check `gh pr view <PR> --json state`. If `MERGED`, advance to the next PR and repeat Phase 2 (its re-sync now picks up the just-merged changes). If not yet merged, report current status and stop — do not spin.
 
-When you advance, **always re-fetch and merge `origin/dash` forward into the next PR** (Phase 2a) before doing anything else — the merge that just landed is exactly the change it needs to absorb.
+When you advance, **always re-fetch and merge `origin/main` forward into the next PR** (Phase 2a) before doing anything else — the merge that just landed is exactly the change it needs to absorb.
 
 If the user merges a PR **out of the planned order**, adapt: drop it from the remaining list and re-sync whatever is now next.
 
 ---
 
-## Phase 4 (optional): upstream drift and release ordering
+## Phase 4 (optional): release ordering
 
-Two fork-specific things worth surfacing once, at the end, rather than fixing mid-queue:
+One thing worth surfacing once, at the end, rather than fixing mid-queue:
 
-- **Upstream drift.** If several PRs in the queue conflicted against `main` in the same file, `main` may have moved and `dash` may be behind it. The durable fix is the routine sync in `.claude/rules/upstream-sync.md` (`git checkout main && git merge --ff-only upstream/main`, then `git checkout main && git merge main`) — a commit to `dash`, so mention it, don't do it unprompted.
-- **Release ordering.** If any PR in the queue moves `Dash::Configuration::Proxy::Run::MINIMUM_VERSION`, the referenced `ghcr.io/zoolutions/dash-proxy` tag must already be published — proxy image first, gem second. Flag it before the user merges, because merging a gem PR that names an unpublished proxy tag breaks integration tests on `dash`.
+- **Release ordering.** If any PR in the queue moves `Dash::Configuration::Proxy::Run::MINIMUM_VERSION`, the referenced `ghcr.io/zoolutions/dash-proxy` tag must already be published — proxy image first, gem second. Flag it before the user merges, because merging a gem PR that names an unpublished proxy tag breaks integration tests on `main`.
 
 ---
 
@@ -166,8 +165,7 @@ When the queue is drained (all merged, or all merge-ready-and-handed-off, or blo
 Then:
 
 1. What the user must do next (merge the ready ones, decide on any `needs-user` items).
-2. Anything that complicates a later upstream extraction for a branch on the upstreamable list — e.g. unrelated fork-only changes committed onto the feature branch, which `git diff dash...feat/<feature>` would carry into the upstream PR.
-3. Whether upstream drift or a `MINIMUM_VERSION` release-ordering issue (Phase 4) is worth acting on.
+2. Whether a `MINIMUM_VERSION` release-ordering issue (Phase 4) is worth acting on.
 
 ---
 
@@ -175,8 +173,8 @@ Then:
 
 - **Never rebase anything** — every branch here is published; merge forward only.
 - **Never force-push** — this command never rewrites history, so a plain `git push` always suffices.
-- **Never touch `main`** — not a commit, not a merge, not a push. It is a fast-forward-only mirror of `basecamp/kamal`.
-- **Never process a PR based on `main`** — report it as a fork-model mistake instead.
+- **Never commit or push to `main` directly** — it changes only through merged PRs.
+- **Never process a PR based on anything other than `main`** — report it as a mistake instead.
 - **Never resolve conflicts here** — abort and let `/github-review-pr` Phase A0 do it with the full playbook.
 - **Don't re-implement `/github-review-pr`, `/github-review-failures`, or `/github-review-comments`** — invoke them.
 - **One stuck PR must not block the rest** — mark it `needs-user`, continue the queue, return to it in the final report.

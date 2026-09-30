@@ -143,13 +143,13 @@ go vet ./...
 | Unbounded request/response buffering | Size-capped buffer pool (`proxy_buffer_pool.go`) |
 | ACME solver answering any domain's challenge | Validate the challenge is for the domain being issued |
 | Editing `MINIMUM_VERSION` or `ghcr.io/zoolutions` defaults casually | Follow `.claude/rules/upstream-sync.md` — proxy image ships before the gem references it |
-| Committing a fix straight to `main` | `main` is fast-forward-only; branch off `main`, PR into `main` |
+| Committing a fix straight to `main` | Nothing is pushed to `main` directly; branch off `main`, PR into `main` |
 
 ## Handoff
 
 When complete, summarize:
 - Vulnerabilities found (with severity), tagged `[gem]` or `[proxy]`
-- Remediation steps, including which repo (`kamal` vs `kamal-proxy`) and branch (`dash` vs `feat/*`) the fix belongs on
+- Remediation steps, including which repo (`kamal` vs `kamal-proxy`) and branch (`main` vs `feat/*`) the fix belongs on
 - Tests to add — unit test path for the gem, `_test.go` for the proxy
 - Whether the finding blocks the next release per `.claude/rules/upstream-sync.md`'s proxy-before-gem ordering
 

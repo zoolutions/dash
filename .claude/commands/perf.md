@@ -22,7 +22,7 @@ worktree (below) — never report a number against a baseline from another machi
 or another day.
 
 **Never touch the primary tree to build the baseline.** The primary checkout on
-this repo is normally `dash`; do not `git checkout main` in place — use a
+this repo is normally a feature branch; do not `git checkout main` in place — use a
 worktree so the working tree you're actively editing is never disturbed.
 
 ## Which repo has bench

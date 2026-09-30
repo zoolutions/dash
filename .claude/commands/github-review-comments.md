@@ -34,7 +34,7 @@ Once you have the PR number, confirm it and check the target branch:
 gh pr view <PR_NUMBER> --json title,state,url,baseRefName
 ```
 
-If `baseRefName` is `main`, stop and flag it -- PRs target `dash`, never `main` (see `.claude/rules/upstream-sync.md`). This command assumes a normal feature PR into `main`; do not proceed against `main`.
+If `baseRefName` is not `main`, stop and flag it -- PRs target `main`. This command assumes a normal feature PR into `main`.
 
 ---
 
@@ -113,12 +113,12 @@ For each unresolved comment, read the full body and categorise it:
 
 | Reviewer suggestion | Why it's wrong here |
 |---|---|
-| "Just commit this fix to `main`" | `main` is a fast-forward-only mirror of `basecamp/kamal` -- never commit there |
+| "Just commit this fix to `main`" | Nothing is pushed to `main` directly -- it changes only through merged PRs |
 | "Rename `.kamal/` / the `kamal-proxy` container / `KAMAL_*` env vars" | Frozen server artifacts — they wait for the staged rename bridge (see AGENTS.md) |
 | "Tag this `dash-v3.2.0`" | Gem tags are plain `vX.Y.Z` via `rake release`; `dash-v*` is frozen history |
 | "Hardcode the proxy version string in the test" | Must interpolate `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` -- see `.claude/rules/testing.md` |
 | "Use a `-dash.1` style suffix for the proxy tag" | `Gem::Version` parses `-` as a prerelease marker, sorts BELOW the base, breaks `kamal proxy boot`'s version check |
-| "Rebase your branch onto `dash`" | Feature branches root off `main` and merge it forward; never rebase a published branch |
+| "Rebase your branch onto `main`" | Feature branches root off `main` and merge it forward; never rebase a published branch |
 | "This builder test failure needs fixing" | Agree and fix it — the suite is host-independent, so builder failures are real |
 | "This multi-host fixture doesn't need `loadbalancer: false`" | The fork auto-activates the loadbalancer for any primary role with >1 web host; Docker-in-Docker integration VMs can't resolve each other's hostnames without it disabled |
 

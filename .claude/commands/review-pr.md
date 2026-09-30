@@ -12,7 +12,7 @@ Review PR for pattern compliance, fork-constraint violations, and issues. Be con
 ## Workflow
 
 1. Fetch PR details and diff via `mcp__github__pull_request_read` (repo: `zoolutions/dash`)
-2. Identify target branch — `main` or `dash`? (see Fork Constraints below)
+2. Confirm the target branch is `main` (see Fork Constraints below)
 3. Categorize changed files by layer (see AGENTS.md architecture)
 4. Check for pattern violations and fork-constraint violations
 5. Run `bundle exec rubocop --parallel` and unit tests locally against the PR diff if feasible

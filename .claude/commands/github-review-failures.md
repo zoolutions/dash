@@ -34,7 +34,7 @@ Once you have the PR number, confirm it and its base branch:
 gh pr view <PR_NUMBER> --json title,state,url,baseRefName,mergeable
 ```
 
-**PRs target `dash`, never `main`.** If `baseRefName` is `main`, stop and flag it — see `.claude/rules/upstream-sync.md`.
+**PRs target `main`.** If `baseRefName` is not `main`, stop and flag it.
 
 **Pre-flight: merge conflicts (detection only).** If `mergeable` is `CONFLICTING`, STOP — do not diagnose CI on a conflicted branch (the merge itself may fix or cause the failures). Report the conflict and hand off to `/github-review-pr`, whose Phase A0 owns the resolution runbook — this command's toolset deliberately does not include the merge machinery. If `mergeable` is `UNKNOWN`, note it and proceed: the orchestrator resolves the ambiguity; a standalone run shouldn't block on GitHub's recompute.
 
@@ -180,7 +180,7 @@ If there are still pending checks, report which checks are running and what was 
 |---|---|---|
 | A test passes locally but fails in CI (or vice versa) | Look for a call that reaches outside the process — Docker, the network, the clock. `test_helper.rb` pins the two that used to do this |
 | Integration suite fails pulling `ghcr.io/zoolutions/kamal-proxy:<MINIMUM_VERSION>` | Tag not yet published to ghcr.io, or `MINIMUM_VERSION` was bumped without a matching proxy release | Check `docker buildx imagetools inspect ghcr.io/zoolutions/kamal-proxy:<tag>`; if unpublished, this is a release-ordering issue, not a code bug — see `.claude/rules/upstream-sync.md` |
-| Any check failing on a PR whose base is `main` | `main` must stay a pristine fast-forward mirror of upstream | Flag it; the PR should retarget `dash` |
+| Any check failing on a PR whose base is not `main` | `main` is the only long-lived branch | Flag it; the PR should retarget `main` |
 
 ---
 
@@ -188,7 +188,7 @@ If there are still pending checks, report which checks are running and what was 
 
 - **Read before fixing** — always read the actual failing code before attempting a fix
 - **Fix the root cause** — don't add `# rubocop:disable` or `//nolint` to bypass lint; fix the actual issue
-- **Don't fix unrelated failures** — if a test was already failing on `dash` before this PR, note it but don't fix it here
+- **Don't fix unrelated failures** — if a test was already failing on `main` before this PR, note it but don't fix it here
 - **Never rename frozen server artifacts** to chase a fix — `.kamal/`, the `kamal-proxy` container, `KAMAL_*` env vars, and the image title label wait for the staged rename bridge (AGENTS.md); if a fix seems to require touching one, the real fix is elsewhere
 - **Flaky vs environmental** — a test that passes locally but fails in CI (or vice versa) may be one of the Known/Expected Failures above; check that table first
 - **Genuinely intermittent failures** — if a failure looks flaky (passed on re-run, fails only sometimes, only one matrix cell), hand off to `/debug-flaky` instead of adding workarounds; it owns the reproduction ladder and the knowledge base (`docs/flaky-tests.md`)
