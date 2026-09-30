@@ -46,7 +46,7 @@ Use direct tools when:
 - Reading a specific known file path (e.g. `lib/dash/configuration/proxy/run.rb`)
 - Simple pattern match in a known location
 - Single-file edits (a Thor command tweak, a test assertion fix)
-- Running `bin/test`, `bundle exec rubocop --parallel`, or `rake release`
+- Running `bin/test`, `bundle exec rubocop --parallel`, or `bin/release`
 
 ## Repo-Specific Notes
 
