@@ -2,7 +2,7 @@
 description: "Coordinates development across dash's layer cake (gem + proxy). Use when planning multi-layer features, orchestrating implementation order, or designing new subsystems."
 model: opus
 argument-hint: "feature or task to coordinate"
-allowed-tools: Read, Grep, Glob, Bash(bundle exec rubocop --parallel), Bash(bin/test), Bash(bundle exec ruby -Itest -e:*), Bash(git *), Task, Agent
+allowed-tools: Read, Grep, Glob, Bash(gh pr view:*), Bash(bundle exec rubocop --parallel), Bash(bin/test), Bash(bundle exec ruby -Itest -e:*), Bash(git *), Task, Agent
 ---
 
 # Dash Architect Mode

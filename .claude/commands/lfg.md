@@ -7,19 +7,17 @@ allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), 
 
 # LFG - Full Autonomous Workflow
 
-Execute a complete engineering workflow with verification at each phase. This is a fork: `main` mirrors basecamp/kamal and is never committed to directly. All work happens on a feature branch rooted off `main`, merged back into `main`. See `AGENTS.md` and `.claude/rules/upstream-sync.md` for the branch model and release ordering — do not duplicate them here.
+Execute a complete engineering workflow with verification at each phase. `main` is never committed to directly. All work happens on a feature branch rooted off `main`, merged back into `main`. See `AGENTS.md` and `.claude/rules/upstream-sync.md` for the branch model and release ordering — do not duplicate them here.
 
 ## Phase 0: Branch Setup
 
-**BEFORE any other work, prepare the git branch — always root off `main`, never off `main`:**
+**BEFORE any other work, prepare the git branch — always root off `main`:**
 
 1. Check the current branch: `git branch --show-current`
-2. Switch to `dash` and sync it: `git checkout main && git pull origin main`
+2. Switch to `main` and sync it: `git checkout main && git pull origin main`
 3. Create feature branch off `main`: `git checkout -b feat/{brief-description}` (or `issue-{number}-{brief-description}` if working a GitHub issue)
 
-Rooting off `main` means the branch builds on the fork's real codebase — merged features, fork identity, and the `.claude/` toolkit are all present, so slash commands keep working and the branch merges back without replaying fork identity. The PR this workflow opens at the end targets `dash`, not `main`.
-
-Upstreaming later is still possible from a `dash`-rooted branch — the "Upstreaming a feature" recipe in `upstream-sync.md` extracts the feature's own diff with `git diff dash...feat/<feature>`. Do not root off `main` to pre-empt that.
+Rooting off `main` means the branch builds on the fork's real codebase — merged features, fork identity, and the `.claude/` toolkit are all present, so slash commands keep working and the branch merges back without replaying fork identity. The PR this workflow opens at the end targets `main`.
 
 ---
 
@@ -249,7 +247,7 @@ EOF
 
 ### Push & PR
 
-PRs from this workflow target `dash`, not `main`:
+PRs from this workflow target `main`:
 
 ```bash
 git push -u origin $(git branch --show-current)
@@ -299,8 +297,6 @@ The PR body MUST end with a `## Deviations & judgment calls` section copied from
 `implementation-notes.md` (then delete the file). If the plan held completely,
 write "None — the plan held." This section is read FIRST in review — it is the
 audit trail for every decision the plan didn't make.
-
-If this feature is meant to be upstreamed later (rejected-by-basecamp features are NOT — see `ROADMAP.md`'s "safe moat" list), do nothing special here: the branch stays on `dash`, and the separate `pr/<feature>` extraction flow in `.claude/rules/upstream-sync.md` lifts the feature's own diff onto `main` when the time comes.
 
 ---
 
