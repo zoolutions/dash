@@ -50,7 +50,7 @@ class Views::Docs::Pages::Guide < DocsUI::Page
         sub-headings *inside* a Section.
       MD
 
-      DocsUI::Code(<<~RUBY, filename: "config/routes.rb", lexer: :ruby)
+      DocsUI::Code(<<~RUBY, filename: "config/routes.rb")
         Rails.application.routes.draw { mount DocsKit::Engine, at: "/docs" }
       RUBY
     end
@@ -66,13 +66,13 @@ end
 - **The primary argument is positional; modifiers are keywords.**
   `Section("Title", description:)`, `Code(source, filename:)`,
   `Header("Title", eyebrow:)`.
+- **`Code`'s `filename:` selects the language** (`*.yml` → yaml, `Dockerfile`
+  → docker, `*.sh` → shell, …); pass `lexer:` only to override the guess or when
+  there is no filename (the default is ruby).
 - **Wrappers that take no positional arg use lowercase page helpers** so a block
   needs no parens: `md <<~'MD' … MD`, `prose { … }`, `example { |ex| … }`,
   `operation "operationId"`. (A bare `DocsUI::Prose do` is a Ruby SyntaxError; the
   helpers sidestep it.)
-- **`DocsUI::Code` needs `lexer:` for anything that is not Ruby** — `filename:`
-  is only the title bar; `lexer: :yaml` / `:shell` selects the highlighter, and
-  the request spec fails a `.yml`-named block lexed as anything else.
 - **Reference material has dedicated helpers** — reach for these before prose:
   `DocsUI::PropTable`, `DocsUI::FieldTable`, `DocsUI::RequestExample`,
   `DocsUI::Callout(:note | :tip | :warning)`.
