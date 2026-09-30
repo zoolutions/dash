@@ -68,7 +68,9 @@ Layer 0: SSHKit                    (remote execution)
 
 1. If the proxy changed or `MINIMUM_VERSION` must move: in `../kamal-proxy`, `script/release-dash v1.0.0.X` → CI publishes `ghcr.io/zoolutions/dash-proxy:v1.0.0.X` (multi-arch, must be PUBLIC); set `MINIMUM_VERSION` here and run `bin/sync-proxy-flags`.
 2. `bin/test` (full suite).
-3. `bin/release [patch|minor|major|X.Y.Z]` — computes the next version from `lib/dash/version.rb`, shows the commits since the last tag, requires a clean, up-to-date `main`, and asks for confirmation before running `rake release[X.Y.Z]`, which gates on the proxy image, bumps `lib/dash/version.rb` + the `Gemfile.lock` pin, commits, pushes `main`, creates the `vX.Y.Z` GitHub release. The `release.yml` workflow then tests, builds, Sigstore-signs, and trusted-publishes to RubyGems (environment `rubygems`).
+3. `bin/release [patch|minor|major|X.Y.Z]` — computes the next version from `lib/dash/version.rb`, shows the commits since the last tag, requires a clean, up-to-date `main`, and asks for confirmation before running `rake release[X.Y.Z]` (`rakelib/release.rake`), which gates on the proxy image (the `release:preflight` hook in the `Rakefile`), bumps `lib/dash/version.rb` + the `dash` pin in `Gemfile.lock` and `docs/Gemfile.lock` (in place, no re-resolve), commits, pushes `main`, creates the `vX.Y.Z` GitHub release. The `release.yml` workflow then tests, builds, Sigstore-signs, and trusted-publishes to RubyGems (environment `rubygems`).
+
+`bin/release`, `rakelib/release.rake` and the shared jobs of `release.yml` are byte-identical across the zoolutions gems (docs-kit, daisyui, dash, pgbus, phlex-reactive): change them in every repo or none. dash-only release steps live in the `release:preflight` / `release:prepare` hooks in the `Rakefile`.
 
 Gem tags are plain `vX.Y.Z` (own semver, 3.x line). Historical `dash-v*` tags are frozen. Proxy tags stay `v<base>.<n>` (or plain semver).
 

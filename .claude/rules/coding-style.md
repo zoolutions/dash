@@ -131,4 +131,4 @@ Before marking work complete:
 - [ ] Docker/shell args built via `Dash::Commands::*` + `argumentize`/`optionize`, not inline strings
 - [ ] Tests use Minitest + Mocha; proxy version assertions interpolate `MINIMUM_VERSION`
 - [ ] `bundle exec rubocop --parallel` passes
-- [ ] Releases go through `rake release[X.Y.Z]` (never hand-rolled tags)
+- [ ] Releases go through `bin/release` (wraps `rake release[X.Y.Z]`; never hand-rolled tags)

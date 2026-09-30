@@ -85,7 +85,7 @@ The suite is host-independent: `test_helper.rb` pins the Docker architecture and
 
 ## Release Ordering — Hard Constraint
 
-**Proxy image before gem, always.** `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` must name a tag already published at `ghcr.io/zoolutions/dash-proxy` before the gem releases — integration tests and `dash proxy boot` pull it. `rake release` enforces this with a pullability gate.
+**Proxy image before gem, always.** `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` must name a tag already published at `ghcr.io/zoolutions/dash-proxy` before the gem releases — integration tests and `dash proxy boot` pull it. `rake release` enforces this with a pullability gate (the `release:preflight` hook in the `Rakefile`; the task itself is the shared `rakelib/release.rake`).
 
 ```bash
 # 1. ../kamal-proxy, on main (only when MINIMUM_VERSION moves or proxy features changed)

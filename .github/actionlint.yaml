@@ -1,0 +1,5 @@
+# actionlint 1.7.12 predates GitHub's ubuntu-26.04 hosted runner label, which
+# the shared release.yml jobs use; declare it so the label check passes.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
