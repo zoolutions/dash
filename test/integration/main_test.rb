@@ -98,6 +98,36 @@ class MainTest < IntegrationTest
     assert_container_running host: :vm3, name: "app_with_roles-workers-#{second_version}"
   end
 
+  test "app with replicas" do
+    @app = "app_with_roles"
+
+    version = latest_app_version
+
+    kamal :deploy, "-d", "replicas"
+
+    assert_app_is_up version: version
+    assert_container_running host: :vm1, name: "app_with_roles-web-replicas-#{version}"
+    assert_container_running host: :vm1, name: "app_with_roles-web.2-replicas-#{version}"
+    assert_container_running host: :vm3, name: "app_with_roles-workers-replicas-#{version}"
+    assert_container_not_running host: :vm3, name: "app_with_roles-workers.2-replicas-#{version}"
+
+    kamal :scale, :set, :workers, "3", "-d", "replicas"
+    assert_container_running host: :vm3, name: "app_with_roles-workers.2-replicas-#{version}"
+    assert_container_running host: :vm3, name: "app_with_roles-workers.3-replicas-#{version}"
+
+    second_version = update_app_rev
+
+    kamal :redeploy, "-d", "replicas"
+    assert_app_is_up version: second_version
+    assert_container_running host: :vm2, name: "app_with_roles-web.2-replicas-#{second_version}"
+    assert_container_running host: :vm3, name: "app_with_roles-workers.3-replicas-#{second_version}"
+
+    kamal :scale, :set, :workers, "1", "-d", "replicas"
+    assert_container_running host: :vm3, name: "app_with_roles-workers-replicas-#{second_version}"
+    assert_container_not_running host: :vm3, name: "app_with_roles-workers.2-replicas-#{second_version}"
+    assert_container_not_running host: :vm3, name: "app_with_roles-workers.3-replicas-#{second_version}"
+  end
+
   test "config" do
     config = YAML.load(kamal(:config, capture: true))
     version = latest_app_version
