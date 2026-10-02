@@ -16,8 +16,8 @@ class Dash::Cli::Prune < Dash::Cli::Base
     end
   end
 
-  desc "containers", "Prune all stopped containers, except the last n per role (default 5)"
-  option :retain, type: :numeric, default: nil, desc: "Number of containers to retain per role"
+  desc "containers", "Prune all stopped containers, except the last n per role replica (default 5)"
+  option :retain, type: :numeric, default: nil, desc: "Number of containers to retain per role replica"
   def containers
     retain = options.fetch(:retain, DASH.config.retain_containers)
     raise "retain must be at least 1" if retain < 1

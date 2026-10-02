@@ -12,6 +12,10 @@ class Dash::Cli::App::BootState
 
     clash, running, names, *clashes = Dash::Commands::App.split_states(output).map(&:strip)
 
+    if names&.include?(Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE)
+      raise Dash::Cli::BootError, "Could not list the running containers of #{role}, not booting it"
+    end
+
     @clashes = { 1 => clash.presence }.merge(clashes.each.with_index(2).to_h { |id, replica| [ replica, id.presence ] })
     @running = running_by_replica(running.presence, names&.lines&.map(&:strip)&.reject(&:empty?))
   end
@@ -45,15 +49,21 @@ class Dash::Cli::App::BootState
   end
 
   private
-    # Without the names (an older answer shape), slot 1's `--latest` read is all there is.
-    # With them, every slot's version comes out of its container's name, and slot 1's read
-    # is kept only when it really is slot 1's: on a role that was scalable and no longer
-    # is, `--latest` over the role labels can return another slot's container.
+    # Every slot's version comes out of its container's name. Slot 1's own `--latest` read
+    # wins for slot 1 (it prefers the latest image, as it always has), unless it is really
+    # another slot's whole name: on a role that was scalable and no longer is, `--latest`
+    # over the role labels can return a leftover slot's container.
     def running_by_replica(slot_one, names)
-      return slot_one ? { 1 => slot_one } : {} if names.nil?
+      by_replica = Array(names).reverse.to_h { |name| [ role.replica_from_name(name), role.version_from_name(name) ] }.except(nil)
 
-      by_replica = names.reverse.to_h { |name| [ role.replica_from_name(name), role.version_from_name(name) ] }.except(nil)
-      by_replica[1] = slot_one if slot_one && names.include?(role.replica_name(1, slot_one))
+      if slot_one && !foreign?(slot_one)
+        by_replica[1] = slot_one
+      end
+
       by_replica
+    end
+
+    def foreign?(version)
+      (owner = role.replica_from_name(version)) && owner != 1
     end
 end

@@ -68,19 +68,19 @@ class CommandsAppReplicasTest < ActiveSupport::TestCase
 
   test "container_id_for_version targets the slot's container" do
     assert_equal \
-      "docker container ls --all --filter 'name=^app-web.2-123$' --quiet",
+      "docker container ls --all --filter 'name=^app-web\\.2-123$' --quiet",
       new_command(replica: 2).container_id_for_version("123").join(" ")
   end
 
   test "stop with version stops the slot's container" do
     assert_equal \
-      "docker container ls --all --filter 'name=^app-web.2-123$' --quiet | xargs docker stop",
+      "docker container ls --all --filter 'name=^app-web\\.2-123$' --quiet | xargs docker stop",
       new_command(replica: 2).stop(version: "123").join(" ")
   end
 
   test "signal sends a signal to the slot's container" do
     assert_equal \
-      "docker container ls --all --filter 'name=^app-payments.3-123$' --quiet | xargs docker kill --signal=TSTP",
+      "docker container ls --all --filter 'name=^app-payments\\.3-123$' --quiet | xargs docker kill --signal=TSTP",
       new_command(role: "payments", host: "1.1.1.2", replica: 3).signal("TSTP", version: "123").join(" ")
   end
 
@@ -100,16 +100,16 @@ class CommandsAppReplicasTest < ActiveSupport::TestCase
 
     assert_equal 4, states.scan(Dash::Commands::App::BOOT_STATE_SEPARATOR).size, states
     assert states.start_with?(new_command(role: "payments", host: "1.1.1.2").boot_state("999").join(" ")), states
-    assert_match "echo --%-- ; docker ps --filter label=service=app --filter label=destination= --filter label=role=payments --filter status=running --filter status=restarting --format \"{{.Names}}\"", states
-    assert_match "docker container ls --all --filter 'name=^app-payments.2-999$' --quiet", states
-    assert_match "docker container ls --all --filter 'name=^app-payments.3-999$' --quiet", states
+    assert_match "echo --%-- ; docker ps --filter label=service=app --filter label=destination= --filter label=role=payments --filter status=running --filter status=restarting --format \"{{.Names}}\" || echo #{Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE}", states
+    assert_match "docker container ls --all --filter 'name=^app-payments\\.2-999$' --quiet", states
+    assert_match "docker container ls --all --filter 'name=^app-payments\\.3-999$' --quiet", states
   end
 
   test "boot_states for a role without replicas still reads the active containers" do
     workers = new_command(role: "workers", host: "1.1.1.2")
 
     assert_equal \
-      "#{workers.boot_state("999").join(" ")} ; echo --%-- ; docker ps --filter label=service=app --filter label=destination= --filter label=role=workers --filter status=running --filter status=restarting --format \"{{.Names}}\"",
+      "#{workers.boot_state("999").join(" ")} ; echo --%-- ; docker ps --filter label=service=app --filter label=destination= --filter label=role=workers --filter status=running --filter status=restarting --format \"{{.Names}}\" || echo #{Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE}",
       workers.boot_states("999").join(" ")
   end
 

@@ -7,6 +7,10 @@ class Dash::Commands::App < Dash::Commands::Base
   # and a version is a name suffix, so neither can produce this line on its own.
   BOOT_STATE_SEPARATOR = "--%--"
 
+  # Printed in place of the running containers when docker could not list them, so a boot
+  # can tell "nothing runs" from "could not ask" - the chain's `;` hides the exit status.
+  ACTIVE_CONTAINERS_UNREADABLE = "--unreadable--"
+
   # The two halves of a #boot_state or #stale_state capture, raw. Callers decide what an
   # empty half means; the separator line itself is dropped.
   def self.split_state(output)
@@ -132,7 +136,7 @@ class Dash::Commands::App < Dash::Commands::Base
   end
 
   def container_id_for_version(version, only_running: false)
-    container_id_for(container_name: container_name(version), only_running: only_running)
+    container_id_for(container_name: container_name_pattern(version), only_running: only_running)
   end
 
   def current_running_version
@@ -171,7 +175,7 @@ class Dash::Commands::App < Dash::Commands::Base
     chain \
       boot_state(version),
       [ :echo, BOOT_STATE_SEPARATOR ],
-      active_containers,
+      [ *active_containers, "||", :echo, ACTIVE_CONTAINERS_UNREADABLE ],
       *clashes
   end
 
@@ -244,6 +248,12 @@ class Dash::Commands::App < Dash::Commands::Base
     def extract_version_from_name
       # Extract SHA from "service-role-dest-SHA"
       %(while read line; do echo ${line##{role.replica_prefix(replica)}-}; done)
+    end
+
+    # The exact-name lookup for this slot's container of a version. Slot 1 keeps the name as
+    # it always was; slot n escapes its prefix (see Role#replica_name_pattern).
+    def container_name_pattern(version)
+      replica > 1 ? "#{role.replica_name_pattern(replica)}-#{version}" : container_name(version)
     end
 
     def slotted?

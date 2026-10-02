@@ -166,6 +166,26 @@ class ConfigurationRoleReplicasTest < ActiveSupport::TestCase
     assert_config_error "servers/payments/drain/signal: QUIETLY is not a signal docker can send"
   end
 
+  test "drain signal numbers must be in the Linux range" do
+    @deploy[:servers]["payments"]["drain"] = { "signal" => 999 }
+
+    assert_config_error "servers/payments/drain/signal: 999 is not a signal docker can send"
+  end
+
+  test "drain wait cannot be negative" do
+    @deploy[:servers]["payments"]["drain"] = { "wait" => -1 }
+
+    assert_config_error "servers/payments/drain/wait: must be 0 or more seconds"
+  end
+
+  test "volumes-from warns when replicas share it" do
+    @deploy[:servers]["payments"]["replicas"] = { "max" => 2 }
+    @deploy[:servers]["payments"]["options"] = { "volumes-from" => "data" }
+
+    _, err = capture_io { config }
+    assert_match "every replica on a host shares the volume data", err
+  end
+
   test "drain on a proxied role is refused because the proxy drains it" do
     @deploy[:servers]["web"]["drain"] = { "signal" => "TSTP" }
 

@@ -23,7 +23,7 @@ class CliAppReplicasTest < CliTestCase
       assert_match 'dash-proxy deploy app-web --target="aaaaaaaaaaaa:80,bbbbbbbbbbbb:80"', output
 
       assert_match "docker container ls --all --filter 'name=^app-web-123$' --quiet | xargs docker stop", output
-      assert_match "docker container ls --all --filter 'name=^app-web.2-123$' --quiet | xargs docker stop", output
+      assert_match "docker container ls --all --filter 'name=^app-web\\.2-123$' --quiet | xargs docker stop", output
       assert output.index("dash-proxy deploy app-web ") < output.index("'name=^app-web-123$' --quiet | xargs docker stop"), output
     end
   end
@@ -63,7 +63,7 @@ class CliAppReplicasTest < CliTestCase
     run_command("boot", host: "1.1.1.2").tap do |output|
       assert_match "--name app-payments.3-latest ", output
       assert_no_match(/--name app-payments\.4-latest/, output)
-      assert_match "docker container ls --all --filter 'name=^app-payments.4-123$' --quiet | xargs docker stop -t 45", output
+      assert_match "docker container ls --all --filter 'name=^app-payments\\.4-123$' --quiet | xargs docker stop -t 45", output
     end
   end
 
@@ -75,7 +75,7 @@ class CliAppReplicasTest < CliTestCase
     waits = captures.select { |capture| capture.include?(Dash::Commands::Base::READINESS_PROGRESS_PREFIX) }
     assert_equal 2, waits.size, captures.inspect
     assert_match "name=^app-payments-latest$", waits.first
-    assert_match "name=^app-payments.2-latest$", waits.last
+    assert_match "name=^app-payments\\.2-latest$", waits.last
   end
 
   test "boot renames a clashing container in each slot" do
@@ -88,7 +88,7 @@ class CliAppReplicasTest < CliTestCase
       assert renamed_2, output
 
       assert_match "'name=^#{renamed_1}$' --quiet | xargs docker stop", output
-      assert_match "'name=^#{renamed_2}$' --quiet | xargs docker stop", output
+      assert_match "'name=^#{renamed_2.sub(".", "\\.")}$' --quiet | xargs docker stop", output
     end
   end
 
@@ -116,7 +116,7 @@ class CliAppReplicasTest < CliTestCase
     run_command("boot", allow_execute_error: true)
 
     assert executions.any? { |command| command.include?("'name=^app-web-latest$' --quiet | xargs docker stop") }, executions.inspect
-    assert executions.any? { |command| command.include?("'name=^app-web.2-latest$' --quiet | xargs docker stop") }, executions.inspect
+    assert executions.any? { |command| command.include?("'name=^app-web\\.2-latest$' --quiet | xargs docker stop") }, executions.inspect
     assert executions.none? { |command| command.include?("'name=^app-web-123$'") }, executions.inspect
   ensure
     Thread.report_on_exception = true
@@ -130,7 +130,7 @@ class CliAppReplicasTest < CliTestCase
       assert_no_match(/--name app-workers\.2-latest/, output)
       assert_no_match(/DASH_REPLICA/, output)
       assert_match "docker container ls --all --filter 'name=^app-workers-123$' --quiet | xargs docker stop", output
-      assert_match "docker container ls --all --filter 'name=^app-workers.2-123$' --quiet | xargs docker stop", output
+      assert_match "docker container ls --all --filter 'name=^app-workers\\.2-123$' --quiet | xargs docker stop", output
     end
   end
 
@@ -139,8 +139,28 @@ class CliAppReplicasTest < CliTestCase
 
     run_command("boot", config: :with_accessories, host: "1.1.1.3").tap do |output|
       assert_match "docker container ls --all --filter 'name=^app-workers-122$' --quiet | xargs docker stop", output
-      assert_match "docker container ls --all --filter 'name=^app-workers.2-123$' --quiet | xargs docker stop", output
+      assert_match "docker container ls --all --filter 'name=^app-workers\\.2-123$' --quiet | xargs docker stop", output
     end
+  end
+
+  test "boot still stops slot 1's old container when the running list comes back empty" do
+    stub_boot_state_output "\n#{SEPARATOR}\n123\n#{SEPARATOR}\n\n"
+
+    run_command("boot", config: :with_accessories, host: "1.1.1.3").tap do |output|
+      assert_match "docker container ls --all --filter 'name=^app-workers-123$' --quiet | xargs docker stop", output
+    end
+  end
+
+  test "boot fails before starting anything when the running containers cannot be listed" do
+    Thread.report_on_exception = false
+    stub_boot_state_output "\n#{SEPARATOR}\n123\n#{SEPARATOR}\n#{Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE}\n"
+
+    output = run_command("boot", config: :with_accessories, host: "1.1.1.3", allow_execute_error: true)
+
+    assert_no_match(/--name app-workers-latest/, output)
+    assert_no_match(/xargs docker stop/, output)
+  ensure
+    Thread.report_on_exception = true
   end
 
   test "boot records the replica count on the host's timing entry" do
@@ -205,7 +225,7 @@ class CliAppReplicasTest < CliTestCase
 
   test "rollout deploy boots as many replicas as run and targets them all" do
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
-      .with { |*args| args.join(" ").include?("'name=^app-web-latest$'") && args.last == { raise_on_non_zero_exit: false } }
+      .with { |*args| args.join(" ").include?("-latest$'") && args.last == { raise_on_non_zero_exit: false } }
       .returns("")
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with { |*args| args.join(" ").include?("--format \"{{.Names}}\"") }
@@ -247,9 +267,13 @@ class CliAppReplicasTest < CliTestCase
     stub_active_containers "app-web-999\napp-web.2-999\n"
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with { |*args| args.join(" ").include?("'name=^app-web-999$'") }.returns("abc")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("name=^app-web\\.2-'") }.returns("999")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("'name=^app-web\\.2-999$'") }.returns("bbb")
 
     run_command("start", config: :with_accessories).tap do |output|
-      assert_match 'dash-proxy deploy app-web --target="abc:80"', output
+      assert_match 'dash-proxy deploy app-web --target="abc:80,bbb:80"', output
     end
   end
 
@@ -260,7 +284,58 @@ class CliAppReplicasTest < CliTestCase
   end
 
   test "logs --replica skips roles without that slot" do
-    assert_no_match(/Nothing found/, run_command("logs", "--replica", "2", config: :with_accessories))
+    assert_empty run_command("logs", "--replica", "2", config: :with_accessories).strip
+  end
+
+  test "start registers a slot left running above max as well" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("999")
+    stub_active_containers "app-web-999\napp-web.2-999\n"
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("'name=^app-web-999$'") }.returns("aaa")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("'name=^app-web\\.2-999$'") }.returns("bbb")
+
+    assert_match 'dash-proxy deploy app-web --target="aaa:80,bbb:80"', run_command("start", config: :with_accessories)
+  end
+
+  test "stop stops a slot left running above max" do
+    stub_active_containers "app-web-123\napp-web.2-123\napp-web.3-123\n"
+
+    assert_match "--filter '\\''name=^app-web\\.3-'\\'' --filter status=running", run_command("stop")
+  end
+
+  test "start refuses to register fewer replicas than min" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("999")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("'name=^app-web\\.2-999$'") }.returns("")
+
+    error = assert_raises(SSHKit::Runner::ExecuteError) { run_command("start") }
+    assert_match "Found 1 of the 2 replicas of web", error.message
+  end
+
+  test "rollout deploy refuses a version any slot already runs" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("'name=^app-web-latest$'") && args.last == { raise_on_non_zero_exit: false } }
+      .returns("")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("'name=^app-web\\.2-latest$'") && args.last == { raise_on_non_zero_exit: false } }
+      .returns("c2")
+    stub_active_containers "app-web-123\napp-web.2-123\n"
+
+    error = assert_raises(SSHKit::Runner::ExecuteError) { run_command("rollout", "deploy") }
+    assert_match "Version latest is already deployed for web on 1.1.1.1", error.message
+  end
+
+  test "logs --follow --replica refuses a slot the role does not have" do
+    error = assert_raises(ArgumentError) { run_command("logs", "--follow", "--replica", "3") }
+    assert_match "web has no replica 3", error.message
+  end
+
+  test "logs --container-id does not claim a replica it cannot know" do
+    run_command("logs", "--container-id", "C137").tap do |output|
+      assert_match "App Host: 1.1.1.1", output
+      assert_no_match(/replica 1/, output)
+    end
   end
 
   private
