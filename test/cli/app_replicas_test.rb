@@ -151,6 +151,73 @@ class CliAppReplicasTest < CliTestCase
     assert DASH.timings.lines.any? { |line| line.match?(/web 1\.1\.1\.1 .*\(healthy after \d+\.\ds, 2 replicas\)\z/) }, DASH.timings.lines.inspect
   end
 
+  test "boot says how many replicas it boots and how many were running" do
+    stub_boot_states running: { 1 => "123" }, role: :payments
+
+    assert_match "Booting 1 replica of payments on 1.1.1.2 (1 of 3 slots running, min 1)", run_command("boot", host: "1.1.1.2")
+  end
+
+  test "start starts every slot and registers every running replica" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("999")
+
+    run_command("start").tap do |output|
+      assert_match "docker start app-web-999", output
+      assert_match "docker start app-web.2-999", output
+      assert_match 'dash-proxy deploy app-web --target="999:80,999:80"', output
+    end
+  end
+
+  test "stop removes the service once and stops every slot" do
+    run_command("stop").tap do |output|
+      assert_equal 1, output.scan("dash-proxy remove app-web").size, output
+      assert_match "--filter '\\''name=^app-web-'\\'' --filter status=running --filter status=restarting' | head -1 | xargs docker stop", output
+      assert_match "--filter '\\''name=^app-web\\.2-'\\'' --filter status=running --filter status=restarting' | head -1 | xargs docker stop", output
+    end
+  end
+
+  test "logs shows every replica under its own header" do
+    run_command("logs").tap do |output|
+      assert_match "App (replica 1) Host: 1.1.1.1", output
+      assert_match "App (replica 2) Host: 1.1.1.1", output
+    end
+  end
+
+  test "logs --replica shows one replica" do
+    run_command("logs", "--replica", "2").tap do |output|
+      assert_match "App (replica 2) Host: 1.1.1.1", output
+      assert_no_match(/replica 1\)/, output)
+    end
+  end
+
+  test "exec --reuse --replica runs in that slot's container" do
+    captures = recorded_captures { run_command("exec", "--reuse", "--replica", "2", "ruby -v") }
+
+    assert captures.any? { |capture| capture.start_with?("docker exec app-web.2-123 ruby -v") }, captures.inspect
+  end
+
+  test "stale_containers checks every slot" do
+    captures = recorded_captures { run_command("stale_containers") }
+
+    stale_states = captures.select { |capture| capture.include?(Dash::Commands::App::BOOT_STATE_SEPARATOR) }
+    assert_equal 2, stale_states.size, captures.inspect
+    assert_match "${line#app-web.2-}", stale_states.last
+  end
+
+  test "rollout deploy boots as many replicas as run and targets them all" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("'name=^app-web-latest$'") && args.last == { raise_on_non_zero_exit: false } }
+      .returns("")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("--format \"{{.Names}}\"") }
+      .returns("app-web-123\napp-web.2-123\n")
+
+    run_command("rollout", "deploy").tap do |output|
+      assert_match "--name app-web-latest ", output
+      assert_match "--name app-web.2-latest ", output
+      assert_match 'dash-proxy rollout deploy app-web --target="123:80,123:80"', output
+    end
+  end
+
   private
     def run_command(*command, config: :with_replicas, host: "1.1.1.1", allow_execute_error: false)
       stdouted do

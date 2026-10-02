@@ -102,6 +102,7 @@ class Dash::Configuration
     ensure_sleep_has_a_docker_socket
     ensure_proxy_protocol_names_its_peers
     ensure_max_idle_conns_meaningful
+    ensure_replicas_fit_their_roles
   end
 
   # Resolves every secret the deploy will need so a missing secret fails fast,
@@ -512,6 +513,12 @@ class Dash::Configuration
     # (target_pool.go resolves defaults from zeros), so the one value an
     # operator writes to mean "keep none" is the one value that cannot mean it.
     # Legal, so warn rather than raise.
+    # Run once every role and the root proxy exist: a role's merged proxy reads the root
+    # one, which Servers.new builds roles ahead of.
+    def ensure_replicas_fit_their_roles
+      roles.each { |role| role.replicas.ensure_fits!(role, volumes: Array(raw_config.volumes)) }
+    end
+
     def ensure_max_idle_conns_meaningful
       offenders = roles.select do |role|
         role.running_proxy? && role.proxy.proxy_config.dig("target", "max_idle_conns") == 0

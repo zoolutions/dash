@@ -1038,6 +1038,15 @@ class CliMainTest < CliTestCase
     end
   end
 
+  test "deploy config banner shows the replica bounds of a scalable role" do
+    Dash::Cli::Main.any_instance.expects(:invoke).at_least_once
+
+    run_command("deploy", config_file: "deploy_with_replicas").tap do |output|
+      assert_match /web: 1 host \(1\.1\.1\.1\) × 2 replicas — readiness/, output
+      assert_match /payments: 2 hosts \(1\.1\.1\.2, 1\.1\.1\.3\) × 1–3 replicas — readiness/, output
+    end
+  end
+
   test "deploy config banner omits the proxy health check path when it is not configured" do
     Dash::Cli::Main.any_instance.expects(:invoke).at_least_once
 

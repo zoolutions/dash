@@ -25,6 +25,7 @@ class Dash::Cli::App::Boot
       @timing = timing
 
       @state = capture_boot_state
+      announce_replicas if role.replicas.scalable?
       old_versions = old_versions_renamed_if_clashing
 
       wait_at_barrier if queuer?
@@ -63,6 +64,12 @@ class Dash::Cli::App::Boot
       end
 
       old_versions.merge(state.surplus_replicas.to_h { |replica| [ replica, state.running_version(replica) ] }).compact
+    end
+
+    # A slot that crashed between min and the runtime count is not running, so it is not
+    # counted - say so, rather than letting the count drop silently.
+    def announce_replicas
+      info "Booting #{state.count} #{"replica".pluralize(state.count)} of #{role} on #{host} (#{state.running_count} of #{role.replicas.max} slots running, min #{role.replicas.min})"
     end
 
     def capture_boot_state

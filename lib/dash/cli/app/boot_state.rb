@@ -19,11 +19,15 @@ class Dash::Cli::App::BootState
   # How many replicas this boot starts: the slots running now, never fewer than min (so a
   # crash cannot shrink the role below its floor) nor more than max.
   def count
-    role.replicas.clamp(@running.size)
+    role.replicas.clamp(running_count)
   end
 
   def replicas
     (1..count).to_a
+  end
+
+  def running_count
+    @running.size
   end
 
   def clashing?(replica)
