@@ -104,7 +104,7 @@ servers:
     # drains it, so setting one there is an error.
     drain:
       signal: TSTP
-      wait: 120
+      wait: 20
 
     # Option values are shell-escaped before reaching `docker run`, but `${...}` is
     # deliberately left for the deploy host's shell to expand. Role `env` is never

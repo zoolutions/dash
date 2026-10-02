@@ -1,6 +1,6 @@
 # The dash-proxy targets of one role on one host: the running container of every slot, in
-# slot order. A role without replicas has one slot, so this asks exactly what re-registering
-# a single container always asked.
+# slot order. A role without replicas has one slot, so this asks what re-registering a
+# single container always asked, plus which slots run at all.
 class Dash::Cli::App::RunningTargets
   attr_reader :sshkit, :role, :host
   delegate :capture_with_info, to: :sshkit
@@ -11,7 +11,7 @@ class Dash::Cli::App::RunningTargets
     @host = host
   end
 
-  def container_ids(only_running: false, replicas: role.replica_numbers)
+  def container_ids(only_running: false, replicas: self.replicas)
     replicas.filter_map do |replica|
       app = DASH.app(role: role, host: host, replica: replica)
 
@@ -22,4 +22,16 @@ class Dash::Cli::App::RunningTargets
       end
     end
   end
+
+  # The configured slots, plus any slot still running above them - a lowered max, or a
+  # role whose `replicas` went away - until the next deploy stops it.
+  def replicas
+    @replicas ||= (role.replica_numbers | running_replicas).sort
+  end
+
+  private
+    def running_replicas
+      names = capture_with_info(*DASH.app(role: role, host: host).active_containers, raise_on_non_zero_exit: false).lines.map(&:strip)
+      names.filter_map { |name| role.replica_from_name(name) }
+    end
 end

@@ -4,7 +4,7 @@
 class Dash::Configuration::Role::Replicas
   # Docker options every replica on a host would claim for itself.
   EXCLUSIVE_OPTIONS = %w[ publish p name hostname ]
-  VOLUME_OPTIONS = %w[ volume v mount ]
+  VOLUME_OPTIONS = %w[ volume v mount volumes-from ]
 
   attr_reader :min, :max, :context
 

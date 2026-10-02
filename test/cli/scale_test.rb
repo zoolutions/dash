@@ -34,7 +34,7 @@ class CliScaleTest < CliTestCase
 
     captures = recorded_captures { run_command("set", "payments", "3") }
 
-    assert captures.any? { |capture| capture.include?(Dash::Commands::Base::READINESS_PROGRESS_PREFIX) && capture.include?("name=^app-payments.2-123$") }, captures.inspect
+    assert captures.any? { |capture| capture.include?(Dash::Commands::Base::READINESS_PROGRESS_PREFIX) && capture.include?("name=^app-payments\\.2-123$") }, captures.inspect
   end
 
   test "set adds a web replica to the proxy pool with every running replica" do
@@ -50,8 +50,8 @@ class CliScaleTest < CliTestCase
     stub_running "1.1.1.2" => [ "app-payments-123", "app-payments.2-123" ], "1.1.1.3" => [ "app-payments-123", "app-payments.2-123", "app-payments.3-123" ]
 
     run_command("set", "payments", "4").tap do |output|
-      assert_match "docker container ls --all --filter 'name=^app-payments.3-123$' --quiet | xargs docker stop -t 45", output
-      assert_no_match(/'name=\^app-payments\.2-123\$' --quiet \| xargs docker stop/, output)
+      assert_match "docker container ls --all --filter 'name=^app-payments\\.3-123$' --quiet | xargs docker stop -t 45", output
+      assert_no_match(/'name=\^app-payments\\\.2-123\$' --quiet \| xargs docker stop/, output)
       assert_match "Removed app-payments.3-123 on 1.1.1.3", output
     end
   end
@@ -61,8 +61,8 @@ class CliScaleTest < CliTestCase
     Dash::Cli::Scale::ReplicaLeave.any_instance.expects(:sleep).with(5)
 
     run_command("set", "payments", "2").tap do |output|
-      signal = output.index("docker container ls --all --filter 'name=^app-payments.2-123$' --quiet | xargs docker kill --signal=TSTP")
-      stop = output.index("docker container ls --all --filter 'name=^app-payments.2-123$' --quiet | xargs docker stop -t 45")
+      signal = output.index("docker container ls --all --filter 'name=^app-payments\\.2-123$' --quiet | xargs docker kill --signal=TSTP")
+      stop = output.index("docker container ls --all --filter 'name=^app-payments\\.2-123$' --quiet | xargs docker stop -t 45")
 
       assert signal, output
       assert stop, output
@@ -77,12 +77,12 @@ class CliScaleTest < CliTestCase
 
     run_command("set", "web", "1", config: :with_replicas_range).tap do |output|
       deploy = output.index('dash-proxy deploy app-web --target="aaaaaaaaaaaa:80"')
-      stop = output.index("'name=^app-web.3-123$' --quiet | xargs docker stop")
+      stop = output.index("'name=^app-web\\.3-123$' --quiet | xargs docker stop")
 
       assert deploy, output
       assert stop, output
       assert deploy < stop, output
-      assert_match "'name=^app-web.2-456$' --quiet | xargs docker stop", output
+      assert_match "'name=^app-web\\.2-456$' --quiet | xargs docker stop", output
       assert_no_match(/docker kill/, output)
     end
   end

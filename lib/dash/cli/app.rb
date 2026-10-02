@@ -66,6 +66,10 @@ class Dash::Cli::App < Dash::Cli::Base
           endpoints = Dash::Cli::App::RunningTargets.new(self, role: role, host: host).container_ids
           raise Dash::Cli::BootError, "Failed to get endpoint for #{role} on #{host}, did the container boot?" if endpoints.empty?
 
+          if endpoints.size < role.replicas.min
+            raise Dash::Cli::BootError, "Found #{endpoints.size} of the #{role.replicas.min} replicas of #{role} on #{host}, did every container start?"
+          end
+
           cli.run_hook "pre-proxy-deploy", hosts: host.to_s, role: role.name
           execute *app.deploy(targets: endpoints)
           cli.run_hook "post-proxy-deploy", hosts: host.to_s, role: role.name
@@ -81,11 +85,13 @@ class Dash::Cli::App < Dash::Cli::Base
         app = DASH.app(role: role, host: host)
         execute *DASH.auditor.record("Stopped app", role: role), verbosity: :debug
 
-        if role.running_proxy? && Dash::Cli::App::RunningTargets.new(self, role: role, host: host).container_ids.any?
+        targets = Dash::Cli::App::RunningTargets.new(self, role: role, host: host)
+
+        if role.running_proxy? && targets.container_ids.any?
           execute *app.remove, raise_on_non_zero_exit: false
         end
 
-        role.replica_numbers.each do |replica|
+        targets.replicas.each do |replica|
           execute *DASH.app(role: role, host: host, replica: replica).stop, raise_on_non_zero_exit: false
         end
       end
@@ -247,6 +253,11 @@ class Dash::Cli::App < Dash::Cli::Base
 
     if options[:follow]
       lines = options[:lines].presence || ((since || grep) ? nil : 10) # Default to 10 lines if since or grep isn't set
+      follow_role = DASH.specific_roles&.first || DASH.primary_role
+
+      if replica && !follow_role.replica_numbers.include?(replica)
+        raise ArgumentError, "#{follow_role} has no replica #{replica}, it runs at most #{follow_role.replicas.max}"
+      end
 
       run_locally do
         info "Following logs on #{DASH.primary_host}..."
@@ -267,7 +278,8 @@ class Dash::Cli::App < Dash::Cli::Base
 
         slots.each do |slot|
           # Each replica's lines under a header of their own, so they are not mistaken for one stream.
-          type = role.replicas.scalable? ? "App (replica #{slot})" : "App"
+          # A --container-id names a container whose slot is unknown, so claim none.
+          type = role.replicas.scalable? && (replica || !container_id) ? "App (replica #{slot})" : "App"
 
           begin
             puts_by_host host, capture_with_info(*DASH.app(role: role, host: host, replica: slot).logs(container_id: container_id, timestamps: timestamps, since: since, lines: lines, grep: grep, grep_options: grep_options)), type: type, quiet: quiet

@@ -8,6 +8,9 @@ class Dash::Configuration::Role::Drain
     STOP TSTP TTIN TTOU URG XCPU XFSZ VTALRM PROF WINCH IO POLL PWR SYS
   ]
 
+  # Linux signal numbers, SIGHUP through SIGRTMAX.
+  SIGNAL_NUMBERS = 1..64
+
   attr_reader :context
 
   def initialize(drain_config:, context:)
@@ -30,8 +33,17 @@ class Dash::Configuration::Role::Drain
 
   private
     def validate!
-      return if signal.nil? || signal.match?(/\A\d+\z/) || SIGNALS.include?(signal.upcase.delete_prefix("SIG"))
+      raise Dash::ConfigurationError, "#{context}/wait: must be 0 or more seconds" if wait.negative?
+      return if signal.nil? || valid_signal?
 
       raise Dash::ConfigurationError, "#{context}/signal: #{signal} is not a signal docker can send"
+    end
+
+    def valid_signal?
+      if signal.match?(/\A\d+\z/)
+        SIGNAL_NUMBERS.cover?(signal.to_i)
+      else
+        SIGNALS.include?(signal.upcase.delete_prefix("SIG"))
+      end
     end
 end

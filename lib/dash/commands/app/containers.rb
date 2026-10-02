@@ -11,7 +11,7 @@ module Dash::Commands::App::Containers
 
   def remove_container(version:)
     pipe \
-      container_id_for(container_name: container_name(version)),
+      container_id_for(container_name: container_name_pattern(version)),
       xargs(docker(:container, :rm))
   end
 
@@ -25,7 +25,7 @@ module Dash::Commands::App::Containers
 
   def container_health_log(version:)
     pipe \
-      container_id_for(container_name: container_name(version)),
+      container_id_for(container_name: container_name_pattern(version)),
       xargs(docker(:inspect, "--format", DOCKER_HEALTH_LOG_FORMAT))
   end
 end

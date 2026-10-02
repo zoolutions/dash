@@ -256,7 +256,13 @@ class Dash::Configuration::Role
   # The `--filter name=` value for a slot's containers. Docker matches it as a regular
   # expression, so a `.` in the slot or the destination has to be literal.
   def replica_name_filter(replica)
-    "'name=^#{replica_prefix(replica).gsub(/[.^$*+?()\[\]{}|\\]/) { |char| "\\#{char}" }}-'"
+    "'name=^#{replica_name_pattern(replica)}-'"
+  end
+
+  # The slot's prefix as a docker name regex: slot n's `.` has to be literal, or
+  # `^app-web.2-123$` would also match slot 1's container of a version named `2-123`.
+  def replica_name_pattern(replica)
+    replica_prefix(replica).gsub(/[.^$*+?()\[\]{}|\\]/) { |char| "\\#{char}" }
   end
 
   def replica_name(replica, version = nil)
@@ -269,7 +275,7 @@ class Dash::Configuration::Role
   def replica_from_name(container_name)
     if container_name.start_with?("#{replica_prefix(1)}-")
       1
-    elsif (match = replica_name_pattern.match(container_name))
+    elsif (match = replica_name_regexp.match(container_name))
       match[1].to_i
     end
   end
@@ -369,7 +375,7 @@ class Dash::Configuration::Role
       end
     end
 
-    def replica_name_pattern
+    def replica_name_regexp
       destination = "-#{Regexp.escape(config.destination)}" if config.destination
       /\A#{Regexp.escape(config.service)}-#{Regexp.escape(name)}\.(\d+)#{destination}-/
     end

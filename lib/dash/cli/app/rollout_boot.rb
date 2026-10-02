@@ -25,7 +25,7 @@ class Dash::Cli::App::RolloutBoot
 
   private
     def ensure_not_already_deployed
-      if capture_with_info(*app.container_id_for_version(version), raise_on_non_zero_exit: false).present?
+      if replicas.any? { |replica| capture_with_info(*app(replica).container_id_for_version(version), raise_on_non_zero_exit: false).present? }
         raise Dash::Cli::BootError, "Version #{version} is already deployed for #{role} on #{host}, roll out a different version"
       end
     end
