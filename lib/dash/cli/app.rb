@@ -133,6 +133,10 @@ class Dash::Cli::App < Dash::Cli::Base
       replica = options[:replica]
       case
       when options[:interactive] && options[:reuse]
+        unless DASH.primary_role.replica_numbers.include?(replica)
+          raise ArgumentError, "#{DASH.primary_role} has no replica #{replica}, it runs at most #{DASH.primary_role.replicas.max}"
+        end
+
         say "Get current version of running container...", :magenta unless options[:version]
         using_version(options[:version] || current_running_version) do |version|
           say "Launching interactive command with version #{version} via SSH from existing container on #{DASH.primary_host}...", :magenta
@@ -155,6 +159,8 @@ class Dash::Cli::App < Dash::Cli::Base
           say "Launching command with version #{version} from existing container...", :magenta
 
           on_roles(DASH.roles, hosts: DASH.app_hosts) do |host, role|
+            next unless role.replica_numbers.include?(replica)
+
             execute *DASH.auditor.record("Executed cmd '#{cmd}' on app version #{version}", role: role), verbosity: :debug
             puts_by_host host, capture_with_info(*DASH.app(role: role, host: host, replica: replica).execute_in_existing_container(cmd, env: env), strip: !raw), quiet: quiet, raw: raw
           end
@@ -192,7 +198,11 @@ class Dash::Cli::App < Dash::Cli::Base
         role.replica_numbers.each do |replica|
           app = DASH.app(role: role, host: host, replica: replica)
           listed, running = Dash::Commands::App.split_state(capture_with_info(*app.stale_state, raise_on_non_zero_exit: false))
-          versions = listed.strip.split("\n") - [ running.strip ]
+          slot_version = Dash::Cli::App::SlotVersion.new(self, app)
+          running = slot_version.resolve(running)
+          next unless running # nothing of this slot runs, so nothing is stale relative to it
+
+          versions = listed.strip.split("\n").reject { |version| slot_version.foreign?(version) } - [ running ]
           name = replica == 1 ? "role #{role}" : "role #{role} replica #{replica}"
 
           versions.each do |version|
@@ -253,7 +263,9 @@ class Dash::Cli::App < Dash::Cli::Base
 
       on_roles(DASH.roles, hosts: DASH.app_hosts) do |host, role|
         # A --container-id names one container, whatever the slot.
-        (replica || container_id ? [ replica || 1 ] : role.replica_numbers).each do |slot|
+        slots = replica || container_id ? [ replica || 1 ] & role.replica_numbers : role.replica_numbers
+
+        slots.each do |slot|
           # Each replica's lines under a header of their own, so they are not mistaken for one stream.
           type = role.replicas.scalable? ? "App (replica #{slot})" : "App"
 
@@ -429,10 +441,10 @@ class Dash::Cli::App < Dash::Cli::Base
     def current_running_version(host: DASH.primary_host)
       version = nil
       on(host) do
-        role = DASH.roles_on(host).first
-        version = capture_with_info(*DASH.app(role: role, host: host).current_running_version).strip
+        app = DASH.app(role: DASH.roles_on(host).first, host: host)
+        version = Dash::Cli::App::SlotVersion.new(self, app).resolve(capture_with_info(*app.current_running_version))
       end
-      version.presence
+      version
     end
 
     def version_or_latest
