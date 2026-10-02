@@ -319,6 +319,9 @@ class Dash::Cli::Main < Dash::Cli::Base
   desc "registry", "Login and -out of the image registry"
   subcommand "registry", Dash::Cli::Registry
 
+  desc "scale", "Change how many containers of a role run, without a deploy"
+  subcommand "scale", Dash::Cli::Scale
+
   desc "secrets", "Helpers for extracting secrets"
   subcommand "secrets", Dash::Cli::Secrets
 

@@ -11,8 +11,8 @@ class Dash::Cli::App::RunningTargets
     @host = host
   end
 
-  def container_ids(only_running: false)
-    role.replica_numbers.filter_map do |replica|
+  def container_ids(only_running: false, replicas: role.replica_numbers)
+    replicas.filter_map do |replica|
       app = DASH.app(role: role, host: host, replica: replica)
 
       if (version = capture_with_info(*app.current_running_version, raise_on_non_zero_exit: false).strip.presence)

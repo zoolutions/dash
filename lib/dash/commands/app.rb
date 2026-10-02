@@ -119,6 +119,11 @@ class Dash::Commands::App < Dash::Commands::Base
     pipe container_id_for_version(version), xargs(docker(:kill, "--signal=#{signal}"))
   end
 
+  # Every running container of the role with docker's status line, for `dash scale status`.
+  def replica_status
+    docker :ps, *container_filter_args(statuses: ACTIVE_DOCKER_STATUSES, all_replicas: true), "--format", '"{{.Names}}\t{{.Status}}"'
+  end
+
   # The names of every running container of the role, whatever its slot. A slot's version
   # and whether it counts as running both come out of the name, so this is all a boot needs
   # to know how many replicas a host runs.

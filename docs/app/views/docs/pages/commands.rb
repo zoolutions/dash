@@ -71,6 +71,11 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     [ "dev", "Build the working directory, tag it as dirty, push to the local image store" ]
   ].freeze
 
+  SCALE = [
+    [ "set ROLE COUNT", "Run COUNT containers of ROLE across its hosts, within its replicas bounds" ],
+    [ "status [ROLE]", "Show the containers of each role per host; --json for a document" ]
+  ].freeze
+
   OTHERS = [
     [ "dash server bootstrap", "Set up Docker to run dash apps" ],
     [ "dash server exec", "Run a custom command on the server" ],
@@ -88,6 +93,7 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     proxy_commands
     accessory_commands
     build_commands
+    scale_commands
     other_commands
   end
 
@@ -138,6 +144,18 @@ class Views::Docs::Pages::Commands < DocsUI::Page
   def build_commands
     DocsUI::Section("dash build", description: "Build the application image.") do
       subcommand_table BUILD
+    end
+  end
+
+  def scale_commands
+    DocsUI::Section("dash scale", description: "Change how many containers of a role run, without a deploy.") do
+      subcommand_table SCALE
+      md <<~'MD'
+        The count is in containers across the role's hosts, spread evenly
+        within each host's `replicas` bounds, at the version already running.
+        It takes the deploy lock, and the next deploy keeps it. dash-only — see
+        [Replicas](/docs/worker-roles#replicas).
+      MD
     end
   end
 

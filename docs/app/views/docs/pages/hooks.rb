@@ -15,14 +15,18 @@ class Views::Docs::Pages::Hooks < DocsUI::Page
     [ "post-deploy", "after a successful deploy, with the elapsed time", "deploy, redeploy, rollback, setup", "yes", "" ],
     [ "pre-app-boot", "before each boot group of hosts starts its new containers", "app boot, deploy, redeploy, rollback", "", "" ],
     [ "post-app-boot", "after that boot group's new containers are live", "app boot, deploy, redeploy, rollback", "", "" ],
-    [ "pre-proxy-deploy", "before a proxied role's new container is registered with dash-proxy on a host", "app boot, deploy, redeploy, rollback", "", "dash" ],
-    [ "post-proxy-deploy", "after dash-proxy reports that container healthy and switches to it", "app boot, deploy, redeploy, rollback", "", "dash" ],
-    [ "pre-app-stop", "before the previous version's container is stopped on a host", "app boot, deploy, redeploy, rollback", "", "" ],
+    [ "pre-proxy-deploy", "before a proxied role's new containers are registered with dash-proxy on a host", "app boot, deploy, redeploy, rollback", "", "dash" ],
+    [ "post-proxy-deploy", "after dash-proxy reports them healthy and switches to them", "app boot, deploy, redeploy, rollback", "", "dash" ],
+    [ "pre-app-stop", "before each previous-version container is stopped on a host (once per replica)", "app boot, deploy, redeploy, rollback", "", "" ],
     [ "post-app-stop", "after it is stopped", "app boot, deploy, redeploy, rollback", "", "" ],
     [ "pre-proxy-reboot", "before the proxy container is replaced on a host", "proxy reboot, proxy boot (config drift), upgrade", "", "" ],
     [ "post-proxy-reboot", "after the new proxy container is up", "proxy reboot, proxy boot (config drift), upgrade", "", "" ],
     [ "pre-loadbalancer-reboot", "before the load balancer container is replaced", "proxy reboot, proxy boot (config drift)", "", "dash" ],
     [ "post-loadbalancer-reboot", "after the new load balancer container is up", "proxy reboot, proxy boot (config drift)", "", "dash" ],
+    [ "pre-scale-out", "before `dash scale set` adds containers of a role", "scale set", "", "dash" ],
+    [ "post-scale-out", "after the new containers are ready", "scale set", "", "dash" ],
+    [ "pre-scale-in", "before `dash scale set` removes containers of a role", "scale set", "", "dash" ],
+    [ "post-scale-in", "after they are drained and stopped", "scale set", "", "dash" ],
     [ "docker-setup", "after Docker is confirmed installed on every host", "server bootstrap, setup", "", "" ]
   ].freeze
 
@@ -65,7 +69,14 @@ class Views::Docs::Pages::Hooks < DocsUI::Page
         a cache or notify a tracker with the host that just went live. The
         loadbalancer hooks wrap the [load balancer](/docs/load-balancing)
         container's replacement, which happens separately from the per-host
-        proxies. Neither exists in upstream kamal.
+        proxies. Neither exists in upstream kamal. With
+        [replicas](/docs/worker-roles#replicas), the proxy-deploy hooks still
+        fire once per host and role, around the one dash-proxy deploy that
+        switches every replica; the app-stop hooks fire once per old container.
+
+        The scale hooks wrap `dash scale set`: `DASH_HOSTS` is the hosts that
+        gain or lose containers and `DASH_REPLICAS` the total the role runs
+        afterwards.
 
         `pre-connect` runs before the first SSH connection of a command, so it
         fires for `dash app logs` as much as for `dash deploy`; use
@@ -93,7 +104,8 @@ class Views::Docs::Pages::Hooks < DocsUI::Page
         | `DASH_DESTINATION` | the `-d` destination, when one is set |
         | `DASH_HOSTS` | comma-separated hosts the event concerns (the boot group, the single host, or the whole target) |
         | `DASH_ROLES` | comma-separated roles, when the command was narrowed with `--roles` |
-        | `DASH_ROLE` | the one role, on the proxy-deploy hooks |
+        | `DASH_ROLE` | the one role, on the proxy-deploy, app-stop and scale hooks |
+        | `DASH_REPLICAS` | the role's resulting container count, on the scale hooks |
         | `DASH_COMMAND` / `DASH_SUBCOMMAND` | the command being run, e.g. `deploy`, or `app` / `boot` |
         | `DASH_LOCK` | `true` when the command holds the deploy lock |
         | `DASH_RUNTIME` | seconds elapsed, on `post-deploy` |

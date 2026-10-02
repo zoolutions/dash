@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+# Runs before `dash scale set` adds containers of a role. $DASH_HOSTS are the hosts that
+# get new replicas; $DASH_REPLICAS is the total the role will run afterwards.
+
+echo "Scaling $DASH_ROLE out to $DASH_REPLICAS containers on $DASH_HOSTS..."

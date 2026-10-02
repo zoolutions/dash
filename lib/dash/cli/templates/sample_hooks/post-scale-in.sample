@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+
+echo "Scaled $DASH_ROLE in to $DASH_REPLICAS containers on $DASH_HOSTS"

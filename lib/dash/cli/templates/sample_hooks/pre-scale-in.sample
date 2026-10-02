@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+# Runs before `dash scale set` removes containers of a role. $DASH_HOSTS are the hosts
+# that lose replicas; $DASH_REPLICAS is the total the role will run afterwards.
+
+echo "Scaling $DASH_ROLE in to $DASH_REPLICAS containers on $DASH_HOSTS..."
