@@ -1,0 +1,39 @@
+docs/app/views/docs/pages/worker_roles.rb
+  s_aea897c94c51c1::t_ab4e2b2d8fc4be 282
+lib/dash/commands/app.rb
+  s_aea897c94c51c1::t_ab4e2b2d8fc4be 128,135,205-210
+test/integration/docker/deployer/app_with_roles/config/deploy.replicas.yml
+  s_aea897c94c51c1::t_036e39915fd2da 10-11
+test/cli/scale/placement_test.rb
+  s_aea897c94c51c1::t_036e39915fd2da 49-61
+lib/dash/cli/scale/replica_leave.rb
+  s_aea897c94c51c1::t_ab4e2b2d8fc4be 29-30,32,43-44,46-49
+lib/dash/cli/scale/replica_join.rb
+  s_aea897c94c51c1::t_ab4e2b2d8fc4be 35-37,39-40,45-46,48-54
+test/cli/scale_test.rb
+  s_aea897c94c51c1::t_036e39915fd2da 102-150,219-230
+test/integration/main_test.rb
+  s_aea897c94c51c1::t_036e39915fd2da 115
+lib/dash/cli/scale/placement.rb
+  s_aea897c94c51c1::t_ab4e2b2d8fc4be 23-24,26-29,45-48
+lib/dash/cli/scale.rb
+  s_aea897c94c51c1::t_ab4e2b2d8fc4be 103-104,106-107,135-136
+docs/app/views/docs/pages/hooks.rb
+  s_aea897c94c51c1::t_ab4e2b2d8fc4be 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2952220b015615d0c9180bf8f5d57012b08693c6",
+  "prompts": {},
+  "sessions": {
+    "s_aea897c94c51c1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3c293cb-90b8-4854-b0ca-e77a65cd8c5b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
