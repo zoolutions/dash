@@ -31,7 +31,7 @@ labels:
     description: Refactoring or cleanup that pays down an accepted shortcut
     group: type
   - name: security
-    color: e9e257
+    color: "e9e257"
     description: Vulnerability, hardening, or an authorization correctness fix
     group: type
   - name: documentation
@@ -98,7 +98,7 @@ labels:
     description: Has a /plan body with Context, Decision, Steps and Gates; ready for /lfg
     group: status
   - name: epic
-    color: 5319e7
+    color: "5319e7"
     description: Umbrella item tracking several smaller issues
     group: status
   - name: blocker
@@ -110,7 +110,7 @@ labels:
     description: Waiting on details before it can be planned or worked on
     group: status
   - name: flaky-test
-    color: e99695
+    color: "e99695"
     description: A test that fails intermittently; filed by /debug-flaky
     group: status
 
@@ -133,7 +133,7 @@ labels:
     description: This issue or pull request already exists
     group: community
   - name: invalid
-    color: e4e669
+    color: "e4e669"
     description: This doesn't seem right
     group: community
   - name: wontfix
@@ -160,6 +160,7 @@ paths:
   "bin/sync-proxy-flags": proxy
   "lib/dash/cli.rb": cli
   "lib/dash/{cli,output,commander}/**/*": cli
+  "lib/dash/{cli,output,commander}.rb": cli
   "lib/dash/commander.rb": cli
   "test/cli/**/*": cli
   "lib/dash/configuration.rb": configuration
@@ -175,12 +176,22 @@ paths:
   "lib/dash/secrets/**/*": secrets
   "lib/dash/{report,timings,otel_shipper}.rb": observability
   "lib/dash/report/**/*": observability
+  "lib/dash/report.rb": observability
+  "test/{cli,output,commander}/**/*": cli
+  "test/{cli,output,commander}_test.rb": cli
+  "test/commander_test.rb": cli
+  "test/{build,dockerfile}/**/*": build
+  "test/secrets_test.rb": secrets
+  "test/env_file_test.rb": secrets
+  "test/secrets/**/*": secrets
+  "test/{report,timings,otel_shipper}_test.rb": observability
+  "test/report/**/*": observability
+  "test/report_test.rb": observability
   ".github/**/*": devops
   "bin/release": devops
   "rakelib/**/*": devops
-  "Dockerfile*": devops
+  "**/Dockerfile*": devops
   ".claude/**/*": dx
   "{AGENTS,CLAUDE}.md": dx
   "bin/labels": dx
-  "lode/**/*": dx
   "docs/**/*": docs-site
