@@ -16,12 +16,23 @@ class Dash::Configuration::Validator::Role < Dash::Configuration::Validator
     # `healthcheck: false` is the explicit opt-out from the readiness gate, so the
     # example's hash shape is not the only legal one.
     def validate_key_override!(key, value)
-      return false unless key.to_s == "healthcheck"
-
-      case value
-      when false then true
-      when Hash then false
-      else error "should be a hash, or false to accept no readiness gate for this role"
+      case key.to_s
+      when "healthcheck"
+        case value
+        when false then true
+        when Hash then false
+        else error "should be a hash, or false to accept no readiness gate for this role"
+        end
+      when "replicas"
+        # `replicas: 2` is shorthand for min and max, so the example's hash shape is not
+        # the only legal one either.
+        case value
+        when Integer then true
+        when Hash then false
+        else error "should be an integer, or a hash with min and max"
+        end
+      else
+        false
       end
     end
 

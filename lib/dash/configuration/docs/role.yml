@@ -66,6 +66,46 @@ servers:
       limit: 25%
       wait: 10
 
+    # Replicas
+    #
+    # How many containers of this role run on EACH of its hosts. A process that cannot
+    # use more than one core by itself — open-source Sidekiq is one Ruby process — gets
+    # the rest of a bigger host this way, without declaring the same worker twice.
+    #
+    # `replicas: 2` is shorthand for `{ min: 2, max: 2 }`; the default is one, which is
+    # the behaviour without the key. A deploy boots as many replicas as are running now,
+    # kept within `min` and `max`, so a count changed at runtime with
+    # `dash scale set <role> <count>` survives the next deploy. With nothing running it
+    # boots `min`. `max` is the ceiling for `dash scale set`.
+    #
+    # Replicas of a proxied role are all targets of the role's one dash-proxy service,
+    # which balances across them. Replicas of any other role are independent containers.
+    # Replica 1 keeps the container name the role always had; replica 2 and up put the
+    # slot into the role segment (`app-workers.2-<version>`), and every replica of a
+    # scalable role gets the `replica` label and the `DASH_REPLICA` env var.
+    #
+    # Every replica opens its own database pool, so `pool × replicas × hosts` has to fit
+    # the database's (or the pooler's) connection limit.
+    #
+    # More than one replica cannot set the `publish`, `p`, `name` or `hostname` docker
+    # options, which every replica on a host would claim, and cannot yet be combined with
+    # `proxy/sleep`. Host volumes are shared by every replica on a host, which is fine for
+    # read-only config or a shared cache and wrong for a per-process store, so they warn.
+    replicas:
+      min: 1
+      max: 4
+
+    # Drain
+    #
+    # How a replica of a role WITHOUT the proxy leaves when `dash scale set` removes it:
+    # `signal` is sent first (e.g. TSTP, so Sidekiq stops taking new jobs), then dash
+    # waits `wait` seconds before `docker stop`. Keep `wait` inside the stop budget
+    # described on the worker roles page. A role behind dash-proxy has no drain: the proxy
+    # drains it, so setting one there is an error.
+    drain:
+      signal: TSTP
+      wait: 120
+
     # Option values are shell-escaped before reaching `docker run`, but `${...}` is
     # deliberately left for the deploy host's shell to expand. Role `env` is never
     # defined in that shell, so `${MY_VAR}` resolves to empty. Use the bare `$MY_VAR`
