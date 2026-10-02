@@ -30,8 +30,10 @@ class Dash::Cli::App::RunningTargets
   end
 
   private
+    # A listing that fails raises: an empty answer would read as "no surplus slots", and the
+    # caller would stop or register an incomplete set.
     def running_replicas
-      names = capture_with_info(*DASH.app(role: role, host: host).active_containers, raise_on_non_zero_exit: false).lines.map(&:strip)
+      names = capture_with_info(*DASH.app(role: role, host: host).active_containers).lines.map(&:strip)
       names.filter_map { |name| role.replica_from_name(name) }
     end
 end

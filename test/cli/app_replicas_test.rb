@@ -163,6 +163,31 @@ class CliAppReplicasTest < CliTestCase
     Thread.report_on_exception = true
   end
 
+  test "boot only treats the whole unreadable marker line as a failed listing" do
+    stub_boot_state_output "\n#{SEPARATOR}\n123\n#{SEPARATOR}\napp-workers-release#{Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE}\n"
+
+    assert_match "--name app-workers-latest ", run_command("boot", config: :with_accessories, host: "1.1.1.3")
+  end
+
+  test "stop aborts rather than guess when the running containers cannot be listed" do
+    Thread.report_on_exception = false
+    # What a failed `docker ps` looks like from here: nothing at all when the caller
+    # suppressed the exit status, an exception when it did not.
+    listing = ->(args) { args.join(" ").include?("--format \"{{.Names}}\"") }
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| listing.(args) && args.last != { raise_on_non_zero_exit: false } }
+      .raises(SSHKit::Command::Failed.new("Cannot connect to the Docker daemon"))
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| listing.(args) && args.last == { raise_on_non_zero_exit: false } }
+      .returns("")
+
+    output = nil
+    assert_raises(SSHKit::Runner::ExecuteError) { output = run_command("stop") }
+    assert_nil output
+  ensure
+    Thread.report_on_exception = true
+  end
+
   test "boot records the replica count on the host's timing entry" do
     stub_boot_states running: { 1 => "123", 2 => "123" }
 
@@ -231,10 +256,19 @@ class CliAppReplicasTest < CliTestCase
       .with { |*args| args.join(" ").include?("--format \"{{.Names}}\"") }
       .returns("app-web-123\napp-web.2-123\n")
 
-    run_command("rollout", "deploy").tap do |output|
-      assert_match "--name app-web-latest ", output
-      assert_match "--name app-web.2-latest ", output
-      assert_match 'dash-proxy rollout deploy app-web --target="123:80,123:80"', output
+    captures = recorded_captures do
+      run_command("rollout", "deploy").tap do |output|
+        assert_match "--name app-web-latest ", output
+        assert_match "--name app-web.2-latest ", output
+        assert_match 'dash-proxy rollout deploy app-web --target="123:80,123:80"', output
+      end
+    end
+
+    # Each slot is checked for the version on its own, before anything boots: the check is
+    # the lookup that tolerates a miss, the endpoint read after the run is the one that doesn't.
+    [ "app-web", "app-web\\.2" ].each do |prefix|
+      assert captures.any? { |capture| capture.start_with?("docker container ls --all --filter 'name=^#{prefix}-latest$' --quiet") && capture.include?("raise_on_non_zero_exit") },
+        "no already-deployed check for #{prefix}: #{captures.inspect}"
     end
   end
 
