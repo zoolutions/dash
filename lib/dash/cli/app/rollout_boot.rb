@@ -60,7 +60,7 @@ class Dash::Cli::App::RolloutBoot
     def replicas
       @replicas ||=
         if role.replicas.scalable?
-          names = capture_with_info(*app.active_containers, raise_on_non_zero_exit: false).lines.map(&:strip)
+          names = capture_with_info(*app.active_containers).lines.map(&:strip)
           (1..role.replicas.clamp(names.filter_map { |name| role.replica_from_name(name) }.uniq.size)).to_a
         else
           [ 1 ]

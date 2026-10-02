@@ -18,7 +18,7 @@ class Dash::Cli::App::SlotVersion
     version = read.to_s.strip.presence
     return version unless foreign?(version)
 
-    names = capture_with_info(*app.active_containers, raise_on_non_zero_exit: false).lines.map(&:strip)
+    names = capture_with_info(*app.active_containers).lines.map(&:strip)
     names.filter_map { |name| role.version_from_name(name) if role.replica_from_name(name) == replica }.first
   end
 

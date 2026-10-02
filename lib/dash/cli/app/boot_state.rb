@@ -12,7 +12,8 @@ class Dash::Cli::App::BootState
 
     clash, running, names, *clashes = Dash::Commands::App.split_states(output).map(&:strip)
 
-    if names&.include?(Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE)
+    # The whole line, never a substring: a version may contain the marker's characters.
+    if names&.lines&.any? { |line| line.strip == Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE }
       raise Dash::Cli::BootError, "Could not list the running containers of #{role}, not booting it"
     end
 
