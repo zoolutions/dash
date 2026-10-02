@@ -132,6 +132,8 @@ class CliScaleTest < CliTestCase
   test "set fails when a removed replica does not stop" do
     stub_running "1.1.1.2" => [ "app-payments-123", "app-payments.2-123" ], "1.1.1.3" => [ "app-payments-123" ]
     Dash::Cli::Scale::ReplicaLeave.any_instance.stubs(:sleep)
+    # Every other execute (the audit line, the drain signal) succeeds; mocha tries the newer
+    # stub first, so only the leaving replica's `docker stop` fails.
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
       .with { |*args| args.join(" ").include?("xargs docker stop") && !args.last.is_a?(Hash) }
