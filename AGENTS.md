@@ -74,6 +74,18 @@ Layer 0: SSHKit                    (remote execution)
 
 Gem tags are plain `vX.Y.Z` (own semver, 3.x line). Historical `dash-v*` tags are frozen. Proxy tags stay `v<base>.<n>` (or plain semver).
 
+## Labels
+
+Every pull request carries exactly one `type` label and at least one `area`
+label from `.github/labels.yml` — never a `status` label. `/plan` labels the
+issue, `/lfg` copies the issue's `type` and `area` labels onto the PR (never
+`plan` or another status label). Without an issue, the type comes from the
+change's conventional-commit prefix and the areas from
+`bin/labels infer $(git diff --name-only origin/main...HEAD)`. Labels change in
+the manifest and reach GitHub with `bin/labels sync`, never through the UI.
+Rules: `.github/LABELS.md`. `bin/labels` + `.github/LABELS.md` are the shared
+labels kit (canonical copy in docs-kit): never edit them in place.
+
 ## Proxy image contract
 
 - dash reads the running proxy version FROM THE IMAGE TAG (`docker inspect kamal-proxy --format '{{.Config.Image}}'`) and compares it with `Gem::Version` (`Dash::Utils.older_version?`). Only the tag is compared, so old `kamal-proxy`-image containers upgrade cleanly to `dash-proxy` images.

@@ -6,6 +6,9 @@ updates:
       github-actions:
         patterns:
           - "*"
+    labels:
+      - dependencies
+      - devops
     schedule:
       interval: weekly
     cooldown:
