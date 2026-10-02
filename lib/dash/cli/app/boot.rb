@@ -18,82 +18,90 @@ class Dash::Cli::App::Boot
     @cli = cli
   end
 
+  # Every replica of the role on this host is swapped together: the old containers keep
+  # serving until all the new ones are ready, and a failure stops every new one.
   def run
     DASH.timings.phase("#{role} #{host}", depth: 1) do |timing|
       @timing = timing
 
-      old_version = old_version_renamed_if_clashing
+      @state = capture_boot_state
+      old_versions = old_versions_renamed_if_clashing
 
       wait_at_barrier if queuer?
 
       begin
-        start_new_version
+        start_new_versions
       rescue => e
         close_barrier if gatekeeper?
-        stop_new_version
+        stop_new_versions
         raise
       end
 
       release_barrier if gatekeeper?
 
-      if old_version
-        stop_old_version(old_version)
-      end
+      stop_old_versions(old_versions)
     end
   end
 
   private
-    # Both answers come back from one round trip, which means the running version is read
-    # before any rename happens. When the clashing container IS the running one, the
+    attr_reader :state
+
+    # Every answer comes back from one round trip, which means the running versions are
+    # read before any rename happens. When a clashing container IS the running one, the
     # version to stop later is the name it was renamed to - the name that was read now
     # belongs to the container this boot is about to start.
-    def old_version_renamed_if_clashing
-      clashing_container_id, old_version = capture_boot_state
+    def old_versions_renamed_if_clashing
+      old_versions = state.replicas.to_h { |replica| [ replica, state.running_version(replica) ] }
 
-      if clashing_container_id.present?
+      state.replicas.select { |replica| state.clashing?(replica) }.each do |replica|
         renamed_version = "#{version}_replaced_#{SecureRandom.hex(8)}"
-        info "Renaming container #{version} to #{renamed_version} as already deployed on #{host}"
+        info "Renaming container #{app(replica).container_name(version)} to #{renamed_version} as already deployed on #{host}"
         execute *auditor.record_then("Renaming container #{version} to #{renamed_version}",
-          app.rename_container(version: version, new_version: renamed_version))
+          app(replica).rename_container(version: version, new_version: renamed_version))
 
-        old_version = renamed_version if old_version == version
+        old_versions[replica] = renamed_version if old_versions[replica] == version
       end
 
-      old_version
+      old_versions.merge(state.surplus_replicas.to_h { |replica| [ replica, state.running_version(replica) ] }).compact
     end
 
     def capture_boot_state
-      clashing, running = Dash::Commands::App.split_state(capture_with_info(*app.boot_state(version), raise_on_non_zero_exit: false))
-
-      [ clashing.strip.presence, running.strip.presence ]
+      Dash::Cli::App::BootState.new(role, capture_with_info(*app.boot_states(version), raise_on_non_zero_exit: false))
     end
 
-    def start_new_version
-      hostname = "#{host.to_s[0...51].chomp(".")}-#{SecureRandom.hex(6)}"
-
+    def start_new_versions
       execute *auditor.record_then("Booted app version #{version}", app.ensure_env_directory)
       upload! role.secrets_io(host), role.secrets_path, mode: "0600"
 
-      # `docker run --detach` prints the id of the container it just started, so the
-      # proxy target comes out of the run itself — asking docker for it again was a round
-      # trip spent re-reading something the host had already said.
-      container_id = capture_with_info(*app.run(hostname: hostname)).strip
+      container_ids = state.replicas.map { |replica| run_replica(replica) }
 
       if running_proxy?
-        endpoint = container_id[0, SHORT_CONTAINER_ID_LENGTH]
-        raise Dash::Cli::BootError, "Failed to get endpoint for #{role} on #{host}, did the container boot?" if endpoint.empty?
+        endpoints = container_ids.map { |container_id| container_id[0, SHORT_CONTAINER_ID_LENGTH] }
+        raise Dash::Cli::BootError, "Failed to get endpoint for #{role} on #{host}, did the container boot?" if endpoints.any?(&:empty?)
 
         run_hook "pre-proxy-deploy", hosts: host.to_s, role: role.name
         info "Deploying #{role} on #{host} via dash-proxy (waiting up to #{DASH.config.deploy_timeout}s for it to become healthy)..."
-        timing_healthy { execute *app.deploy(target: endpoint) }
+        timing_healthy { execute *app.deploy(targets: endpoints) }
         run_hook "post-proxy-deploy", hosts: host.to_s, role: role.name
       else
-        timing_healthy { Dash::Cli::Healthcheck::Poller.wait_for_healthy(role: role, &method(:readiness_status)) }
+        timing_healthy do
+          state.replicas.each do |replica|
+            Dash::Cli::Healthcheck::Poller.wait_for_healthy(role: role) { |*args| readiness_status(replica, *args) }
+          end
+        end
       end
     rescue => e
       error "Failed to boot #{role} on #{host}"
       dump_diagnostics
       raise e
+    end
+
+    # `docker run --detach` prints the id of the container it just started, so the proxy
+    # target comes out of the run itself — asking docker for it again was a round trip
+    # spent re-reading something the host had already said.
+    def run_replica(replica)
+      hostname = "#{host.to_s[0...51].chomp(".")}-#{SecureRandom.hex(6)}"
+      capture_with_info(*app(replica).run(hostname: hostname)).strip
     end
 
     # A role behind the proxy lets `dash-proxy deploy` block on the host until the
@@ -104,11 +112,11 @@ class Dash::Cli::App::Boot
     #
     # Neither capture suppresses a non-zero exit: a status that cannot be read is a broken
     # command, and it has always failed the boot on the spot rather than being waited out.
-    def readiness_status(mode, seconds_left = nil)
+    def readiness_status(replica, mode, seconds_left = nil)
       if mode == :confirm
-        capture_with_info(*app.status(version: version))
+        capture_with_info(*app(replica).status(version: version))
       else
-        capture_with_info *app.wait_for_ready(version: version, timeout: seconds_left),
+        capture_with_info *app(replica).wait_for_ready(version: version, timeout: seconds_left),
           interaction_handler: Dash::Cli::Healthcheck::ProgressReporter.new
       end
     end
@@ -116,22 +124,30 @@ class Dash::Cli::App::Boot
     # Every failed boot gets the container log, and the health probe history when the
     # container declares a healthcheck — non-primary roles have no dash-proxy report to fall back on.
     def dump_diagnostics
-      error capture_with_info(*app.logs(container_id: app.container_id_for_version(version)))
+      state.replicas.each do |replica|
+        error capture_with_info(*app(replica).logs(container_id: app(replica).container_id_for_version(version)))
 
-      health_log = capture_with_info(*app.container_health_log(version: version)).strip
-      error health_log unless health_log.empty? || health_log == "null"
+        health_log = capture_with_info(*app(replica).container_health_log(version: version)).strip
+        error health_log unless health_log.empty? || health_log == "null"
+      end
     rescue SSHKit::Command::Failed
       error "Could not fetch logs for #{version}"
     end
 
-    def stop_new_version
-      execute *app.stop(version: version), raise_on_non_zero_exit: false
+    def stop_new_versions
+      state.replicas.each do |replica|
+        execute *app(replica).stop(version: version), raise_on_non_zero_exit: false
+      end
     end
 
-    def stop_old_version(old_version)
-      run_stop_hook "pre-app-stop", old_version
-      execute *app.stop(version: old_version), raise_on_non_zero_exit: false
-      run_stop_hook "post-app-stop", old_version
+    def stop_old_versions(old_versions)
+      return if old_versions.empty?
+
+      old_versions.each do |replica, old_version|
+        run_stop_hook "pre-app-stop", old_version
+        execute *app(replica).stop(version: old_version), raise_on_non_zero_exit: false
+        run_stop_hook "post-app-stop", old_version
+      end
 
       execute *app.clean_up_assets if assets?
       execute *app.clean_up_error_pages if DASH.config.error_pages_path
@@ -172,15 +188,17 @@ class Dash::Cli::App::Boot
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       yield
     ensure
-      @timing.detail = format("healthy after %.1fs", Process.clock_gettime(Process::CLOCK_MONOTONIC) - started)
+      replicas = ", #{state.count} replicas" if role.replicas.scalable?
+      @timing.detail = format("healthy after %.1fs%s", Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, replicas)
     end
 
     def barrier_role?
       role == DASH.primary_role
     end
 
-    def app
-      @app ||= DASH.app(role: role, host: host)
+    def app(replica = 1)
+      @apps ||= {}
+      @apps[replica] ||= DASH.app(role: role, host: host, replica: replica)
     end
 
     def auditor

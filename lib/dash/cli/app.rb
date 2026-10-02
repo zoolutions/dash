@@ -55,15 +55,19 @@ class Dash::Cli::App < Dash::Cli::Base
       on_roles(DASH.roles, hosts: DASH.app_hosts, parallel: DASH.config.parallel_roles?, rolling: true) do |host, role|
         app = DASH.app(role: role, host: host)
         execute *DASH.auditor.record("Started app version #{DASH.config.version}"), verbosity: :debug
-        execute *app.start, raise_on_non_zero_exit: false
+
+        # Every slot's container of the version, up to max: a stopped app does not know
+        # how many replicas it ran, and a slot that never existed just fails to start.
+        role.replica_numbers.each do |replica|
+          execute *DASH.app(role: role, host: host, replica: replica).start, raise_on_non_zero_exit: false
+        end
 
         if role.running_proxy?
-          version = capture_with_info(*app.current_running_version, raise_on_non_zero_exit: false).strip
-          endpoint = capture_with_info(*app.container_id_for_version(version)).strip
-          raise Dash::Cli::BootError, "Failed to get endpoint for #{role} on #{host}, did the container boot?" if endpoint.empty?
+          endpoints = Dash::Cli::App::RunningTargets.new(self, role: role, host: host).container_ids
+          raise Dash::Cli::BootError, "Failed to get endpoint for #{role} on #{host}, did the container boot?" if endpoints.empty?
 
           cli.run_hook "pre-proxy-deploy", hosts: host.to_s, role: role.name
-          execute *app.deploy(target: endpoint)
+          execute *app.deploy(targets: endpoints)
           cli.run_hook "post-proxy-deploy", hosts: host.to_s, role: role.name
         end
       end
