@@ -1,0 +1,62 @@
+test/cli/scale/placement_test.rb
+  s_aea897c94c51c1::t_0b2efdcb926d46 1-53
+docs/app/views/docs/pages/worker_roles.rb
+  s_aea897c94c51c1::t_f6f47a5017f6b1 266-270
+  s_aea897c94c51c1::t_32b3308b0f08d7 18,261-265,271-307
+docs/app/views/docs/pages/hooks.rb
+  s_aea897c94c51c1::t_32b3308b0f08d7 18-20,26-29,72-79,107-108
+lib/dash/commands/app.rb
+  s_aea897c94c51c1::t_3a2d6784eb0f16 122-126
+lib/dash/cli/scale/replica_join.rb
+  s_aea897c94c51c1::t_d13043f122cbbf 11-12,17,42
+  s_aea897c94c51c1::t_3a2d6784eb0f16 1-10,13-16,18-41,43-62
+docs/app/views/docs/pages/commands.rb
+  s_aea897c94c51c1::t_32b3308b0f08d7 74-78,96,150-158
+test/cli/scale_test.rb
+  s_aea897c94c51c1::t_d992fa5dceb795 1-119,122-129,132-136,138-171,173-184
+  s_aea897c94c51c1::t_76f41b5c6c7bd6 172
+  s_aea897c94c51c1::t_94c5da26a88437 137
+  s_aea897c94c51c1::t_a000a0bf623fad 120-121,130-131
+test/fixtures/deploy_with_replicas_range.yml
+  s_aea897c94c51c1::t_73f86c81080849 1-15
+lib/dash/cli/main.rb
+  s_aea897c94c51c1::t_3a2d6784eb0f16 322-324
+lib/dash/cli/scale/replica_leave.rb
+  s_aea897c94c51c1::t_3a2d6784eb0f16 1-10,13-16,18-35,37-63
+  s_aea897c94c51c1::t_d13043f122cbbf 11-12,17,36
+lib/dash/cli/app/running_targets.rb
+  s_aea897c94c51c1::t_3a2d6784eb0f16 14-15
+lib/dash/cli/scale.rb
+  s_aea897c94c51c1::t_d13043f122cbbf 73,79,90,95
+  s_aea897c94c51c1::t_407b0a945b9b22 5,137
+  s_aea897c94c51c1::t_fc34cdd1883e8b 64,122
+  s_aea897c94c51c1::t_3a2d6784eb0f16 1-4,6-63,65-72,74-78,80-89,91-94,96-121,123-136
+lib/dash/cli/templates/sample_hooks/post-scale-out.sample
+  s_aea897c94c51c1::t_407fdaae62bfe4 1-3
+lib/dash/cli/templates/sample_hooks/pre-scale-in.sample
+  s_aea897c94c51c1::t_407fdaae62bfe4 1-6
+lib/dash/cli/templates/sample_hooks/post-scale-in.sample
+  s_aea897c94c51c1::t_407fdaae62bfe4 1-3
+lib/dash/cli/scale/placement.rb
+  s_aea897c94c51c1::t_152ac900a4721f 1-45
+lib/dash/diagnostics/scale.rb
+  s_aea897c94c51c1::t_3a2d6784eb0f16 1-28
+lib/dash/cli/templates/sample_hooks/pre-scale-out.sample
+  s_aea897c94c51c1::t_407fdaae62bfe4 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "16081bf984f8f30d5b9e09c8430f92f51150156e",
+  "prompts": {},
+  "sessions": {
+    "s_aea897c94c51c1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3c293cb-90b8-4854-b0ca-e77a65cd8c5b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
