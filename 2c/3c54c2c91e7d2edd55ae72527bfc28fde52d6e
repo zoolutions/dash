@@ -1,0 +1,9 @@
+test/cli/scale_test.rb
+  ai_agent 135-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2c3c54c2c91e7d2edd55ae72527bfc28fde52d6e",
+  "prompts": {}
+}
