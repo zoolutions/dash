@@ -58,7 +58,7 @@ class Dash::Cli::Scale < Dash::Cli::Base
       mutex = Mutex.new
 
       on(role.hosts) do |host|
-        names = capture_with_info(*DASH.app(role: role, host: host).active_containers, raise_on_non_zero_exit: false).lines.map(&:strip)
+        names = capture_with_info(*DASH.app(role: role, host: host).active_containers).lines.map(&:strip)
         replicas = names.filter_map { |name| [ role.replica_from_name(name), role.version_from_name(name) ] if role.replica_from_name(name) }.reverse.to_h
 
         mutex.synchronize { running[host.to_s] = replicas }
@@ -118,7 +118,7 @@ class Dash::Cli::Scale < Dash::Cli::Base
       mutex = Mutex.new
 
       on(role.hosts) do |host|
-        lines = capture_with_info(*DASH.app(role: role, host: host).replica_status, raise_on_non_zero_exit: false).lines
+        lines = capture_with_info(*DASH.app(role: role, host: host).replica_status).lines
         mutex.synchronize { statuses[host.to_s] = lines.map { |line| line.chomp.split("\t", 2) }.reject { |name, _| name.blank? } }
       end
 

@@ -87,6 +87,18 @@ class CliScaleTest < CliTestCase
     end
   end
 
+  test "set aborts rather than guess when a host's containers cannot be listed" do
+    listing = ->(args) { args.join(" ").include?("--format \"{{.Names}}\"") }
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| listing.(args) && args.last != { raise_on_non_zero_exit: false } }
+      .raises(SSHKit::Command::Failed.new("Cannot connect to the Docker daemon"))
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| listing.(args) && args.last == { raise_on_non_zero_exit: false } }
+      .returns("")
+
+    assert_raises(SSHKit::Runner::ExecuteError) { run_command("set", "payments", "3") }
+  end
+
   test "set refuses a count outside the role's bounds" do
     error = assert_raises(ArgumentError) { run_command("set", "payments", "7") }
     assert_equal "payments runs 2 to 6 containers on its 2 hosts (replicas min 1, max 3 per host), not 7", error.message
