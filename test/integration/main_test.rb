@@ -112,6 +112,7 @@ class MainTest < IntegrationTest
     assert_container_not_running host: :vm3, name: "app_with_roles-workers.2-replicas-#{version}"
 
     kamal :scale, :set, :workers, "3", "-d", "replicas"
+    assert_container_running host: :vm3, name: "app_with_roles-workers.2-replicas-#{version}"
     assert_container_running host: :vm3, name: "app_with_roles-workers.3-replicas-#{version}"
 
     second_version = update_app_rev

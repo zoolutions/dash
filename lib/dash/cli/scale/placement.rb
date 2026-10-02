@@ -20,7 +20,13 @@ class Dash::Cli::Scale::Placement
   end
 
   private
+    # A host above max (max was lowered since it scaled) sheds its surplus first: the next
+    # deploy would clamp it anyway, and the count asked for would quietly not hold.
     def plan(target)
+      @slots.each_key do |host|
+        remove_from(host) while @slots[host].size > @max
+      end
+
       total = @slots.values.sum(&:size)
 
       (target - total).times { add_one } if target > total
@@ -36,7 +42,10 @@ class Dash::Cli::Scale::Placement
     end
 
     def remove_one
-      host = @slots.keys.reverse.max_by { |candidate| @slots[candidate].size }
+      remove_from @slots.keys.reverse.max_by { |candidate| @slots[candidate].size }
+    end
+
+    def remove_from(host)
       slot = @slots[host].max
 
       @slots[host] = @slots[host] - [ slot ]

@@ -125,14 +125,14 @@ class Dash::Commands::App < Dash::Commands::Base
 
   # Every running container of the role with docker's status line, for `dash scale status`.
   def replica_status
-    docker :ps, *container_filter_args(statuses: ACTIVE_DOCKER_STATUSES, all_replicas: true), "--format", '"{{.Names}}\t{{.Status}}"'
+    active_containers_ps format: '"{{.Names}}\t{{.Status}}"'
   end
 
   # The names of every running container of the role, whatever its slot. A slot's version
   # and whether it counts as running both come out of the name, so this is all a boot needs
   # to know how many replicas a host runs.
   def active_containers
-    docker :ps, *container_filter_args(statuses: ACTIVE_DOCKER_STATUSES, all_replicas: true), "--format", '"{{.Names}}"'
+    active_containers_ps format: '"{{.Names}}"'
   end
 
 
@@ -202,6 +202,12 @@ class Dash::Commands::App < Dash::Commands::Base
   end
 
   private
+    # The one `docker ps` both #active_containers and #replica_status ask: every running
+    # container of the role, whatever its slot.
+    def active_containers_ps(format:)
+      docker :ps, *container_filter_args(statuses: ACTIVE_DOCKER_STATUSES, all_replicas: true), "--format", format
+    end
+
     # The same two readiness sources #status and #health_probe cover, read into `$status`
     # so the loop around them is the same either way. They differ in what a non-zero exit
     # means. A probe that exits non-zero IS the answer "not ready", so its output is

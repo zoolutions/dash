@@ -99,6 +99,55 @@ class CliScaleTest < CliTestCase
     assert_raises(SSHKit::Runner::ExecuteError) { run_command("set", "payments", "3") }
   end
 
+  test "set scales from the image a host runs, not a renamed container's version" do
+    stub_running "1.1.1.2" => [ "app-payments-abc_replaced_0123456789abcdef" ], "1.1.1.3" => [ "app-payments-abc" ]
+
+    run_command("set", "payments", "3").tap do |output|
+      assert_match "--name app-payments.2-abc ", output
+      assert_match "dhh/app:abc ", output
+    end
+  end
+
+  test "set clears a stopped container left in the slot before reusing it" do
+    stub_running "1.1.1.2" => [ "app-payments-123" ], "1.1.1.3" => [ "app-payments-123" ]
+
+    run_command("set", "payments", "3").tap do |output|
+      remove = output.index("docker container ls --all --filter 'name=^app-payments\\.2-123$' --quiet | xargs docker container rm")
+      run = output.index("--name app-payments.2-123 ")
+
+      assert remove, output
+      assert run, output
+      assert remove < run, output
+    end
+  end
+
+  test "set refuses to pool fewer web replicas than are running" do
+    stub_running "1.1.1.1" => [ "app-web-123" ]
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("'name=^app-web\\.2-123$'") }.returns("")
+
+    assert_raises(SSHKit::Runner::ExecuteError) { run_command("set", "web", "2", config: :with_replicas_range) }
+  end
+
+  test "set fails when a removed replica does not stop" do
+    stub_running "1.1.1.2" => [ "app-payments-123", "app-payments.2-123" ], "1.1.1.3" => [ "app-payments-123" ]
+    Dash::Cli::Scale::ReplicaLeave.any_instance.stubs(:sleep)
+    SSHKit::Backend::Abstract.any_instance.stubs(:execute)
+    SSHKit::Backend::Abstract.any_instance.stubs(:execute)
+      .with { |*args| args.join(" ").include?("xargs docker stop") && !args.last.is_a?(Hash) }
+      .raises(SSHKit::Command::Failed.new("no such container"))
+
+    assert_raises(SSHKit::Runner::ExecuteError) { run_command("set", "payments", "2") }
+  end
+
+  test "set waits drain.wait even without a drain signal" do
+    stub_running "1.1.1.1" => [ "app-web-123" ]
+
+    leave = Dash::Cli::Scale::ReplicaLeave.new("1.1.1.2", stub(running_proxy?: false, drain_signal: nil, drain_wait: 7, to_s: "payments"), { 2 => "123" }, stub(info: nil), running: [ 1, 2 ])
+    leave.expects(:sleep).with(7)
+    leave.send(:drain)
+  end
+
   test "set refuses a count outside the role's bounds" do
     error = assert_raises(ArgumentError) { run_command("set", "payments", "7") }
     assert_equal "payments runs 2 to 6 containers on its 2 hosts (replicas min 1, max 3 per host), not 7", error.message
@@ -165,6 +214,20 @@ class CliScaleTest < CliTestCase
       assert_match /1\.1\.1\.2\s+2\s+123\s+Up 5 minutes \(healthy\)/, output
       assert_match /1\.1\.1\.3\s+1\s+123\s+Up 2 hours/, output
     end
+  end
+
+  test "status lists every role without a ROLE argument, and an empty host as such" do
+    stub_status "1.1.1.1" => "app-web-123\tUp 1 hour\napp-web.2-123\tUp 1 hour\n", "1.1.1.2" => "app-payments-123\tUp 2 hours\n", "1.1.1.3" => ""
+
+    run_command("status").tap do |output|
+      assert_match "web: 2 containers", output
+      assert_match "payments: 1 container ", output
+      assert_match /1\.1\.1\.3\s+-\s+no replicas running/, output
+    end
+  end
+
+  test "status refuses an unknown role" do
+    assert_raises(ArgumentError) { run_command("status", "nope") }
   end
 
   test "status --json prints the same shape as a document" do

@@ -32,14 +32,26 @@ class Dash::Cli::Scale::ReplicaJoin
   end
 
   private
+    # A scale-in stops a replica and leaves its container, so the slot's name can still be
+    # taken by a stopped container of this version. `docker rm` refuses a running one, and
+    # the slot is not running - that is why it is being added.
     def start(replica)
+      execute *app(replica).remove_container(version: DASH.config.version), raise_on_non_zero_exit: false
+
       hostname = "#{host.to_s[0...51].chomp(".")}-#{SecureRandom.hex(6)}"
       capture_with_info(*app(replica).run(hostname: hostname))
     end
 
-    # The whole pool, old replicas and new: a deploy replaces the service's target list.
+    # The whole pool, old replicas and new: a deploy replaces the service's target list, so a
+    # missing id would drop a running replica from it.
     def join_proxy
-      targets = Dash::Cli::App::RunningTargets.new(sshkit, role: role, host: host).container_ids(replicas: (@running + replicas).sort)
+      pool = (@running + replicas).sort
+      targets = Dash::Cli::App::RunningTargets.new(sshkit, role: role, host: host).container_ids(replicas: pool)
+
+      if targets.size != pool.size
+        raise Dash::Cli::BootError, "Found #{targets.size} of the #{pool.size} replicas of #{role} on #{host} to pool, not changing the proxy"
+      end
+
       execute *app.deploy(targets: targets.map { |id| id[0, SHORT_CONTAINER_ID_LENGTH] })
     end
 

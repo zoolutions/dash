@@ -7,7 +7,8 @@ servers:
   workers:
     hosts:
       - vm3
-    cmd: sleep infinity
+    # Traps the drain signal, so a scale-in drains instead of suspending the process.
+    cmd: sh -c 'trap exit TSTP TERM; while true; do sleep 1; done'
     healthcheck: false
     replicas:
       min: 1

@@ -26,8 +26,10 @@ class Dash::Cli::Scale::ReplicaLeave
       drain
     end
 
+    # A stop that fails must fail the scale-in: the replica would still run while the
+    # command reported the count reached.
     leaving.each do |replica, version|
-      execute *app(replica).stop(version: version), raise_on_non_zero_exit: false
+      execute *app(replica).stop(version: version)
     end
   end
 
@@ -38,11 +40,13 @@ class Dash::Cli::Scale::ReplicaLeave
       execute *app.deploy(targets: targets.map { |id| id[0, SHORT_CONTAINER_ID_LENGTH] })
     end
 
+    # The signal is optional; the wait is not tied to it, so `drain: { wait: N }` alone
+    # still gives a replica N seconds before `docker stop`.
     def drain
-      return unless role.drain_signal
-
-      leaving.each do |replica, version|
-        execute *app(replica).signal(role.drain_signal, version: version), raise_on_non_zero_exit: false
+      if role.drain_signal
+        leaving.each do |replica, version|
+          execute *app(replica).signal(role.drain_signal, version: version), raise_on_non_zero_exit: false
+        end
       end
 
       await_drain

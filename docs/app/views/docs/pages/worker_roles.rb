@@ -279,7 +279,7 @@ class Views::Docs::Pages::WorkerRoles < DocsUI::Page
       DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
         servers:
           payments:
-            hosts: [ 10.0.0.21 ]
+            hosts: [ 10.0.0.21, 10.0.0.22 ]
             cmd: bundle exec sidekiq -q payments
             replicas:
               min: 1      # per host, booted on every deploy when fewer run

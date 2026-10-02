@@ -26,7 +26,7 @@ class Views::Docs::Pages::Hooks < DocsUI::Page
     [ "pre-scale-out", "before `dash scale set` adds containers of a role", "scale set", "", "dash" ],
     [ "post-scale-out", "after the new containers are ready", "scale set", "", "dash" ],
     [ "pre-scale-in", "before `dash scale set` removes containers of a role", "scale set", "", "dash" ],
-    [ "post-scale-in", "after they are drained and stopped", "scale set", "", "dash" ],
+    [ "post-scale-in", "after they are stopped (drained first, when the proxy or `drain` applies)", "scale set", "", "dash" ],
     [ "docker-setup", "after Docker is confirmed installed on every host", "server bootstrap, setup", "", "" ]
   ].freeze
 

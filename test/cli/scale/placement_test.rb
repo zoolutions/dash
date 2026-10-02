@@ -46,6 +46,19 @@ class CliScalePlacementTest < ActiveSupport::TestCase
     assert_equal({ "b" => [ 1 ] }, placement.additions)
   end
 
+  test "skips a host that is already full" do
+    placement = placement({ "a" => [ 1, 2, 3 ], "b" => [ 1 ] }, target: 5)
+
+    assert_equal({ "b" => [ 2 ] }, placement.additions)
+  end
+
+  test "brings a host above max back down to it before balancing" do
+    placement = placement({ "a" => [ 1, 2, 3, 4 ], "b" => [ 1 ] }, target: 4, max: 2)
+
+    assert_equal({ "a" => [ 4, 3 ] }, placement.removals)
+    assert_equal({ "b" => [ 2 ] }, placement.additions)
+  end
+
   private
     def placement(running, target:, max: 3)
       Dash::Cli::Scale::Placement.new(running: running, target: target, max: max)

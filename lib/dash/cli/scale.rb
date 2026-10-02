@@ -100,8 +100,11 @@ class Dash::Cli::Scale < Dash::Cli::Base
       run_hook "post-scale-in", role: role.name, hosts: hosts.join(","), replicas: count.to_s
     end
 
+    # The version names the image, so a container a boot renamed out of the way
+    # (`<version>_replaced_<hex>`) still runs `<version>`.
     def host_version(role, replicas)
-      replicas[1] || replicas.values.first || raise(Dash::Cli::BootError, "Nothing of #{role} runs on a host to scale from, deploy it first")
+      version = replicas[1] || replicas.values.first || raise(Dash::Cli::BootError, "Nothing of #{role} runs on a host to scale from, deploy it first")
+      version.sub(/_replaced_\h{16}\z/, "")
     end
 
     def using_version(version)
@@ -129,6 +132,8 @@ class Dash::Cli::Scale < Dash::Cli::Base
       say "#{role[:role]}: #{role[:total]} #{"container".pluralize(role[:total])} (replicas min #{role[:min]}, max #{role[:max]} per host)"
 
       role[:hosts].each do |host, replicas|
+        say format("  %-20s %-3s %s", host, "-", "no replicas running") if replicas.empty?
+
         replicas.each do |replica|
           say format("  %-20s %-3s %-20s %s", host, replica[:replica], replica[:version], replica[:status])
         end
