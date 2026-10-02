@@ -15,6 +15,7 @@ class Views::Docs::Pages::WorkerRoles < DocsUI::Page
     supervisor_readyz
     listener_everywhere
     stop_budget
+    replicas
     rolling
     exec_probes
     checking
@@ -253,6 +254,57 @@ class Views::Docs::Pages::WorkerRoles < DocsUI::Page
         `deploy_timeout` comfortably above that — the examples above use 120.
         Both keys are documented in the
         [deploy.yml reference](/docs/configuration).
+      MD
+    end
+  end
+
+  def replicas
+    DocsUI::Section("Replicas") do
+      md <<~'MD'
+        Open-source Sidekiq is one Ruby process, so it uses roughly one core
+        however big the host is. `replicas` runs several containers of one role
+        on each host instead of declaring the same worker twice under two names.
+
+        Every replica opens its own connection pool, so `pool × replicas ×
+        hosts` is what the database sees, and it has to fit the database's (or
+        the pooler's) connection limit. For web, raising `WEB_CONCURRENCY` on one host is
+        still the cheaper first move — Puma workers share memory through
+        `preload_app!` — and replicas of a proxied role are all targets of the
+        role's one dash-proxy service on that host.
+
+        Replicas share the host's volumes: fine for read-only config or a
+        shared cache, wrong for a per-process store, so dash warns when a
+        scalable role mounts one.
+      MD
+      DocsUI::Code(<<~YAML, filename: "config/deploy.yml", lexer: :yaml)
+        servers:
+          payments:
+            hosts: [ 10.0.0.21, 10.0.0.22 ]
+            cmd: bundle exec sidekiq -q payments
+            replicas:
+              min: 1      # per host, booted on every deploy when fewer run
+              max: 4      # per host, ceiling for dash scale set
+            drain:
+              signal: TSTP
+              wait: 120
+            stop_timeout: 150
+      YAML
+      md <<~'MD'
+        `dash scale set payments 6` changes the count at runtime, at the
+        version already running, without a deploy — the count is containers
+        across the role's hosts, like Heroku dynos. A deploy boots as many
+        replicas as are running (never fewer than `min`, never more than
+        `max`), so the next deploy keeps it. `dash scale status` shows each
+        host's replicas.
+
+        Scaling in is graceful. A web replica leaves the proxy pool before it
+        stops, which drains its in-flight requests. A worker replica is sent
+        `drain.signal` (`TSTP` tells Sidekiq to stop fetching), given
+        `drain.wait` seconds to finish what it holds, then stopped with
+        `docker stop -t stop_timeout`. The budget above still applies, with
+        the drain in front: `drain.wait` is spent before `docker stop` starts
+        counting, so the supervisor shutdown deadline only has to cover what
+        is left in flight after it.
       MD
     end
   end
