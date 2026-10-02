@@ -1,0 +1,17 @@
+servers:
+  web:
+    hosts:
+      - vm1
+      - vm2
+    replicas: 2
+  workers:
+    hosts:
+      - vm3
+    cmd: sleep infinity
+    healthcheck: false
+    replicas:
+      min: 1
+      max: 3
+    drain:
+      signal: TSTP
+      wait: 1
