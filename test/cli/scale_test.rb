@@ -94,6 +94,13 @@ class CliScaleTest < CliTestCase
     assert_raises(ArgumentError) { run_command("set", "payments", "1") }
   end
 
+  test "set reads the count as a decimal, so a leading zero is not octal" do
+    stub_running "1.1.1.2" => [ "app-payments-123" ], "1.1.1.3" => [ "app-payments-123" ]
+
+    assert_match "payments now runs 3 containers", run_command("set", "payments", "03")
+    assert_raises(ArgumentError) { run_command("set", "payments", "0x3") }
+  end
+
   test "set refuses an unknown role" do
     error = assert_raises(ArgumentError) { run_command("set", "nope", "2") }
     assert_match "No role named nope", error.message

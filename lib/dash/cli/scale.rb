@@ -6,7 +6,7 @@ class Dash::Cli::Scale < Dash::Cli::Base
   desc "set ROLE COUNT", "Run COUNT containers of ROLE across its hosts, within its replicas bounds"
   def set(role_name, count)
     role = scalable_role(role_name)
-    count = Integer(count)
+    count = Integer(count, 10)
     ensure_within_bounds(role, count)
 
     modify(lock: true) do
