@@ -2,7 +2,7 @@
 description: "Use when a CI test failure looks intermittent — takes a failed Actions run, PR, or test path; drives evidence → reproduction → root cause → stress-proofed fix → knowledge capture. Never masks with skip/retry."
 model: opus
 argument-hint: "Actions run URL/ID, PR number, or test path (e.g. test/integration/app_test.rb)"
-allowed-tools: Bash(gh run view:*), Bash(gh run download:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh api:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh label list:*), Bash(git log:*), Bash(git diff:*), Bash(git show:*), Bash(git blame:*), Bash(bin/test:*), Bash(bundle exec:*), Bash(docker:*), Read, Write, Edit, Glob, Grep, Agent
+allowed-tools: Bash(gh run view:*), Bash(gh run download:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh api:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(bin/labels infer:*), Bash(bin/labels sync), Bash(gh label list:*), Bash(git log:*), Bash(git diff:*), Bash(git show:*), Bash(git blame:*), Bash(bin/test:*), Bash(bundle exec:*), Bash(docker:*), Read, Write, Edit, Glob, Grep, Agent
 ---
 
 # Debug Flaky Test: $ARGUMENTS
@@ -102,7 +102,7 @@ Hard rules: no `skip`, no retry-wrapping the assertion, no `sleep`, no assertion
 ## Phase 8: Record
 
 1. Append a dated entry to `docs/flaky-tests.md` (create it if missing): test, signature class, root cause (the one sentence), fix, reproduction recipe. Prune entries whose tests no longer exist.
-2. Issues: if the fix ships now, reference and close any open `flaky-test` issue in the PR (`Closes #N`). If the flake can't be fixed now, create one: `gh issue create --repo zoolutions/dash --label flaky-test` with the evidence and recipe (create the label first if it doesn't exist).
+2. Issues: if the fix ships now, reference and close any open `flaky-test` issue in the PR (`Closes #N`). If the flake can't be fixed now, create one: `gh issue create --repo zoolutions/dash --label flaky-test --label chore --label <area>` with the evidence and recipe (`chore` is the type for a test-only issue; the area is `bin/labels infer <the flaky test's paths>`, never zero). If a label is missing on GitHub, run `bin/labels sync`; never `gh label create` a label that isn't in `.github/labels.yml`. A fix PR gets one `type` + at least one `area` label (`.github/LABELS.md`).
 3. If the investigation exposed something systemic (CI dind config, shared test helpers, upstream-sync interaction), file it as its own issue — don't bury it in the memory file.
 
 Now begin with Phase 0 for: $ARGUMENTS
