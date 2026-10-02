@@ -1,0 +1,51 @@
+lib/dash/configuration/docs/configuration.yml
+  s_aea897c94c51c1::t_d10e07763d34b0 139-140
+lib/dash/cli/app.rb
+  s_aea897c94c51c1::t_d10e07763d34b0 69-72,88-90,94,256-260,281-282
+lib/dash/commands/app.rb
+  s_aea897c94c51c1::t_d10e07763d34b0 10-13,144,183,258-261
+lib/dash/cli/app/rollout_boot.rb
+  s_aea897c94c51c1::t_d10e07763d34b0 28
+test/commands/app_replicas_test.rb
+  s_aea897c94c51c1::t_d10e07763d34b0 71,77,83,103-105,112
+lib/dash/cli/app/boot_state.rb
+  s_aea897c94c51c1::t_d10e07763d34b0 15-18,52-55,57-61,65-67
+lib/dash/cli/prune.rb
+  s_aea897c94c51c1::t_d10e07763d34b0 19-20
+lib/dash/cli/app/running_targets.rb
+  s_aea897c94c51c1::t_256156579ae0e7 2-3,14,25-36
+test/cli/scale_test.rb
+  s_aea897c94c51c1::t_19cf4faaed1c2a 37,53-54,64-65,80,85
+lib/dash/commands/app/containers.rb
+  s_aea897c94c51c1::t_d10e07763d34b0 14,28
+lib/dash/configuration/role/replicas.rb
+  s_aea897c94c51c1::t_d10e07763d34b0 7
+lib/dash/configuration.rb
+  s_aea897c94c51c1::t_d10e07763d34b0 518-521
+test/configuration/role/replicas_test.rb
+  s_aea897c94c51c1::t_d10e07763d34b0 169-188
+lib/dash/configuration/docs/role.yml
+  s_aea897c94c51c1::t_d10e07763d34b0 107
+lib/dash/configuration/role/drain.rb
+  s_aea897c94c51c1::t_d10e07763d34b0 11-13,36-37,41-47
+test/cli/app_replicas_test.rb
+  s_aea897c94c51c1::t_d10e07763d34b0 26,66,78,91,119,133,142,146-165,228,270-273,276,287-338
+lib/dash/configuration/role.rb
+  s_aea897c94c51c1::t_d10e07763d34b0 259-265,278,378
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "c6ee55462ff89660d411a7e27f5a27d1bd086eb0",
+  "prompts": {},
+  "sessions": {
+    "s_aea897c94c51c1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3c293cb-90b8-4854-b0ca-e77a65cd8c5b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}

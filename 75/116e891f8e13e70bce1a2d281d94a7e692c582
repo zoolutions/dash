@@ -1,0 +1,29 @@
+lib/dash/cli/app/running_targets.rb
+  s_aea897c94c51c1::t_26283a7f366383 33-34,36
+lib/dash/cli/app/rollout_boot.rb
+  s_aea897c94c51c1::t_26283a7f366383 63
+test/cli/app_replicas_test.rb
+  s_aea897c94c51c1::t_9fb6428f4755c1 174-176,178,180-182
+  s_aea897c94c51c1::t_f00cca50fea221 166-173,177,179,183-190,259-261,263-266
+  s_aea897c94c51c1::t_66dfafcdccc945 262,267-271
+lib/dash/cli/app/boot_state.rb
+  s_aea897c94c51c1::t_26283a7f366383 15-16
+lib/dash/cli/app/slot_version.rb
+  s_aea897c94c51c1::t_26283a7f366383 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "75116e891f8e13e70bce1a2d281d94a7e692c582",
+  "prompts": {},
+  "sessions": {
+    "s_aea897c94c51c1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3c293cb-90b8-4854-b0ca-e77a65cd8c5b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}

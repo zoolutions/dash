@@ -1,0 +1,57 @@
+lib/dash/configuration/docs/configuration.yml
+  s_aea897c94c51c1::t_ad7bb11af81139 139-140
+lib/dash/configuration/docs/role.yml
+  s_aea897c94c51c1::t_ef32e670c5b115 107
+lib/dash/commands/app.rb
+  s_aea897c94c51c1::t_7468b5319a4a17 139,253-256
+  s_aea897c94c51c1::t_cbce5a64bc1b4d 10-13,178
+test/configuration/role/replicas_test.rb
+  s_aea897c94c51c1::t_ef32e670c5b115 169-188
+test/cli/app_replicas_test.rb
+  s_aea897c94c51c1::t_b7f18a7da6252f 146-165,287
+  s_aea897c94c51c1::t_9511dc2b8a9c5c 290-338
+  s_aea897c94c51c1::t_42e55d9cfb99d1 91
+  s_aea897c94c51c1::t_db23284249b27a 26,66,78,119,133,142
+  s_aea897c94c51c1::t_bdca7fa24389ec 228,270-273,276
+lib/dash/commands/app/containers.rb
+  s_aea897c94c51c1::t_7468b5319a4a17 14,28
+lib/dash/cli/app/boot_state.rb
+  s_aea897c94c51c1::t_cbce5a64bc1b4d 15-18,52-55,57-61,65-67
+lib/dash/configuration.rb
+  s_aea897c94c51c1::t_ef32e670c5b115 518-521
+lib/dash/configuration/role/replicas.rb
+  s_aea897c94c51c1::t_ef32e670c5b115 7
+lib/dash/configuration/role/drain.rb
+  s_aea897c94c51c1::t_ef32e670c5b115 11-13,36-37,41-47
+lib/dash/cli/app/rollout_boot.rb
+  s_aea897c94c51c1::t_927d77a2cc46bb 28
+lib/dash/cli/app/running_targets.rb
+  s_aea897c94c51c1::t_927d77a2cc46bb 2-3,14-15,25-36
+lib/dash/cli/app.rb
+  s_aea897c94c51c1::t_927d77a2cc46bb 69-72,88-90,94,257-260,281-282
+  s_aea897c94c51c1::t_53ebfa05b5f966 256
+lib/dash/cli/prune.rb
+  s_aea897c94c51c1::t_ef32e670c5b115 19-20
+lib/dash/configuration/role.rb
+  s_aea897c94c51c1::t_7468b5319a4a17 259-265
+  s_aea897c94c51c1::t_f62f26193a4e9c 278,378
+test/commands/app_replicas_test.rb
+  s_aea897c94c51c1::t_db23284249b27a 71,77,83,104-105
+  s_aea897c94c51c1::t_b7f18a7da6252f 103,112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0a5ed33ea50a956bbcf99646acb16c1321117a9b",
+  "prompts": {},
+  "sessions": {
+    "s_aea897c94c51c1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3c293cb-90b8-4854-b0ca-e77a65cd8c5b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}

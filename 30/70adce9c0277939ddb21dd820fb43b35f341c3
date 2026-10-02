@@ -1,0 +1,32 @@
+lib/dash/configuration/role/replicas.rb
+  s_aea897c94c51c1::t_16dfcef34dc67a 1-72
+lib/dash/configuration/role.rb
+  s_aea897c94c51c1::t_31251bdd60c85b 6-9
+  s_aea897c94c51c1::t_59ed49e5c56522 37-44,46-49
+  s_aea897c94c51c1::t_279677c79ac435 359-363
+  s_aea897c94c51c1::t_380658e4cf2c0e 235,238,240-275
+lib/dash/configuration/validator/role.rb
+  s_aea897c94c51c1::t_7ac3693f97c574 19-35
+lib/dash/configuration/docs/role.yml
+  s_aea897c94c51c1::t_113732e7372fc8 69-108
+lib/dash/configuration/role/drain.rb
+  s_aea897c94c51c1::t_79abd4172b846c 1-37
+test/configuration/role/replicas_test.rb
+  s_aea897c94c51c1::t_7198dd07d8ed17 1-228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3070adce9c0277939ddb21dd820fb43b35f341c3",
+  "prompts": {},
+  "sessions": {
+    "s_aea897c94c51c1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3c293cb-90b8-4854-b0ca-e77a65cd8c5b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
