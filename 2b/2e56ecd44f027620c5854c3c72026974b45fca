@@ -1,0 +1,21 @@
+test/cli/scale_test.rb
+  s_aea897c94c51c1::t_e165a93ae11c1c 90-101
+lib/dash/cli/scale.rb
+  s_aea897c94c51c1::t_8712a76d3c6628 61,121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2b2e56ecd44f027620c5854c3c72026974b45fca",
+  "prompts": {},
+  "sessions": {
+    "s_aea897c94c51c1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3c293cb-90b8-4854-b0ca-e77a65cd8c5b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
