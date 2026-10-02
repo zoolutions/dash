@@ -218,6 +218,51 @@ class CliAppReplicasTest < CliTestCase
     end
   end
 
+  test "stale_containers --stop never stops slot 1's live container when --latest read a leftover slot" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?(SEPARATOR) }
+      .returns("123\napp-workers.2-123\n#{SEPARATOR}\napp-workers.2-123\n")
+    stub_active_containers "app-workers-123\napp-workers.2-123\n"
+
+    run_command("stale_containers", "--stop", config: :with_accessories, host: "1.1.1.3").tap do |output|
+      assert_no_match(/Stopping stale container/, output)
+      assert_no_match(/app-workers\.2-123/, output)
+    end
+  end
+
+  test "stale_containers still finds slot 1's stale versions when --latest read a leftover slot" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?(SEPARATOR) }
+      .returns("123\n122\napp-workers.2-123\n#{SEPARATOR}\napp-workers.2-123\n")
+    stub_active_containers "app-workers-123\napp-workers.2-123\n"
+
+    run_command("stale_containers", config: :with_accessories, host: "1.1.1.3").tap do |output|
+      assert_match "Detected stale container for role workers with version 122", output
+      assert_no_match(/version 123/, output)
+    end
+  end
+
+  test "start registers slot 1 when --latest read a leftover slot" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("app-web.2-999")
+    stub_active_containers "app-web-999\napp-web.2-999\n"
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("'name=^app-web-999$'") }.returns("abc")
+
+    run_command("start", config: :with_accessories).tap do |output|
+      assert_match 'dash-proxy deploy app-web --target="abc:80"', output
+    end
+  end
+
+  test "exec --reuse --replica skips roles without that slot" do
+    captures = recorded_captures { run_command("exec", "--reuse", "--replica", "2", "ruby -v", config: :with_accessories) }
+
+    assert captures.none? { |capture| capture.start_with?("docker exec") }, captures.inspect
+  end
+
+  test "logs --replica skips roles without that slot" do
+    assert_no_match(/Nothing found/, run_command("logs", "--replica", "2", config: :with_accessories))
+  end
+
   private
     def run_command(*command, config: :with_replicas, host: "1.1.1.1", allow_execute_error: false)
       stdouted do
@@ -242,6 +287,12 @@ class CliAppReplicasTest < CliTestCase
       SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
         .with { |*args| args.join(" ").include?(SEPARATOR) }
         .returns(output)
+    end
+
+    def stub_active_containers(names)
+      SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+        .with { |*args| args.join(" ").include?("--format \"{{.Names}}\"") && !args.join(" ").include?(SEPARATOR) }
+        .returns(names)
     end
 
     def stub_run_capture_ids(*ids)
