@@ -43,6 +43,17 @@ class CommandsPruneTest < ActiveSupport::TestCase
       new_command(destination: "staging").app_containers(retain: 5, role: role(:web, destination: "staging")).join(" ")
   end
 
+  test "app containers of a scalable role are scoped to one slot, so retain holds per slot" do
+    @config[:servers] = { "web" => { "hosts" => [ "1.1.1.1" ], "replicas" => { "max" => 3 } } }
+
+    assert_equal \
+      "docker ps -q -a --filter label=service=app --filter label=destination= --filter label=role=web --filter 'name=^app-web-' --filter status=created --filter status=exited --filter status=dead | tail -n +6 | while read container_id; do docker rm $container_id; done",
+      new_command.app_containers(retain: 5, role: role(:web)).join(" ")
+
+    assert_match "--filter 'name=^app-web\\.2-' --filter status=created",
+      new_command.app_containers(retain: 5, role: role(:web), replica: 2).join(" ")
+  end
+
   private
     def new_command(destination: nil)
       Dash::Commands::Prune.new(config(destination: destination))

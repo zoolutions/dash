@@ -13,14 +13,30 @@ class Dash::Commands::App < Dash::Commands::Base
     output.to_s.partition(/^#{Regexp.escape(BOOT_STATE_SEPARATOR)}$/).values_at(0, 2)
   end
 
-  attr_reader :role, :host
+  # Every segment of a #boot_states capture, raw, in the order they were asked.
+  def self.split_states(output)
+    output.to_s.split(/^#{Regexp.escape(BOOT_STATE_SEPARATOR)}$/, -1)
+  end
 
-  delegate :container_name, to: :role
+  attr_reader :role, :host, :replica
 
-  def initialize(config, role: nil, host: nil)
+  # `replica` is the slot this instance reads and writes. Slot 1 is the container the role
+  # always had, so a role without `replicas:` is only ever slot 1 and its commands are
+  # exactly what they were before replicas existed.
+  def initialize(config, role: nil, host: nil, replica: 1)
     super(config)
     @role = role
     @host = host
+    @replica = replica
+  end
+
+  def container_name(version = nil)
+    role.replica_name(replica, version)
+  end
+
+  # The same role and host, another slot.
+  def for_replica(replica)
+    self.class.new(config, role: role, host: host, replica: replica)
   end
 
   def run(hostname: nil)
@@ -34,11 +50,13 @@ class Dash::Commands::App < Dash::Commands::Base
       "--env", "KAMAL_VERSION=\"#{config.version}\"",
       "--env", "KAMAL_HOST=\"#{host}\"",
       *([ "--env", "KAMAL_DESTINATION=\"#{config.destination}\"" ] if config.destination),
+      *([ "--env", "DASH_REPLICA=\"#{replica}\"" ] if slotted?),
       *role.env_args(host),
       *role.logging_args,
       *config.volume_args,
       *role.asset_volume_args,
       *role.label_args,
+      *(argumentize("--label", { "replica" => replica }) if slotted?),
       *role.option_args,
       *role.healthcheck_args,
       config.absolute_image,
@@ -92,7 +110,20 @@ class Dash::Commands::App < Dash::Commands::Base
   end
 
   def info
-    docker :ps, *container_filter_args
+    docker :ps, *container_filter_args(all_replicas: true)
+  end
+
+  # `docker kill --signal`: how a replica without the proxy is told to stop taking work
+  # before it is stopped.
+  def signal(signal, version:)
+    pipe container_id_for_version(version), xargs(docker(:kill, "--signal=#{signal}"))
+  end
+
+  # The names of every running container of the role, whatever its slot. A slot's version
+  # and whether it counts as running both come out of the name, so this is all a boot needs
+  # to know how many replicas a host runs.
+  def active_containers
+    docker :ps, *container_filter_args(statuses: ACTIVE_DOCKER_STATUSES, all_replicas: true), "--format", '"{{.Names}}"'
   end
 
 
@@ -127,6 +158,23 @@ class Dash::Commands::App < Dash::Commands::Base
   # Everything the stale check needs from a host: every version of the role that has a
   # container, and the version running now - the difference is what is stale. Same shape
   # as #boot_state, same separator, same reason for `;` over `&&`.
+  # #boot_state for the whole role on this host, still one round trip: slot 1's answers,
+  # then every running container of the role (which carries each other slot's version and
+  # the replica count), then whether slots 2..max already hold the version being deployed.
+  # A role without replicas asks for the running containers too, so a deploy after
+  # `replicas` was lowered still finds the slots it has to stop.
+  def boot_states(version)
+    clashes = role.replica_numbers.drop(1).flat_map do |replica|
+      [ [ :echo, BOOT_STATE_SEPARATOR ], for_replica(replica).container_id_for_version(version) ]
+    end
+
+    chain \
+      boot_state(version),
+      [ :echo, BOOT_STATE_SEPARATOR ],
+      active_containers,
+      *clashes
+  end
+
   def stale_state
     chain \
       list_versions,
@@ -185,8 +233,8 @@ class Dash::Commands::App < Dash::Commands::Base
       docker :ps, "--latest", *format, *container_filter_args(statuses: ACTIVE_DOCKER_STATUSES), argumentize("--filter", filters)
     end
 
-    def container_filter_args(statuses: nil)
-      argumentize "--filter", container_filters(statuses: statuses)
+    def container_filter_args(statuses: nil, all_replicas: false)
+      argumentize "--filter", container_filters(statuses: statuses, all_replicas: all_replicas)
     end
 
     def image_filter_args
@@ -195,13 +243,18 @@ class Dash::Commands::App < Dash::Commands::Base
 
     def extract_version_from_name
       # Extract SHA from "service-role-dest-SHA"
-      %(while read line; do echo ${line##{role.container_prefix}-}; done)
+      %(while read line; do echo ${line##{role.replica_prefix(replica)}-}; done)
     end
 
-    def container_filters(statuses: nil)
+    def slotted?
+      role.present? && role.replica_scoped?(replica)
+    end
+
+    def container_filters(statuses: nil, all_replicas: false)
       [ "label=service=#{config.service}" ].tap do |filters|
         filters << "label=destination=#{config.destination}"
         filters << "label=role=#{role}" if role
+        filters << role.replica_name_filter(replica) if slotted? && !all_replicas
         statuses&.each do |status|
           filters << "status=#{status}"
         end

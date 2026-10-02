@@ -226,7 +226,7 @@ class CommandsAppTest < ActiveSupport::TestCase
   test "deploy" do
     assert_equal \
       "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
-      new_command.deploy(target: "172.1.0.2").join(" ")
+      new_command.deploy(targets: [ "172.1.0.2" ]).join(" ")
   end
 
   test "deploy with path timeouts" do
@@ -234,13 +234,13 @@ class CommandsAppTest < ActiveSupport::TestCase
 
     assert_equal \
       "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --path-timeout=\"/api/reports=5m\" --path-timeout=\"/stream=0s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
-      new_command.deploy(target: "172.1.0.2").join(" ")
+      new_command.deploy(targets: [ "172.1.0.2" ]).join(" ")
   end
 
   test "deploy with basic auth" do
     @config[:proxy] = { "ssl" => true, "host" => "example.com", "basic_auth" => { "username" => "admin", "password" => "s3cr3t" } }
 
-    command = new_command.deploy(target: "172.1.0.2")
+    command = new_command.deploy(targets: [ "172.1.0.2" ])
 
     # The executed argv carries the real credential...
     assert_equal \
@@ -257,7 +257,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
     assert_equal \
       "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --host=\"example.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
-      new_command.deploy(target: "172.1.0.2").join(" ")
+      new_command.deploy(targets: [ "172.1.0.2" ]).join(" ")
   end
 
   test "deploy with SSL targeting multiple hosts" do
@@ -265,7 +265,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
     assert_equal \
       "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --host=\"example.com\" --host=\"anotherexample.com\" --tls --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
-      new_command.deploy(target: "172.1.0.2").join(" ")
+      new_command.deploy(targets: [ "172.1.0.2" ]).join(" ")
   end
 
   test "deploy with SSL false" do
@@ -273,7 +273,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
     assert_equal \
       "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
-      new_command.deploy(target: "172.1.0.2").join(" ")
+      new_command.deploy(targets: [ "172.1.0.2" ]).join(" ")
   end
 
   test "deploy with custom healthcheck" do
@@ -281,7 +281,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
     assert_equal \
       "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --health-check-interval=\"1s\" --health-check-timeout=\"10s\" --health-check-path=\"/health\" --health-check-port=\"3001\" --health-check-host=\"health.example.com\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
-      new_command.deploy(target: "172.1.0.2").join(" ")
+      new_command.deploy(targets: [ "172.1.0.2" ]).join(" ")
   end
 
   test "deploy with healthcheck port only" do
@@ -289,7 +289,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
     assert_equal \
       "docker exec dash-proxy dash-proxy deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\" --health-check-port=\"8080\" --buffer-requests --buffer-responses --log-request-header=\"Cache-Control\" --log-request-header=\"Last-Modified\" --log-request-header=\"User-Agent\"",
-      new_command.deploy(target: "172.1.0.2").join(" ")
+      new_command.deploy(targets: [ "172.1.0.2" ]).join(" ")
   end
 
   test "remove" do
@@ -301,7 +301,7 @@ class CommandsAppTest < ActiveSupport::TestCase
   test "rollout_deploy" do
     assert_equal \
       "docker exec dash-proxy dash-proxy rollout deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\"",
-      new_command.rollout_deploy(target: "172.1.0.2").join(" ")
+      new_command.rollout_deploy(targets: [ "172.1.0.2" ]).join(" ")
   end
 
   test "rollout_deploy only passes flags the proxy rollout accepts" do
@@ -309,7 +309,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
     assert_equal \
       "docker exec dash-proxy dash-proxy rollout deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"30s\" --drain-timeout=\"30s\"",
-      new_command.rollout_deploy(target: "172.1.0.2").join(" ")
+      new_command.rollout_deploy(targets: [ "172.1.0.2" ]).join(" ")
   end
 
   test "rollout_deploy with custom timeouts" do
@@ -318,7 +318,7 @@ class CommandsAppTest < ActiveSupport::TestCase
 
     assert_equal \
       "docker exec dash-proxy dash-proxy rollout deploy app-web --target=\"172.1.0.2:80\" --deploy-timeout=\"6s\" --drain-timeout=\"12s\"",
-      new_command.rollout_deploy(target: "172.1.0.2").join(" ")
+      new_command.rollout_deploy(targets: [ "172.1.0.2" ]).join(" ")
   end
 
   test "rollout_set with percent" do

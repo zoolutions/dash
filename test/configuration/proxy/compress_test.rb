@@ -49,14 +49,14 @@ class ConfigurationProxyCompressTest < ActiveSupport::TestCase
 
   test "encodings reach the proxy as repeated flags in order" do
     args = configuration("compress" => { "encodings" => [ "br", "gzip" ] })
-      .proxy.deploy_command_args(target: "1.1.1.1")
+      .proxy.deploy_command_args(targets: [ "1.1.1.1" ])
 
     assert_equal [ "--compress=\"br\"", "--compress=\"gzip\"" ], args.grep(/^--compress=/)
   end
 
   test "content_types reach the proxy as repeated flags" do
     args = configuration("compress" => { "enabled" => true, "content_types" => [ "text/html", "application/json" ] })
-      .proxy.deploy_command_args(target: "1.1.1.1")
+      .proxy.deploy_command_args(targets: [ "1.1.1.1" ])
 
     assert_includes args, "--compress-content-type=\"text/html\""
     assert_includes args, "--compress-content-type=\"application/json\""

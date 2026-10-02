@@ -37,7 +37,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
   test "header values with spaces, quotes and dollars survive escaping" do
     value = %(a "quoted" $HOME and 'single' `tick`)
     args = configuration("headers" => { "response" => { "set" => { "X-Test" => value } } })
-      .proxy.deploy_command_args(target: "1.1.1.1")
+      .proxy.deploy_command_args(targets: [ "1.1.1.1" ])
 
     flag = args.find { |arg| arg.start_with?("--set-response-header=") }
 
@@ -90,7 +90,7 @@ class ConfigurationProxyTrafficTest < ActiveSupport::TestCase
   # AC2 — StringArrayVar, so one flag per rule and order is preserved.
   test "each redirect is its own repeated flag" do
     args = configuration("redirects" => [ { "from" => "/a", "to" => "/1" }, { "from" => "/b", "to" => "/2" } ])
-      .proxy.deploy_command_args(target: "1.1.1.1")
+      .proxy.deploy_command_args(targets: [ "1.1.1.1" ])
 
     assert_equal [ "--redirect=\"/a=/1\"", "--redirect=\"/b=/2\"" ], args.grep(/^--redirect=/)
   end

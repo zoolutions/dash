@@ -1,16 +1,16 @@
 module Dash::Commands::App::Proxy
   delegate :container_name, to: :"config.proxy_boot", prefix: :proxy
 
-  def deploy(target:)
-    proxy_exec :deploy, role.container_prefix, *role.proxy.deploy_command_args(target: target)
+  def deploy(targets:)
+    proxy_exec :deploy, role.container_prefix, *role.proxy.deploy_command_args(targets: targets)
   end
 
   def remove
     proxy_exec :remove, role.container_prefix
   end
 
-  def rollout_deploy(target:)
-    proxy_exec :rollout, :deploy, role.container_prefix, *role.proxy.rollout_deploy_command_args(target: target)
+  def rollout_deploy(targets:)
+    proxy_exec :rollout, :deploy, role.container_prefix, *role.proxy.rollout_deploy_command_args(targets: targets)
   end
 
   def rollout_set(percent: nil, list: nil)

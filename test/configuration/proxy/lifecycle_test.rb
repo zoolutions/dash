@@ -61,7 +61,7 @@ class ConfigurationProxyLifecycleTest < ActiveSupport::TestCase
 
   test "each sleep container is its own repeated flag" do
     args = configuration(SOCKET.merge("sleep" => { "after" => 300, "containers" => [ "a", "b" ] }))
-      .proxy.deploy_command_args(target: "1.1.1.1")
+      .proxy.deploy_command_args(targets: [ "1.1.1.1" ])
 
     assert_equal [ "--sleep-container=\"a\"", "--sleep-container=\"b\"" ], args.grep(/^--sleep-container=/)
   end

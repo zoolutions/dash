@@ -24,7 +24,7 @@ class ConfigurationProxyTlsTest < ActiveSupport::TestCase
   test "on_demand_url reaches the generated deploy command" do
     config = configuration "ssl" => { "on_demand_url" => "/api/v1/tls/ask" }
 
-    assert_includes config.proxy.deploy_command_args(target: "1.1.1.1"),
+    assert_includes config.proxy.deploy_command_args(targets: [ "1.1.1.1" ]),
       "--tls-on-demand-url=\"/api/v1/tls/ask\""
   end
 

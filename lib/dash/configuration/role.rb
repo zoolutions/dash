@@ -246,6 +246,19 @@ class Dash::Configuration::Role
     [ config.service, replica == 1 ? name : "#{name}.#{replica}", config.destination ].compact.join("-")
   end
 
+  # Whether docker lookups for a slot need its name as well as the role labels: a scalable
+  # role's slot 1 would otherwise see slot 2's containers. Slot 2 and up always do, even
+  # after `replicas` was lowered to 1, so a deploy can still find and stop them.
+  def replica_scoped?(replica)
+    replica > 1 || replicas.scalable?
+  end
+
+  # The `--filter name=` value for a slot's containers. Docker matches it as a regular
+  # expression, so a `.` in the slot or the destination has to be literal.
+  def replica_name_filter(replica)
+    "'name=^#{replica_prefix(replica).gsub(/[.^$*+?()\[\]{}|\\]/) { |char| "\\#{char}" }}-'"
+  end
+
   def replica_name(replica, version = nil)
     [ replica_prefix(replica), version || config.version ].compact.join("-")
   end

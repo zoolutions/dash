@@ -20,7 +20,7 @@ module Dash::Commands::App::Containers
   end
 
   def remove_containers
-    docker :container, :prune, "--force", *container_filter_args
+    docker :container, :prune, "--force", *container_filter_args(all_replicas: true)
   end
 
   def container_health_log(version:)

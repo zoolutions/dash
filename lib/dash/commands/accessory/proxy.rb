@@ -2,7 +2,7 @@ module Dash::Commands::Accessory::Proxy
   delegate :container_name, to: :"config.proxy_boot", prefix: :proxy
 
   def deploy(target:)
-    proxy_exec :deploy, service_name, *proxy.deploy_command_args(target: target)
+    proxy_exec :deploy, service_name, *proxy.deploy_command_args(targets: [ target ])
   end
 
   def remove

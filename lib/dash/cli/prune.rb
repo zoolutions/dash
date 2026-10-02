@@ -27,7 +27,9 @@ class Dash::Cli::Prune < Dash::Cli::Base
         # One round trip per host, whatever it runs: a host with no app roles still
         # records that the sweep reached it.
         execute *DASH.auditor.record_then("Pruned containers",
-          *DASH.roles_on(host).map { |role| DASH.prune.app_containers(retain: retain, role: role) })
+          *DASH.roles_on(host).flat_map { |role|
+            role.replica_numbers.map { |replica| DASH.prune.app_containers(retain: retain, role: role, replica: replica) }
+          })
       end
     end
   end

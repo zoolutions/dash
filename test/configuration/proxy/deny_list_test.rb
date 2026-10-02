@@ -30,7 +30,7 @@ class ConfigurationProxyDenyListTest < ActiveSupport::TestCase
 
   test "deny rules reach the proxy as repeated flags" do
     args = configuration("deny_ips" => [ "203.0.113.0/24" ], "deny_user_agents" => [ "BadBot/.*" ])
-      .proxy.deploy_command_args(target: "1.1.1.1")
+      .proxy.deploy_command_args(targets: [ "1.1.1.1" ])
 
     assert_includes args, "--deny-ip=\"203.0.113.0/24\""
     assert_includes args, "--deny-user-agent=\"BadBot/.*\""

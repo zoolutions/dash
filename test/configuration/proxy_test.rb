@@ -503,7 +503,7 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
 
   test "read_targets in deploy command args" do
     @deploy[:proxy] = { "host" => "example.com", "read_routing" => { "targets" => [ "192.168.0.2:3000" ] } }
-    args = config.proxy.deploy_command_args(target: "abc123:80")
+    args = config.proxy.deploy_command_args(targets: [ "abc123:80" ])
     assert_includes args.join(" "), "--read-target=\"192.168.0.2:3000\""
   end
 

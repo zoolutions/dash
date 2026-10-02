@@ -79,7 +79,7 @@ class ConfigurationProxyTuningTest < ActiveSupport::TestCase
 
   test "an explicit zero survives all the way to the command line" do
     args = configuration("request_timeout" => 0, "target" => { "max_conns" => 0 })
-      .proxy.deploy_command_args(target: "1.1.1.1")
+      .proxy.deploy_command_args(targets: [ "1.1.1.1" ])
 
     assert_includes args, "--request-timeout=\"0s\""
     assert_includes args, "--target-max-conns=\"0\""
