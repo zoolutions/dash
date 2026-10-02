@@ -45,7 +45,7 @@ class ConfigurationProxyCacheTest < ActiveSupport::TestCase
       "vary_cookies" => [ "locale" ]
     }
 
-    args = config.proxy.deploy_command_args(target: "1.1.1.1")
+    args = config.proxy.deploy_command_args(targets: [ "1.1.1.1" ])
 
     assert_includes args, "--cache-vary-header=\"Accept-Encoding\""
     assert_includes args, "--cache-vary-header=\"Accept-Language\""

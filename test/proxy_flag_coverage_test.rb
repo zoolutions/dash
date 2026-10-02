@@ -146,7 +146,7 @@ class ProxyFlagCoverageTest < ActiveSupport::TestCase
     # than read off the deploy_options hash — a key that resolves to nil emits
     # nothing, and should not count as covered.
     def emitted_deploy_flags
-      maximal_configs.flat_map { |config| flag_names config.role(:web).proxy.deploy_command_args(target: "1.1.1.1") }.uniq
+      maximal_configs.flat_map { |config| flag_names config.role(:web).proxy.deploy_command_args(targets: [ "1.1.1.1" ]) }.uniq
     end
 
     def emitted_run_flags

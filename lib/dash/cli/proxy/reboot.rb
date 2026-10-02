@@ -143,16 +143,11 @@ class Dash::Cli::Proxy::Reboot
       registered_services = []
 
       DASH.roles_on(host).select(&:running_proxy?).each do |role|
-        app = DASH.app(role: role, host: host)
-
-        version = capture_with_info(*app.current_running_version, raise_on_non_zero_exit: false).strip.presence
-        next unless version
-
-        endpoint = capture_with_info(*app.container_id_for_version(version, only_running: true), raise_on_non_zero_exit: false).strip.presence
-        next unless endpoint
+        endpoints = Dash::Cli::App::RunningTargets.new(sshkit, role: role, host: host).container_ids(only_running: true)
+        next if endpoints.empty?
 
         info "Re-registering #{role.container_prefix} with dash-proxy on #{host}..."
-        execute *app.deploy(target: endpoint)
+        execute *DASH.app(role: role, host: host).deploy(targets: endpoints)
         registered_services << role.container_prefix
       end
 

@@ -91,8 +91,8 @@ class Dash::Commander
     config.accessories&.collect(&:name) || []
   end
 
-  def app(role: nil, host: nil)
-    Dash::Commands::App.new(config, role: role, host: host)
+  def app(role: nil, host: nil, replica: 1)
+    Dash::Commands::App.new(config, role: role, host: host, replica: replica)
   end
 
   def accessory(name)

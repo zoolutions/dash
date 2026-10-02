@@ -23,7 +23,7 @@ class ConfigurationProxyAccessControlTest < ActiveSupport::TestCase
 
   test "allow_ips reach the proxy as repeated flags" do
     args = configuration("allow_ips" => [ "10.0.0.0/8", "192.168.0.0/16" ])
-      .proxy.deploy_command_args(target: "1.1.1.1")
+      .proxy.deploy_command_args(targets: [ "1.1.1.1" ])
 
     assert_includes args, "--allow-ip=\"10.0.0.0/8\""
     assert_includes args, "--allow-ip=\"192.168.0.0/16\""

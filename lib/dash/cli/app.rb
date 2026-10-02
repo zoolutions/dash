@@ -55,15 +55,23 @@ class Dash::Cli::App < Dash::Cli::Base
       on_roles(DASH.roles, hosts: DASH.app_hosts, parallel: DASH.config.parallel_roles?, rolling: true) do |host, role|
         app = DASH.app(role: role, host: host)
         execute *DASH.auditor.record("Started app version #{DASH.config.version}"), verbosity: :debug
-        execute *app.start, raise_on_non_zero_exit: false
+
+        # Every slot's container of the version, up to max: a stopped app does not know
+        # how many replicas it ran, and a slot that never existed just fails to start.
+        role.replica_numbers.each do |replica|
+          execute *DASH.app(role: role, host: host, replica: replica).start, raise_on_non_zero_exit: false
+        end
 
         if role.running_proxy?
-          version = capture_with_info(*app.current_running_version, raise_on_non_zero_exit: false).strip
-          endpoint = capture_with_info(*app.container_id_for_version(version)).strip
-          raise Dash::Cli::BootError, "Failed to get endpoint for #{role} on #{host}, did the container boot?" if endpoint.empty?
+          endpoints = Dash::Cli::App::RunningTargets.new(self, role: role, host: host).container_ids
+          raise Dash::Cli::BootError, "Failed to get endpoint for #{role} on #{host}, did the container boot?" if endpoints.empty?
+
+          if endpoints.size < role.replicas.min
+            raise Dash::Cli::BootError, "Found #{endpoints.size} of the #{role.replicas.min} replicas of #{role} on #{host}, did every container start?"
+          end
 
           cli.run_hook "pre-proxy-deploy", hosts: host.to_s, role: role.name
-          execute *app.deploy(target: endpoint)
+          execute *app.deploy(targets: endpoints)
           cli.run_hook "post-proxy-deploy", hosts: host.to_s, role: role.name
         end
       end
@@ -77,15 +85,15 @@ class Dash::Cli::App < Dash::Cli::Base
         app = DASH.app(role: role, host: host)
         execute *DASH.auditor.record("Stopped app", role: role), verbosity: :debug
 
-        if role.running_proxy?
-          version = capture_with_info(*app.current_running_version, raise_on_non_zero_exit: false).strip
-          endpoint = capture_with_info(*app.container_id_for_version(version)).strip
-          if endpoint.present?
-            execute *app.remove, raise_on_non_zero_exit: false
-          end
+        targets = Dash::Cli::App::RunningTargets.new(self, role: role, host: host)
+
+        if role.running_proxy? && targets.container_ids.any?
+          execute *app.remove, raise_on_non_zero_exit: false
         end
 
-        execute *app.stop, raise_on_non_zero_exit: false
+        targets.replicas.each do |replica|
+          execute *DASH.app(role: role, host: host, replica: replica).stop, raise_on_non_zero_exit: false
+        end
       end
     end
   end
@@ -102,6 +110,7 @@ class Dash::Cli::App < Dash::Cli::Base
   desc "exec [CMD...]", "Execute a custom command on servers within the app container (use --help to show options)"
   option :interactive, aliases: "-i", type: :boolean, default: false, desc: "Execute command over ssh for an interactive shell (use for console/bash)"
   option :reuse, type: :boolean, default: false, desc: "Reuse currently running container instead of starting a new one"
+  option :replica, type: :numeric, default: 1, desc: "Replica slot whose container --reuse runs in"
   option :env, aliases: "-e", type: :hash, desc: "Set environment variables for the command"
   option :detach, type: :boolean, default: false, desc: "Execute command in a detached container"
   option :raw, type: :boolean, default: false, desc: "Output raw, unmodified stdout"
@@ -127,12 +136,17 @@ class Dash::Cli::App < Dash::Cli::Base
       env = options[:env]
       detach = options[:detach]
       quiet = options[:quiet]
+      replica = options[:replica]
       case
       when options[:interactive] && options[:reuse]
+        unless DASH.primary_role.replica_numbers.include?(replica)
+          raise ArgumentError, "#{DASH.primary_role} has no replica #{replica}, it runs at most #{DASH.primary_role.replicas.max}"
+        end
+
         say "Get current version of running container...", :magenta unless options[:version]
         using_version(options[:version] || current_running_version) do |version|
           say "Launching interactive command with version #{version} via SSH from existing container on #{DASH.primary_host}...", :magenta
-          run_locally { exec DASH.app(role: DASH.primary_role, host: DASH.primary_host).execute_in_existing_container_over_ssh(cmd, env: env) }
+          run_locally { exec DASH.app(role: DASH.primary_role, host: DASH.primary_host, replica: replica).execute_in_existing_container_over_ssh(cmd, env: env) }
         end
 
       when options[:interactive]
@@ -151,8 +165,10 @@ class Dash::Cli::App < Dash::Cli::Base
           say "Launching command with version #{version} from existing container...", :magenta
 
           on_roles(DASH.roles, hosts: DASH.app_hosts) do |host, role|
+            next unless role.replica_numbers.include?(replica)
+
             execute *DASH.auditor.record("Executed cmd '#{cmd}' on app version #{version}", role: role), verbosity: :debug
-            puts_by_host host, capture_with_info(*DASH.app(role: role, host: host).execute_in_existing_container(cmd, env: env), strip: !raw), quiet: quiet, raw: raw
+            puts_by_host host, capture_with_info(*DASH.app(role: role, host: host, replica: replica).execute_in_existing_container(cmd, env: env), strip: !raw), quiet: quiet, raw: raw
           end
         end
 
@@ -185,16 +201,23 @@ class Dash::Cli::App < Dash::Cli::Base
 
     with_lock_if_stopping do
       on_roles(DASH.roles, hosts: DASH.app_hosts) do |host, role|
-        app = DASH.app(role: role, host: host)
-        listed, running = Dash::Commands::App.split_state(capture_with_info(*app.stale_state, raise_on_non_zero_exit: false))
-        versions = listed.strip.split("\n") - [ running.strip ]
+        role.replica_numbers.each do |replica|
+          app = DASH.app(role: role, host: host, replica: replica)
+          listed, running = Dash::Commands::App.split_state(capture_with_info(*app.stale_state, raise_on_non_zero_exit: false))
+          slot_version = Dash::Cli::App::SlotVersion.new(self, app)
+          running = slot_version.resolve(running)
+          next unless running # nothing of this slot runs, so nothing is stale relative to it
 
-        versions.each do |version|
-          if stop
-            puts_by_host host, "Stopping stale container for role #{role} with version #{version}", quiet: quiet
-            execute *app.stop(version: version), raise_on_non_zero_exit: false
-          else
-            puts_by_host host,  "Detected stale container for role #{role} with version #{version} (use `dash app stale_containers --stop` to stop)", quiet: quiet
+          versions = listed.strip.split("\n").reject { |version| slot_version.foreign?(version) } - [ running ]
+          name = replica == 1 ? "role #{role}" : "role #{role} replica #{replica}"
+
+          versions.each do |version|
+            if stop
+              puts_by_host host, "Stopping stale container for #{name} with version #{version}", quiet: quiet
+              execute *app.stop(version: version), raise_on_non_zero_exit: false
+            else
+              puts_by_host host,  "Detected stale container for #{name} with version #{version} (use `dash app stale_containers --stop` to stop)", quiet: quiet
+            end
           end
         end
       end
@@ -215,6 +238,7 @@ class Dash::Cli::App < Dash::Cli::Base
   option :follow, aliases: "-f", desc: "Follow log on primary server (or specific host set by --hosts)"
   option :skip_timestamps, type: :boolean, aliases: "-T", desc: "Skip appending timestamps to logging output"
   option :container_id, desc: "Docker container ID to fetch logs"
+  option :replica, type: :numeric, desc: "Replica slot to show (default: every replica, or replica 1 with --follow)"
   def logs
     # FIXME: Catch when app containers aren't running
 
@@ -225,8 +249,15 @@ class Dash::Cli::App < Dash::Cli::Base
     timestamps = !options[:skip_timestamps]
     quiet = options[:quiet]
 
+    replica = options[:replica]
+
     if options[:follow]
       lines = options[:lines].presence || ((since || grep) ? nil : 10) # Default to 10 lines if since or grep isn't set
+      follow_role = DASH.specific_roles&.first || DASH.primary_role
+
+      if replica && !follow_role.replica_numbers.include?(replica)
+        raise ArgumentError, "#{follow_role} has no replica #{replica}, it runs at most #{follow_role.replicas.max}"
+      end
 
       run_locally do
         info "Following logs on #{DASH.primary_host}..."
@@ -234,7 +265,7 @@ class Dash::Cli::App < Dash::Cli::Base
         DASH.specific_roles ||= [ DASH.primary_role.name ]
         role = DASH.roles_on(DASH.primary_host).first
 
-        app = DASH.app(role: role, host: host)
+        app = DASH.app(role: role, host: host, replica: replica || 1)
         info app.follow_logs(host: DASH.primary_host, container_id: container_id, timestamps: timestamps, lines: lines, grep: grep, grep_options: grep_options)
         exec app.follow_logs(host: DASH.primary_host, container_id: container_id, timestamps: timestamps, lines: lines, grep: grep, grep_options: grep_options)
       end
@@ -242,10 +273,19 @@ class Dash::Cli::App < Dash::Cli::Base
       lines = options[:lines].presence || ((since || grep) ? nil : 100) # Default to 100 lines if since or grep isn't set
 
       on_roles(DASH.roles, hosts: DASH.app_hosts) do |host, role|
-        begin
-          puts_by_host host, capture_with_info(*DASH.app(role: role, host: host).logs(container_id: container_id, timestamps: timestamps, since: since, lines: lines, grep: grep, grep_options: grep_options)), quiet: quiet
-        rescue SSHKit::Command::Failed
-          puts_by_host host, "Nothing found", quiet: quiet
+        # A --container-id names one container, whatever the slot.
+        slots = replica || container_id ? [ replica || 1 ] & role.replica_numbers : role.replica_numbers
+
+        slots.each do |slot|
+          # Each replica's lines under a header of their own, so they are not mistaken for one stream.
+          # A --container-id names a container whose slot is unknown, so claim none.
+          type = role.replicas.scalable? && (replica || !container_id) ? "App (replica #{slot})" : "App"
+
+          begin
+            puts_by_host host, capture_with_info(*DASH.app(role: role, host: host, replica: slot).logs(container_id: container_id, timestamps: timestamps, since: since, lines: lines, grep: grep, grep_options: grep_options)), type: type, quiet: quiet
+          rescue SSHKit::Command::Failed
+            puts_by_host host, "Nothing found", type: type, quiet: quiet
+          end
         end
       end
     end
@@ -301,6 +341,11 @@ class Dash::Cli::App < Dash::Cli::Base
       on_roles(DASH.roles, hosts: DASH.app_hosts) do |host, role|
         execute *DASH.auditor.record("Removed app container with version #{version}", role: role), verbosity: :debug
         execute *DASH.app(role: role, host: host).remove_container(version: version)
+
+        # A slot that never ran the version has nothing to remove.
+        role.replica_numbers.drop(1).each do |replica|
+          execute *DASH.app(role: role, host: host, replica: replica).remove_container(version: version), raise_on_non_zero_exit: false
+        end
       end
     end
   end
@@ -408,10 +453,10 @@ class Dash::Cli::App < Dash::Cli::Base
     def current_running_version(host: DASH.primary_host)
       version = nil
       on(host) do
-        role = DASH.roles_on(host).first
-        version = capture_with_info(*DASH.app(role: role, host: host).current_running_version).strip
+        app = DASH.app(role: DASH.roles_on(host).first, host: host)
+        version = Dash::Cli::App::SlotVersion.new(self, app).resolve(capture_with_info(*app.current_running_version))
       end
-      version.presence
+      version
     end
 
     def version_or_latest

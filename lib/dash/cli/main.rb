@@ -378,7 +378,8 @@ class Dash::Cli::Main < Dash::Cli::Base
       say "Deploying #{config.service}#{" to #{config.destination}" if config.destination} (version #{config.abbreviated_version})", :magenta
       config.roles.each do |role|
         hosts = "#{role.hosts.count} #{"host".pluralize(role.hosts.count)} (#{role.hosts.join(", ")})"
-        say "  #{role.name}: #{hosts} — readiness: #{role.readiness_description}", (:yellow if role.readiness_source == :none)
+        replicas = " #{role.replicas}" if role.replicas.scalable?
+        say "  #{role.name}: #{hosts}#{replicas} — readiness: #{role.readiness_description}", (:yellow if role.readiness_source == :none)
       end
       say "  proxy: #{config.proxy_hosts.join(", ")}" if config.proxy_hosts.any?
       if config.proxy.load_balancing?

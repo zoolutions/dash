@@ -16,8 +16,8 @@ class Dash::Cli::Prune < Dash::Cli::Base
     end
   end
 
-  desc "containers", "Prune all stopped containers, except the last n per role (default 5)"
-  option :retain, type: :numeric, default: nil, desc: "Number of containers to retain per role"
+  desc "containers", "Prune all stopped containers, except the last n per role replica (default 5)"
+  option :retain, type: :numeric, default: nil, desc: "Number of containers to retain per role replica"
   def containers
     retain = options.fetch(:retain, DASH.config.retain_containers)
     raise "retain must be at least 1" if retain < 1
@@ -27,7 +27,9 @@ class Dash::Cli::Prune < Dash::Cli::Base
         # One round trip per host, whatever it runs: a host with no app roles still
         # records that the sweep reached it.
         execute *DASH.auditor.record_then("Pruned containers",
-          *DASH.roles_on(host).map { |role| DASH.prune.app_containers(retain: retain, role: role) })
+          *DASH.roles_on(host).flat_map { |role|
+            role.replica_numbers.map { |replica| DASH.prune.app_containers(retain: retain, role: role, replica: replica) }
+          })
       end
     end
   end

@@ -102,6 +102,7 @@ class Dash::Configuration
     ensure_sleep_has_a_docker_socket
     ensure_proxy_protocol_names_its_peers
     ensure_max_idle_conns_meaningful
+    ensure_replicas_fit_their_roles
   end
 
   # Resolves every secret the deploy will need so a missing secret fails fast,
@@ -506,6 +507,12 @@ class Dash::Configuration
       raise Dash::ConfigurationError, "Role(s) #{offenders.map(&:name).join(", ")}: " \
         "proxy/sleep requires proxy/run/docker_socket - dash-proxy can only stop and start containers " \
         "through the container runtime socket, and it is not mounted into the proxy without it"
+    end
+
+    # Run once every role and the root proxy exist: a role's merged proxy reads the root
+    # one, which Servers.new builds roles ahead of.
+    def ensure_replicas_fit_their_roles
+      roles.each { |role| role.replicas.ensure_fits!(role, volumes: Array(raw_config.volumes)) }
     end
 
     # dash-proxy resolves a zero max_idle_conns to its default of 100

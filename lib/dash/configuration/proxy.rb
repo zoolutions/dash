@@ -391,8 +391,11 @@ class Dash::Configuration::Proxy
       .merge(target_options).compact
   end
 
-  def deploy_command_args(target:)
-    optionize ({ target: "#{target}:#{app_port}" }).merge(deploy_options), with: "="
+  # dash-proxy takes a comma-separated target list, waits until every target is healthy,
+  # then swaps the whole pool and drains the one it replaced - which is how all replicas
+  # of a role on a host go live together.
+  def deploy_command_args(targets:)
+    optionize ({ target: target_list(targets) }).merge(deploy_options), with: "="
   end
 
   # dash-proxy rollout deploy only accepts the target and the timeouts - the service already
@@ -404,8 +407,8 @@ class Dash::Configuration::Proxy
     }.compact
   end
 
-  def rollout_deploy_command_args(target:)
-    optionize ({ target: "#{target}:#{app_port}" }).merge(rollout_deploy_options), with: "="
+  def rollout_deploy_command_args(targets:)
+    optionize ({ target: target_list(targets) }).merge(rollout_deploy_options), with: "="
   end
 
   def rollout_set_command_args(percent: nil, list: nil)
@@ -428,6 +431,10 @@ class Dash::Configuration::Proxy
   end
 
   private
+    def target_list(targets)
+      Array(targets).map { |target| "#{target}:#{app_port}" }.join(",")
+    end
+
     # Which dispositions this layer keeps. The per-app proxy behind a load
     # balancer sheds the edge concerns; without load balancing there is no
     # other layer to defer to. Dash::Configuration::Loadbalancer overrides

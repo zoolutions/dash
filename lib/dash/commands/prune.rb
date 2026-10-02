@@ -19,9 +19,13 @@ class Dash::Commands::Prune < Dash::Commands::Base
   # candidate, and once it is gone every wake 404s. With `retain >= 1` a role's
   # newest container always survives, and the slept one is always the newest —
   # sleeping happens to the current release.
-  def app_containers(retain:, role:)
+  #
+  # Scoped to one replica slot as well when the role has several, so `retain` holds per
+  # slot: a rollback needs every slot's container of the version, and a role-wide window
+  # would keep 1/N as many versions.
+  def app_containers(retain:, role:, replica: 1)
     pipe \
-      docker(:ps, "-q", "-a", *service_filter, *destination_filter, *role_filter(role), *stopped_containers_filters),
+      docker(:ps, "-q", "-a", *service_filter, *destination_filter, *role_filter(role), *replica_filter(role, replica), *stopped_containers_filters),
       "tail -n +#{retain + 1}",
       "while read container_id; do docker rm $container_id; done"
   end
@@ -48,5 +52,9 @@ class Dash::Commands::Prune < Dash::Commands::Base
 
     def role_filter(role)
       [ "--filter", "label=role=#{role}" ]
+    end
+
+    def replica_filter(role, replica)
+      role.replica_scoped?(replica) ? [ "--filter", role.replica_name_filter(replica) ] : []
     end
 end

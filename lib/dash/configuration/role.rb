@@ -3,7 +3,10 @@ class Dash::Configuration::Role
 
   delegate :argumentize, :optionize, to: Dash::Utils
 
-  attr_reader :name, :config, :specialized_env, :specialized_logging, :specialized_proxy, :healthcheck
+  attr_reader :name, :config, :specialized_env, :specialized_logging, :specialized_proxy, :healthcheck, :replicas, :drain
+
+  delegate :numbers, to: :replicas, prefix: :replica
+  delegate :signal, :wait, to: :drain, prefix: true
 
   alias to_s name
 
@@ -31,7 +34,19 @@ class Dash::Configuration::Role
         context: "servers/#{name}/healthcheck"
     end
 
+    @replicas = Dash::Configuration::Role::Replicas.new \
+      replicas_config: specializations["replicas"],
+      context: "servers/#{name}/replicas"
+
+    @drain = Dash::Configuration::Role::Drain.new \
+      drain_config: specializations["drain"],
+      context: "servers/#{name}/drain"
+
     initialize_specialized_proxy
+
+    if running_proxy? && drain.configured?
+      raise Dash::ConfigurationError, "servers/#{name}/drain: a role behind dash-proxy is drained by the proxy, remove drain"
+    end
   end
 
   def primary_host
@@ -217,11 +232,66 @@ class Dash::Configuration::Role
 
 
   def container_name(version = nil)
-    [ container_prefix, version || config.version ].compact.join("-")
+    replica_name(1, version)
   end
 
+  # Also the dash-proxy service name, which stays one per role whatever the replica count.
   def container_prefix
-    [ config.service, name, config.destination ].compact.join("-")
+    replica_prefix(1)
+  end
+
+  # Replica 1 is the container the role always had, so its name never changed; replica n
+  # puts the slot into the role segment, where a free-form version cannot reach it.
+  def replica_prefix(replica)
+    [ config.service, replica == 1 ? name : "#{name}.#{replica}", config.destination ].compact.join("-")
+  end
+
+  # Whether docker lookups for a slot need its name as well as the role labels: a scalable
+  # role's slot 1 would otherwise see slot 2's containers. Slot 2 and up always do, even
+  # after `replicas` was lowered to 1, so a deploy can still find and stop them.
+  def replica_scoped?(replica)
+    replica > 1 || replicas.scalable?
+  end
+
+  # The `--filter name=` value for a slot's containers. Docker matches it as a regular
+  # expression, so a `.` in the slot or the destination has to be literal.
+  def replica_name_filter(replica)
+    "'name=^#{replica_name_pattern(replica)}-'"
+  end
+
+  # The slot's prefix as a docker name regex: slot n's `.` has to be literal, or
+  # `^app-web.2-123$` would also match slot 1's container of a version named `2-123`.
+  def replica_name_pattern(replica)
+    replica_prefix(replica).gsub(/[.^$*+?()\[\]{}|\\]/) { |char| "\\#{char}" }
+  end
+
+  def replica_name(replica, version = nil)
+    [ replica_prefix(replica), version || config.version ].compact.join("-")
+  end
+
+  # The slot a container of this role is, read from its name - nil when the name is not
+  # one of this role's. The `role` label already excludes a sibling role whose name extends
+  # this one, so callers only ever hand this names of this role's containers.
+  def replica_from_name(container_name)
+    if container_name.start_with?("#{replica_prefix(1)}-")
+      1
+    elsif (match = replica_name_regexp.match(container_name))
+      match[1].to_i
+    end
+  end
+
+  def version_from_name(container_name)
+    if (replica = replica_from_name(container_name))
+      container_name.delete_prefix("#{replica_prefix(replica)}-")
+    end
+  end
+
+  def docker_option_keys
+    docker_options.keys.map(&:to_s)
+  end
+
+  def docker_option_values(*keys)
+    docker_options.select { |key, _| keys.include?(key.to_s) }.values.flatten
   end
 
 
@@ -303,6 +373,11 @@ class Dash::Configuration::Role
         servers = config.raw_config.servers[name]
         servers.is_a?(Array) ? servers : Array(servers["hosts"])
       end
+    end
+
+    def replica_name_regexp
+      destination = "-#{Regexp.escape(config.destination)}" if config.destination
+      /\A#{Regexp.escape(config.service)}-#{Regexp.escape(name)}\.(\d+)#{destination}-/
     end
 
     def default_labels
