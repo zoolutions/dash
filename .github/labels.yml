@@ -161,7 +161,6 @@ paths:
   "lib/dash/cli.rb": cli
   "lib/dash/{cli,output,commander}/**/*": cli
   "lib/dash/{cli,output,commander}.rb": cli
-  "lib/dash/commander.rb": cli
   "test/cli/**/*": cli
   "lib/dash/configuration.rb": configuration
   "lib/dash/configuration/**/*": configuration
@@ -176,17 +175,15 @@ paths:
   "lib/dash/secrets/**/*": secrets
   "lib/dash/{report,timings,otel_shipper}.rb": observability
   "lib/dash/report/**/*": observability
-  "lib/dash/report.rb": observability
   "test/{cli,output,commander}/**/*": cli
   "test/{cli,output,commander}_test.rb": cli
-  "test/commander_test.rb": cli
   "test/{build,dockerfile}/**/*": build
+  "test/{build,dockerfile}_*_test.rb": build
   "test/secrets_test.rb": secrets
   "test/env_file_test.rb": secrets
   "test/secrets/**/*": secrets
   "test/{report,timings,otel_shipper}_test.rb": observability
   "test/report/**/*": observability
-  "test/report_test.rb": observability
   ".github/**/*": devops
   "bin/release": devops
   "rakelib/**/*": devops
