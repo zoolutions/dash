@@ -103,9 +103,10 @@ module Dash::Cli
       # Process-scoped rather than commander-scoped: Dash::Cli::Alias::Command
       # resets DASH and re-enters Dash::Cli::Main.start, so an aliased command
       # builds a second commander and would otherwise warn twice. `dash migrate`
-      # is exempt - telling an operator to run the command they are running is noise.
+      # is exempt - telling an operator to run the command they are running is noise - and
+      # so is `dash mcp`, whose stdout is the protocol.
       def warn_on_legacy_project_directory(command_name)
-        return if command_name == "migrate"
+        return if %w[ migrate mcp ].include?(command_name)
         return if Dash::Cli::Base.legacy_project_directory_warned
         return unless Dash::ProjectDirectory.legacy?
 

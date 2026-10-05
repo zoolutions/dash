@@ -203,6 +203,18 @@ class Dash::Cli::Main < Dash::Cli::Base
     end
   end
 
+  desc "mcp", "Serve read-only diagnostics to an AI agent over stdio (Model Context Protocol)"
+  option :allow_logs, type: :boolean, default: false, desc: "Enable the logs tool (container logs can carry personal data; or DASH_MCP_ALLOW_LOGS=true)"
+  def mcp
+    Dash::Mcp.load!
+    protocol = Dash::Mcp::Runner.reserve_stdout!
+    Dash::Mcp::Runner.authorize!(ENV)
+    DASH.verbosity = :error
+    pre_connect_if_required
+
+    Dash::Mcp::Runner.run(mcp_session, output: protocol)
+  end
+
   desc "init", "Create config stub in config/deploy.yml and secrets stub in .dash"
   option :bundle, type: :boolean, default: false, desc: "Add dash to the Gemfile and create a bin/dash binstub"
   def init
@@ -369,6 +381,14 @@ class Dash::Cli::Main < Dash::Cli::Base
       successful = true
       puts_json { Dash::Diagnostics::Doctor.new.to_h.tap { |snapshot| successful = snapshot[:successful] } }
       exit 1 unless successful
+    end
+
+    # The scope the operator started `dash mcp` with is the ceiling for every question.
+    def mcp_session
+      Dash::Mcp::Session.new(
+        config_file: Pathname.new(File.expand_path(options[:config_file])), destination: options[:destination], version: options[:version],
+        hosts: options[:hosts]&.split(","), roles: options[:roles]&.split(","),
+        allow_logs: Dash::Mcp::Runner.allow_logs?(options[:allow_logs], ENV), redactor: Dash::Diagnostics::Redactor.for(DASH.config))
     end
 
     def print_doctor_report(results)

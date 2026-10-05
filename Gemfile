@@ -8,6 +8,7 @@ group :development do
   gem "minitest", "< 6"
   gem "mocha"
   gem "railties"
+  gem "mcp", "~> 1.6" # optional at runtime (`dash mcp` lazy-requires it); here so CI runs test/mcp
 end
 
 group :rubocop do
