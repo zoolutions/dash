@@ -24,8 +24,8 @@ class Dash::Commands::Auditor < Dash::Commands::Base
     combine record(line, **details), *commands
   end
 
-  def reveal
-    [ :tail, "-n", 50, audit_log_file ]
+  def reveal(lines: 50)
+    [ :tail, "-n", Integer(lines.to_s, 10), audit_log_file ]
   end
 
   private

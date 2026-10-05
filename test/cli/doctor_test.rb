@@ -14,6 +14,10 @@ class CliDoctorTest < CliTestCase
     # is dash's own. Pin both halves to fixtures so editing the repo's Dockerfile or its
     # .dockerignore cannot move a doctor assertion.
     stub_dockerfile "rails_multistage"
+
+    # The drift check reads containers and proxy routes over SSH; tests that are not about
+    # it see a consistent fleet.
+    stub_drift
   end
 
   teardown do
@@ -35,6 +39,37 @@ class CliDoctorTest < CliTestCase
       assert_match(/OK app\.example\.com: served certificate valid until/, output)
       assert_match "ready to deploy", output
     end
+  end
+
+  test "doctor reports a consistent fleet" do
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+
+    assert_match "OK proxy: proxy targets match the running containers", run_command("doctor")
+  end
+
+  test "doctor fails on a proxy target that is not running and warns on the rest of the drift" do
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+    stub_drift(
+      { code: "proxy_target_not_running", host: "1.1.1.1", role: "web", detail: "app-web routes to aaa, which is not a running container" },
+      { code: "version_mismatch", host: nil, role: "web", detail: "web runs 998 on 1.1.1.1, 999 on 1.1.1.2" })
+
+    exception = assert_raises(Dash::Cli::DoctorError) { run_command("doctor") }
+    assert_includes exception.message, "Drift - FAIL 1.1.1.1: proxy_target_not_running: app-web routes to aaa"
+    assert_not_includes exception.message, "version_mismatch"
+  end
+
+  test "doctor without the registry check never logs in" do
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+    SSHKit::Backend::Abstract.any_instance.expects(:execute).with { |*args| args.include?(:login) }.never
+
+    DASH.configure config_file: Pathname.new(File.expand_path("test/fixtures/deploy_with_doctor.yml"))
+    doctor = Dash::Cli::Doctor.new(registry: false)
+    doctor.run
+
+    assert_empty doctor.results.select { |result| result.check == :registry }
   end
 
   test "doctor with proxy running at current version" do
@@ -476,5 +511,9 @@ class CliDoctorTest < CliTestCase
       certificate.not_after = not_after
       certificate.sign(key, OpenSSL::Digest::SHA256.new)
       certificate
+    end
+
+    def stub_drift(*entries)
+      Dash::Diagnostics::Drift.stubs(:take).returns(stub(entries: entries))
     end
 end

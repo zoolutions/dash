@@ -1,0 +1,49 @@
+# The tail of a role's containers on its hosts, every replica slot, for `dash mcp`.
+#
+# Built for input nobody vetted: an agent chooses the role, hosts, `lines`, `since` and
+# `grep`. The role and hosts are looked up in the configuration, `lines` is bounded,
+# `since` must look like a duration or a timestamp, and `grep` never reaches a shell at
+# all - it is a plain substring match, applied here, after the capture.
+class Dash::Diagnostics::Logs < Dash::Diagnostics::Base
+  # "42m", "1h30m", "2026-10-05", "2026-10-05T10:00:00Z", "2026-10-05T10:00:00+02:00"
+  SINCE = /\A(?:(?:\d+[smh])+|\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?)?)\z/
+  MAX_GREP_LENGTH = 200
+
+  def initialize(role: DASH.primary_role, hosts: nil, lines: 100, since: nil, grep: nil)
+    @role = role
+    @hosts = hosts || (role.hosts & DASH.hosts)
+    @lines = Dash::Diagnostics::Lines.bounded(lines)
+    @since = validated_since(since)
+    @grep = validated_grep(grep)
+  end
+
+  private
+    def snapshot
+      { role: @role.name, hosts: per_host(@hosts) { |backend, host| { replicas: replicas(backend, host) } } }
+    end
+
+    def replicas(backend, host)
+      @role.replica_numbers.map do |replica|
+        output = backend.capture_with_info(*DASH.app(role: @role, host: host, replica: replica).logs(lines: @lines, since: @since), raise_on_non_zero_exit: false)
+        { replica: replica, lines: matching(output.lines.map(&:chomp)) }
+      end
+    end
+
+    def matching(lines)
+      @grep ? lines.select { |line| line.include?(@grep) } : lines
+    end
+
+    def validated_since(since)
+      return if since.blank?
+      raise ArgumentError, "since must be a duration like 42m or 1h30m, or a timestamp like 2026-10-05T10:00:00Z, got #{since.inspect}" unless since.to_s.match?(SINCE)
+
+      since.to_s
+    end
+
+    def validated_grep(grep)
+      return if grep.blank?
+      raise ArgumentError, "grep must be at most #{MAX_GREP_LENGTH} characters" if grep.to_s.length > MAX_GREP_LENGTH
+
+      grep.to_s
+    end
+end

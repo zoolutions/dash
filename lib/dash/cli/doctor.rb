@@ -18,7 +18,8 @@ class Dash::Cli::Doctor
     dns: "DNS",
     certificate: "Certificates",
     readiness: "Readiness",
-    dockerfile: "Dockerfile"
+    dockerfile: "Dockerfile",
+    drift: "Drift"
   }.freeze
 
   STATUS_COLORS = { ok: :green, warn: :yellow, fail: :red }.freeze
@@ -47,12 +48,15 @@ class Dash::Cli::Doctor
 
   attr_reader :results
 
-  def initialize
+  # `registry: false` leaves out the registry check, the one check that is not read-only:
+  # it runs `docker login` on every host. `dash mcp` asks for that.
+  def initialize(registry: true)
     @results = []
+    @registry = registry
   end
 
   def run
-    @results = host_check_results + endpoint_check_results + config_check_results
+    @results = host_check_results + endpoint_check_results + config_check_results + drift_check_results
   end
 
   def failures
@@ -80,11 +84,12 @@ class Dash::Cli::Doctor
       results_by_host = {}
       mutex = Mutex.new
       proxy_hosts = DASH.proxy_hosts
+      registry = @registry
       error = nil
 
       begin
         on(DASH.hosts) do |host|
-          checks = Dash::Cli::Doctor::HostChecks.new(host.hostname, self, proxy_host: proxy_hosts.include?(host.hostname)).run
+          checks = Dash::Cli::Doctor::HostChecks.new(host.hostname, self, proxy_host: proxy_hosts.include?(host.hostname), registry: registry).run
           mutex.synchronize { results_by_host[host.hostname] = checks }
         end
       # Only ExecuteError: sshkit 1.25 has no MultipleExecuteError, and naming
@@ -109,5 +114,22 @@ class Dash::Cli::Doctor
 
     def config_check_results
       Dash::Cli::Doctor::ConfigChecks.new.run
+    end
+
+    # Whether the proxies route to what runs. A target that is not running, or a host the
+    # load balancer should forward to and does not, fails; the rest warn.
+    def drift_check_results
+      entries = Dash::Diagnostics::Drift.take.entries
+
+      if entries.empty?
+        [ Result.new(:drift, "proxy", :ok, "proxy targets match the running containers") ]
+      else
+        entries.map do |entry|
+          status = Dash::Diagnostics::Drift::FAILURES.include?(entry[:code]) ? :fail : :warn
+          Result.new(:drift, entry[:host] || entry[:role], status, "#{entry[:code]}: #{entry[:detail]}")
+        end
+      end
+    rescue StandardError => e
+      [ Result.new(:drift, "proxy", :warn, "could not compare proxy targets with containers (#{e.class}: #{e.message})") ]
     end
 end

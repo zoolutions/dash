@@ -7,10 +7,11 @@ class Dash::Cli::Doctor::HostChecks
   attr_reader :host, :sshkit, :proxy_host
   delegate :execute, :capture_with_info, to: :sshkit
 
-  def initialize(host, sshkit, proxy_host:)
+  def initialize(host, sshkit, proxy_host:, registry: true)
     @host = host
     @sshkit = sshkit
     @proxy_host = proxy_host
+    @registry = registry
   end
 
   def run
@@ -18,7 +19,7 @@ class Dash::Cli::Doctor::HostChecks
 
     if checks[:ssh].ok?
       checks[:docker] = docker_check
-      checks[:registry] = registry_check
+      checks[:registry] = registry_check if @registry
       checks.merge!(proxy_checks) if proxy_host
     end
 

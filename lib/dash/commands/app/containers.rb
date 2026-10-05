@@ -5,6 +5,12 @@ module Dash::Commands::App::Containers
     docker :container, :ls, "--all", *container_filter_args
   end
 
+  # Every container of the service in this destination, one `docker ps` JSON object per
+  # line. Called without a role it covers every role and every replica slot on the host.
+  def list_containers_json
+    docker :container, :ls, "--all", *container_filter_args(all_replicas: true), "--format", "'{{json .}}'"
+  end
+
   def list_container_names
     [ *list_containers, "--format", "'{{ .Names }}'" ]
   end

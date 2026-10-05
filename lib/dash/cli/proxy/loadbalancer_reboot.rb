@@ -96,7 +96,7 @@ class Dash::Cli::Proxy::LoadbalancerReboot
     # `list --json` returns {"services": {"<name>": ...}} - exact key
     # membership, same as the per-host proxy reboot's verification.
     def verify_service
-      listed = JSON.parse(capture_with_info(*DASH.loadbalancer.list(json: true))).fetch("services", {}).keys
+      listed = Dash::Commands::Proxy::Services.parse(capture_with_info(*DASH.loadbalancer.list(json: true))).keys
 
       unless listed.include?(DASH.config.service)
         raise Dash::Cli::BootError, "the load balancer on #{host} is missing service #{DASH.config.service} after reboot"
