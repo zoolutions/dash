@@ -1,0 +1,35 @@
+lib/dash/diagnostics/doctor.rb
+  s_d23409d772f820::t_25bdffaa0234fe 1-6,8,10-71,76,78,84-144
+test/cli/doctor_test.rb
+  s_d23409d772f820::t_25bdffaa0234fe 80,257,503
+lib/dash/diagnostics/doctor/host_checks.rb
+  s_d23409d772f820::t_25bdffaa0234fe 6,31
+lib/dash/cli/main.rb
+  s_d23409d772f820::t_25bdffaa0234fe 194,395
+lib/dash/mcp/tools/doctor_tool.rb
+  s_d23409d772f820::t_25bdffaa0234fe 11
+test/mcp/read_only_test.rb
+  s_d23409d772f820::t_25bdffaa0234fe 23
+lib/dash/diagnostics/base.rb
+  s_d23409d772f820::t_25bdffaa0234fe 6
+lib/dash/diagnostics/doctor/endpoint_checks.rb
+  s_d23409d772f820::t_25bdffaa0234fe 7,18
+lib/dash/diagnostics/doctor/config_checks.rb
+  s_d23409d772f820::t_25bdffaa0234fe 3,10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "6d85a22fe7aea43e64367cc980083529612c4706",
+  "prompts": {},
+  "sessions": {
+    "s_d23409d772f820": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "33a3ec28-fddf-42bd-bd6e-bd072ff2b346",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
