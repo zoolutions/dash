@@ -1,0 +1,41 @@
+test/cli/scale_test.rb
+  s_d23409d772f820::t_a48a1bab601987 238
+lib/dash/cli/scale.rb
+  s_d23409d772f820::t_e3dac5bf10ffcf 30,35
+  s_d23409d772f820::t_a48a1bab601987 129-130
+test/diagnostics/scale_test.rb
+  s_d23409d772f820::t_b042bbdb67f32c 1-37
+lib/dash/mcp/server.rb
+  s_d23409d772f820::t_ef13a76c5fde78 15-16,21
+lib/dash/mcp.rb
+  s_d23409d772f820::t_ef13a76c5fde78 21
+docs/app/views/docs/pages/debugging.rb
+  s_d23409d772f820::t_ef13a76c5fde78 41-42
+test/mcp/server_test.rb
+  s_d23409d772f820::t_ef13a76c5fde78 7
+  s_d23409d772f820::t_2240631938ea0a 22
+lib/dash/mcp/tools/scale_status_tool.rb
+  s_d23409d772f820::t_ef13a76c5fde78 1-10
+test/mcp/session_test.rb
+  s_d23409d772f820::t_ef13a76c5fde78 55-63
+lib/dash/diagnostics/scale.rb
+  s_d23409d772f820::t_e3dac5bf10ffcf 2-6,10-16,18-19,22-29
+test/mcp/read_only_test.rb
+  s_d23409d772f820::t_ef13a76c5fde78 15-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "a191628aafd92342232e5b5409c29fe6fee8a829",
+  "prompts": {},
+  "sessions": {
+    "s_d23409d772f820": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "33a3ec28-fddf-42bd-bd6e-bd072ff2b346",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
