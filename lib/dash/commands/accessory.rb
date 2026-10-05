@@ -1,3 +1,5 @@
+require "shellwords"
+
 class Dash::Commands::Accessory < Dash::Commands::Base
   include Proxy
 
@@ -43,8 +45,8 @@ class Dash::Commands::Accessory < Dash::Commands::Base
 
   def logs(timestamps: true, since: nil, lines: nil, grep: nil, grep_options: nil)
     pipe \
-      docker(:logs, service_name, (" --since #{since}" if since), (" --tail #{lines}" if lines), ("--timestamps" if timestamps), "2>&1"),
-      ("grep '#{grep}'#{" #{grep_options}" if grep_options}" if grep)
+      docker(:logs, service_name, (" --since #{since.to_s.shellescape}" if since), (" --tail #{Integer(lines.to_s, 10)}" if lines), ("--timestamps" if timestamps), "2>&1"),
+      ("grep #{Dash::Utils.single_quote(grep)}#{" #{grep_options}" if grep_options}" if grep)
   end
 
   def follow_logs(timestamps: true, grep: nil, grep_options: nil)

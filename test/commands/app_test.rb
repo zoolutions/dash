@@ -405,6 +405,17 @@ class CommandsAppTest < ActiveSupport::TestCase
       new_command.logs(since: "5m", grep: "my-id").join(" ")
   end
 
+  test "logs quotes grep and since so neither can run a command" do
+    command = new_command.logs(since: "5m; touch /tmp/pwned", grep: "it's'; touch /tmp/pwned; echo '").join(" ")
+
+    assert_includes command, "--since 5m\\;\\ touch\\ /tmp/pwned "
+    assert_includes command, "| grep 'it'\\''s'\\''; touch /tmp/pwned; echo '\\'''"
+  end
+
+  test "logs refuses lines that are not a number" do
+    assert_raises(ArgumentError) { new_command.logs(lines: "10; touch /tmp/pwned") }
+  end
+
   test "follow logs" do
     assert_equal \
       "ssh -t root@app-1 -p 22 'sh -c '\\''docker ps --latest --quiet --filter label=service=app --filter label=destination= --filter label=role=web --filter status=running --filter status=restarting --filter ancestor=$(docker image ls --filter reference=dhh/app:latest --format '\\''\\'\\'''\\''{{.ID}}'\\''\\'\\'''\\'') ; docker ps --latest --quiet --filter label=service=app --filter label=destination= --filter label=role=web --filter status=running --filter status=restarting'\\'' | head -1 | xargs docker logs --timestamps --follow 2>&1'",
@@ -675,6 +686,14 @@ class CommandsAppTest < ActiveSupport::TestCase
     assert_equal \
       "docker container ls --all --filter label=service=app --filter label=destination=staging --filter label=role=web",
       new_command.list_containers.join(" ")
+  end
+
+  test "list_containers_json covers every role and replica of the service" do
+    config = Dash::Configuration.new(@config, version: "999")
+
+    assert_equal \
+      "docker container ls --all --filter label=service=app --filter label=destination= --format '{{json .}}'",
+      Dash::Commands::App.new(config).list_containers_json.join(" ")
   end
 
   test "list_container_names" do
