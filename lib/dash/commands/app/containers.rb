@@ -11,6 +11,18 @@ module Dash::Commands::App::Containers
     docker :container, :ls, "--all", *container_filter_args(all_replicas: true), "--format", "'{{json .}}'"
   end
 
+  # The running containers' `docker ps` JSON (for their role labels), then the separator,
+  # then their `docker stats`. `xargs -r` matters: `docker stats` given no container
+  # reports every container on the host, other apps' included.
+  def stats_json
+    filters = container_filter_args(statuses: Dash::Commands::App::ACTIVE_DOCKER_STATUSES, all_replicas: true)
+
+    chain \
+      docker(:ps, *filters, "--format", "'{{json .}}'"),
+      [ :echo, Dash::Commands::App::BOOT_STATE_SEPARATOR ],
+      pipe(docker(:ps, "--quiet", *filters), [ :xargs, "-r", :docker, :stats, "--no-stream", "--format", "'{{json .}}'" ])
+  end
+
   def list_container_names
     [ *list_containers, "--format", "'{{ .Names }}'" ]
   end
