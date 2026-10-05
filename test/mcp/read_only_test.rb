@@ -12,7 +12,8 @@ class McpReadOnlyTest < McpTestCase
     /\A(echo --dash-replica-\h+-- ; sh -c 'docker ps [^;]*; docker ps [^']*' \| head -1 \| xargs docker logs --timestamps( --since [\w:.+-]+)? --tail \d+ 2>&1( ; )?)+\z/, # logs, every slot
     /\Adocker inspect \S+ --format '\{\{\.Config\.Image\}\}' \| awk -F: '\{print \$NF\}'\z/,              # doctor: proxy version
     /\Adocker inspect \S+ --format '\{\{range \.Mounts\}\}\{\{println \.Destination\}\}\{\{end\}\}'\z/,   # doctor: proxy socket
-    /\Ass -ltnH sport = :\d+\z/                                                                           # doctor: ports
+    /\Ass -ltnH sport = :\d+\z/,                                                                          # doctor: ports
+    /\Adocker ps( --filter \S+)+ --format "\{\{\.Names\}\}\\t\{\{\.Status\}\}"\z/                           # scale status
   ].freeze
 
   # Only the doctor executes, and only these: it checks exit statuses, not output.

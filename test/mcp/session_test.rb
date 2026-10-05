@@ -52,6 +52,15 @@ class McpSessionTest < McpTestCase
     assert DASH.connected?
   end
 
+  test "scale_status answers per role within the call's roles" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("app-payments-123\tUp 2 hours\n")
+
+    scale = call_json("scale_status", { roles: [ "payments" ] }, on: server(session(fixture: :deploy_with_replicas)))
+
+    assert_equal [ "payments" ], scale["roles"].map { |role| role["role"] }
+    assert_equal 2, scale["roles"].first["total"]
+  end
+
   test "the lock is read from the primary host only when it is in scope" do
     text, error = call_tool("lock_status", {}, on: server(session(hosts: [ "1.1.1.2" ])))
 

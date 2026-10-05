@@ -4,7 +4,7 @@ class McpServerTest < McpTestCase
   test "lists exactly the curated tools" do
     response = JSON.parse(server.handle_json({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }.to_json))
 
-    assert_equal %w[ audit config containers deploy_reports doctor drift lock_status logs proxy_services ],
+    assert_equal %w[ audit config containers deploy_reports doctor drift lock_status logs proxy_services scale_status ],
       response.dig("result", "tools").map { |tool| tool["name"] }.sort
   end
 
@@ -19,7 +19,7 @@ class McpServerTest < McpTestCase
   end
 
   test "no tool is named for something that changes state" do
-    assert_empty Dash::Mcp::Server::TOOLS.map(&:tool_name).grep(/deploy\z|scale|exec|reboot|restart|remove|stop|start|acquire|release|prune|rollback/)
+    assert_empty Dash::Mcp::Server::TOOLS.map(&:tool_name).grep(/deploy\z|scale(?!_status\z)|exec|reboot|restart|remove|stop|start|acquire|release|prune|rollback/)
   end
 
   test "an argument a tool does not declare is refused" do

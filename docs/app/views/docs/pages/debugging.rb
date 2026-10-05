@@ -38,7 +38,8 @@ class Views::Docs::Pages::Debugging < DocsUI::Page
     [ "audit", "dash audit --json (lines: up to 500 per host)" ],
     [ "lock_status", "dash lock status --json" ],
     [ "deploy_reports", "dash report show --json (last: up to 20)" ],
-    [ "logs", "dash app logs, off unless allowed (lines: up to 500, since, grep)" ]
+    [ "logs", "dash app logs, off unless allowed (lines: up to 500, since, grep)" ],
+    [ "scale_status", "dash scale status --json" ]
   ].freeze
 
   def content

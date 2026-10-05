@@ -235,7 +235,7 @@ class CliScaleTest < CliTestCase
   test "status --json prints the same shape as a document" do
     stub_status "1.1.1.2" => "app-payments-123\tUp 2 hours\napp-payments.2-123\tUp 5 minutes\n", "1.1.1.3" => ""
 
-    json = JSON.parse(run_command("status", "payments", "--json")[/\{.*\}/m])
+    json = JSON.parse(run_command("status", "payments", "--json"))
 
     assert_equal [ "payments" ], json["roles"].map { |role| role["role"] }
     payments = json["roles"].first

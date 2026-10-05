@@ -18,6 +18,7 @@ module Dash::Mcp
     dash/mcp/tools/lock_status_tool
     dash/mcp/tools/doctor_tool
     dash/mcp/tools/logs_tool
+    dash/mcp/tools/scale_status_tool
     dash/mcp/server
     dash/mcp/transport
     dash/mcp/runner
