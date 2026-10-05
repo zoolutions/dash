@@ -200,6 +200,23 @@ class CommanderTest < ActiveSupport::TestCase
     assert_nil @kamal.instance_variable_get(:@output_logger)
   end
 
+  test "reconfigure reloads the config and drops narrowing but stays connected" do
+    @kamal.connected = true
+    @kamal.specific_hosts = [ "1.1.1.1" ]
+    @kamal.specific_roles = [ "web" ]
+    old_config, old_lock, old_loadbalancer = @kamal.config, @kamal.lock, @kamal.loadbalancer
+
+    @kamal.reconfigure config_file: Pathname.new(File.expand_path("fixtures/deploy_with_roles.yml", __dir__))
+
+    assert @kamal.connected?
+    assert_nil @kamal.specific_hosts
+    assert_nil @kamal.specific_roles
+    assert_equal [ "1.1.1.1", "1.1.1.2", "1.1.1.3", "1.1.1.4" ], @kamal.hosts
+    assert_not_same old_config, @kamal.config
+    assert_not_same old_lock, @kamal.lock
+    assert_not_same old_loadbalancer, @kamal.loadbalancer
+  end
+
   test "held locks are picked up from the DASH env vars" do
     with_env("DASH_LOCK" => "true", "DASH_SERVER_LOCK" => "true") do
       commander = Dash::Commander.new

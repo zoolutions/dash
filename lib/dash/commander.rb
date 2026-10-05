@@ -49,6 +49,19 @@ class Dash::Commander
     @config, @config_kwargs = nil, kwargs
   end
 
+  # A fresh read of deploy.yml for a long-lived process (`dash mcp`), one per question:
+  # the builders bound to the old Configuration and any --hosts/--roles narrowing go,
+  # `connected` stays, so the pre-connect hook does not fire again. The output loggers are
+  # closed, since loading the config broadcasts to them again.
+  def reconfigure(**kwargs)
+    configure(**kwargs)
+    @output_logger&.close
+    @output_logger = nil
+    @commands = {}
+    @loadbalancer_config = nil
+    @specifics = @specific_hosts = @specific_roles = nil
+  end
+
   def configured?
     @config || @config_kwargs
   end
