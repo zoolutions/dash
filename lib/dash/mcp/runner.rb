@@ -10,6 +10,7 @@ module Dash::Mcp::Runner
   # protocol. Called before anything else in `dash mcp` can print.
   def reserve_stdout!
     protocol = $stdout
+    protocol.set_encoding("UTF-8")
     $stdout = $stderr
     SSHKit.config.output = SSHKit::Formatter::Pretty.new($stderr)
     protocol

@@ -36,6 +36,17 @@ class DiagnosticsContainersTest < DiagnosticsTestCase
     assert_equal [], hosts[0][:containers]
   end
 
+  test "a label value with a comma does not cost the host its answer" do
+    line = { "ID" => "aaa", "Names" => "app-web-999", "State" => "running", "Status" => "Up",
+             "Labels" => "traefik.http.routers.app.rule=Host(a,b),role=web,service=app" }.to_json
+    stub_capture "1.1.1.1", "{{json .}}", line
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).with { |*args| SSHKit::Backend.current.host.to_s != "1.1.1.1" }.returns("")
+
+    container = Dash::Diagnostics::Containers.new.to_h[:hosts].first[:containers].first
+
+    assert_equal [ "web", 1, "999" ], container.values_at(:role, :replica, :version)
+  end
+
   test "is JSON-safe" do
     stub_capture "1.1.1.1", "{{json .}}", ps_line("app-web-999", id: "aaa", role: "web")
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).with { |*args| SSHKit::Backend.current.host.to_s != "1.1.1.1" }.returns("")

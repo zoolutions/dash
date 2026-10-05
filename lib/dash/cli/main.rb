@@ -387,7 +387,7 @@ class Dash::Cli::Main < Dash::Cli::Base
     def mcp_session
       Dash::Mcp::Session.new(
         config_file: Pathname.new(File.expand_path(options[:config_file])), destination: options[:destination], version: options[:version],
-        hosts: options[:hosts]&.split(","), roles: options[:roles]&.split(","),
+        hosts: options[:primary] ? [ DASH.primary_host ] : options[:hosts]&.split(","), roles: options[:roles]&.split(","),
         allow_logs: Dash::Mcp::Runner.allow_logs?(options[:allow_logs], ENV), redactor: Dash::Diagnostics::Redactor.for(DASH.config))
     end
 

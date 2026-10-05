@@ -23,8 +23,12 @@ class McpRedactionTest < McpTestCase
 
   test "the config tool redacts ssh key material and the accessories' secret env" do
     config = call_json("config", {}, on: server(session(fixture: :deploy_with_accessories, secrets: SECRETS)))
-
     assert_equal "[REDACTED]", config.dig("config", "accessories", "mysql", "env", "secret")
+
+    config = call_json("config", {}, on: server(session(fixture: :deploy_with_ssh_keys)))
+    assert_equal "[REDACTED]", config.dig("config", "ssh_options", "keys")
+    assert_equal "[REDACTED]", config.dig("config", "ssh_options", "key_data")
+    assert_equal "root", config.dig("config", "ssh_options", "user")
   end
 
   test "an error message is redacted too" do

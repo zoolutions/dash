@@ -57,6 +57,13 @@ class McpReadOnlyTest < McpTestCase
     assert @executes.none? { |command| command.include?("login") }, "the doctor logged in to the registry"
   end
 
+  test "the doctor says it left the registry check out" do
+    doctor = call_json("doctor")
+
+    assert_equal [ "registry" ], doctor["skipped"].map { |skipped| skipped["check"] }
+    assert_empty doctor["results"].select { |result| result["check"] == "registry" }
+  end
+
   private
     def command(args)
       args.reject { |arg| arg.is_a?(Hash) }.join(" ")

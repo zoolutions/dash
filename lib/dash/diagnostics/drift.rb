@@ -14,7 +14,7 @@
 #
 # A host whose snapshot is an error is skipped, not reported: its error already says why.
 # While the deploy lock is held the version codes are skipped too - a deploy in flight runs
-# two versions on purpose.
+# two versions on purpose - and `lock_held` says so (nil when the lock was not read).
 class Dash::Diagnostics::Drift < Dash::Diagnostics::Base
   FAILURES = %w[ proxy_target_not_running loadbalancer_target_missing ].freeze
   REPLACED_SUFFIX = /_replaced_\h{16}\z/
@@ -41,7 +41,7 @@ class Dash::Diagnostics::Drift < Dash::Diagnostics::Base
 
   private
     def snapshot
-      { consistent: entries.empty?, drift: entries }
+      { consistent: entries.empty?, lock_held: @lock&.dig(:lock, :held), drift: entries }
     end
 
     def proxy_entries

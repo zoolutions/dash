@@ -9,7 +9,7 @@ class DiagnosticsDriftTest < DiagnosticsTestCase
     drift = drift_for(containers: { "1.1.1.1" => [ web("aaaaaaaaaaaa1") ], "1.1.1.2" => [ web("bbbbbbbbbbbb1") ] },
       services: { "1.1.1.1" => [ "aaaaaaaaaaaa" ], "1.1.1.2" => [ "bbbbbbbbbbbb" ] })
 
-    assert_equal({ consistent: true, drift: [] }, drift.to_h.except(:generated_at))
+    assert_equal({ consistent: true, lock_held: nil, drift: [] }, drift.to_h.except(:generated_at))
   end
 
   test "proxy_target_not_running when the proxy routes to a container that is not running" do
@@ -75,6 +75,7 @@ class DiagnosticsDriftTest < DiagnosticsTestCase
       services: { "1.1.1.1" => [ "aaaaaaaaaaaa" ], "1.1.1.2" => [ "bbbbbbbbbbbb" ] }, lock: { lock: { host: "1.1.1.1", held: true } })
 
     assert_empty drift.entries
+    assert_equal true, drift.to_h[:lock_held]
   end
 
   test "take captures the three snapshots it compares" do

@@ -1,7 +1,6 @@
 require_relative "../diagnostics/diagnostics_test_case"
 
 begin
-  require "mcp"
   Dash::Mcp.load!
 rescue Dash::ConfigurationError
   # Without the optional gem the MCP tests skip; CI has it from the development group.

@@ -31,8 +31,9 @@ class Dash::Diagnostics::Containers < Dash::Diagnostics::Base
       }
     end
 
-    # docker renders labels as "key=value,key=value".
+    # docker renders labels as "key=value,key=value", so a value carrying a comma leaves
+    # fragments with no "=". They are dropped; dash's own labels have no commas.
     def labels(rendered)
-      rendered.to_s.split(",").to_h { |pair| pair.split("=", 2) }
+      rendered.to_s.split(",").filter_map { |pair| pair.split("=", 2) if pair.include?("=") }.to_h
     end
 end
