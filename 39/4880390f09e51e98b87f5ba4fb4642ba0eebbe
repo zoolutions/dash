@@ -1,0 +1,21 @@
+lib/dash/cli/proxy.rb
+  s_d23409d772f820::t_30c3e0c5e35159 2-3
+lib/dash/cli/proxy/inspection.rb
+  s_d23409d772f820::t_30c3e0c5e35159 1-3,5,7-11,13-23,28-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "394880390f09e51e98b87f5ba4fb4642ba0eebbe",
+  "prompts": {},
+  "sessions": {
+    "s_d23409d772f820": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "33a3ec28-fddf-42bd-bd6e-bd072ff2b346",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
