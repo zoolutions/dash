@@ -378,9 +378,7 @@ class Dash::Cli::Main < Dash::Cli::Base
 
     # Pure JSON on stdout, so the failure is the exit status rather than an ERROR line.
     def doctor_json
-      successful = true
-      puts_json { Dash::Diagnostics::Doctor.new.to_h.tap { |snapshot| successful = snapshot[:successful] } }
-      exit 1 unless successful
+      exit 1 unless puts_json { Dash::Diagnostics::Doctor.new.to_h }[:successful]
     end
 
     # The scope the operator started `dash mcp` with is the ceiling for every question.

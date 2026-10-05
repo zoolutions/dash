@@ -545,12 +545,12 @@ module Dash::Cli
         super
       end
 
-      # A diagnostic as pure JSON on stdout. capture_with_info logs every command it runs at
-      # info, onto stdout, so the capture runs at :error - a `| jq` must see only the JSON.
+      # A diagnostic as pure JSON on stdout, returned too. capture_with_info logs every command
+      # it runs at info, onto stdout, so the capture runs at :error - a `| jq` must see only the JSON.
       def puts_json(ssh: true)
         DASH.with_verbosity(:error) do
           pre_connect_if_required if ssh
-          puts JSON.pretty_generate(yield)
+          yield.tap { |snapshot| puts JSON.pretty_generate(snapshot) }
         end
       end
 
