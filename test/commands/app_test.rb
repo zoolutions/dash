@@ -700,7 +700,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     config = Dash::Configuration.new(@config, version: "999")
 
     assert_equal \
-      "docker ps --filter label=service=app --filter label=destination= --filter status=running --filter status=restarting --format '{{json .}}' ; " \
+      "docker ps --filter label=service=app --filter label=destination= --filter status=running --filter status=restarting --format '{{json .}}' || echo --unreadable-- ; " \
       "echo --%-- ; " \
       "docker ps --quiet --filter label=service=app --filter label=destination= --filter status=running --filter status=restarting " \
       "| xargs -r docker stats --no-stream --format '{{json .}}'",

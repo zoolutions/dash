@@ -118,7 +118,7 @@ class CommandsAccessoryTest < ActiveSupport::TestCase
   test "list_containers_json and stats_json are scoped to the accessory's service label" do
     assert_equal "docker ps --all --filter label=service=app-mysql --format '{{json .}}'", new_command(:mysql).list_containers_json.join(" ")
     assert_equal \
-      "docker ps --filter label=service=app-mysql --filter status=running --filter status=restarting --format '{{json .}}' ; echo --%-- ; " \
+      "docker ps --filter label=service=app-mysql --filter status=running --filter status=restarting --format '{{json .}}' || echo --unreadable-- ; echo --%-- ; " \
       "docker ps --quiet --filter label=service=app-mysql --filter status=running --filter status=restarting | xargs -r docker stats --no-stream --format '{{json .}}'",
       new_command(:mysql).stats_json.join(" ")
   end

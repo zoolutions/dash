@@ -13,12 +13,14 @@ module Dash::Commands::App::Containers
 
   # The running containers' `docker ps` JSON (for their role labels), then the separator,
   # then their `docker stats`. `xargs -r` matters: `docker stats` given no container
-  # reports every container on the host, other apps' included.
+  # reports every container on the host, other apps' included. A docker ps that fails
+  # prints ACTIVE_CONTAINERS_UNREADABLE, since the chain's `;` hides its exit status and
+  # "could not ask" would otherwise read as "nothing runs".
   def stats_json
     filters = container_filter_args(statuses: Dash::Commands::App::ACTIVE_DOCKER_STATUSES, all_replicas: true)
 
     chain \
-      docker(:ps, *filters, "--format", "'{{json .}}'"),
+      [ *docker(:ps, *filters, "--format", "'{{json .}}'"), "||", :echo, Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE ],
       [ :echo, Dash::Commands::Base::SECTION_SEPARATOR ],
       pipe(docker(:ps, "--quiet", *filters), [ :xargs, "-r", :docker, :stats, "--no-stream", "--format", "'{{json .}}'" ])
   end

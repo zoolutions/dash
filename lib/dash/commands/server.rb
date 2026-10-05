@@ -10,8 +10,8 @@ class Dash::Commands::Server < Dash::Commands::Base
   end
 
   # Load, CPU count, memory, disk for / and Docker's data root, and uptime, one section
-  # each in one round trip. getconf rather than nproc and df -Pk rather than -B1, so a
-  # busybox host answers too.
+  # each in one round trip. df -Pk rather than -B1, which busybox df lacks. getconf is
+  # POSIX; where it is missing the CPU count is nil and the rest still answers.
   def stats
     sections = [
       [ :cat, "/proc/loadavg" ],

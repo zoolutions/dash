@@ -8,6 +8,11 @@ require "json"
 # Every number keeps its raw string under `raw:`; a value docker printed in a form Units
 # cannot read becomes nil there, never a wrong number.
 class Dash::Diagnostics::ContainerStats < Dash::Diagnostics::Base
+  # Raised inside per_host, which turns it into the host's error entry.
+  class DockerUnreadable < StandardError
+    def message = "docker ps failed: the docker daemon could not be asked"
+  end
+
   # `accessories: []` for the app alone, `hosts: []` for accessories alone.
   def initialize(hosts: DASH.app_hosts, accessories: DASH.config.accessories)
     @hosts = hosts
@@ -24,6 +29,8 @@ class Dash::Diagnostics::ContainerStats < Dash::Diagnostics::Base
 
     def containers(output, accessory: nil)
       ps, stats = output.to_s.split(/^#{Regexp.escape(Dash::Commands::Base::SECTION_SEPARATOR)}$/, 2)
+      raise DockerUnreadable if ps.to_s.lines.map(&:strip).include?(Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE)
+
       by_id = stats.to_s.lines.filter_map { |line| JSON.parse(line) if line.strip.present? }.index_by { |sample| sample["ID"].to_s[0, 12] }
 
       Dash::Diagnostics::DockerPs.containers(ps, accessory: accessory).map do |container|
@@ -41,6 +48,6 @@ class Dash::Diagnostics::ContainerStats < Dash::Diagnostics::Base
         memory_bytes: memory, memory_limit_bytes: memory_limit, memory_percent: Dash::Diagnostics::Units.percent(sample["MemPerc"]),
         net_rx_bytes: net_rx, net_tx_bytes: net_tx, block_read_bytes: block_read, block_write_bytes: block_write,
         pids: Integer(sample["PIDs"].to_s, 10, exception: false),
-        raw: { cpu: sample["CPUPerc"], memory: sample["MemUsage"], net_io: sample["NetIO"], block_io: sample["BlockIO"] } }
+        raw: { cpu: sample["CPUPerc"], memory: sample["MemUsage"], memory_percent: sample["MemPerc"], net_io: sample["NetIO"], block_io: sample["BlockIO"], pids: sample["PIDs"] } }
     end
 end

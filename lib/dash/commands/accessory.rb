@@ -44,14 +44,14 @@ class Dash::Commands::Accessory < Dash::Commands::Base
     docker :ps, "--all", *service_filter, "--format", "'{{json .}}'"
   end
 
-  # Same shape as Commands::App#stats_json: the labels, the separator, then `docker stats`
-  # behind `xargs -r`, which keeps an accessory that is not running from reporting every
-  # container on the host.
+  # Same shape as Commands::App#stats_json: the labels (or the unreadable marker), the
+  # separator, then `docker stats` behind `xargs -r`, which keeps an accessory that is not
+  # running from reporting every container on the host.
   def stats_json
     filters = [ *service_filter, *Dash::Commands::App::ACTIVE_DOCKER_STATUSES.flat_map { |status| [ "--filter", "status=#{status}" ] } ]
 
     chain \
-      docker(:ps, *filters, "--format", "'{{json .}}'"),
+      [ *docker(:ps, *filters, "--format", "'{{json .}}'"), "||", :echo, Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE ],
       [ :echo, SECTION_SEPARATOR ],
       pipe(docker(:ps, "--quiet", *filters), [ :xargs, "-r", :docker, :stats, "--no-stream", "--format", "'{{json .}}'" ])
   end

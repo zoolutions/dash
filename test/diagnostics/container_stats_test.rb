@@ -17,7 +17,7 @@ class DiagnosticsContainerStatsTest < DiagnosticsTestCase
     assert_equal [ "app-web-999", "web", 1, "999" ], container.values_at(:name, :role, :replica, :version)
     assert_equal({ cpu_percent: 12.5, memory_bytes: 120 * 1024**2, memory_limit_bytes: (1.9 * 1024**3).round, memory_percent: 6.17,
       net_rx_bytes: 1_200, net_tx_bytes: 3_400_000, block_read_bytes: 0, block_write_bytes: 8_190, pids: 23,
-      raw: { cpu: "12.50%", memory: "120MiB / 1.9GiB", net_io: "1.2kB / 3.4MB", block_io: "0B / 8.19kB" } }, container[:stats])
+      raw: { cpu: "12.50%", memory: "120MiB / 1.9GiB", memory_percent: "6.17%", net_io: "1.2kB / 3.4MB", block_io: "0B / 8.19kB", pids: "23" } }, container[:stats])
   end
 
   test "a container that stopped between docker ps and docker stats keeps its labels, without stats" do
@@ -35,6 +35,16 @@ class DiagnosticsContainerStatsTest < DiagnosticsTestCase
 
     assert_equal [ { host: "1.1.1.1", containers: [] } ], Dash::Diagnostics::ContainerStats.new(hosts: [ "1.1.1.1" ]).to_h[:hosts]
     assert_includes captures.first, "| xargs -r docker stats"
+    assert_includes captures.first, "|| echo #{Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE}"
+  end
+
+  test "a host whose docker cannot be asked is an error, not a host running nothing" do
+    stub_capture "1.1.1.1", "docker stats", "#{Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE}\n--%--\n"
+
+    host = Dash::Diagnostics::ContainerStats.new(hosts: [ "1.1.1.1" ], accessories: []).to_h[:hosts].first
+
+    assert_nil host[:containers]
+    assert_match "docker ps failed: the docker daemon could not be asked", host[:error]
   end
 
   test "a number docker printed in a way it cannot read stays as its raw string" do
