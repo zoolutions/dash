@@ -9,7 +9,7 @@ class McpReadOnlyTest < McpTestCase
     /\Adocker exec \S+ dash-proxy list --json\z/,                                                         # proxy and load balancer routes
     %r{\Astat \S+ > /dev/null && cat \S+ \| base64 -d\z},                                                 # deploy lock
     /\Atail -n \d+ \S+\z/,                                                                                # audit log
-    /\Ash -c 'docker ps .*' \| head -1 \| xargs docker logs --timestamps( --since [\w:.+-]+)? --tail \d+ 2>&1\z/, # logs
+    /\A(echo --dash-replica-\h+-- ; sh -c 'docker ps [^;]*; docker ps [^']*' \| head -1 \| xargs docker logs --timestamps( --since [\w:.+-]+)? --tail \d+ 2>&1( ; )?)+\z/, # logs, every slot
     /\Adocker inspect \S+ --format '\{\{\.Config\.Image\}\}' \| awk -F: '\{print \$NF\}'\z/,              # doctor: proxy version
     /\Adocker inspect \S+ --format '\{\{range \.Mounts\}\}\{\{println \.Destination\}\}\{\{end\}\}'\z/,   # doctor: proxy socket
     /\Ass -ltnH sport = :\d+\z/                                                                           # doctor: ports

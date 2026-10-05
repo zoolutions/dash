@@ -1,3 +1,5 @@
+require "securerandom"
+
 # The tail of a role's containers on its hosts, every replica slot, for `dash mcp`.
 #
 # Built for input nobody vetted: an agent chooses the role, hosts, `lines`, `since` and
@@ -25,10 +27,15 @@ class Dash::Diagnostics::Logs < Dash::Diagnostics::Base
       { role: @role.name, hosts: per_host(@hosts) { |backend, host| { replicas: replicas(backend, host) } } }
     end
 
+    # One capture for every slot on the host, split back apart on a separator made for this
+    # read alone: a fixed one could be printed by the app to shift lines between slots.
     def replicas(backend, host)
-      @role.replica_numbers.map do |replica|
-        output = backend.capture_with_info(*DASH.app(role: @role, host: host, replica: replica).logs(lines: @lines, since: @since), raise_on_non_zero_exit: false)
-        { replica: replica, lines: matching(output.lines.map { |line| redacted(line.chomp) }) }
+      separator = "--dash-replica-#{SecureRandom.hex(8)}--"
+      command = DASH.app(role: @role, host: host).replica_logs(separator: separator, lines: @lines, since: @since)
+      slots = backend.capture_with_info(*command, raise_on_non_zero_exit: false).split(/^#{Regexp.escape(separator)}\n?/, -1).drop(1)
+
+      @role.replica_numbers.each_with_index.map do |replica, index|
+        { replica: replica, lines: matching(slots[index].to_s.lines.map { |line| redacted(line.chomp) }) }
       end
     end
 

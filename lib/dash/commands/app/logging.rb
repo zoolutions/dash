@@ -11,6 +11,12 @@ module Dash::Commands::App::Logging
       ("grep #{Dash::Utils.single_quote(grep)}#{" #{grep_options}" if grep_options}" if grep)
   end
 
+  # Every replica slot's logs in one round trip, each slot's after a `separator` line. Log
+  # lines are anyone's text, so the caller picks a separator no log line can guess.
+  def replica_logs(separator:, **options)
+    chain(*role.replica_numbers.flat_map { |replica| [ [ :echo, separator ], for_replica(replica).logs(**options) ] })
+  end
+
   def follow_logs(host:, container_id: nil, timestamps: true, lines: nil, grep: nil, grep_options: nil)
     run_over_ssh \
       pipe(

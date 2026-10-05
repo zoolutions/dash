@@ -9,7 +9,8 @@ class McpLogsToolTest < McpTestCase
   end
 
   test "tails the role when logs are allowed, and redacts what it returns" do
-    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("token=registry-secret-pw\nGET /up 200\n")
+    SecureRandom.stubs(:hex).returns("0123456789abcdef")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("--dash-replica-0123456789abcdef--\ntoken=registry-secret-pw\nGET /up 200\n")
 
     logs = call_json("logs", { role: "web", hosts: [ "1.1.1.1" ], lines: 10, grep: "token" },
       on: server(session(allow_logs: true, secrets: { "PW" => "registry-secret-pw" })))
