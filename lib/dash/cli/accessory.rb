@@ -140,7 +140,10 @@ class Dash::Cli::Accessory < Dash::Cli::Base
     return puts_json(&snapshot) if options[:json]
 
     pre_connect_if_required
-    snapshot.call[:accessories].each { |host| puts Dash::Cli::StatsTable.lines("Accessory #{host[:accessory]}", host) }
+    entries = snapshot.call[:accessories]
+    return say "No host in scope runs #{name == "all" ? "an accessory" : name}", :yellow if entries.empty?
+
+    entries.each { |host| puts Dash::Cli::StatsTable.lines("Accessory #{host[:accessory]}", host) }
   end
 
   desc "details [NAME]", "Show details about accessory on host (use NAME=all to show all accessories)"

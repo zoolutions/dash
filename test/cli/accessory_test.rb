@@ -291,6 +291,12 @@ class CliAccessoryTest < CliTestCase
     assert_equal [ "busybox", "mysql", "redis" ], stats["accessories"].map { |entry| entry["accessory"] }.uniq.sort
   end
 
+  test "stats says so when no host in scope runs the accessory" do
+    output = stdouted { Dash::Cli::Accessory.start([ "stats", "mysql", "--hosts", "1.1.1.1", "-c", "test/fixtures/deploy_with_accessories_with_different_registries.yml" ]) }
+
+    assert_match "No host in scope runs mysql", output
+  end
+
   test "stats of an unknown accessory says so" do
     assert_match "No accessory by the name of 'nope'", capture(:stderr) { run_command("stats", "nope") }
   end

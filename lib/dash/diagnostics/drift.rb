@@ -26,7 +26,7 @@ class Dash::Diagnostics::Drift < Dash::Diagnostics::Base
   def self.take
     lock = Dash::Diagnostics::Lock.new.to_h if DASH.hosts.include?(DASH.config.primary_host)
 
-    new(containers: Dash::Diagnostics::Containers.new.to_h, proxy_services: Dash::Diagnostics::ProxyServices.new.to_h, lock: lock)
+    new(containers: Dash::Diagnostics::Containers.new(accessories: []).to_h, proxy_services: Dash::Diagnostics::ProxyServices.new.to_h, lock: lock)
   end
 
   def initialize(containers:, proxy_services:, lock: nil, config: nil)
