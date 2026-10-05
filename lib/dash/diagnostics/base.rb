@@ -42,4 +42,12 @@ class Dash::Diagnostics::Base
 
       hosts.map { |host| { host: host.to_s }.merge(results.fetch(host.to_s) { { error: "no answer" } }) }
     end
+
+    # per_host for every accessory on its own hosts within scope: [ { host:, accessory:, ... } ].
+    def per_accessory(accessories)
+      accessories.flat_map do |accessory|
+        per_host(accessory.hosts & DASH.accessory_hosts) { |backend, host| yield accessory, backend, host }
+          .map { |entry| { host: entry[:host], accessory: accessory.name }.merge(entry.except(:host)) }
+      end
+    end
 end

@@ -19,6 +19,7 @@ class Views::Docs::Pages::Debugging < DocsUI::Page
     [ "dash report show --json [--last N]", "The saved deploy reports, most recent first (at most 20)" ],
     [ "dash scale status --json", "Per role: replica bounds and each host's slots" ],
     [ "dash app stats [--json]", "Each container's CPU, memory against its limit, network and block I/O, PIDs" ],
+    [ "dash accessory stats NAME|all [--json]", "The same for an accessory's container on its hosts" ],
     [ "dash server stats [--json]", "Each host's load against its CPUs, memory, swap, disk for / and Docker's data root, uptime" ]
   ].freeze
 
@@ -40,9 +41,9 @@ class Views::Docs::Pages::Debugging < DocsUI::Page
     [ "audit", "dash audit --json (lines: up to 500 per host)" ],
     [ "lock_status", "dash lock status --json" ],
     [ "deploy_reports", "dash report show --json (last: up to 20)" ],
-    [ "logs", "dash app logs, off unless allowed (lines: up to 500, since, grep)" ],
+    [ "logs", "dash app logs or dash accessory logs (role or accessory), off unless allowed (lines: up to 500, since, grep)" ],
     [ "scale_status", "dash scale status --json" ],
-    [ "container_stats", "dash app stats --json" ],
+    [ "container_stats", "dash app stats --json and dash accessory stats all --json together" ],
     [ "host_stats", "dash server stats --json" ]
   ].freeze
 
@@ -87,6 +88,12 @@ class Views::Docs::Pages::Debugging < DocsUI::Page
         dash cannot read stays visible instead of turning into a wrong number.
         Only this service's containers are reported, even on a host other
         apps share.
+
+        Accessories are reported on their own hosts: `dash accessory stats
+        mysql` (or `all`), and over MCP the `containers` and `container_stats`
+        tools list them under `accessories` next to the app's `hosts`. The
+        `logs` tool takes `accessory:` instead of `role:` — where a database's
+        errors are.
       MD
     end
   end

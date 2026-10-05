@@ -48,6 +48,17 @@ class DiagnosticsLogsTest < DiagnosticsTestCase
     assert_equal [ "password=[REDACTED]" ], plain[:hosts].first[:replicas].first[:lines]
   end
 
+  test "tails an accessory, with the same validation and local grep" do
+    configure :deploy_with_accessories
+    commands = []
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).with { |*args| commands << args.grep_v(Hash).join(" "); true }.returns("ERROR deadlock\nready\n")
+
+    snapshot = Dash::Diagnostics::Logs.new(accessory: DASH.config.accessory(:mysql), lines: 20, since: "1h", grep: "ERROR").to_h
+
+    assert_equal({ accessory: "mysql", hosts: [ { host: "1.1.1.3", lines: [ "ERROR deadlock" ] } ] }, snapshot.except(:generated_at))
+    assert_equal [ "docker logs app-mysql  --since 1h  --tail 20 --timestamps 2>&1" ], commands
+  end
+
   test "refuses a since that is not a duration or a timestamp" do
     [ "5m; touch /tmp/pwned", "$(id)", "`id`", "yesterday" ].each do |since|
       assert_raises(ArgumentError, since) { Dash::Diagnostics::Logs.new(since: since) }

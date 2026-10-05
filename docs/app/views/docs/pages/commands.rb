@@ -64,6 +64,7 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     [ "details [NAME]", "Show details about accessory on host" ],
     [ "exec [NAME] [CMD...]", "Execute a custom command within the accessory container" ],
     [ "logs [NAME]", "Show log lines from accessory on host" ],
+    [ "stats [NAME]", "Show CPU, memory, network and block I/O of an accessory (NAME=all for every one); --json" ],
     [ "remove [NAME]", "Remove accessory container, image and data directory from host" ],
     [ "upgrade", "Upgrade accessories from Kamal 1.x to 2.0" ]
   ].freeze

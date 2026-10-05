@@ -39,6 +39,23 @@ class Dash::Commands::Accessory < Dash::Commands::Base
     docker :container, :stop, service_name
   end
 
+  # The accessory's container as `docker ps` JSON, running or not.
+  def list_containers_json
+    docker :ps, "--all", *service_filter, "--format", "'{{json .}}'"
+  end
+
+  # Same shape as Commands::App#stats_json: the labels, the separator, then `docker stats`
+  # behind `xargs -r`, which keeps an accessory that is not running from reporting every
+  # container on the host.
+  def stats_json
+    filters = [ *service_filter, *Dash::Commands::App::ACTIVE_DOCKER_STATUSES.flat_map { |status| [ "--filter", "status=#{status}" ] } ]
+
+    chain \
+      docker(:ps, *filters, "--format", "'{{json .}}'"),
+      [ :echo, SECTION_SEPARATOR ],
+      pipe(docker(:ps, "--quiet", *filters), [ :xargs, "-r", :docker, :stats, "--no-stream", "--format", "'{{json .}}'" ])
+  end
+
   def info(all: false, quiet: false)
     docker :ps, *("-a" if all), *("-q" if quiet), *service_filter
   end

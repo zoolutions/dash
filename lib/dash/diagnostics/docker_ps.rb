@@ -8,8 +8,15 @@ module Dash::Diagnostics::DockerPs
 
   module_function
 
-  def containers(output)
-    output.to_s.lines.filter_map { |line| container(JSON.parse(line)) if line.strip.present? }
+  # An accessory's containers carry only its `service` label, so they are named for the
+  # accessory the caller asked about rather than for a role.
+  def containers(output, accessory: nil)
+    output.to_s.lines.filter_map { |line| (accessory ? accessory_container(JSON.parse(line), accessory) : container(JSON.parse(line))) if line.strip.present? }
+  end
+
+  def accessory_container(ps, accessory)
+    { name: ps["Names"], id: ps["ID"], accessory: accessory, state: ps["State"], status: ps["Status"], health: ps["Status"].to_s[HEALTH, 1],
+      image: ps["Image"], created_at: ps["CreatedAt"] }
   end
 
   def container(ps)

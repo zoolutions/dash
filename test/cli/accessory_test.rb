@@ -273,6 +273,28 @@ class CliAccessoryTest < CliTestCase
     end
   end
 
+
+  test "stats prints the accessory's cpu, memory and pids, and --json the document" do
+    output = [ { "ID" => "mmmmmmmmmmmm", "Names" => "app-mysql", "State" => "running", "Status" => "Up", "Labels" => "service=app-mysql" }.to_json, "--%--",
+      { "ID" => "mmmmmmmmmmmm", "CPUPerc" => "3.00%", "MemUsage" => "400MiB / 1GiB", "MemPerc" => "39%", "NetIO" => "0B / 0B", "BlockIO" => "0B / 0B", "PIDs" => "40" }.to_json ].join("\n")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("--%--\n")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).with { |*args| args.join(" ").include?("label=service=app-mysql") }.returns(output)
+
+    run_command("stats", "mysql").tap do |out|
+      assert_match "Accessory mysql Host: 1.1.1.3", out
+      assert_match(/app-mysql\s+mysql\s+-\s+3\.0%\s+419\.4MB \/ 1\.1GB\s+40/, out)
+      assert_no_match "redis", out
+    end
+
+    stats = JSON.parse(run_command("stats", "all", "--json"))
+    assert_equal [], stats["hosts"]
+    assert_equal [ "busybox", "mysql", "redis" ], stats["accessories"].map { |entry| entry["accessory"] }.uniq.sort
+  end
+
+  test "stats of an unknown accessory says so" do
+    assert_match "No accessory by the name of 'nope'", capture(:stderr) { run_command("stats", "nope") }
+  end
+
   private
     def run_command(*command)
       stdouted { Dash::Cli::Accessory.start([ *command, "-c", "test/fixtures/deploy_with_accessories_with_different_registries.yml" ]) }

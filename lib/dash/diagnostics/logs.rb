@@ -1,6 +1,7 @@
 require "securerandom"
 
-# The tail of a role's containers on its hosts, every replica slot, for `dash mcp`.
+# The tail of a role's containers on its hosts, every replica slot - or of an accessory's
+# container on its hosts - for `dash mcp`.
 #
 # Built for input nobody vetted: an agent chooses the role, hosts, `lines`, `since` and
 # `grep`. The role and hosts are looked up in the configuration, `lines` is bounded,
@@ -13,10 +14,12 @@ class Dash::Diagnostics::Logs < Dash::Diagnostics::Base
 
   # With a redactor, lines are redacted before grep sees them: matching raw lines would let a
   # grep probe a secret one guessed character at a time.
-  def initialize(role: DASH.primary_role, hosts: nil, lines: 100, since: nil, grep: nil, redactor: nil)
+  # Either a role (every replica slot) or an accessory (its one container on each host).
+  def initialize(role: nil, accessory: nil, hosts: nil, lines: 100, since: nil, grep: nil, redactor: nil)
     @redactor = redactor
-    @role = role
-    @hosts = hosts || (role.hosts & DASH.hosts)
+    @accessory = accessory
+    @role = role || (DASH.primary_role unless accessory)
+    @hosts = hosts || (accessory ? accessory.hosts & DASH.accessory_hosts : @role.hosts & DASH.hosts)
     @lines = Dash::Diagnostics::Lines.bounded(lines)
     @since = validated_since(since)
     @grep = validated_grep(grep)
@@ -24,7 +27,16 @@ class Dash::Diagnostics::Logs < Dash::Diagnostics::Base
 
   private
     def snapshot
-      { role: @role.name, hosts: per_host(@hosts) { |backend, host| { replicas: replicas(backend, host) } } }
+      if @accessory
+        { accessory: @accessory.name, hosts: per_host(@hosts) { |backend, _host| { lines: accessory_lines(backend) } } }
+      else
+        { role: @role.name, hosts: per_host(@hosts) { |backend, host| { replicas: replicas(backend, host) } } }
+      end
+    end
+
+    def accessory_lines(backend)
+      output = backend.capture_with_info(*DASH.accessory(@accessory.name).logs(lines: @lines, since: @since), raise_on_non_zero_exit: false)
+      matching(output.lines.map { |line| redacted(line.chomp) })
     end
 
     # One capture for every slot on the host, split back apart on a separator made for this

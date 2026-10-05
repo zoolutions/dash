@@ -5,6 +5,8 @@ require_relative "mcp_test_case"
 # command, fails here until the shape is reviewed and added.
 class McpReadOnlyTest < McpTestCase
   READ_ONLY_CAPTURES = [
+    /\Adocker ps --all --filter label=service=\S+ --format '\{\{json \.\}\}'\z/,                                     # accessory containers
+    /\Adocker logs \S+ +( --since [\w:.+-]+ +)? --tail \d+ --timestamps 2>&1\z/,                                       # accessory logs
     /\Adocker container ls --all( --filter \S+)+ --format '\{\{json \.\}\}'\z/,                        # containers
     /\Adocker exec \S+ dash-proxy list --json\z/,                                                         # proxy and load balancer routes
     %r{\Astat \S+ > /dev/null && cat \S+ \| base64 -d\z},                                                 # deploy lock
@@ -32,8 +34,11 @@ class McpReadOnlyTest < McpTestCase
   end
 
   test "every tool only reads" do
-    server = self.server(session(fixture: :deploy_with_loadbalancer, allow_logs: true))
+    server = self.server(session(fixture: :deploy_with_accessories, allow_logs: true))
     arguments = { "logs" => { since: "15m", grep: "x" }, "audit" => { lines: 10 } }
+    call_tool("logs", { accessory: "mysql", since: "1h" }, on: server)
+    @captures.each { |command| assert READ_ONLY_CAPTURES.any? { |shape| shape.match?(command) }, "accessory logs captured: #{command}" }
+    assert @captures.any? { |command| command.start_with?("docker logs app-mysql") }, "the accessory's logs were not read"
 
     Dash::Mcp::Server::TOOLS.map(&:tool_name).each do |name|
       @captures.clear

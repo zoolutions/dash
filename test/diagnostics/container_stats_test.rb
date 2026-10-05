@@ -48,6 +48,22 @@ class DiagnosticsContainerStatsTest < DiagnosticsTestCase
     assert_equal "--", stats[:raw][:cpu]
   end
 
+  test "reports each accessory on its own hosts" do
+    configure :deploy_with_accessories
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("--%--\n")
+    mysql = { "ID" => "mmmmmmmmmmmm", "Names" => "app-mysql", "Image" => "mysql:5.7", "State" => "running", "Status" => "Up 3 days", "Labels" => "service=app-mysql" }.to_json
+    stub_capture "1.1.1.3", "label=service=app-mysql", [ mysql, "--%--", stats_line("mmmmmmmmmmmm", "app-mysql", cpu: "3.00%", mem: "400MiB / 1GiB", pids: "40") ].join("\n")
+
+    accessories = Dash::Diagnostics::ContainerStats.new.to_h[:accessories]
+
+    mysql_entry = accessories.find { |entry| entry[:accessory] == "mysql" }
+    assert_equal "1.1.1.3", mysql_entry[:host]
+    container = mysql_entry[:containers].first
+    assert_equal [ "app-mysql", "mysql" ], container.values_at(:name, :accessory)
+    assert_equal [ 3.0, 40 ], container[:stats].values_at(:cpu_percent, :pids)
+    assert_equal [ "1.1.1.1", "1.1.1.2" ], accessories.select { |entry| entry[:accessory] == "redis" }.map { |entry| entry[:host] }
+  end
+
   private
     def stats_line(id, name, cpu: "0.00%", mem: "0B / 0B", mem_percent: "0.00%", net: "0B / 0B", block: "0B / 0B", pids: "0")
       { "ID" => id, "Name" => name, "CPUPerc" => cpu, "MemUsage" => mem, "MemPerc" => mem_percent, "NetIO" => net, "BlockIO" => block, "PIDs" => pids }.to_json
