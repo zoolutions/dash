@@ -33,6 +33,7 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     [ "details", "Show details about app containers" ],
     [ "containers / images", "Show app containers / images on servers; containers --json for every slot as a document" ],
     [ "stale_containers", "Detect app stale containers" ],
+    [ "stats", "Show CPU, memory, network and block I/O of the app containers; --json" ],
     [ "live / maintenance", "Switch the app between live and maintenance mode" ],
     [ "rollout <deploy|set|stop>", "Manage a canary rollout of a new version through the proxy — see Canary rollout" ],
     [ "remove", "Remove app containers and images from servers" ],
@@ -82,6 +83,7 @@ class Views::Docs::Pages::Commands < DocsUI::Page
   OTHERS = [
     [ "dash server bootstrap", "Set up Docker to run dash apps" ],
     [ "dash server exec", "Run a custom command on the server" ],
+    [ "dash server stats", "Show load, memory, swap, disk and uptime of the servers; --json" ],
     [ "dash registry <setup|remove|login|logout>", "Manage the local registry or remote registry sessions" ],
     [ "dash lock <status|acquire|release>", "Manage the deploy lock; --server targets the shared server lock instead; status --json" ],
     [ "dash prune <all|images|containers>", "Prune old application images and stopped containers" ],

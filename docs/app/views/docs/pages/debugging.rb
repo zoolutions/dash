@@ -17,7 +17,9 @@ class Views::Docs::Pages::Debugging < DocsUI::Page
     [ "dash audit --json", "The audit log per host, parsed into recorded_at, performer, tags, message" ],
     [ "dash lock status --json", "Whether the deploy lock is held, by whom, since when, why" ],
     [ "dash report show --json [--last N]", "The saved deploy reports, most recent first (at most 20)" ],
-    [ "dash scale status --json", "Per role: replica bounds and each host's slots" ]
+    [ "dash scale status --json", "Per role: replica bounds and each host's slots" ],
+    [ "dash app stats [--json]", "Each container's CPU, memory against its limit, network and block I/O, PIDs" ],
+    [ "dash server stats [--json]", "Each host's load against its CPUs, memory, swap, disk for / and Docker's data root, uptime" ]
   ].freeze
 
   DRIFT_CODES = [
@@ -39,11 +41,14 @@ class Views::Docs::Pages::Debugging < DocsUI::Page
     [ "lock_status", "dash lock status --json" ],
     [ "deploy_reports", "dash report show --json (last: up to 20)" ],
     [ "logs", "dash app logs, off unless allowed (lines: up to 500, since, grep)" ],
-    [ "scale_status", "dash scale status --json" ]
+    [ "scale_status", "dash scale status --json" ],
+    [ "container_stats", "dash app stats --json" ],
+    [ "host_stats", "dash server stats --json" ]
   ].freeze
 
   def content
     json_commands
+    resource_usage
     drift
     mcp_setup
     security_model
@@ -63,6 +68,26 @@ class Views::Docs::Pages::Debugging < DocsUI::Page
         deploy lock or changes a host.
       MD
       command_table JSON_COMMANDS
+    end
+  end
+
+  def resource_usage
+    DocsUI::Section("Resource usage") do
+      md <<~'MD'
+        `dash app stats` samples every running container of this service on
+        each app host — `docker stats --no-stream`, about a second per host,
+        hosts in parallel — and joins it to the container's role, replica slot
+        and version. `dash server stats` reads each host's load average next to
+        its CPU count (`load.per_cpu` above 1 means work is queuing), memory
+        and swap, disk use for `/` and for Docker's data root, and uptime.
+
+        Both are a snapshot of now, not a history: there is no retention, no
+        thresholds and no alerting here. Memory is in bytes with the raw
+        docker string kept under `raw`, so a value docker prints in a form
+        dash cannot read stays visible instead of turning into a wrong number.
+        Only this service's containers are reported, even on a host other
+        apps share.
+      MD
     end
   end
 

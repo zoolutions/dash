@@ -19,6 +19,8 @@ module Dash::Mcp
     dash/mcp/tools/doctor_tool
     dash/mcp/tools/logs_tool
     dash/mcp/tools/scale_status_tool
+    dash/mcp/tools/container_stats_tool
+    dash/mcp/tools/host_stats_tool
     dash/mcp/server
     dash/mcp/transport
     dash/mcp/runner

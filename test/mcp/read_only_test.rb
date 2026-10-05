@@ -13,7 +13,9 @@ class McpReadOnlyTest < McpTestCase
     /\Adocker inspect \S+ --format '\{\{\.Config\.Image\}\}' \| awk -F: '\{print \$NF\}'\z/,              # doctor: proxy version
     /\Adocker inspect \S+ --format '\{\{range \.Mounts\}\}\{\{println \.Destination\}\}\{\{end\}\}'\z/,   # doctor: proxy socket
     /\Ass -ltnH sport = :\d+\z/,                                                                          # doctor: ports
-    /\Adocker ps( --filter \S+)+ --format "\{\{\.Names\}\}\\t\{\{\.Status\}\}"\z/                           # scale status
+    /\Adocker ps( --filter \S+)+ --format "\{\{\.Names\}\}\\t\{\{\.Status\}\}"\z/,                          # scale status
+    /\Adocker ps( --filter \S+)+ --format '\{\{json \.\}\}' ; echo --%-- ; docker ps --quiet( --filter \S+)+ \| xargs -r docker stats --no-stream --format '\{\{json \.\}\}'\z/, # container stats
+    %r{\Acat /proc/loadavg ; echo --%-- ; getconf _NPROCESSORS_ONLN ; echo --%-- ; grep -E '\^\(MemTotal\|MemAvailable\|SwapTotal\|SwapFree\):' /proc/meminfo ; echo --%-- ; df -Pk / ; echo --%-- ; df -Pk "\$\(docker info --format '\{\{\.DockerRootDir\}\}'\)" ; echo --%-- ; cat /proc/uptime\z} # host stats
   ].freeze
 
   # Only the doctor executes, and only these: it checks exit statuses, not output.
