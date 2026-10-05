@@ -1,4 +1,6 @@
 class Dash::Cli::App < Dash::Cli::Base
+  STATS_COLUMNS = "  %-28s %-10s %4s %8s %21s %6s".freeze
+
   desc "boot", "Boot app on servers (or reboot app if already running)"
   def boot
     modify(lock: true) do
@@ -194,6 +196,15 @@ class Dash::Cli::App < Dash::Cli::Base
 
     quiet = options[:quiet]
     on(DASH.app_hosts) { |host| puts_by_host host, capture_with_info(*DASH.app.list_containers), quiet: quiet }
+  end
+
+  desc "stats", "Show CPU, memory, network and block I/O of the app containers (a one-second sample per host)"
+  option :json, type: :boolean, default: false, desc: "Print the stats per host as JSON"
+  def stats
+    return puts_json { Dash::Diagnostics::ContainerStats.new.to_h } if options[:json]
+
+    pre_connect_if_required
+    Dash::Diagnostics::ContainerStats.new.to_h[:hosts].each { |host| print_container_stats(host) }
   end
 
   desc "stale_containers", "Detect app stale containers"
@@ -394,6 +405,29 @@ class Dash::Cli::App < Dash::Cli::Base
   end
 
   private
+    def print_container_stats(host)
+      puts "App Host: #{host[:host]}"
+      return puts("  ERROR #{host[:error]}") if host[:error]
+      return puts("  no containers running") if host[:containers].empty?
+
+      puts format(STATS_COLUMNS, "CONTAINER", "ROLE", "SLOT", "CPU", "MEMORY / LIMIT", "PIDS")
+      host[:containers].each do |container|
+        stats = container[:stats] || {}
+        puts format(STATS_COLUMNS, container[:name], container[:role], container[:replica], stats_percent(stats[:cpu_percent]),
+          stats_memory(stats), stats[:pids] || "-")
+      end
+    end
+
+    def stats_percent(value)
+      value ? format("%.1f%%", value) : "-"
+    end
+
+    def stats_memory(stats)
+      return stats.dig(:raw, :memory) || "-" unless stats[:memory_bytes] && stats[:memory_limit_bytes]
+
+      "#{Dash::Utils.human_bytes(stats[:memory_bytes])} / #{Dash::Utils.human_bytes(stats[:memory_limit_bytes])}"
+    end
+
     def start_rollout
       modify(lock: true) do
         say "Get most recent version available as an image...", :magenta unless options[:version]
