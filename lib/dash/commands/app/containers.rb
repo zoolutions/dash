@@ -19,7 +19,7 @@ module Dash::Commands::App::Containers
 
     chain \
       docker(:ps, *filters, "--format", "'{{json .}}'"),
-      [ :echo, Dash::Commands::App::BOOT_STATE_SEPARATOR ],
+      [ :echo, Dash::Commands::Base::SECTION_SEPARATOR ],
       pipe(docker(:ps, "--quiet", *filters), [ :xargs, "-r", :docker, :stats, "--no-stream", "--format", "'{{json .}}'" ])
   end
 

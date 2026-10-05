@@ -9,8 +9,6 @@ class Dash::Commands::Server < Dash::Commands::Base
       [ :wc, "-l" ]
   end
 
-  SECTION_SEPARATOR = "--%--"
-
   # Load, CPU count, memory, disk for / and Docker's data root, and uptime, one section
   # each in one round trip. getconf rather than nproc and df -Pk rather than -B1, so a
   # busybox host answers too.
