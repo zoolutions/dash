@@ -9,7 +9,7 @@ class DiagnosticsDriftTest < DiagnosticsTestCase
     drift = drift_for(containers: { "1.1.1.1" => [ web("aaaaaaaaaaaa1") ], "1.1.1.2" => [ web("bbbbbbbbbbbb1") ] },
       services: { "1.1.1.1" => [ "aaaaaaaaaaaa" ], "1.1.1.2" => [ "bbbbbbbbbbbb" ] })
 
-    assert_equal({ consistent: true, lock_held: nil, drift: [] }, drift.to_h.except(:generated_at))
+    assert_equal({ consistent: true, lock_held: nil, drift: [], unread: [] }, drift.to_h.except(:generated_at))
   end
 
   test "proxy_target_not_running when the proxy routes to a container that is not running" do
@@ -33,11 +33,13 @@ class DiagnosticsDriftTest < DiagnosticsTestCase
     assert_empty drift.entries
   end
 
-  test "an unreachable host is skipped, its error already says why" do
+  test "an unreachable host is not compared, and the snapshot says which hosts went unread" do
     drift = drift_for(containers: { "1.1.1.1" => :error, "1.1.1.2" => [ web("bbbbbbbbbbbb1") ] },
       services: { "1.1.1.1" => [ "aaaaaaaaaaaa" ], "1.1.1.2" => :error })
 
     assert_empty drift.entries
+    assert_equal [ { host: "1.1.1.1", source: "containers", error: "down" }, { host: "1.1.1.2", source: "proxy_services", error: "down" } ], drift.unread
+    assert_equal false, drift.to_h[:consistent]
   end
 
   test "loadbalancer_target_missing and loadbalancer_target_extra" do

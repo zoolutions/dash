@@ -12,7 +12,8 @@
 #   version_mismatch             a role's hosts run different versions
 #   multiple_running_versions    one host runs more than one version of a role
 #
-# A host whose snapshot is an error is skipped, not reported: its error already says why.
+# A host whose snapshot is an error is not compared; it is listed under `unread` instead,
+# and the fleet is not called consistent.
 # While the deploy lock is held the version codes are skipped too - a deploy in flight runs
 # two versions on purpose - and `lock_held` says so (nil when the lock was not read).
 class Dash::Diagnostics::Drift < Dash::Diagnostics::Base
@@ -39,9 +40,16 @@ class Dash::Diagnostics::Drift < Dash::Diagnostics::Base
     @entries ||= proxy_entries + loadbalancer_entries + version_entries
   end
 
+  # The hosts whose containers or routes could not be read, so were not compared. A fleet
+  # with any is not reported consistent: no drift found is not the same as none there.
+  def unread
+    @unread ||= [ [ "containers", Array(@containers[:hosts]) ], [ "proxy_services", [ *@proxy_services[:hosts], @proxy_services[:loadbalancer] ].compact ] ]
+      .flat_map { |source, hosts| hosts.select { |host| host[:error] }.map { |host| { host: host[:host], source: source, error: host[:error] } } }
+  end
+
   private
     def snapshot
-      { consistent: entries.empty?, lock_held: @lock&.dig(:lock, :held), drift: entries }
+      { consistent: entries.empty? && unread.empty?, lock_held: @lock&.dig(:lock, :held), drift: entries, unread: unread }
     end
 
     def proxy_entries

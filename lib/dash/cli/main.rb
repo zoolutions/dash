@@ -206,8 +206,8 @@ class Dash::Cli::Main < Dash::Cli::Base
   desc "mcp", "Serve read-only diagnostics to an AI agent over stdio (Model Context Protocol)"
   option :allow_logs, type: :boolean, default: false, desc: "Enable the logs tool (container logs can carry personal data; or DASH_MCP_ALLOW_LOGS=true)"
   def mcp
+    protocol = Dash::Mcp.reserve_stdout!
     Dash::Mcp.load!
-    protocol = Dash::Mcp::Runner.reserve_stdout!
     Dash::Mcp::Runner.authorize!(ENV)
     DASH.verbosity = :error
     pre_connect_if_required

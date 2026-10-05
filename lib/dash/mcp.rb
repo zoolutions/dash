@@ -23,6 +23,17 @@ module Dash::Mcp
     dash/mcp/runner
   ].freeze
 
+  # Everything that prints after this lands on stderr; the returned IO carries only the
+  # protocol. `dash mcp` calls it first, before even the gem loads, so nothing - not the
+  # "add the gem" error either - can print onto the protocol stream.
+  def self.reserve_stdout!
+    protocol = $stdout
+    protocol.set_encoding("UTF-8")
+    $stdout = $stderr
+    SSHKit.config.output = SSHKit::Formatter::Pretty.new($stderr)
+    protocol
+  end
+
   # Only the gem's own require is rescued, so a broken dash/mcp/* require shows up as
   # itself instead of as "add the gem".
   def self.load!

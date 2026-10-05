@@ -19,7 +19,7 @@ class Dash::Mcp::Tools::LogsTool < Dash::Mcp::BaseTool
     return error_response(REFUSED) unless server_context.fetch(:session).allow_logs?
 
     answer(server_context, hosts: hosts) do
-      Dash::Diagnostics::Logs.new(role: scoped_role(role), lines: lines, since: since, grep: grep).to_h
+      Dash::Diagnostics::Logs.new(role: scoped_role(role), lines: lines, since: since, grep: grep, redactor: server_context.fetch(:session).redactor).to_h
     end
   end
 

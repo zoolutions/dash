@@ -83,8 +83,8 @@ class Views::Docs::Pages::Debugging < DocsUI::Page
         While the deploy lock is held, the two version codes are left out — a
         deploy in flight runs two versions on purpose — and the snapshot says
         `"lock_held": true`. A host whose containers or proxy routes could not
-        be read is skipped rather than reported; its `error` is in the
-        `containers` or `proxy services` output.
+        be read is not compared: it is listed under `unread` with its error,
+        the fleet is not reported consistent, and `dash doctor` warns.
       MD
     end
   end
@@ -168,7 +168,8 @@ class Views::Docs::Pages::Debugging < DocsUI::Page
         (`password`, `token`, `secret`, `key` — deliberately broad, so
         `ssh_options.keys` is hidden too), and every value from `.dash/secrets`
         wherever it appears inside a string, so a password inside a
-        `DATABASE_URL`, an audit line or an SSH error is blanked. Secrets
+        `DATABASE_URL`, an audit line or an SSH error is blanked. Log lines are
+        redacted before `grep` sees them, so a grep cannot probe a secret. Secrets
         shorter than 6 characters are only caught by their key. Container logs
         are off unless you start the server with `--allow-logs`: they carry
         whatever your app prints, personal data included, and the redactor only

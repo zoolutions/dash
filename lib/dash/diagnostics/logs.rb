@@ -9,7 +9,10 @@ class Dash::Diagnostics::Logs < Dash::Diagnostics::Base
   SINCE = /\A(?:(?:\d+[smh])+|\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?)?)\z/
   MAX_GREP_LENGTH = 200
 
-  def initialize(role: DASH.primary_role, hosts: nil, lines: 100, since: nil, grep: nil)
+  # With a redactor, lines are redacted before grep sees them: matching raw lines would let a
+  # grep probe a secret one guessed character at a time.
+  def initialize(role: DASH.primary_role, hosts: nil, lines: 100, since: nil, grep: nil, redactor: nil)
+    @redactor = redactor
     @role = role
     @hosts = hosts || (role.hosts & DASH.hosts)
     @lines = Dash::Diagnostics::Lines.bounded(lines)
@@ -25,8 +28,12 @@ class Dash::Diagnostics::Logs < Dash::Diagnostics::Base
     def replicas(backend, host)
       @role.replica_numbers.map do |replica|
         output = backend.capture_with_info(*DASH.app(role: @role, host: host, replica: replica).logs(lines: @lines, since: @since), raise_on_non_zero_exit: false)
-        { replica: replica, lines: matching(output.lines.map(&:chomp)) }
+        { replica: replica, lines: matching(output.lines.map { |line| redacted(line.chomp) }) }
       end
+    end
+
+    def redacted(line)
+      @redactor ? @redactor.redact_text(line) : line
     end
 
     def matching(lines)

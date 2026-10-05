@@ -20,6 +20,17 @@ class DiagnosticsLogsTest < DiagnosticsTestCase
     assert commands.none? { |command| command.include?("grep") }, "grep must never reach the remote shell"
   end
 
+  test "redacts before grep, so a grep cannot probe a secret" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("password=hunter2-very-secret\n")
+    redactor = Dash::Diagnostics::Redactor.new(secrets: { "PW" => "hunter2-very-secret" })
+
+    probe = Dash::Diagnostics::Logs.new(role: DASH.config.role(:web), hosts: [ "1.1.1.1" ], grep: "hunter2-v", redactor: redactor).to_h
+    plain = Dash::Diagnostics::Logs.new(role: DASH.config.role(:web), hosts: [ "1.1.1.1" ], grep: "password", redactor: redactor).to_h
+
+    assert_equal [], probe[:hosts].first[:replicas].first[:lines]
+    assert_equal [ "password=[REDACTED]" ], plain[:hosts].first[:replicas].first[:lines]
+  end
+
   test "refuses a since that is not a duration or a timestamp" do
     [ "5m; touch /tmp/pwned", "$(id)", "`id`", "yesterday" ].each do |since|
       assert_raises(ArgumentError, since) { Dash::Diagnostics::Logs.new(since: since) }

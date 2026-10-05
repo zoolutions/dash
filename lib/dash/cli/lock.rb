@@ -4,6 +4,8 @@ class Dash::Cli::Lock < Dash::Cli::Base
   option :json, type: :boolean, default: false, desc: "Print the deploy lock status as JSON"
   def status
     if options[:json]
+      raise ArgumentError, "--json reports the deploy lock; it cannot be combined with --server" if options[:server]
+
       puts_json { Dash::Diagnostics::Lock.new.to_h }
     elsif options[:server]
       report_server_lock_status

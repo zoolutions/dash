@@ -60,6 +60,17 @@ class CliDoctorTest < CliTestCase
     assert_not_includes exception.message, "version_mismatch"
   end
 
+  test "doctor warns instead of passing when drift could not read every host" do
+    stub_domain_resolution to: [ "1.1.1.1" ]
+    stub_served_certificate expiring: Time.now + (90 * 86_400)
+    Dash::Diagnostics::Drift.stubs(:take).returns(stub(entries: [], unread: [ { host: "1.1.1.1", source: "proxy_services", error: "refused" } ]))
+
+    run_command("doctor").tap do |output|
+      assert_match "WARN 1.1.1.1: could not read proxy_services (refused), so it was not compared", output
+      assert_no_match "proxy targets match", output
+    end
+  end
+
   test "doctor without the registry check never logs in" do
     stub_domain_resolution to: [ "1.1.1.1" ]
     stub_served_certificate expiring: Time.now + (90 * 86_400)
@@ -514,6 +525,6 @@ class CliDoctorTest < CliTestCase
     end
 
     def stub_drift(*entries)
-      Dash::Diagnostics::Drift.stubs(:take).returns(stub(entries: entries))
+      Dash::Diagnostics::Drift.stubs(:take).returns(stub(entries: entries, unread: []))
     end
 end

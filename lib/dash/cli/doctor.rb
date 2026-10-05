@@ -119,12 +119,13 @@ class Dash::Cli::Doctor
     # Whether the proxies route to what runs. A target that is not running, or a host the
     # load balancer should forward to and does not, fails; the rest warn.
     def drift_check_results
-      entries = Dash::Diagnostics::Drift.take.entries
+      drift = Dash::Diagnostics::Drift.take
+      unread = drift.unread.map { |host| Result.new(:drift, host[:host], :warn, "could not read #{host[:source]} (#{host[:error]}), so it was not compared") }
 
-      if entries.empty?
+      if drift.entries.empty? && unread.empty?
         [ Result.new(:drift, "proxy", :ok, "proxy targets match the running containers") ]
       else
-        entries.map do |entry|
+        unread + drift.entries.map do |entry|
           status = Dash::Diagnostics::Drift::FAILURES.include?(entry[:code]) ? :fail : :warn
           Result.new(:drift, entry[:host] || entry[:role], status, "#{entry[:code]}: #{entry[:detail]}")
         end

@@ -1,20 +1,10 @@
 require "active_support/security_utils"
 
-# Boots `dash mcp`: the token gate, stdout handed to the protocol alone, the stdio loop.
+# Boots `dash mcp`: the token gate, the logs gate, the stdio loop.
 module Dash::Mcp::Runner
   TRUTHY = %w[ 1 true yes on ].freeze
 
   module_function
-
-  # Everything that prints after this lands on stderr; the returned IO carries only the
-  # protocol. Called before anything else in `dash mcp` can print.
-  def reserve_stdout!
-    protocol = $stdout
-    protocol.set_encoding("UTF-8")
-    $stdout = $stderr
-    SSHKit.config.output = SSHKit::Formatter::Pretty.new($stderr)
-    protocol
-  end
 
   # Not authentication: the client that launches `dash mcp` sets both variables, so this
   # only stops a launch nobody configured for it (a stray .mcp.json, a copied command).

@@ -68,6 +68,10 @@ class CliLockTest < CliTestCase
   end
 
 
+  test "status --json does not answer for the server lock" do
+    assert_raises(ArgumentError) { Dash::Cli::Lock.start([ "status", "--json", "--server", "-c", "test/fixtures/deploy_with_accessories.yml" ]) }
+  end
+
   test "status --json" do
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .returns("Locked by: Jane at 2026-10-05T10:00:00Z\nVersion: 999\nMessage: hold on\n")

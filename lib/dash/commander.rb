@@ -251,7 +251,8 @@ class Dash::Commander
 
       SSHKit.config.output = Dash::Output::Formatter.new($stdout, output_logger)
 
-      at_exit { @output_logger&.close }
+      # Once per commander: a long-lived `dash mcp` loads the config once per question.
+      @output_logger_closer ||= at_exit { @output_logger&.close }
     rescue => e
       $stderr.puts "Output logger setup failed: #{e.class}: #{e.message}"
       $stderr.puts e.backtrace.join("\n") if ENV["VERBOSE"]

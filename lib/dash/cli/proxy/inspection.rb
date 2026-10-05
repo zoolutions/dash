@@ -12,7 +12,8 @@ module Dash::Cli::Proxy::Inspection
     if snapshot[:consistent]
       [ "No drift: proxy targets match the running containers" ]
     else
-      snapshot[:drift].map { |entry| "#{entry[:code]} #{entry[:host] || entry[:role]}: #{entry[:detail]}" }
+      snapshot[:drift].map { |entry| "#{entry[:code]} #{entry[:host] || entry[:role]}: #{entry[:detail]}" } +
+        Array(snapshot[:unread]).map { |host| "unread #{host[:host]}: could not read #{host[:source]} (#{host[:error]})" }
     end
   end
 
