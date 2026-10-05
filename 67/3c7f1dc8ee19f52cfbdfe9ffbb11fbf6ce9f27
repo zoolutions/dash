@@ -1,0 +1,63 @@
+lib/dash/cli/stats_table.rb
+  s_d23409d772f820::t_613139d56c60e1 1-34
+test/commands/accessory_test.rb
+  s_d23409d772f820::t_15ea7f3ab504c2 118-125
+test/diagnostics/containers_test.rb
+  s_d23409d772f820::t_15ea7f3ab504c2 50-61
+lib/dash/diagnostics/base.rb
+  s_d23409d772f820::t_a6d33dd57d5429 47-48
+  s_d23409d772f820::t_53f31b0726a5d5 45-46,49-52
+lib/dash/diagnostics/containers.rb
+  s_d23409d772f820::t_53f31b0726a5d5 2-3,13,15-18
+  s_d23409d772f820::t_a6d33dd57d5429 5-6,8,14
+lib/dash/commands/accessory.rb
+  s_d23409d772f820::t_53f31b0726a5d5 42-58
+lib/dash/mcp/tools/logs_tool.rb
+  s_d23409d772f820::t_a5d1b2941c1079 5,10,19,21,24-25,29-33
+test/cli/accessory_test.rb
+  s_d23409d772f820::t_c240f53bb71626 276-290,292-297
+  s_d23409d772f820::t_d00f9332d7b444 291
+test/mcp/read_only_test.rb
+  s_d23409d772f820::t_a5d1b2941c1079 8-9,37,39-41
+docs/app/views/docs/pages/debugging.rb
+  s_d23409d772f820::t_5b209bc6e8bd93 22,44,46,91-96
+test/diagnostics/container_stats_test.rb
+  s_d23409d772f820::t_15ea7f3ab504c2 51-60,64-66
+  s_d23409d772f820::t_53f31b0726a5d5 61-63
+docs/app/views/docs/pages/commands.rb
+  s_d23409d772f820::t_5b209bc6e8bd93 67
+lib/dash/diagnostics/container_stats.rb
+  s_d23409d772f820::t_1277272bd19b92 4-5,19,21-22,25,29
+  s_d23409d772f820::t_a6d33dd57d5429 11-12,14,20
+test/diagnostics/logs_test.rb
+  s_d23409d772f820::t_15ea7f3ab504c2 51-53,55-61
+  s_d23409d772f820::t_8969614f9b6300 54
+lib/dash/diagnostics/logs.rb
+  s_d23409d772f820::t_1277272bd19b92 3-4,17-18,20-22,30-39
+lib/dash/cli/accessory.rb
+  s_d23409d772f820::t_c240f53bb71626 136-138
+  s_d23409d772f820::t_613139d56c60e1 133-135,139-145
+lib/dash/cli/app.rb
+  s_d23409d772f820::t_613139d56c60e1 205
+  s_d23409d772f820::t_a6d33dd57d5429 193,202
+test/mcp/logs_tool_test.rb
+  s_d23409d772f820::t_a5d1b2941c1079 35-49
+lib/dash/diagnostics/docker_ps.rb
+  s_d23409d772f820::t_53f31b0726a5d5 11-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "673c7f1dc8ee19f52cfbdfe9ffbb11fbf6ce9f27",
+  "prompts": {},
+  "sessions": {
+    "s_d23409d772f820": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "33a3ec28-fddf-42bd-bd6e-bd072ff2b346",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
