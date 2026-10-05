@@ -1,0 +1,35 @@
+lib/dash/commands/app/containers.rb
+  s_d23409d772f820::t_9b82d8da6d566a 16-18,23
+test/commands/accessory_test.rb
+  s_d23409d772f820::t_f0dcbfa72049a4 121
+test/commands/app_test.rb
+  s_d23409d772f820::t_f0dcbfa72049a4 703
+lib/dash/commands/accessory.rb
+  s_d23409d772f820::t_9b82d8da6d566a 47-49,54
+test/diagnostics/container_stats_test.rb
+  s_d23409d772f820::t_9b82d8da6d566a 20
+  s_d23409d772f820::t_f0dcbfa72049a4 38-43
+  s_d23409d772f820::t_e7cb1a3e6d635a 44-47
+lib/dash/diagnostics/container_stats.rb
+  s_d23409d772f820::t_9b82d8da6d566a 11-15,32-33,51
+lib/dash/commands/server.rb
+  s_d23409d772f820::t_9b82d8da6d566a 13-14
+test/mcp/read_only_test.rb
+  s_d23409d772f820::t_e7cb1a3e6d635a 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ae6cd60712992179eb2f83538665f2a2d0577f96",
+  "prompts": {},
+  "sessions": {
+    "s_d23409d772f820": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "33a3ec28-fddf-42bd-bd6e-bd072ff2b346",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
