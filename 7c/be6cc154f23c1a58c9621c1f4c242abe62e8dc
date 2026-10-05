@@ -1,0 +1,75 @@
+test/mcp/stdio_test.rb
+  s_d23409d772f820::t_4eff651f7cde70 1-58
+test/mcp/read_only_test.rb
+  s_d23409d772f820::t_4eff651f7cde70 1-64
+lib/dash/mcp/base_tool.rb
+  s_d23409d772f820::t_0f64e9f61cf297 1-43
+test/mcp/runner_test.rb
+  s_d23409d772f820::t_556629ffc89610 1-13
+lib/dash/mcp/runner.rb
+  s_d23409d772f820::t_9ce43b9b9dc657 1-37
+test/mcp/logs_tool_test.rb
+  s_d23409d772f820::t_556629ffc89610 1-39
+lib/dash/mcp/tools/logs_tool.rb
+  s_d23409d772f820::t_9ce43b9b9dc657 1-31
+lib/dash/cli/main.rb
+  s_d23409d772f820::t_502505b7f23b50 206-208,211-217,386-391
+  s_d23409d772f820::t_c3075266992f2a 209-210
+test/mcp/server_test.rb
+  s_d23409d772f820::t_556629ffc89610 1-37
+lib/dash/mcp.rb
+  s_d23409d772f820::t_502505b7f23b50 7-8
+  s_d23409d772f820::t_0f64e9f61cf297 1-6,9-37
+test/mcp/redaction_test.rb
+  s_d23409d772f820::t_556629ffc89610 1-38
+lib/dash/mcp/transport.rb
+  s_d23409d772f820::t_9ce43b9b9dc657 1-14
+lib/dash/mcp/tools/proxy_services_tool.rb
+  s_d23409d772f820::t_9ce43b9b9dc657 1-10
+Gemfile
+  s_d23409d772f820::t_cecd2279546c99 11
+lib/dash.rb
+  s_d23409d772f820::t_0f64e9f61cf297 29-30
+lib/dash/mcp/server.rb
+  s_d23409d772f820::t_9ce43b9b9dc657 1-30
+lib/dash/mcp/tools/audit_tool.rb
+  s_d23409d772f820::t_9ce43b9b9dc657 1-11
+lib/dash/mcp/session.rb
+  s_d23409d772f820::t_0f64e9f61cf297 1-50
+lib/dash/mcp/tools/drift_tool.rb
+  s_d23409d772f820::t_9ce43b9b9dc657 1-14
+lib/dash/cli/base.rb
+  s_d23409d772f820::t_502505b7f23b50 106-107,109
+lib/dash/mcp/tools/deploy_reports_tool.rb
+  s_d23409d772f820::t_9ce43b9b9dc657 1-10
+test/mcp/session_test.rb
+  s_d23409d772f820::t_556629ffc89610 1-61
+lib/dash/mcp/tools/doctor_tool.rb
+  s_d23409d772f820::t_9ce43b9b9dc657 1-13
+lib/dash/mcp/tools/containers_tool.rb
+  s_d23409d772f820::t_9ce43b9b9dc657 1-10
+test/mcp/mcp_test_case.rb
+  s_d23409d772f820::t_556629ffc89610 1-39
+lib/dash/mcp/tools/lock_status_tool.rb
+  s_d23409d772f820::t_9ce43b9b9dc657 1-15
+Gemfile.lock
+  ai_agent 65,74-78,85-86,182,212
+lib/dash/mcp/tools/config_tool.rb
+  s_d23409d772f820::t_9ce43b9b9dc657 1-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "7cbe6cc154f23c1a58c9621c1f4c242abe62e8dc",
+  "prompts": {},
+  "sessions": {
+    "s_d23409d772f820": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "33a3ec28-fddf-42bd-bd6e-bd072ff2b346",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
