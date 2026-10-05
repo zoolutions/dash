@@ -1524,6 +1524,40 @@ class CliProxyTest < CliTestCase
     end
   end
 
+
+  test "services lists what the proxy routes for this deploy" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("list --json") }
+      .returns({ services: { "app-web" => { host: "app.example.com", targets: [ "aaa:80" ], state: "running" }, "other" => {} } }.to_json)
+
+    run_command("services").tap do |output|
+      assert_match "Proxy Host: 1.1.1.1", output
+      assert_match "  app-web app.example.com -> aaa:80 (running)", output
+      assert_no_match "other", output
+    end
+
+    services = JSON.parse(run_command("services", "--json"))
+    assert_equal [ "app-web" ], services["hosts"].first["services"].keys
+  end
+
+  test "drift reports each mismatch with its code" do
+    Dash::Diagnostics::Drift.stubs(:take).returns(Dash::Diagnostics::Drift.new(
+      containers: { hosts: [ { host: "1.1.1.1", containers: [] } ] },
+      proxy_services: { hosts: [ { host: "1.1.1.1", services: { "app-web" => { "targets" => [ "aaaaaaaaaaaa:80" ] } } } ] }))
+
+    assert_match "proxy_target_not_running 1.1.1.1: app-web routes to aaaaaaaaaaaa, which is not a running container", run_command("drift")
+
+    drift = JSON.parse(run_command("drift", "--json"))
+    assert_equal false, drift["consistent"]
+    assert_equal [ "proxy_target_not_running" ], drift["drift"].map { |entry| entry["code"] }
+  end
+
+  test "drift without drift says so" do
+    Dash::Diagnostics::Drift.stubs(:take).returns(Dash::Diagnostics::Drift.new(containers: { hosts: [] }, proxy_services: { hosts: [] }))
+
+    assert_match "No drift: proxy targets match the running containers", run_command("drift")
+  end
+
   private
     def stub_cert_container_running(name)
       SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("")

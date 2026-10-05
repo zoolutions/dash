@@ -151,7 +151,10 @@ class Dash::Cli::Main < Dash::Cli::Base
   end
 
   desc "audit", "Show audit log from servers"
+  option :json, type: :boolean, default: false, desc: "Print the audit log as JSON, parsed per line"
   def audit
+    return puts_json { Dash::Diagnostics::Audit.new.to_h } if options[:json]
+
     quiet = options[:quiet]
     on(DASH.hosts) do |host|
       puts_by_host host, capture_with_info(*DASH.auditor.reveal), quiet: quiet
@@ -159,7 +162,10 @@ class Dash::Cli::Main < Dash::Cli::Base
   end
 
   desc "config", "Show combined config (including secrets!)"
+  option :json, type: :boolean, default: false, desc: "Print the config and its topology (roles, hosts, proxies) as JSON"
   def config
+    return puts_json(ssh: false) { Dash::Diagnostics::Config.new.to_h } if options[:json]
+
     run_locally do
       puts Dash::Utils.redacted(DASH.config.to_h).to_yaml
     end
@@ -177,8 +183,11 @@ class Dash::Cli::Main < Dash::Cli::Base
     puts "No documentation found for #{section}"
   end
 
-  desc "doctor", "Diagnose deploy readiness of servers, registry, proxy, ports, DNS, certificates, and per-role readiness gates"
+  desc "doctor", "Diagnose deploy readiness of servers, registry, proxy, ports, DNS, certificates, per-role readiness gates, and proxy drift"
+  option :json, type: :boolean, default: false, desc: "Print the results as JSON (exits 1 when a check fails)"
   def doctor
+    return doctor_json if options[:json]
+
     say "Running readiness checks...", :magenta
     pre_connect_if_required
 
@@ -353,6 +362,13 @@ class Dash::Cli::Main < Dash::Cli::Base
       base_options = options.without("skip_push")
       base_options = base_options.except("no_cache") unless base_options["no_cache"]
       { "version" => DASH.config.version }.merge(base_options)
+    end
+
+    # Pure JSON on stdout, so the failure is the exit status rather than an ERROR line.
+    def doctor_json
+      successful = true
+      puts_json { Dash::Diagnostics::Doctor.new.to_h.tap { |snapshot| successful = snapshot[:successful] } }
+      exit 1 unless successful
     end
 
     def print_doctor_report(results)

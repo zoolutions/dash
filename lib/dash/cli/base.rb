@@ -544,6 +544,15 @@ module Dash::Cli
         super
       end
 
+      # A diagnostic as pure JSON on stdout. capture_with_info logs every command it runs at
+      # info, onto stdout, so the capture runs at :error - a `| jq` must see only the JSON.
+      def puts_json(ssh: true)
+        DASH.with_verbosity(:error) do
+          pre_connect_if_required if ssh
+          puts JSON.pretty_generate(yield)
+        end
+      end
+
       def pre_connect_if_required
         if !DASH.connected?
           run_hook "pre-connect", secrets: true unless options[:skip_hooks]

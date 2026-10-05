@@ -67,6 +67,16 @@ class CliLockTest < CliTestCase
     end
   end
 
+
+  test "status --json" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .returns("Locked by: Jane at 2026-10-05T10:00:00Z\nVersion: 999\nMessage: hold on\n")
+
+    lock = JSON.parse(stdouted { Dash::Cli::Lock.start([ "status", "--json", "-c", "test/fixtures/deploy_with_accessories.yml" ]) })["lock"]
+
+    assert_equal({ "host" => "1.1.1.1", "held" => true, "locked_by" => "Jane", "locked_at" => "2026-10-05T10:00:00Z", "version" => "999", "message" => "hold on" }, lock)
+  end
+
   private
     def run_command(*command)
       stdouted { Dash::Cli::Lock.start([ *command, "-v", "-c", "test/fixtures/deploy_with_accessories.yml" ]) }

@@ -188,7 +188,10 @@ class Dash::Cli::App < Dash::Cli::Base
   end
 
   desc "containers", "Show app containers on servers"
+  option :json, type: :boolean, default: false, desc: "Print every container per host as JSON (role, replica, version, state, health)"
   def containers
+    return puts_json { Dash::Diagnostics::Containers.new.to_h } if options[:json]
+
     quiet = options[:quiet]
     on(DASH.app_hosts) { |host| puts_by_host host, capture_with_info(*DASH.app.list_containers), quiet: quiet }
   end

@@ -20,11 +20,15 @@ class Dash::Diagnostics::Drift < Dash::Diagnostics::Base
   REPLACED_SUFFIX = /_replaced_\h{16}\z/
   TARGET_KEYS = %w[ targets reader_targets rollout_targets ].freeze
 
+  # The lock is only read when the primary host is in scope; narrowed away from it, the
+  # version codes are reported whether or not a deploy is in flight.
   def self.take
-    new(containers: Dash::Diagnostics::Containers.new.to_h, proxy_services: Dash::Diagnostics::ProxyServices.new.to_h, lock: Dash::Diagnostics::Lock.new.to_h)
+    lock = Dash::Diagnostics::Lock.new.to_h if DASH.hosts.include?(DASH.config.primary_host)
+
+    new(containers: Dash::Diagnostics::Containers.new.to_h, proxy_services: Dash::Diagnostics::ProxyServices.new.to_h, lock: lock)
   end
 
-  def initialize(containers:, proxy_services:, lock: nil, config: DASH.config)
+  def initialize(containers:, proxy_services:, lock: nil, config: nil)
     @containers = containers
     @proxy_services = proxy_services
     @lock = lock
@@ -67,8 +71,8 @@ class Dash::Diagnostics::Drift < Dash::Diagnostics::Base
       loadbalancer = @proxy_services[:loadbalancer]
       return [] if loadbalancer.nil? || loadbalancer[:error]
 
-      expected = Dash::Configuration::Loadbalancer.new(config: @config, proxy_config: @config.proxy.proxy_config, secrets: @config.secrets).target_hosts.uniq
-      actual = targets(loadbalancer[:services].to_h[@config.service])
+      expected = Dash::Configuration::Loadbalancer.new(config: config, proxy_config: config.proxy.proxy_config, secrets: config.secrets).target_hosts.uniq
+      actual = targets(loadbalancer[:services].to_h[config.service])
       host = loadbalancer[:host]
 
       (expected - actual).map { |target| entry "loadbalancer_target_missing", host, nil, "the load balancer does not forward to #{target}" } +
@@ -78,7 +82,7 @@ class Dash::Diagnostics::Drift < Dash::Diagnostics::Base
     def version_entries
       return [] if @lock&.dig(:lock, :held)
 
-      @config.roles.flat_map do |role|
+      config.roles.flat_map do |role|
         by_host = running.transform_values { |containers| versions(containers.select { |container| container[:role] == role.name }) }.reject { |_, versions| versions.empty? }
 
         multiple = by_host.select { |_, versions| versions.size > 1 }.map do |host, versions|
@@ -93,6 +97,10 @@ class Dash::Diagnostics::Drift < Dash::Diagnostics::Base
       end
     end
 
+    def config
+      @config ||= DASH.config
+    end
+
     def running
       @running ||= Array(@containers[:hosts]).reject { |host| host[:error] }.to_h do |host|
         [ host[:host], Array(host[:containers]).select { |container| container[:state] == "running" } ]
@@ -100,7 +108,7 @@ class Dash::Diagnostics::Drift < Dash::Diagnostics::Base
     end
 
     def proxied_roles_on(host)
-      @config.roles.select { |role| role.running_proxy? && role.hosts.include?(host) }
+      config.roles.select { |role| role.running_proxy? && role.hosts.include?(host) }
     end
 
     # dash-proxy lists targets as "<container id or host>:<port>"; the id is the short one

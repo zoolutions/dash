@@ -13,8 +13,11 @@ class Dash::Cli::Report < Dash::Cli::Base
 
   desc "show", "Print the last saved deploy report"
   option :last, type: :numeric, banner: "N", desc: "Print a trend table over the last N reports instead"
+  option :json, type: :boolean, default: false, desc: "Print the saved reports as JSON, most recent first (at most #{Dash::Diagnostics::Reports::MAX})"
   def show
-    if (last = options[:last])
+    if options[:json]
+      puts_json(ssh: false) { Dash::Diagnostics::Reports.new(last: options[:last] || 1, directory: reports_directory).to_h }
+    elsif (last = options[:last])
       return say "--last takes a positive number of reports, got #{last}", :red unless count?(last)
 
       print_trend saved.recent(last.to_i)

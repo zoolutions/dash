@@ -4,7 +4,9 @@ class Dash::Diagnostics::Lock < Dash::Diagnostics::Base
   # "Locked by: Jane at 2026-10-05T10:00:00Z", "Version: 999", "Message: ..."
   LOCKED_BY = /\ALocked by: (?<locked_by>.*) at (?<locked_at>\S+)\z/
 
-  def initialize(host: DASH.primary_host)
+  # The lock lives on the configured primary host whatever --hosts narrows to; asking any
+  # other host would answer "not held" for a lock that is.
+  def initialize(host: DASH.config.primary_host)
     @host = host
   end
 

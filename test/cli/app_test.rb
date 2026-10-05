@@ -1225,6 +1225,19 @@ class CliAppTest < CliTestCase
     assert_raises(ArgumentError) { run_command("rollout", "frobnicate") }
   end
 
+
+  test "containers --json is every container per host as JSON" do
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("{{json .}}") }
+      .returns({ "ID" => "aaa", "Names" => "app-web-999", "State" => "running", "Status" => "Up", "Labels" => "role=web" }.to_json)
+
+    containers = JSON.parse(run_command("containers", "--json"))
+
+    assert_equal "1.1.1.1", containers["hosts"].first["host"]
+    assert_equal({ "name" => "app-web-999", "role" => "web", "replica" => 1, "version" => "999" },
+      containers["hosts"].first["containers"].first.slice("name", "role", "replica", "version"))
+  end
+
   private
     def stub_rollout_target_not_deployed
       SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)

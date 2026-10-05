@@ -346,6 +346,24 @@ class Dash::Cli::Proxy < Dash::Cli::Base
     end
   end
 
+  desc "services", "Show what dash-proxy routes for this deploy on each proxy host (and the load balancer)"
+  option :json, type: :boolean, default: false, desc: "Print the services as JSON"
+  def services
+    return puts_json { Dash::Diagnostics::ProxyServices.new.to_h } if options[:json]
+
+    pre_connect_if_required
+    puts Inspection.services_lines(Dash::Diagnostics::ProxyServices.new.to_h)
+  end
+
+  desc "drift", "Compare the running containers with the proxy and load balancer targets"
+  option :json, type: :boolean, default: false, desc: "Print the drift as JSON"
+  def drift
+    return puts_json { Dash::Diagnostics::Drift.take.to_h } if options[:json]
+
+    pre_connect_if_required
+    puts Inspection.drift_lines(Dash::Diagnostics::Drift.take.to_h)
+  end
+
   desc "details", "Show details about proxy container from servers"
   def details
     quiet = options[:quiet]

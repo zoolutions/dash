@@ -1273,6 +1273,37 @@ class CliMainTest < CliTestCase
     assert_equal DEPLOY_COMMAND_SEQUENCE, recorded_deploy_commands { run_command("deploy", "--skip_push") }
   end
 
+
+  test "audit --json parses each line, and stdout is only the JSON" do
+    output = run_command("audit", "--json")
+    audit = JSON.parse(output)
+
+    assert_equal [ "1.1.1.1", "1.1.1.2" ], audit["hosts"].map { |host| host["host"] }
+    assert_no_match "Running", output
+  end
+
+  test "config --json adds the topology" do
+    config = JSON.parse(run_command("config", "--json", config_file: "deploy_with_roles"))
+
+    assert_equal [ "web", "workers" ], config["roles"].map { |role| role["name"] }
+    assert_equal [ "1.1.1.1", "1.1.1.2" ], config["roles"].first["hosts"]
+    assert_equal "registry.digitalocean.com/dhh/app:999", config.dig("config", "absolute_image")
+  end
+
+  test "doctor --json prints the results and exits 1 when a check fails" do
+    Dash::Diagnostics::Doctor.any_instance.stubs(:snapshot).returns(successful: false, results: [ { check: "ssh", target: "1.1.1.1", status: "fail", detail: "refused" } ], skipped: [])
+
+    exit_error = assert_raises(SystemExit) { run_command("doctor", "--json") }
+
+    assert_equal 1, exit_error.status
+  end
+
+  test "doctor --json exits cleanly when everything passes" do
+    Dash::Diagnostics::Doctor.any_instance.stubs(:snapshot).returns(successful: true, results: [], skipped: [])
+
+    assert_equal true, JSON.parse(run_command("doctor", "--json"))["successful"]
+  end
+
   private
     def saved_reports
       saved_report_names.map { |name| JSON.parse(File.read(File.join(@reports_directory, name)), symbolize_names: true) }

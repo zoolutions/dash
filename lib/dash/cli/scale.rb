@@ -27,12 +27,12 @@ class Dash::Cli::Scale < Dash::Cli::Base
   option :json, type: :boolean, default: false, desc: "Print the status as JSON"
   def status(role_name = nil)
     roles = role_name ? [ scalable_role(role_name) ] : DASH.config.roles
-    scale = Dash::Diagnostics::Scale.new(roles.map { |role| [ role, replica_status(role) ] })
+    scale = -> { Dash::Diagnostics::Scale.new(roles.map { |role| [ role, replica_status(role) ] }).to_h }
 
     if options[:json]
-      puts JSON.pretty_generate(scale.to_h)
+      puts_json(&scale)
     else
-      scale.to_h[:roles].each { |role| print_status(role) }
+      scale.call[:roles].each { |role| print_status(role) }
     end
   end
 
