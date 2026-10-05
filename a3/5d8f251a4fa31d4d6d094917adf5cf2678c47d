@@ -1,0 +1,24 @@
+docs/app/views/docs/pages/debugging.rb
+  s_d23409d772f820::t_e7bac737b5ff28 3-4,9,11-43,45-104,106-189,192-218
+  s_d23409d772f820::t_1bed6812cca106 1-2,5-8,10,44,105,190-191,219-220
+docs/app/models/doc.rb
+  s_d23409d772f820::t_3f9802437c32cc 39
+docs/app/views/docs/pages/commands.rb
+  s_d23409d772f820::t_5a9ec537328044 16-17,19-20,34,48-49,86,89,114-115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "a35d8f251a4fa31d4d6d094917adf5cf2678c47d",
+  "prompts": {},
+  "sessions": {
+    "s_d23409d772f820": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "33a3ec28-fddf-42bd-bd6e-bd072ff2b346",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
