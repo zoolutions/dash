@@ -36,6 +36,7 @@ class Doc
   page "Hooks",          group: "Deploying"
   page "Canary rollout", group: "Deploying", slug: "rollout", view: "CanaryRollout"
   page "Reading the deploy report", group: "Deploying", slug: "deploy-report", view: "DeployReport"
+  page "Debugging",      group: "Deploying"
 
   # Proxy — the dash-only features upstream kamal does not have
   page "Load balancing",           group: "Proxy", slug: "load-balancing", view: "LoadBalancing"
