@@ -24,7 +24,9 @@ jobs:
       - name: Setup Ruby and install gems
         uses: ruby/setup-ruby@afeafc3d1ab54a631816aba4c914a0081c12ff2f # v1.310.0
         with:
-          ruby-version: 3.3.0
+          # A minor, not a patch: setup-ruby has no prebuilt 3.3.0 for ubuntu-26.04 and
+          # fails the job as "self-hosted"; "3.3" resolves to the latest 3.3.x it ships.
+          ruby-version: "3.3"
           bundler-cache: true
       - name: Run Rubocop
         run: bundle exec rubocop --parallel
