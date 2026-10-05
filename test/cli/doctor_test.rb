@@ -77,7 +77,7 @@ class CliDoctorTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.expects(:execute).with { |*args| args.include?(:login) }.never
 
     DASH.configure config_file: Pathname.new(File.expand_path("test/fixtures/deploy_with_doctor.yml"))
-    doctor = Dash::Cli::Doctor.new(registry: false)
+    doctor = Dash::Diagnostics::Doctor.new(registry: false)
     doctor.run
 
     assert_empty doctor.results.select { |result| result.check == :registry }
@@ -254,7 +254,7 @@ class CliDoctorTest < CliTestCase
 
   test "doctor with unreachable tls endpoint warns" do
     stub_domain_resolution to: [ "1.1.1.1" ]
-    Dash::Cli::Doctor::EndpointChecks.any_instance.stubs(:peer_certificate)
+    Dash::Diagnostics::Doctor::EndpointChecks.any_instance.stubs(:peer_certificate)
       .raises(Errno::ECONNREFUSED.new("Connection refused"))
 
     run_command("doctor").tap do |output|
@@ -500,7 +500,7 @@ class CliDoctorTest < CliTestCase
     end
 
     def stub_served_certificate(expiring:)
-      Dash::Cli::Doctor::EndpointChecks.any_instance.stubs(:peer_certificate)
+      Dash::Diagnostics::Doctor::EndpointChecks.any_instance.stubs(:peer_certificate)
         .returns(generate_certificate(not_after: expiring))
     end
 

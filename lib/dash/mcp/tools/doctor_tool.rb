@@ -8,6 +8,6 @@ class Dash::Mcp::Tools::DoctorTool < Dash::Mcp::BaseTool
   input_schema properties: SCOPE, additionalProperties: false
 
   def self.call(server_context:, hosts: nil, roles: nil)
-    answer(server_context, hosts: hosts, roles: roles) { Dash::Diagnostics::Doctor.new(read_only: true).to_h }
+    answer(server_context, hosts: hosts, roles: roles) { Dash::Diagnostics::Doctor.new(registry: false).to_h }
   end
 end

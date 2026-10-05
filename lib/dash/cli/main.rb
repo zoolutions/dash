@@ -191,7 +191,7 @@ class Dash::Cli::Main < Dash::Cli::Base
     say "Running readiness checks...", :magenta
     pre_connect_if_required
 
-    doctor = Dash::Cli::Doctor.new
+    doctor = Dash::Diagnostics::Doctor.new
     doctor.run
 
     print_doctor_report doctor.results
@@ -392,7 +392,7 @@ class Dash::Cli::Main < Dash::Cli::Base
     def print_doctor_report(results)
       results.group_by(&:title).each do |title, rows|
         say title
-        rows.each { |row| say "  #{row}", Dash::Cli::Doctor::STATUS_COLORS[row.status] }
+        rows.each { |row| say "  #{row}", Dash::Diagnostics::Doctor::STATUS_COLORS[row.status] }
       end
     end
 

@@ -1,13 +1,13 @@
 # Checks that only read the configuration — no SSH, no network. They report problems
 # that are visible in deploy.yml alone, so they still run when every host is unreachable.
-class Dash::Cli::Doctor::ConfigChecks
+class Dash::Diagnostics::Doctor::ConfigChecks
   def run
     readiness_results + dockerfile_results
   end
 
   private
     def result(check, target, status, detail)
-      Dash::Cli::Doctor::Result.new(check, target, status, detail)
+      Dash::Diagnostics::Doctor::Result.new(check, target, status, detail)
     end
 
     def readiness_results

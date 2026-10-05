@@ -3,7 +3,7 @@
 # Every check rescues StandardError at its boundary: the doctor's contract is
 # to report broken environments, not crash on them, and a failed connection can
 # raise anything from Net::SSH errors to Errno and DNS resolution errors.
-class Dash::Cli::Doctor::HostChecks
+class Dash::Diagnostics::Doctor::HostChecks
   attr_reader :host, :sshkit, :proxy_host
   delegate :execute, :capture_with_info, to: :sshkit
 
@@ -28,7 +28,7 @@ class Dash::Cli::Doctor::HostChecks
 
   private
     def result(check, status, detail)
-      Dash::Cli::Doctor::Result.new(check, host, status, detail)
+      Dash::Diagnostics::Doctor::Result.new(check, host, status, detail)
     end
 
     def ssh_check

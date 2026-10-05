@@ -20,7 +20,7 @@ class McpReadOnlyTest < McpTestCase
 
   setup do
     Resolv.stubs(:getaddresses).returns([ "1.1.1.1" ])
-    Dash::Cli::Doctor::EndpointChecks.any_instance.stubs(:peer_certificate).returns(nil)
+    Dash::Diagnostics::Doctor::EndpointChecks.any_instance.stubs(:peer_certificate).returns(nil)
     Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
     @captures, @executes = [], []

@@ -4,7 +4,7 @@ require "openssl"
 
 # Local (no SSH) readiness checks for the domains dash-proxy will serve:
 # DNS resolution against the configured hosts and TLS certificate expiry.
-class Dash::Cli::Doctor::EndpointChecks
+class Dash::Diagnostics::Doctor::EndpointChecks
   CERTIFICATE_EXPIRY_WARN_DAYS = 14
   SECONDS_PER_DAY = 86_400
   TLS_CONNECT_TIMEOUT = 5
@@ -15,7 +15,7 @@ class Dash::Cli::Doctor::EndpointChecks
 
   private
     def result(check, target, status, detail)
-      Dash::Cli::Doctor::Result.new(check, target, status, detail)
+      Dash::Diagnostics::Doctor::Result.new(check, target, status, detail)
     end
 
     # Roles and accessories that run behind the proxy with custom domains.

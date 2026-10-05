@@ -3,7 +3,7 @@ require "dash/sshkit_with_ext"
 # What every diagnostic shares: a JSON-safe `to_h` stamped with when it was taken, and
 # per-host isolation. A host that cannot be reached, or answers with something that does
 # not parse, becomes `{ host:, error: }` in the snapshot - a debugging tool that dies on
-# the broken host is useless exactly when it is needed (same contract as Dash::Cli::Doctor).
+# the broken host is useless exactly when it is needed (same contract as Dash::Diagnostics::Doctor).
 #
 # Read-only by contract: a diagnostic only ever captures, never takes the deploy lock,
 # never writes an audit line, never fires a hook. The pre-connect hook is the caller's
