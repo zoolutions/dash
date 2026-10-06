@@ -133,6 +133,15 @@ class AutoscalePolicyTest < ActiveSupport::TestCase
     assert_equal "UpCloud answered 503", decision.error
   end
 
+  test "errors handed in as exceptions are recorded as their messages" do
+    decision = decide(now: BILLING, current: 1, pool_error: Dash::Autoscale::ProviderError.new("UpCloud answered 503"))
+    assert_equal "UpCloud answered 503", decision.error
+    assert_equal "UpCloud answered 503", JSON.parse(JSON.generate(decision.to_h))["error"]
+
+    decision = decide(now: BILLING, current: 0, unreadable_baseline: { "1.1.1.3" => Errno::ECONNREFUSED.new })
+    assert_equal "1.1.1.3: Connection refused", decision.error
+  end
+
   test "an unreachable baseline host holds: its count is unknown, and dash never powers it off" do
     decision = decide(now: BILLING, current: 0, unreadable_baseline: { "1.1.1.3" => "Errno::ECONNREFUSED" })
 

@@ -14,8 +14,8 @@ class Dash::Autoscale::Policy
   # paused_until:        nil, a Time, or :indefinite
   # warming:             { member host => joined at }
   # unreachable:         { member host => unreachable since }
-  # unreadable_baseline: { baseline host => error }
-  # pool_error:          the provider's error when the pool could not be read
+  # unreadable_baseline: { baseline host => error (an exception or its message) }
+  # pool_error:          the provider's error (an exception or its message) when the pool could not be read
   def initialize(role:, now:, time_zone:, current:, history: {}, paused_until: nil, warming: {}, unreachable: {}, unreadable_baseline: {}, pool_error: nil)
     @role, @scale = role, role.scale
     @now, @time_zone, @current = now, time_zone, current
@@ -24,9 +24,9 @@ class Dash::Autoscale::Policy
   end
 
   def decide
-    return hold("pool_unreadable", error: @pool_error) if @pool_error
+    return hold("pool_unreadable", error: message(@pool_error)) if @pool_error
     return hold("paused", eligible_at: (@paused_until unless @paused_until == :indefinite)) if paused?
-    return hold("host_unreachable", error: @unreadable_baseline.map { |host, error| "#{host}: #{error}" }.join("; ")) if @unreadable_baseline.any?
+    return hold("host_unreachable", error: @unreadable_baseline.map { |host, error| "#{host}: #{message(error)}" }.join("; ")) if @unreadable_baseline.any?
     return unreachable_member if @unreachable.any?
 
     if current < floor
@@ -107,6 +107,11 @@ class Dash::Autoscale::Policy
 
     def last_action_at
       @history.values_at(:last_scale_out_at, :last_scale_in_at).compact.max
+    end
+
+    # Errors may come in as exceptions; a decision carries their message, which JSON can.
+    def message(error)
+      error.respond_to?(:message) ? error.message : error.to_s
     end
 
     def hold(reason, eligible_at: nil, error: nil)

@@ -53,15 +53,18 @@ class CommandsAutoscaleTest < ActiveSupport::TestCase
   end
 
   test "pauses are one file per role" do
-    assert_match "| base64 -d > #{DIR}/pause/payments.tmp && mv #{DIR}/pause/payments.tmp #{DIR}/pause/payments", command.write_pause("payments", "{}").join(" ")
-    assert_equal "rm -f #{DIR}/pause/payments", command.remove_pause("payments").join(" ")
+    assert_match "| base64 -d > #{DIR}/pause/payments.json.tmp && mv #{DIR}/pause/payments.json.tmp #{DIR}/pause/payments.json", command.write_pause("payments", "{}").join(" ")
+    assert_equal "rm -f #{DIR}/pause/payments.json", command.remove_pause("payments").join(" ")
+    assert_equal "rm -f #{DIR}/pause/api.v2.json", command.remove_pause("api.v2").join(" ")
     assert_equal "grep -H \"\" #{DIR}/pause/* 2> /dev/null || true", command.read_pauses.join(" ")
   end
 
   test "a role name that is not a plain word never reaches a path" do
-    [ "../web", "pay ments", "a;b", "" ].each do |name|
-      assert_raises(ArgumentError, name) { command.write_pause(name, "{}") }
-      assert_raises(ArgumentError, name) { command.remove_pause(name) }
+    [ "../web", ".hidden", "pay ments", "a;b", "a/b", "" ].each do |name|
+      [ -> { command.write_pause(name, "{}") }, -> { command.remove_pause(name) } ].each do |call|
+        error = assert_raises(ArgumentError, &call)
+        assert_equal "#{name.inspect} is not a role name dash can keep a pause file for", error.message
+      end
     end
   end
 

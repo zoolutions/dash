@@ -2,11 +2,13 @@ require "base64"
 
 # The autoscaling controller's state files, under `<app_directory>/autoscale/` on the
 # primary role's first baseline host: `heartbeat.json`, `state.json`, `decisions.jsonl`
-# and one `pause/<role>` file per paused role. JSON travels base64-encoded and is decoded
+# and one `pause/<role>.json` file per paused role. JSON travels base64-encoded and is decoded
 # on the host, so no value is ever shell-quoted; a file is written beside its target and
 # moved into place, so a reader never sees half of one. See Dash::Autoscale::StateStore.
 class Dash::Commands::Autoscale < Dash::Commands::Base
-  ROLE_NAME = /\A[\w-]+\z/
+  # What docker allows in a container name, which every role name ends up in.
+  ROLE_NAME = /\A[a-zA-Z0-9_][a-zA-Z0-9_.-]*\z/
+  PAUSE_EXTENSION = ".json"
 
   def ensure_directory
     make_directory pause_directory
@@ -98,6 +100,6 @@ class Dash::Commands::Autoscale < Dash::Commands::Base
     def pause_file(role)
       raise ArgumentError, "#{role.to_s.inspect} is not a role name dash can keep a pause file for" unless ROLE_NAME.match?(role.to_s)
 
-      File.join(pause_directory, role.to_s)
+      File.join(pause_directory, "#{role}#{PAUSE_EXTENSION}")
     end
 end

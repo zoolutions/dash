@@ -91,17 +91,19 @@ class AutoscaleStateStoreTest < ActiveSupport::TestCase
 
   test "pauses by role" do
     stub_capture "grep -H", <<~OUT
-      #{DIR}/pause/payments:{"until":"2026-10-06T14:00:00Z","by":"ops"}
-      #{DIR}/pause/web:{"until":"indefinite","by":"ops"}
-      #{DIR}/pause/web.tmp:{"until":"indefinite","by":"ops"}
+      #{DIR}/pause/payments.json:{"until":"2026-10-06T14:00:00Z","by":"ops"}
+      #{DIR}/pause/web.json:{"until":"indefinite","by":"ops"}
+      #{DIR}/pause/web.json.tmp:{"until":"indefinite","by":"ops"}
+      #{DIR}/pause/api.v2.json:{"until":"indefinite","by":"ops"}
     OUT
 
-    assert_equal({ "payments" => { "until" => "2026-10-06T14:00:00Z", "by" => "ops" }, "web" => { "until" => "indefinite", "by" => "ops" } }, @store.pauses)
+    assert_equal({ "payments" => { "until" => "2026-10-06T14:00:00Z", "by" => "ops" }, "web" => { "until" => "indefinite", "by" => "ops" },
+      "api.v2" => { "until" => "indefinite", "by" => "ops" } }, @store.pauses)
   end
 
   test "writes and removes a pause" do
-    expect_written("pause/payments", { "until" => "indefinite", "by" => "ops" })
-    @backend.expects(:execute).with(:rm, "-f", "#{DIR}/pause/payments")
+    expect_written("pause/payments.json", { "until" => "indefinite", "by" => "ops" })
+    @backend.expects(:execute).with(:rm, "-f", "#{DIR}/pause/payments.json")
 
     @store.write_pause("payments", "until" => "indefinite", "by" => "ops")
     @store.remove_pause("payments")

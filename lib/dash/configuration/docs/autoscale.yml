@@ -49,7 +49,7 @@ autoscale:
 # target through `dash scale set`, under the deploy lock. A tick waits up to
 # `lock_wait_timeout` seconds (default 60) for a lock someone else holds, then holds the
 # role until the next tick. Schedule crons are evaluated in `timezone`, an IANA name
-# (default UTC).
+# (default UTC; this example evaluates them in Stockholm time).
 autoscale:
   provider:
     ...

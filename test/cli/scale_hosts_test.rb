@@ -291,8 +291,10 @@ class CliScaleHostsTest < CliTestCase
     deploy_with_create
     @provider.members_list << member("new1", "10.0.0.30", "payments", "started")
 
-    stdouted { replace_unreachable(:tmp_scale_create, "payments", "new1", count: 3) }
+    output = stdouted { replace_unreachable(:tmp_scale_create, "payments", "new1", count: 3) }
 
+    assert_match "Removing new1 (10.0.0.30) from payments, unreachable...", output
+    assert_no_match(/on 10\.0\.0\.30/, output)
     assert_equal [ [ :stop, "new1", 60 ], [ :destroy, "new1" ] ], @provider.calls
   ensure
     FileUtils.rm_f "test/fixtures/deploy_tmp_scale_create.yml"
