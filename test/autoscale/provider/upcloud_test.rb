@@ -29,6 +29,13 @@ class AutoscaleProviderUpcloudTest < ActiveSupport::TestCase
     assert_equal "94.1.1.1", @provider.members(labels: LABELS, address: "public").first.host
   end
 
+  test "a member without an address of the role's access is an error, not a nil host" do
+    respond list(server("u1", LABELS)), details("u1", "started", [ ip("public", "94.1.1.1") ])
+
+    error = assert_raises(Dash::Autoscale::ProviderError) { @provider.members(labels: LABELS, address: "private") }
+    assert_equal "upcloud: server u1 has no private address, set scale/address to one it has", error.message
+  end
+
   test "requests authenticate with basic auth and never put credentials in the path" do
     respond list
 

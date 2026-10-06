@@ -11,7 +11,7 @@ class Dash::Diagnostics::Doctor::ConfigChecks
     end
 
     def readiness_results
-      DASH.roles.map { |role| readiness_check(role) }
+      DASH.config.roles.map { |role| readiness_check(role) }
     end
 
     def readiness_check(role)

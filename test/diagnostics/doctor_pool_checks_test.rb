@@ -45,15 +45,30 @@ class DiagnosticsDoctorPoolChecksTest < DiagnosticsTestCase
     configure "deploy_with_scale"
     Dash::Autoscale::Provider::Upcloud.any_instance.stubs(:members).raises(Dash::Autoscale::ProviderError, "down")
     Dash::Diagnostics::Doctor::EndpointChecks.any_instance.stubs(:run).returns([])
-    Dash::Diagnostics::Doctor::ConfigChecks.any_instance.stubs(:run).returns([])
 
     doctor = Dash::Diagnostics::Doctor.new(registry: false)
     doctor.run
 
     assert_not doctor.successful?
-    assert_equal [ [ :ssh, "pool" ], [ :pool, "payments" ] ], doctor.failures.map { |result| [ result.check, result.target ] }
-    assert_equal [ :drift ], doctor.warnings.map(&:check)
-    assert_equal "Pool", doctor.failures[1].title
+    assert_equal [ [ :ssh, "pool" ], [ :pool, "payments" ] ], doctor.failures.reject { |result| result.check == :dockerfile }.map { |result| [ result.check, result.target ] }
+    assert_equal [ "payments", "web" ], doctor.results.select { |result| result.check == :readiness }.map(&:target)
+    assert_includes doctor.warnings.map(&:check), :drift
+    assert_equal "Pool", doctor.failures.find { |result| result.check == :pool }.title
+  end
+
+  test "a provider that fails once is asked once per process" do
+    configure "deploy_with_scale"
+    Dash::Autoscale::Provider::Upcloud.any_instance.expects(:members).once.raises(Dash::Autoscale::ProviderError, "down")
+
+    2.times { assert_raises(Dash::Autoscale::ProviderError) { DASH.config.role(:payments).hosts } }
+  end
+
+  test "a credential that resolves to nothing is a failing pool check" do
+    configure "deploy_with_scale"
+    Dash::Secrets.any_instance.stubs(:[]).returns("")
+
+    assert_equal [ [ "payments", :fail, "Could not read the payments pool from upcloud: autoscale/provider/upcloud/username: secret 'UPCLOUD_USERNAME' resolved to an empty value — " \
+      "if your secrets file forwards it from the environment (UPCLOUD_USERNAME=$UPCLOUD_USERNAME), export the variable before running dash" ] ], results
   end
 
   private

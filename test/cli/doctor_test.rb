@@ -83,6 +83,18 @@ class CliDoctorTest < CliTestCase
     assert_empty doctor.results.select { |result| result.check == :registry }
   end
 
+  test "doctor reports a provider that does not answer, even with a pre-connect hook" do
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(true)
+    Dash::Autoscale::Provider::Upcloud.any_instance.stubs(:members).raises(Dash::Autoscale::ProviderError, "down")
+    Dash::Diagnostics::Doctor::EndpointChecks.any_instance.stubs(:run).returns([])
+
+    Dash::Cli::Main.any_instance.stubs(:say)
+    Dash::Cli::Main.any_instance.expects(:say).with("Skipped the pre-connect hook, the hosts are unknown: Could not read the payments pool from upcloud: down", :yellow)
+
+    exception = assert_raises(Dash::Cli::DoctorError) { run_command("doctor", fixture: "deploy_with_scale") }
+    assert_includes exception.message, "Could not read the payments pool from upcloud: down"
+  end
+
   test "doctor with proxy running at current version" do
     stub_proxy_version Dash::Configuration::Proxy::Run::MINIMUM_VERSION
     stub_domain_resolution to: [ "1.1.1.1" ]

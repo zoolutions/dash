@@ -60,7 +60,7 @@ class Dash::Autoscale::Provider::Upcloud < Dash::Autoscale::Provider::Base
     def member_from(server, labels:, address:)
       Dash::Autoscale::Member.new \
         id: server["uuid"],
-        host: address_of(server, address),
+        host: address_of(server, address) || raise(Dash::Autoscale::ProviderError, "upcloud: server #{server["uuid"]} has no #{address} address, set scale/address to one it has"),
         role: labels["dash.role"],
         state: server["state"],
         labels: labels,

@@ -19,11 +19,19 @@ class Dash::Autoscale::Pool
   end
 
   # `on` runs host blocks in threads, and any of them may be the first to read a role's
-  # hosts; the lock keeps that to one provider call.
+  # hosts; the lock keeps that to one provider call. A failure is kept too, so a provider
+  # that is down costs one timeout per process, not one per `hosts` read.
   def members_for(role)
-    @mutex.synchronize do
-      @members[role.name] ||= resolve(role)
+    members = @mutex.synchronize do
+      @members[role.name] ||= begin
+        resolve(role)
+      rescue Dash::Autoscale::ProviderError => e
+        e
+      end
     end
+
+    raise members if members.is_a?(Exception)
+    members
   end
 
   def active_for(role)
@@ -46,7 +54,8 @@ class Dash::Autoscale::Pool
   private
     def resolve(role)
       provider.members(labels: labels_for(role), address: role.scale.address)
-    rescue Dash::Autoscale::ProviderError => e
+    # A credential that resolves to nothing only surfaces here, on the first request.
+    rescue Dash::Autoscale::ProviderError, Dash::ConfigurationError => e
       degraded(role, e)
     end
 

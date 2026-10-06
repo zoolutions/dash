@@ -121,7 +121,7 @@ class Dash::Configuration
     builder.secrets
 
     roles.each do |role|
-      role.secrets_io(role.hosts.first) if role.hosts.any?
+      role.secrets_io(role.baseline_hosts.first) if role.baseline_hosts.any?
 
       if role.running_proxy?
         role.proxy.run&.secrets_io

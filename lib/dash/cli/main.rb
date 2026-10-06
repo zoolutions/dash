@@ -189,7 +189,7 @@ class Dash::Cli::Main < Dash::Cli::Base
     return doctor_json if options[:json]
 
     say "Running readiness checks...", :magenta
-    pre_connect_if_required
+    doctor_pre_connect
 
     doctor = Dash::Diagnostics::Doctor.new
     doctor.run
@@ -377,6 +377,14 @@ class Dash::Cli::Main < Dash::Cli::Base
     end
 
     # Pure JSON on stdout, so the failure is the exit status rather than an ERROR line.
+    # The pre-connect hook is handed every host, and with the pool unreadable those are
+    # unknown. The doctor carries on without it and reports the pool failure itself.
+    def doctor_pre_connect
+      pre_connect_if_required
+    rescue Dash::Autoscale::ProviderError => e
+      say "Skipped the pre-connect hook, the hosts are unknown: #{e.message}", :yellow
+    end
+
     def doctor_json
       exit 1 unless puts_json { Dash::Diagnostics::Doctor.new.to_h }[:successful]
     end
