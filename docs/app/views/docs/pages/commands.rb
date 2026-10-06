@@ -13,10 +13,11 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     [ "dash redeploy", "Deploy app without bootstrapping servers, starting the proxy, or pruning" ],
     [ "dash rollback [VERSION]", "Rollback app to VERSION" ],
     [ "dash details", "Show details about all containers" ],
-    [ "dash audit", "Show audit log from servers" ],
-    [ "dash config", "Show combined config (including secrets!)" ],
+    [ "dash audit", "Show audit log from servers; --json parses each line" ],
+    [ "dash config", "Show combined config (including secrets!); --json adds the topology" ],
     [ "dash docs [SECTION]", "Show dash configuration documentation" ],
-    [ "dash doctor", "Diagnose deploy readiness of servers, registry, proxy, ports, DNS, certificates, and per-role readiness gates" ],
+    [ "dash doctor", "Diagnose deploy readiness of servers, registry, proxy, ports, DNS, certificates, per-role readiness gates, and proxy drift; --json exits 1 on a failure" ],
+    [ "dash mcp", "Serve read-only diagnostics to an AI agent over stdio (Model Context Protocol) — see Debugging" ],
     [ "dash init", "Create config stub in config/deploy.yml and secrets stub in .dash" ],
     [ "dash remove", "Remove the proxy, app, accessories, and registry session from servers" ],
     [ "dash migrate", "Move this project's .kamal directory to .dash" ],
@@ -30,7 +31,7 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     [ "exec [CMD...]", "Execute a custom command on servers within the app container" ],
     [ "logs", "Show log lines from app on servers" ],
     [ "details", "Show details about app containers" ],
-    [ "containers / images", "Show app containers / images on servers" ],
+    [ "containers / images", "Show app containers / images on servers; containers --json for every slot as a document" ],
     [ "stale_containers", "Detect app stale containers" ],
     [ "live / maintenance", "Switch the app between live and maintenance mode" ],
     [ "rollout <deploy|set|stop>", "Manage a canary rollout of a new version through the proxy — see Canary rollout" ],
@@ -44,6 +45,8 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     [ "reboot", "Reboot proxy on servers (stop, remove, start new container)" ],
     [ "start / stop / restart", "Manage the existing proxy container on servers" ],
     [ "details", "Show details about proxy container from servers" ],
+    [ "services", "Show what dash-proxy routes for this deploy per proxy host and on the load balancer; --json" ],
+    [ "drift", "Compare the running containers with the proxy and load balancer targets; --json" ],
     [ "logs", "Show log lines from proxy on servers" ],
     [ "loadbalancer <info|start|stop|logs|deploy>", "Manage the load balancer" ],
     [ "cache <stats|purge>", "Manage the response cache" ],
@@ -80,10 +83,10 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     [ "dash server bootstrap", "Set up Docker to run dash apps" ],
     [ "dash server exec", "Run a custom command on the server" ],
     [ "dash registry <setup|remove|login|logout>", "Manage the local registry or remote registry sessions" ],
-    [ "dash lock <status|acquire|release>", "Manage the deploy lock; --server targets the shared server lock instead" ],
+    [ "dash lock <status|acquire|release>", "Manage the deploy lock; --server targets the shared server lock instead; status --json" ],
     [ "dash prune <all|images|containers>", "Prune old application images and stopped containers" ],
     [ "dash secrets <fetch|extract|print>", "Helpers for extracting secrets from a vault" ],
-    [ "dash report [--last N]", "Print the last saved deploy report, or a trend over the last N" ],
+    [ "dash report [--last N] [--json]", "Print the last saved deploy report, or a trend over the last N; --json for the reports themselves" ],
     [ "dash report path", "Print the directory saved reports are written to" ]
   ].freeze
 
@@ -108,7 +111,8 @@ class Views::Docs::Pages::Commands < DocsUI::Page
         go right. `dash docs` prints the same configuration reference the
         [Configuration](/docs/configuration) pages here are generated from.
         `migrate` renames a kamal project's `.kamal/` to `.dash/` — see
-        [From kamal](/docs/from-kamal).
+        [From kamal](/docs/from-kamal). The `--json` flags and `dash mcp` are
+        covered in [Debugging](/docs/debugging).
 
         `--rolling` on `upgrade`, `proxy reboot`, and `proxy upgrade` walks the
         hosts one at a time instead of in parallel — see

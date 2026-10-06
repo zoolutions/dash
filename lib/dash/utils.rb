@@ -93,6 +93,13 @@ module Dash::Utils
       .join
   end
 
+  # Wraps a value in single quotes, closing and reopening them around any quote the value
+  # carries, so the shell reads it as one literal word: no expansion, no command
+  # substitution, no way out of the quotes. `grep 'my-id'` stays `grep 'my-id'`.
+  def single_quote(value)
+    "'#{value.to_s.gsub("'") { %q('\\'') }}'"
+  end
+
   def escape_ascii_shell_value(value)
     value.to_s.dump
       .gsub(/`/, '\\\\`')

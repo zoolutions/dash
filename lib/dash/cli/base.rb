@@ -103,9 +103,10 @@ module Dash::Cli
       # Process-scoped rather than commander-scoped: Dash::Cli::Alias::Command
       # resets DASH and re-enters Dash::Cli::Main.start, so an aliased command
       # builds a second commander and would otherwise warn twice. `dash migrate`
-      # is exempt - telling an operator to run the command they are running is noise.
+      # is exempt - telling an operator to run the command they are running is noise - and
+      # so is `dash mcp`, whose stdout is the protocol.
       def warn_on_legacy_project_directory(command_name)
-        return if command_name == "migrate"
+        return if %w[ migrate mcp ].include?(command_name)
         return if Dash::Cli::Base.legacy_project_directory_warned
         return unless Dash::ProjectDirectory.legacy?
 
@@ -542,6 +543,15 @@ module Dash::Cli
         pre_connect_if_required
 
         super
+      end
+
+      # A diagnostic as pure JSON on stdout, returned too. capture_with_info logs every command
+      # it runs at info, onto stdout, so the capture runs at :error - a `| jq` must see only the JSON.
+      def puts_json(ssh: true)
+        DASH.with_verbosity(:error) do
+          pre_connect_if_required if ssh
+          yield.tap { |snapshot| puts JSON.pretty_generate(snapshot) }
+        end
       end
 
       def pre_connect_if_required

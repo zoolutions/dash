@@ -1,0 +1,14 @@
+service: app
+image: dhh/app
+servers:
+  - 1.1.1.1
+registry:
+  username: user
+  password: pw
+builder:
+  arch: amd64
+ssh:
+  keys:
+    - ~/.ssh/deploy_ed25519
+  key_data:
+    - "-----BEGIN OPENSSH PRIVATE KEY-----"

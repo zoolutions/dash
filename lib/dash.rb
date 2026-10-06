@@ -26,5 +26,7 @@ require "digest/sha2"
 
 loader = Zeitwerk::Loader.for_gem
 loader.ignore(File.join(__dir__, "dash", "sshkit_with_ext.rb"))
+# The MCP tools subclass MCP::Tool from the optional `mcp` gem; Dash::Mcp.load! requires them.
+loader.ignore(File.join(__dir__, "dash", "mcp"))
 loader.setup
 loader.eager_load_namespace(Dash::Cli) # We need all commands loaded.

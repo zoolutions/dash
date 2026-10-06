@@ -172,7 +172,7 @@ class Dash::Cli::Proxy::Reboot
     def verify_services(registered_services)
       return if registered_services.empty?
 
-      listed = JSON.parse(capture_with_info(*proxy.list(json: true))).fetch("services", {}).keys
+      listed = Dash::Commands::Proxy::Services.parse(capture_with_info(*proxy.list(json: true))).keys
       missing = registered_services - listed
 
       if missing.any?

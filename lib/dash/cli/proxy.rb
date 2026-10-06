@@ -1,4 +1,6 @@
 class Dash::Cli::Proxy < Dash::Cli::Base
+  include Inspection
+
   desc "boot", "Boot proxy on servers"
   def boot
     modify(lock: true, server_lock: true) do

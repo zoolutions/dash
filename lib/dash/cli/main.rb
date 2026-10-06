@@ -151,7 +151,10 @@ class Dash::Cli::Main < Dash::Cli::Base
   end
 
   desc "audit", "Show audit log from servers"
+  option :json, type: :boolean, default: false, desc: "Print the audit log as JSON, parsed per line"
   def audit
+    return puts_json { Dash::Diagnostics::Audit.new.to_h } if options[:json]
+
     quiet = options[:quiet]
     on(DASH.hosts) do |host|
       puts_by_host host, capture_with_info(*DASH.auditor.reveal), quiet: quiet
@@ -159,7 +162,10 @@ class Dash::Cli::Main < Dash::Cli::Base
   end
 
   desc "config", "Show combined config (including secrets!)"
+  option :json, type: :boolean, default: false, desc: "Print the config and its topology (roles, hosts, proxies) as JSON"
   def config
+    return puts_json(ssh: false) { Dash::Diagnostics::Config.new.to_h } if options[:json]
+
     run_locally do
       puts Dash::Utils.redacted(DASH.config.to_h).to_yaml
     end
@@ -177,12 +183,15 @@ class Dash::Cli::Main < Dash::Cli::Base
     puts "No documentation found for #{section}"
   end
 
-  desc "doctor", "Diagnose deploy readiness of servers, registry, proxy, ports, DNS, certificates, and per-role readiness gates"
+  desc "doctor", "Diagnose deploy readiness of servers, registry, proxy, ports, DNS, certificates, per-role readiness gates, and proxy drift"
+  option :json, type: :boolean, default: false, desc: "Print the results as JSON (exits 1 when a check fails)"
   def doctor
+    return doctor_json if options[:json]
+
     say "Running readiness checks...", :magenta
     pre_connect_if_required
 
-    doctor = Dash::Cli::Doctor.new
+    doctor = Dash::Diagnostics::Doctor.new
     doctor.run
 
     print_doctor_report doctor.results
@@ -192,6 +201,18 @@ class Dash::Cli::Main < Dash::Cli::Base
     else
       raise Dash::Cli::DoctorError, doctor_failure_message(doctor)
     end
+  end
+
+  desc "mcp", "Serve read-only diagnostics to an AI agent over stdio (Model Context Protocol)"
+  option :allow_logs, type: :boolean, default: false, desc: "Enable the logs tool (container logs can carry personal data; or DASH_MCP_ALLOW_LOGS=true)"
+  def mcp
+    protocol = Dash::Mcp.reserve_stdout!
+    Dash::Mcp.load!
+    Dash::Mcp::Runner.authorize!(ENV)
+    DASH.verbosity = :error
+    pre_connect_if_required
+
+    Dash::Mcp::Runner.run(mcp_session, output: protocol)
   end
 
   desc "init", "Create config stub in config/deploy.yml and secrets stub in .dash"
@@ -355,10 +376,23 @@ class Dash::Cli::Main < Dash::Cli::Base
       { "version" => DASH.config.version }.merge(base_options)
     end
 
+    # Pure JSON on stdout, so the failure is the exit status rather than an ERROR line.
+    def doctor_json
+      exit 1 unless puts_json { Dash::Diagnostics::Doctor.new.to_h }[:successful]
+    end
+
+    # The scope the operator started `dash mcp` with is the ceiling for every question.
+    def mcp_session
+      Dash::Mcp::Session.new(
+        config_file: Pathname.new(File.expand_path(options[:config_file])), destination: options[:destination], version: options[:version],
+        hosts: options[:primary] ? [ DASH.primary_host ] : options[:hosts]&.split(","), roles: options[:roles]&.split(","),
+        allow_logs: Dash::Mcp::Runner.allow_logs?(options[:allow_logs], ENV), redactor: Dash::Diagnostics::Redactor.for(DASH.config))
+    end
+
     def print_doctor_report(results)
       results.group_by(&:title).each do |title, rows|
         say title
-        rows.each { |row| say "  #{row}", Dash::Cli::Doctor::STATUS_COLORS[row.status] }
+        rows.each { |row| say "  #{row}", Dash::Diagnostics::Doctor::STATUS_COLORS[row.status] }
       end
     end
 

@@ -27,12 +27,13 @@ class Dash::Cli::Scale < Dash::Cli::Base
   option :json, type: :boolean, default: false, desc: "Print the status as JSON"
   def status(role_name = nil)
     roles = role_name ? [ scalable_role(role_name) ] : DASH.config.roles
-    scale = Dash::Diagnostics::Scale.new(roles.map { |role| [ role, replica_status(role) ] })
+    scale = -> { Dash::Diagnostics::Scale.new(roles: roles).to_h }
 
     if options[:json]
-      puts JSON.pretty_generate(scale.to_h)
+      puts_json(&scale)
     else
-      scale.to_h[:roles].each { |role| print_status(role) }
+      pre_connect_if_required
+      scale.call[:roles].each { |role| print_status(role) }
     end
   end
 
@@ -115,19 +116,6 @@ class Dash::Cli::Scale < Dash::Cli::Base
       DASH.config.version = old_version
     end
 
-    # { host => [ [ name, status ] ] }, one `docker ps` per host.
-    def replica_status(role)
-      statuses = {}
-      mutex = Mutex.new
-
-      on(role.hosts) do |host|
-        lines = capture_with_info(*DASH.app(role: role, host: host).replica_status).lines
-        mutex.synchronize { statuses[host.to_s] = lines.map { |line| line.chomp.split("\t", 2) }.reject { |name, _| name.blank? } }
-      end
-
-      role.hosts.to_h { |host| [ host, statuses.fetch(host, []) ] }
-    end
-
     def print_status(role)
       say "#{role[:role]}: #{role[:total]} #{"container".pluralize(role[:total])} (replicas min #{role[:min]}, max #{role[:max]} per host)"
 
@@ -138,5 +126,7 @@ class Dash::Cli::Scale < Dash::Cli::Base
           say format("  %-20s %-3s %-20s %s", host, replica[:replica], replica[:version], replica[:status])
         end
       end
+
+      role[:unread].each { |host| say format("  %-20s %-3s %s", host[:host], "-", "could not read (#{host[:error]})"), :red }
     end
 end

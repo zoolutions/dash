@@ -40,6 +40,12 @@ class CommandsAuditorTest < ActiveSupport::TestCase
     assert_equal @auditor.record("Pruned containers"), @auditor.record_then("Pruned containers")
   end
 
+  test "reveal tails the last 50 lines, or as many as asked" do
+    assert_equal [ :tail, "-n", 50, ".dash/app-audit.log" ], @auditor.reveal
+    assert_equal [ :tail, "-n", 200, ".dash/app-audit.log" ], @auditor.reveal(lines: 200)
+    assert_raises(ArgumentError) { @auditor.reveal(lines: "5; rm -rf /") }
+  end
+
   test "record with destination" do
     new_command(destination: "staging").tap do |auditor|
       assert_equal [

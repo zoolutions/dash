@@ -104,6 +104,15 @@ class CliReportTest < CliTestCase
     assert_empty commands
   end
 
+
+  test "show --json prints the latest saved report, --last N the N most recent" do
+    save "2026-09-10T12-00-00Z-default-deploy.json", runtime: 100.0
+    save "2026-09-11T12-00-00Z-default-deploy.json", runtime: 196.2
+
+    assert_equal [ 196.2 ], JSON.parse(run_command("show", "--json"))["reports"].map { |report| report["runtime"] }
+    assert_equal [ 196.2, 100.0 ], JSON.parse(run_command("show", "--json", "--last", "5"))["reports"].map { |report| report["runtime"] }
+  end
+
   private
     def run_command(*command, config_file: "deploy_simple", destination: nil)
       argv = [ "report", *command, "-c", "test/fixtures/#{config_file}.yml" ]
