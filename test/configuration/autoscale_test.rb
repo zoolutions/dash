@@ -98,11 +98,43 @@ class ConfigurationAutoscaleTest < ActiveSupport::TestCase
     assert_raises_message(%r{autoscale/provider: unknown key: hetzner}) { config }
   end
 
-  test "the controller's keys are not accepted yet" do
-    %w[ interval redis postgres prometheus ].each do |key|
+  test "the reactive rules' keys are not accepted yet" do
+    %w[ redis postgres prometheus ].each do |key|
       @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } }, key => {} }
 
-      assert_raises_message(%r{autoscale: #{key} belongs to the autoscaling controller, which is not part of dash yet \(zoolutions/dash#180\)}) { config }
+      assert_raises_message(%r{autoscale: #{key} belongs to the reactive autoscaling rules, which are not part of dash yet \(zoolutions/dash#180, Phase 3\)}) { config }
+    end
+  end
+
+  test "controller defaults: a tick every 10 seconds, 60 seconds for the lock, UTC" do
+    @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } } }
+    autoscale = config.autoscale
+
+    assert_equal 10, autoscale.interval
+    assert_equal 60, autoscale.lock_wait_timeout
+    assert_equal "UTC", autoscale.timezone
+    assert_equal ActiveSupport::TimeZone["UTC"], autoscale.time_zone
+  end
+
+  test "interval, lock_wait_timeout and timezone" do
+    @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } },
+      "interval" => 30, "lock_wait_timeout" => 0, "timezone" => "Europe/Stockholm" }
+    autoscale = config.autoscale
+
+    assert_equal 30, autoscale.interval
+    assert_equal 0, autoscale.lock_wait_timeout
+    assert_equal "Europe/Stockholm", autoscale.time_zone.tzinfo.name
+  end
+
+  test "controller key bounds and types" do
+    { { "interval" => 4 } => %r{autoscale/interval: must be at least 5 seconds, not 4},
+      { "interval" => "10" } => %r{autoscale/interval: should be an integer},
+      { "lock_wait_timeout" => -1 } => %r{autoscale/lock_wait_timeout: must be at least 0, not -1},
+      { "timezone" => "Mars/Olympus" } => %r{autoscale/timezone: unknown time zone Mars/Olympus},
+      { "timezone" => 1 } => %r{autoscale/timezone: should be a string} }.each do |keys, pattern|
+      @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } } }.merge(keys)
+
+      assert_raises_message(pattern) { config }
     end
   end
 

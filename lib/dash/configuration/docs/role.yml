@@ -125,8 +125,10 @@ servers:
     # A scaled role behind dash-proxy needs the load balancer, which turns on by itself for
     # it even with one baseline host; `proxy/loadbalancer: false` is an error for it.
     #
-    # The keys of the autoscaling controller (`schedule`, `warmup`, `signal`, `up`, `down`,
-    # `cooldown`, `step`, `hold_when`) are not accepted yet.
+    # `schedule`, `warmup`, `cooldown` and `step` drive the autoscaling controller
+    # (`dash autoscale run`), which then owns the role's count: a manual `dash scale set`
+    # lasts until its next tick unless the role is paused. The keys of the reactive rules
+    # (`signal`, `up`, `down`, `hold_when`) are not accepted yet.
     scale:
       min: 2
       max: 4
@@ -159,7 +161,44 @@ servers:
       address: private
 
       # Seconds from powering a member on (or creating it) until it answers SSH, default 300.
+      # The controller also replaces a started member that has not answered SSH for this
+      # long: out of the load balancer, powered off (deleted for `create`), and the next
+      # tick restores the count with a healthy one.
       boot_timeout: 300
+
+      # Windows of guaranteed capacity, in containers (the unit of `dash scale set`). From
+      # every minute `cron` matches, for `for` (seconds, or a number with s, m, h or d, at
+      # most 7d), the controller keeps at least `min` containers running; overlapping
+      # windows take the largest `min`. Outside every window it returns to scale min ×
+      # replicas min. The target never goes above scale max × replicas max.
+      #
+      # `cron` has five fields - minute, hour, day-of-month, month, day-of-week - each `*`,
+      # a number, a range `a-b`, a list `a,b` or a step `*/n` or `a-b/n`; day-of-week 0 and
+      # 7 are Sunday. When both day fields are set, a day matches if either does. There
+      # are no names, `L`, `W` or `#`. It is evaluated in `autoscale/timezone`.
+      #
+      # "The evening before the 1st and the 15th" has no exact cron: this example starts on
+      # the 14th and on each of the 28th to 31st (so on several evenings at a month end).
+      # When a few hours of lead are not needed, start on the day itself: `0 0 1,15 * *`.
+      schedule:
+        - cron: "0 22 14,28-31 * *"
+          for: 30h
+          min: 10
+
+      # Seconds a member that just joined counts as warming up: the controller never scales
+      # in while one is, nor replaces it for not answering SSH. Default: `boot_timeout`.
+      warmup: 300
+
+      # Seconds between the controller's actions. A scale-in step waits `down` (default
+      # 600) after the last scale-out or scale-in. A schedule floor scales out at once:
+      # `up` (default 60) is for the reactive rules to come.
+      cooldown:
+        up: 60
+        down: 600
+
+      # Containers removed per scale-in step, default `replicas/max` (one host's worth).
+      # Scale-out goes straight to the target.
+      step: 3
 
     # Option values are shell-escaped before reaching `docker run`, but `${...}` is
     # deliberately left for the deploy host's shell to expand. Role `env` is never

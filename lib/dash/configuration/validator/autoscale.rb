@@ -4,13 +4,15 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
   SCRIPTS = %w[ members start stop create destroy ]
   REQUIRED_SCRIPTS = %w[ members start stop ]
 
-  # Root keys of the autoscaling controller (zoolutions/dash#180, phases 2-3).
-  CONTROLLER_KEYS = %w[ interval redis postgres prometheus ]
+  # Root keys of the reactive autoscaling rules (zoolutions/dash#180, phase 3).
+  CONTROLLER_KEYS = %w[ redis postgres prometheus ]
+  MINIMUM_INTERVAL = 5
 
   def validate!
     validate_type! config, Hash
     validate_no_controller_keys!
     check_unknown_keys! config, example
+    validate_controller!
 
     with_context("provider") do
       provider = config["provider"]
@@ -28,8 +30,28 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
   private
     def validate_no_controller_keys!
       if (key = (config.keys.map(&:to_s) & CONTROLLER_KEYS).first)
-        error "#{key} belongs to the autoscaling controller, which is not part of dash yet (zoolutions/dash#180)"
+        error "#{key} belongs to the reactive autoscaling rules, which are not part of dash yet (zoolutions/dash#180, Phase 3)"
       end
+    end
+
+    def validate_controller!
+      with_context("interval") { validate_at_least! config["interval"], MINIMUM_INTERVAL, " seconds" }
+      with_context("lock_wait_timeout") { validate_at_least! config["lock_wait_timeout"], 0 }
+
+      with_context("timezone") do
+        timezone = config["timezone"]
+        next if timezone.nil?
+
+        error "should be a string" unless timezone.is_a?(String)
+        error "unknown time zone #{timezone}, use an IANA name such as Europe/Stockholm" if ActiveSupport::TimeZone[timezone].nil?
+      end
+    end
+
+    def validate_at_least!(value, minimum, unit = nil)
+      return if value.nil?
+
+      error "should be an integer" unless value.is_a?(Integer)
+      error "must be at least #{minimum}#{unit}, not #{value}" if value < minimum
     end
 
     def validate_upcloud!(upcloud)
