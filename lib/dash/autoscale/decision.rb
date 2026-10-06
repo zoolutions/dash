@@ -1,6 +1,10 @@
 # What the controller decided for one scaled role on one tick: the action, the container
 # count it goes from and to, the reason codes, and every input the policy used. The reason
 # and action codes are stable - the decision log, the metrics and the MCP tools all use them.
+#
+# On a scale_out or scale_in the reasons name what set the target the role moves toward:
+# `schedule_floor` (a window), `at_min` (scale min × replicas min), plus `at_max` when the
+# target was capped. A scale_in step that stops short of the target still names the target.
 Dash::Autoscale::Decision = Struct.new(:role, :action, :from, :to, :reasons, :inputs, :eligible_at, :at, :error, keyword_init: true) do
   def initialize(reasons: [], inputs: {}, **attributes)
     super

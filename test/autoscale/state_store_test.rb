@@ -93,6 +93,7 @@ class AutoscaleStateStoreTest < ActiveSupport::TestCase
     stub_capture "grep -H", <<~OUT
       #{DIR}/pause/payments:{"until":"2026-10-06T14:00:00Z","by":"ops"}
       #{DIR}/pause/web:{"until":"indefinite","by":"ops"}
+      #{DIR}/pause/web.tmp:{"until":"indefinite","by":"ops"}
     OUT
 
     assert_equal({ "payments" => { "until" => "2026-10-06T14:00:00Z", "by" => "ops" }, "web" => { "until" => "indefinite", "by" => "ops" } }, @store.pauses)

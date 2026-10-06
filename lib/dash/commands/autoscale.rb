@@ -55,7 +55,7 @@ class Dash::Commands::Autoscale < Dash::Commands::Base
     [ :rm, "-f", pause_file(role) ]
   end
 
-  # `<path>:<json>` per paused role.
+  # `<path>:<json>` per file in the pause directory.
   def read_pauses
     any [ :grep, "-H", "\"\"", "#{pause_directory}/*", "2>", "/dev/null" ], [ :true ]
   end

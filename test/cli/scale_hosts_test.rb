@@ -269,6 +269,7 @@ class CliScaleHostsTest < CliTestCase
     assert_match "Removed w1 (10.0.0.40) from web", output
     assert_no_match(/on 10\.0\.0\.40/, output)
     assert_equal [ [ :stop, "w1", 60 ] ], @provider.calls
+    assert_not_includes DASH.run_directory_ensured_on, "10.0.0.40", "a member powered on again later gets its run directory ensured"
   end
 
   test "an unreachable worker member is powered off without a drain, under the deploy lock, with the scale-in hooks" do

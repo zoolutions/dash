@@ -65,10 +65,12 @@ class Dash::Autoscale::StateStore
   def pauses
     capture(@commands.read_pauses).lines.each_with_object({}) do |line, pauses|
       path, json = line.chomp.split(":", 2)
-      next if json.blank?
+      role = File.basename(path)
+      # A `.tmp` an interrupted write left behind is no pause: role names carry no dot.
+      next if json.blank? || !Dash::Commands::Autoscale::ROLE_NAME.match?(role)
 
-      pause = parse("pause/#{File.basename(path)}", json)
-      pauses[File.basename(path)] = pause if pause
+      pause = parse("pause/#{role}", json)
+      pauses[role] = pause if pause
     end
   end
 
