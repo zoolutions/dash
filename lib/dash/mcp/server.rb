@@ -14,6 +14,7 @@ module Dash::Mcp::Server
     Dash::Mcp::Tools::DoctorTool,
     Dash::Mcp::Tools::LogsTool,
     Dash::Mcp::Tools::ScaleStatusTool,
+    Dash::Mcp::Tools::PoolMembersTool,
     Dash::Mcp::Tools::ContainerStatsTool,
     Dash::Mcp::Tools::HostStatsTool
   ].freeze

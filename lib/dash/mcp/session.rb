@@ -22,7 +22,8 @@ class Dash::Mcp::Session
 
   def answer(hosts: nil, roles: nil)
     @mutex.synchronize do
-      DASH.reconfigure(**@config)
+      # The ceiling reaches the pool too, so a provider outage can fall back to it.
+      DASH.reconfigure(**@config, explicit_hosts: @hosts, explicit_roles: @roles)
       DASH.specific_hosts = @hosts
       DASH.specific_roles = @roles
       narrow(hosts: Array(hosts).presence, roles: Array(roles).presence)

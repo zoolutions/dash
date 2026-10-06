@@ -23,10 +23,10 @@ class Views::Docs::Pages::Hooks < DocsUI::Page
     [ "post-proxy-reboot", "after the new proxy container is up", "proxy reboot, proxy boot (config drift), upgrade", "", "" ],
     [ "pre-loadbalancer-reboot", "before the load balancer container is replaced", "proxy reboot, proxy boot (config drift)", "", "dash" ],
     [ "post-loadbalancer-reboot", "after the new load balancer container is up", "proxy reboot, proxy boot (config drift)", "", "dash" ],
-    [ "pre-scale-out", "before `dash scale set` adds containers of a role", "scale set", "", "dash" ],
-    [ "post-scale-out", "after the new containers are ready", "scale set", "", "dash" ],
-    [ "pre-scale-in", "before `dash scale set` removes containers of a role", "scale set", "", "dash" ],
-    [ "post-scale-in", "after they are stopped (drained first, when the proxy or `drain` applies)", "scale set", "", "dash" ],
+    [ "pre-scale-out", "before `dash scale set` adds containers of a role, or a pool member joins it", "scale set", "", "dash" ],
+    [ "post-scale-out", "after the new containers are ready (a joined member of a proxied role is in the load balancer)", "scale set", "", "dash" ],
+    [ "pre-scale-in", "before `dash scale set` removes containers of a role, or a pool member leaves it", "scale set", "", "dash" ],
+    [ "post-scale-in", "after they are stopped (drained first, when the proxy or `drain` applies) and a leaving member is powered off", "scale set", "", "dash" ],
     [ "docker-setup", "after Docker is confirmed installed on every host", "server bootstrap, setup", "", "" ]
   ].freeze
 
@@ -76,7 +76,10 @@ class Views::Docs::Pages::Hooks < DocsUI::Page
 
         The scale hooks wrap `dash scale set`: `DASH_HOSTS` is the hosts that
         gain or lose containers and `DASH_REPLICAS` the total the role runs
-        afterwards.
+        afterwards. On a role with `scale:` they also fire once per pool member
+        that joins or leaves, with `DASH_HOSTS` that member alone: `pre-scale-out`
+        once it answers SSH and before anything is booted on it, `pre-scale-in`
+        before it leaves the load balancer or is drained.
 
         `pre-connect` runs before the first SSH connection of a command, so it
         fires for `dash app logs` as much as for `dash deploy`; use

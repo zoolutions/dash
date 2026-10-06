@@ -28,6 +28,30 @@ class DiagnosticsScaleTest < DiagnosticsTestCase
     assert_match "ECONNREFUSED", payments[:unread].first[:error]
   end
 
+  test "a scaled role lists its members, and flags a started one running nothing of the role" do
+    configure :deploy_with_scale
+    Dash::Autoscale::Pool.any_instance.stubs(:members_for).returns([
+      Dash::Autoscale::Member.new(id: "m1", host: "10.0.0.22", role: "payments", state: "started"),
+      Dash::Autoscale::Member.new(id: "m2", host: "10.0.0.23", role: "payments", state: "stopped")
+    ])
+    stub_capture "1.1.1.2", "{{.Names}}\\t{{.Status}}", "app-payments-123\tUp 2 hours\n"
+    stub_capture "10.0.0.22", "{{.Names}}\\t{{.Status}}", ""
+
+    payments = Dash::Diagnostics::Scale.new(roles: [ DASH.config.role(:payments) ]).to_h[:roles].first
+
+    assert_equal [ "1.1.1.2", "10.0.0.22" ], payments[:hosts].keys
+    assert_equal [ { id: "m1", host: "10.0.0.22", state: "started", orphan: true }, { id: "m2", host: "10.0.0.23", state: "stopped", orphan: false } ], payments[:members]
+    assert_equal({ min: 1, max: 3 }, payments[:scale])
+  end
+
+  test "a scaled role whose pool cannot be read is an error, not a crash" do
+    configure :deploy_with_scale
+    Dash::Autoscale::Provider::Upcloud.any_instance.stubs(:members).raises(Dash::Autoscale::ProviderError, "down")
+
+    payments = Dash::Diagnostics::Scale.new(roles: [ DASH.config.role(:payments) ]).to_h[:roles].first
+    assert_equal({ role: "payments", error: "Could not read the payments pool: down" }, payments)
+  end
+
   test "keeps to the hosts in scope" do
     DASH.specific_hosts = [ "1.1.1.2" ]
     stub_capture "1.1.1.2", "{{.Names}}\\t{{.Status}}", ""

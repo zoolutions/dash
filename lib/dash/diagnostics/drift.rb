@@ -11,6 +11,9 @@
 #   loadbalancer_target_extra    the load balancer forwards to a host it should not
 #   version_mismatch             a role's hosts run different versions
 #   multiple_running_versions    one host runs more than one version of a role
+#   member_not_targeted          a started pool member the load balancer does not forward to
+#                                (reported instead of loadbalancer_target_missing for it)
+#   member_orphan                a started pool member runs nothing of its role
 #
 # A host whose snapshot is an error is not compared; it is listed under `unread` instead,
 # and the fleet is not called consistent.
@@ -37,7 +40,7 @@ class Dash::Diagnostics::Drift < Dash::Diagnostics::Base
   end
 
   def entries
-    @entries ||= proxy_entries + loadbalancer_entries + version_entries
+    @entries ||= proxy_entries + loadbalancer_entries + member_entries + version_entries
   end
 
   # The hosts whose containers or routes could not be read, so were not compared. A fleet
@@ -83,8 +86,34 @@ class Dash::Diagnostics::Drift < Dash::Diagnostics::Base
       actual = targets(loadbalancer[:services].to_h[config.service])
       host = loadbalancer[:host]
 
-      (expected - actual).map { |target| entry "loadbalancer_target_missing", host, nil, "the load balancer does not forward to #{target}" } +
+      (expected - actual).map { |target| missing_target_entry(host, target) } +
         (actual - expected).map { |target| entry "loadbalancer_target_extra", host, nil, "the load balancer forwards to #{target}, which no proxied role runs on" }
+    end
+
+    # A member that joined but never reached the load balancer serves nobody: capacity paid
+    # for and wasted, not a broken route - so it is its own code, not a failure.
+    def missing_target_entry(host, target)
+      if (member = started_members.find { |candidate| candidate.host == target })
+        role = config.roles.find { |candidate| candidate.name == member.role }
+        entry "member_not_targeted", host, role, "member #{member.id} (#{target}) is started but the load balancer does not forward to it"
+      else
+        entry "loadbalancer_target_missing", host, nil, "the load balancer does not forward to #{target}"
+      end
+    end
+
+    def member_entries
+      config.scaled_roles.flat_map do |role|
+        role.active_members.filter_map do |member|
+          next unless running.key?(member.host)
+          next if running[member.host].any? { |container| container[:role] == role.name }
+
+          entry "member_orphan", member.host, role, "member #{member.id} is started but runs no #{role} container"
+        end
+      end
+    end
+
+    def started_members
+      @started_members ||= config.scaled_roles.flat_map(&:active_members)
     end
 
     def version_entries

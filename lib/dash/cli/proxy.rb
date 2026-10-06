@@ -2,6 +2,7 @@ class Dash::Cli::Proxy < Dash::Cli::Base
   include Inspection
 
   desc "boot", "Boot proxy on servers"
+  option :skip_loadbalancer, type: :boolean, default: false, desc: "Boot the per-host proxies only, leaving the load balancer alone (dash scale set uses it for a joining member)"
   def boot
     modify(lock: true, server_lock: true) do
       on(network_hosts) do |host|
@@ -72,7 +73,9 @@ class Dash::Cli::Proxy < Dash::Cli::Base
         run_hook "post-proxy-reboot", hosts: host
       end
 
-      if DASH.config.proxy.load_balancing?
+      # A member joining with `dash scale set` holds the server lock on itself only, so the
+      # shared load balancer - which a drifted config would reboot here - is not its to touch.
+      if boots_loadbalancer?
         lb_drifted = Concurrent::Array.new
         lb_stale = Concurrent::Array.new
 
@@ -445,12 +448,8 @@ class Dash::Cli::Proxy < Dash::Cli::Base
       end
     when "deploy"
       if DASH.config.proxy.load_balancing?
-        targets = DASH.loadbalancer_config.target_hosts
-
         on(DASH.config.proxy.effective_loadbalancer) do |host|
-          Dash::Cli::Proxy::LoadbalancerClaim.new(host, self).claim_service
-          info "Deploying to loadbalancer on #{host} with targets: #{targets.join(', ')}"
-          execute *DASH.loadbalancer.deploy(targets: targets)
+          Dash::Cli::Proxy::LoadbalancerDeploy.new(host, self).run
         end
       else
         puts "Load balancing is not configured"
@@ -669,8 +668,12 @@ class Dash::Cli::Proxy < Dash::Cli::Base
     # network there (zoolutions/dash#140).
     def network_hosts
       hosts = DASH.hosts
-      hosts |= [ DASH.config.proxy.effective_loadbalancer ] if DASH.config.proxy.load_balancing?
+      hosts |= [ DASH.config.proxy.effective_loadbalancer ] if boots_loadbalancer?
       hosts
+    end
+
+    def boots_loadbalancer?
+      DASH.config.proxy.load_balancing? && !options[:skip_loadbalancer]
     end
 
     # The host that owns TLS, and so the certificate store: the loadbalancer
