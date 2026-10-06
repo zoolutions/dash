@@ -1,0 +1,23 @@
+test/test_helper.rb
+  s_546eba5dfe9872::t_105fe792f06fd1 104-107,109,113
+docs/flaky-tests.md
+  s_546eba5dfe9872::t_24bc8714f6bbbc 58-87
+test/stdouted_test.rb
+  s_546eba5dfe9872::t_82077c7ac51628 1-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "dd507906de07c61b754858f843dd38d42b71619b",
+  "prompts": {},
+  "sessions": {
+    "s_546eba5dfe9872": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d02195c6-a1c9-4ae1-94ad-bc6d3d9efa89",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
