@@ -58,6 +58,16 @@ class DiagnosticsContainerStatsTest < DiagnosticsTestCase
     assert_match "docker stats failed", host[:stats_error]
   end
 
+  test "a NaN sample docker printed does not break the JSON" do
+    stub_capture "1.1.1.1", "docker stats",
+      [ ps_line("app-web-999", id: "aaaaaaaaaaaa", role: "web"), "--%--", stats_line("aaaaaaaaaaaa", "app-web-999", cpu: "NaN%", mem_percent: "NaN%") ].join("\n")
+
+    snapshot = Dash::Diagnostics::ContainerStats.new(hosts: [ "1.1.1.1" ], accessories: []).to_h
+
+    assert_nil snapshot[:hosts].first[:containers].first[:stats][:cpu_percent]
+    assert_nothing_raised { JSON.generate(snapshot) }
+  end
+
   test "a number docker printed in a way it cannot read stays as its raw string" do
     stub_capture "1.1.1.1", "docker stats",
       [ ps_line("app-web-999", id: "aaaaaaaaaaaa", role: "web"), "--%--", stats_line("aaaaaaaaaaaa", "app-web-999", cpu: "--", mem: "-- / --") ].join("\n")
@@ -87,6 +97,9 @@ class DiagnosticsContainerStatsTest < DiagnosticsTestCase
 
   private
     def stats_line(id, name, cpu: "0.00%", mem: "0B / 0B", mem_percent: "0.00%", net: "0B / 0B", block: "0B / 0B", pids: "0")
-      { "ID" => id, "Name" => name, "CPUPerc" => cpu, "MemUsage" => mem, "MemPerc" => mem_percent, "NetIO" => net, "BlockIO" => block, "PIDs" => pids }.to_json
+      # Every key `docker stats --format '{{json .}}'` prints (docker/cli formatter_stats.go):
+      # ID is the 12-character short ID, Container what the command was given - here the ID.
+      { "BlockIO" => block, "CPUPerc" => cpu, "Container" => id, "ID" => id, "MemPerc" => mem_percent, "MemUsage" => mem,
+        "Name" => name, "NetIO" => net, "PIDs" => pids }.to_json
     end
 end

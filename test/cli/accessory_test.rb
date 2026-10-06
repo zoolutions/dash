@@ -276,7 +276,7 @@ class CliAccessoryTest < CliTestCase
 
   test "stats prints the accessory's cpu, memory and pids, and --json the document" do
     output = [ { "ID" => "mmmmmmmmmmmm", "Names" => "app-mysql", "State" => "running", "Status" => "Up", "Labels" => "service=app-mysql" }.to_json, "--%--",
-      { "ID" => "mmmmmmmmmmmm", "CPUPerc" => "3.00%", "MemUsage" => "400MiB / 1GiB", "MemPerc" => "39%", "NetIO" => "0B / 0B", "BlockIO" => "0B / 0B", "PIDs" => "40" }.to_json ].join("\n")
+      { "Container" => "mmmmmmmmmmmm", "ID" => "mmmmmmmmmmmm", "Name" => "app-mysql", "CPUPerc" => "3.00%", "MemUsage" => "400MiB / 1GiB", "MemPerc" => "39%", "NetIO" => "0B / 0B", "BlockIO" => "0B / 0B", "PIDs" => "40" }.to_json ].join("\n")
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("--%--\n")
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).with { |*args| args.join(" ").include?("label=service=app-mysql") }.returns(output)
 

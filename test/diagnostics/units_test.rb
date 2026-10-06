@@ -31,5 +31,7 @@ class DiagnosticsUnitsTest < ActiveSupport::TestCase
     assert_equal 1.23, Dash::Diagnostics::Units.percent("1.23%")
     assert_equal 0.0, Dash::Diagnostics::Units.percent("0.00%")
     assert_nil Dash::Diagnostics::Units.percent("--")
+    assert_nil Dash::Diagnostics::Units.percent("NaN%")
+    assert_nil Dash::Diagnostics::Units.percent("Infinity%")
   end
 end
