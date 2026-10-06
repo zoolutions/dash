@@ -85,7 +85,9 @@ class Dash::Configuration::Role
     members.select(&:started?)
   end
 
+  # `host` may be an SSHKit::Host - `on` hands those to its blocks.
   def member_host?(host)
+    host = host.to_s
     !baseline_hosts.include?(host) && active_members.any? { |member| member.host == host }
   end
 

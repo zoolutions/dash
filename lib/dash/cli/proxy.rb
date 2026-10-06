@@ -445,12 +445,8 @@ class Dash::Cli::Proxy < Dash::Cli::Base
       end
     when "deploy"
       if DASH.config.proxy.load_balancing?
-        targets = DASH.loadbalancer_config.target_hosts
-
         on(DASH.config.proxy.effective_loadbalancer) do |host|
-          Dash::Cli::Proxy::LoadbalancerClaim.new(host, self).claim_service
-          info "Deploying to loadbalancer on #{host} with targets: #{targets.join(', ')}"
-          execute *DASH.loadbalancer.deploy(targets: targets)
+          Dash::Cli::Proxy::LoadbalancerDeploy.new(host, self).run
         end
       else
         puts "Load balancing is not configured"

@@ -61,6 +61,8 @@ class ConfigurationScaledRolesTest < ActiveSupport::TestCase
     role = load_fixture("deploy_with_scale").role(:payments)
 
     assert_equal [], role.env_tags("10.0.0.22")
+    assert_equal [], role.env_tags(SSHKit::Host.new("10.0.0.22")), "on() hands SSHKit hosts, not strings"
+    assert role.member_host?(SSHKit::Host.new("10.0.0.22"))
     assert_raises(KeyError) { role.env_tags("9.9.9.9") }
   end
 
