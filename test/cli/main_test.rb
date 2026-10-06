@@ -718,6 +718,18 @@ class CliMainTest < CliTestCase
     end
   end
 
+  test "the dummy git repo ignores the developer's global git config" do
+    Tempfile.create("gitconfig") do |global|
+      global.write("[trace2]\n\teventTarget = af_unix:stream:/nonexistent.sock\n")
+      global.flush
+      ENV["GIT_CONFIG_GLOBAL"] = global.path
+
+      in_dummy_git_repo do
+        assert_empty `git config --get trace2.eventTarget`.strip
+      end
+    end
+  end
+
   test "migrate refuses to overwrite an existing .dash directory" do
     in_dummy_git_repo do
       FileUtils.mkdir_p ".dash"
@@ -1365,7 +1377,14 @@ class CliMainTest < CliTestCase
       end
     end
 
+    # Hermetic: git here reads no global or system config. A developer's global config
+    # can start background work in this repo - a trace2 event target hands every commit
+    # to a daemon that then runs git in the repo while Dir.mktmpdir is deleting it,
+    # failing the teardown with ENOTEMPTY (#192). The teardown restores ENV.
     def in_dummy_git_repo
+      ENV["GIT_CONFIG_GLOBAL"] = File::NULL
+      ENV["GIT_CONFIG_NOSYSTEM"] = "1"
+
       Dir.mktmpdir do |tmpdir|
         Dir.chdir(tmpdir) do
           `git init -q -b main`
