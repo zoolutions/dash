@@ -1,0 +1,58 @@
+test/configuration/autoscale_test.rb
+  s_8de475f5d8ed7f::t_33d9d6e3d872bb 101-102,105-137
+lib/dash/configuration/validator/role.rb
+  s_8de475f5d8ed7f::t_341cd242cc45b9 2-4,26
+test/configuration/role/scale_test.rb
+  s_8de475f5d8ed7f::t_f369bc7a1ddba2 104-105,108,112-204
+lib/dash/autoscale/decision.rb
+  s_8de475f5d8ed7f::t_7c3d506caab896 9-20
+  s_8de475f5d8ed7f::t_63a21c7961f4fd 1-8,21-63
+lib/dash/configuration/autoscale.rb
+  s_8de475f5d8ed7f::t_c9c093d59d1baf 1-6,10-13,30-46
+test/autoscale/decision_test.rb
+  s_8de475f5d8ed7f::t_23bf0e373e76ff 1-49
+test/autoscale/duration_test.rb
+  s_8de475f5d8ed7f::t_35523c41bb51e2 1-23
+lib/dash/autoscale/duration.rb
+  s_8de475f5d8ed7f::t_ba5f3f88c9a516 1-19
+lib/dash/autoscale/cron.rb
+  s_8de475f5d8ed7f::t_53da829b79e0f8 1-75
+lib/dash/configuration/role/scale.rb
+  s_8de475f5d8ed7f::t_99461a3bcf3762 4-6,10,12-14,16,18,20,27-30,33,48-64,73-76,89-128
+lib/dash/autoscale/policy.rb
+  s_8de475f5d8ed7f::t_b19f356b1a8d04 1-52,55,58,60-129
+  s_8de475f5d8ed7f::t_23bf0e373e76ff 53-54,56-57,59
+test/configuration/role/scale/window_test.rb
+  s_8de475f5d8ed7f::t_5466d5e223b806 1-66
+lib/dash/configuration/role.rb
+  s_8de475f5d8ed7f::t_341cd242cc45b9 49
+lib/dash/configuration/role/scale/window.rb
+  s_8de475f5d8ed7f::t_ef464209acd38a 1-37
+lib/dash/configuration/validator/autoscale.rb
+  s_8de475f5d8ed7f::t_c9c093d59d1baf 7-9,15,33,37-54
+lib/dash/configuration/docs/role.yml
+  s_8de475f5d8ed7f::t_1969f437376a5a 164-166,169-201
+  s_8de475f5d8ed7f::t_f8c8d04db8f328 128-131
+lib/dash/configuration/docs/autoscale.yml
+  s_8de475f5d8ed7f::t_1ecd13edebc230 44-58
+test/autoscale/policy_test.rb
+  s_8de475f5d8ed7f::t_bb30a54cc51722 1-223
+test/autoscale/cron_test.rb
+  s_8de475f5d8ed7f::t_687e0b8ca00ad2 1-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0267827e2b4a6641198c8934688e1fbea496761e",
+  "prompts": {},
+  "sessions": {
+    "s_8de475f5d8ed7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0493fb39-330b-4fa2-974d-5232732770d9",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
