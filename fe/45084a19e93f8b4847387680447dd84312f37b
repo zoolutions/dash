@@ -1,0 +1,52 @@
+test/commands/accessory_test.rb
+  s_d23409d772f820::t_71602f66659731 122
+test/diagnostics/container_stats_test.rb
+  s_d23409d772f820::t_71602f66659731 50-60
+lib/dash/diagnostics/container_stats.rb
+  s_d23409d772f820::t_1cd57b2ea5fdd3 28,30,34-35,39-40,42,46-48
+  s_d23409d772f820::t_4fa283131f2659 11-14
+test/mcp/session_test.rb
+  s_d23409d772f820::t_71602f66659731 55-63
+test/commands/app_test.rb
+  s_d23409d772f820::t_71602f66659731 706
+lib/dash/commands/accessory.rb
+  s_d23409d772f820::t_4fa283131f2659 56
+test/diagnostics/logs_test.rb
+  s_d23409d772f820::t_71602f66659731 62-72
+lib/dash/mcp/tools/container_stats_tool.rb
+  s_d23409d772f820::t_1cd57b2ea5fdd3 6-7
+lib/dash/diagnostics/logs.rb
+  s_d23409d772f820::t_1cd57b2ea5fdd3 22-23
+test/mcp/read_only_test.rb
+  s_d23409d772f820::t_1cd57b2ea5fdd3 19
+test/cli/accessory_test.rb
+  s_d23409d772f820::t_8369cadda3a422 285
+test/cli/server_test.rb
+  s_d23409d772f820::t_71602f66659731 114
+lib/dash/diagnostics/units.rb
+  s_d23409d772f820::t_4fa283131f2659 16-19
+lib/dash/cli/stats_table.rb
+  s_d23409d772f820::t_1cd57b2ea5fdd3 4,14-15,22
+test/diagnostics/units_test.rb
+  s_d23409d772f820::t_71602f66659731 21
+lib/dash/commands/app/containers.rb
+  s_d23409d772f820::t_4fa283131f2659 25
+test/cli/app_test.rb
+  s_d23409d772f820::t_71602f66659731 1249
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "fe45084a19e93f8b4847387680447dd84312f37b",
+  "prompts": {},
+  "sessions": {
+    "s_d23409d772f820": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "33a3ec28-fddf-42bd-bd6e-bd072ff2b346",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
