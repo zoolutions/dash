@@ -1,0 +1,34 @@
+lib/dash/cli/proxy.rb
+  s_413b3ef539574a::t_e9d64e3739cc45 5,76-78,671,675-676
+test/cli/scale/host_plan_test.rb
+  s_413b3ef539574a::t_ebc8916cdf33a5 61-68
+lib/dash/cli/scale/host_plan.rb
+  s_413b3ef539574a::t_b0834f8494010a 6-7,29,46-49
+lib/dash/cli/scale/leave.rb
+  s_413b3ef539574a::t_2a683ba905226e 39-41
+test/cli/scale_hosts_test.rb
+  s_413b3ef539574a::t_e9d64e3739cc45 138
+  s_413b3ef539574a::t_43b059cad73b77 194-217,280
+  s_413b3ef539574a::t_ebc8916cdf33a5 248-256
+lib/dash/cli/scale/join.rb
+  s_413b3ef539574a::t_e9d64e3739cc45 32,41,53,64,66,72-73
+  s_413b3ef539574a::t_88b99ffa5acb41 50-52
+test/cli/proxy_test.rb
+  s_413b3ef539574a::t_e9d64e3739cc45 12-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "9805bb6532296add9a990ac1ec0eead0b4dbc42a",
+  "prompts": {},
+  "sessions": {
+    "s_413b3ef539574a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8cd97621-d3e0-4522-9ff2-11a107a5c982",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
