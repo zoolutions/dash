@@ -18,6 +18,7 @@ class DiagnosticsUnitsTest < ActiveSupport::TestCase
     assert_nil Dash::Diagnostics::Units.bytes("--")
     assert_nil Dash::Diagnostics::Units.bytes(nil)
     assert_nil Dash::Diagnostics::Units.bytes("12 parsecs")
+    assert_nil Dash::Diagnostics::Units.bytes("12kiB")
   end
 
   test "a pair splits on the slash" do

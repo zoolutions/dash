@@ -53,7 +53,7 @@ class Dash::Commands::Accessory < Dash::Commands::Base
     chain \
       [ *docker(:ps, *filters, "--format", "'{{json .}}'"), "||", :echo, Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE ],
       [ :echo, SECTION_SEPARATOR ],
-      pipe(docker(:ps, "--quiet", *filters), [ :xargs, "-r", :docker, :stats, "--no-stream", "--format", "'{{json .}}'" ])
+      pipe(docker(:ps, "--quiet", *filters), [ :xargs, "-r", :docker, :stats, "--no-stream", "--format", "'{{json .}}'", "||", :echo, Dash::Diagnostics::ContainerStats::STATS_UNREADABLE ])
   end
 
   def info(all: false, quiet: false)

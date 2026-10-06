@@ -8,6 +8,10 @@ require "json"
 # Every number keeps its raw string under `raw:`; a value docker printed in a form Units
 # cannot read becomes nil there, never a wrong number.
 class Dash::Diagnostics::ContainerStats < Dash::Diagnostics::Base
+  # Printed when `docker stats` fails after `docker ps` answered (a container removed in
+  # between makes the whole sample fail): the containers stay, `stats_error` says why.
+  STATS_UNREADABLE = "--stats-unreadable--"
+
   # Raised inside per_host, which turns it into the host's error entry.
   class DockerUnreadable < StandardError
     def message = "docker ps failed: the docker daemon could not be asked"
@@ -21,21 +25,27 @@ class Dash::Diagnostics::ContainerStats < Dash::Diagnostics::Base
 
   private
     def snapshot
-      { hosts: per_host(@hosts) { |backend, _host| { containers: containers(backend.capture_with_info(*DASH.app.stats_json, raise_on_non_zero_exit: false)) } },
+      { hosts: per_host(@hosts) { |backend, _host| sample(backend.capture_with_info(*DASH.app.stats_json, raise_on_non_zero_exit: false)) },
         accessories: per_accessory(@accessories) do |accessory, backend, _host|
-          { containers: containers(backend.capture_with_info(*DASH.accessory(accessory.name).stats_json, raise_on_non_zero_exit: false), accessory: accessory.name) }
+          sample(backend.capture_with_info(*DASH.accessory(accessory.name).stats_json, raise_on_non_zero_exit: false), accessory: accessory.name)
         end }
     end
 
-    def containers(output, accessory: nil)
+    # { containers: } for one host, plus `stats_error:` when docker stats itself failed.
+    def sample(output, accessory: nil)
       ps, stats = output.to_s.split(/^#{Regexp.escape(Dash::Commands::Base::SECTION_SEPARATOR)}$/, 2)
       raise DockerUnreadable if ps.to_s.lines.map(&:strip).include?(Dash::Commands::App::ACTIVE_CONTAINERS_UNREADABLE)
 
-      by_id = stats.to_s.lines.filter_map { |line| JSON.parse(line) if line.strip.present? }.index_by { |sample| sample["ID"].to_s[0, 12] }
+      stats_lines = stats.to_s.lines.map(&:strip)
+      by_id = stats_lines.filter_map { |line| JSON.parse(line) if line.start_with?("{") }.index_by { |sample| sample["ID"].to_s[0, 12] }
 
-      Dash::Diagnostics::DockerPs.containers(ps, accessory: accessory).map do |container|
+      containers = Dash::Diagnostics::DockerPs.containers(ps, accessory: accessory).map do |container|
         sample = by_id[container[:id].to_s[0, 12]]
         container.merge(stats: sample && stats_of(sample))
+      end
+
+      { containers: containers }.tap do |entry|
+        entry[:stats_error] = "docker stats failed, so these containers have no sample" if stats_lines.include?(STATS_UNREADABLE)
       end
     end
 

@@ -13,9 +13,10 @@ module Dash::Diagnostics::Units
   module_function
 
   def bytes(value)
-    if (match = QUANTITY.match(value.to_s.strip))
-      (match[1].to_f * MULTIPLIERS.fetch(match[2])).round
-    end
+    match = QUANTITY.match(value.to_s.strip)
+    multiplier = match && MULTIPLIERS[match[2]]
+
+    (match[1].to_f * multiplier).round if multiplier
   end
 
   # "used / limit" or "in / out", as two byte counts.

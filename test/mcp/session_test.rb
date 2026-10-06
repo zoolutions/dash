@@ -52,6 +52,15 @@ class McpSessionTest < McpTestCase
     assert DASH.connected?
   end
 
+  test "host_stats narrows by role, through the same scope as every other tool" do
+    seen = []
+    Dash::Diagnostics::HostStats.any_instance.stubs(:snapshot).with { seen << DASH.hosts.dup; true }.returns(hosts: [])
+
+    call_json("host_stats", { roles: [ "workers" ] })
+
+    assert_equal [ [ "1.1.1.3", "1.1.1.4" ] ], seen
+  end
+
   test "scale_status answers per role within the call's roles" do
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("app-payments-123\tUp 2 hours\n")
 

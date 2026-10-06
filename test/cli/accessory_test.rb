@@ -282,7 +282,7 @@ class CliAccessoryTest < CliTestCase
 
     run_command("stats", "mysql").tap do |out|
       assert_match "Accessory mysql Host: 1.1.1.3", out
-      assert_match(/app-mysql\s+mysql\s+-\s+3\.0%\s+419\.4MB \/ 1\.1GB\s+40/, out)
+      assert_match(/app-mysql +mysql +- +3\.0% +419\.4MB \/ 1\.1GB +0B \/ 0B +0B \/ 0B +40$/, out)
       assert_no_match "redis", out
     end
 

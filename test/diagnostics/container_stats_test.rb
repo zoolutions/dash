@@ -47,6 +47,17 @@ class DiagnosticsContainerStatsTest < DiagnosticsTestCase
     assert_match "docker ps failed: the docker daemon could not be asked", host[:error]
   end
 
+  test "a docker stats that fails keeps the containers and says the sample failed" do
+    stub_capture "1.1.1.1", "docker stats",
+      [ ps_line("app-web-999", id: "aaaaaaaaaaaa", role: "web"), "--%--", Dash::Diagnostics::ContainerStats::STATS_UNREADABLE ].join("\n")
+
+    host = Dash::Diagnostics::ContainerStats.new(hosts: [ "1.1.1.1" ], accessories: []).to_h[:hosts].first
+
+    assert_equal "app-web-999", host[:containers].first[:name]
+    assert_nil host[:containers].first[:stats]
+    assert_match "docker stats failed", host[:stats_error]
+  end
+
   test "a number docker printed in a way it cannot read stays as its raw string" do
     stub_capture "1.1.1.1", "docker stats",
       [ ps_line("app-web-999", id: "aaaaaaaaaaaa", role: "web"), "--%--", stats_line("aaaaaaaaaaaa", "app-web-999", cpu: "--", mem: "-- / --") ].join("\n")

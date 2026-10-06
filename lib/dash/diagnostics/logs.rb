@@ -19,7 +19,8 @@ class Dash::Diagnostics::Logs < Dash::Diagnostics::Base
     @redactor = redactor
     @accessory = accessory
     @role = role || (DASH.primary_role unless accessory)
-    @hosts = hosts || (accessory ? accessory.hosts & DASH.accessory_hosts : @role.hosts & DASH.hosts)
+    in_scope = accessory ? accessory.hosts & DASH.accessory_hosts : @role.hosts & DASH.hosts
+    @hosts = hosts ? hosts & in_scope : in_scope
     @lines = Dash::Diagnostics::Lines.bounded(lines)
     @since = validated_since(since)
     @grep = validated_grep(grep)

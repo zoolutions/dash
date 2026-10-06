@@ -703,7 +703,7 @@ class CommandsAppTest < ActiveSupport::TestCase
       "docker ps --filter label=service=app --filter label=destination= --filter status=running --filter status=restarting --format '{{json .}}' || echo --unreadable-- ; " \
       "echo --%-- ; " \
       "docker ps --quiet --filter label=service=app --filter label=destination= --filter status=running --filter status=restarting " \
-      "| xargs -r docker stats --no-stream --format '{{json .}}'",
+      "| xargs -r docker stats --no-stream --format '{{json .}}' || echo --stats-unreadable--",
       Dash::Commands::App.new(config).stats_json.join(" ")
   end
 

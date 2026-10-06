@@ -119,7 +119,7 @@ class CommandsAccessoryTest < ActiveSupport::TestCase
     assert_equal "docker ps --all --filter label=service=app-mysql --format '{{json .}}'", new_command(:mysql).list_containers_json.join(" ")
     assert_equal \
       "docker ps --filter label=service=app-mysql --filter status=running --filter status=restarting --format '{{json .}}' || echo --unreadable-- ; echo --%-- ; " \
-      "docker ps --quiet --filter label=service=app-mysql --filter status=running --filter status=restarting | xargs -r docker stats --no-stream --format '{{json .}}'",
+      "docker ps --quiet --filter label=service=app-mysql --filter status=running --filter status=restarting | xargs -r docker stats --no-stream --format '{{json .}}' || echo --stats-unreadable--",
       new_command(:mysql).stats_json.join(" ")
   end
 

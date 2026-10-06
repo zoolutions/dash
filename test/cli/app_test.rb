@@ -1246,7 +1246,7 @@ class CliAppTest < CliTestCase
 
     run_command("stats").tap do |output|
       assert_match "App Host: 1.1.1.1", output
-      assert_match(/app-web-999\s+web\s+1\s+12\.5%\s+125\.8MB \/ 2\.0GB\s+23/, output)
+      assert_match(/app-web-999 +web +1 +12\.5% +125\.8MB \/ 2\.0GB +0B \/ 0B +0B \/ 0B +23$/, output)
     end
 
     assert_equal 12.5, JSON.parse(run_command("stats", "--json"))["hosts"].first["containers"].first.dig("stats", "cpu_percent")

@@ -111,7 +111,7 @@ class CliServerTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).with { |*args| args.join(" ").include?("/proc/loadavg") }.returns(sections)
 
     run_command("stats").tap do |output|
-      assert_match(/^1\.1\.1\.1\s+0\.52\/0\.48\/0\.4\s+2\s+50\.0% of 4\.1GB\s+50%\s+-\s+1d 1h$/, output)
+      assert_match(/^1\.1\.1\.1 +0\.52\/0\.48\/0\.4 +2 +50\.0% of 4\.1GB +50% +- +1d 1h$/, output)
     end
 
     hosts = JSON.parse(run_command("stats", "--json"))["hosts"]
