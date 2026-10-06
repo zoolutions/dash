@@ -1,0 +1,42 @@
+test/diagnostics/host_stats_test.rb
+  s_d23409d772f820::t_ed829e6f5ac99c 47-56
+lib/dash/diagnostics/container_stats.rb
+  s_d23409d772f820::t_f460408d029408 47-50,52
+test/mcp/read_only_test.rb
+  s_d23409d772f820::t_ed829e6f5ac99c 10,19,42
+test/diagnostics/container_stats_test.rb
+  s_d23409d772f820::t_ed829e6f5ac99c 24-33,36,38-39
+test/commands/app_test.rb
+  s_d23409d772f820::t_ed829e6f5ac99c 695,703
+test/diagnostics/containers_test.rb
+  s_d23409d772f820::t_70c29b6b826a3d 39-40
+lib/dash/commands/app/containers.rb
+  s_d23409d772f820::t_f460408d029408 13-14,19
+  s_d23409d772f820::t_c4235d3c2de6fd 2-6,16,28
+lib/dash/diagnostics/docker_ps.rb
+  s_d23409d772f820::t_f460408d029408 3-7,14,16-21,29-30,34
+test/cli/accessory_test.rb
+  s_d23409d772f820::t_ed829e6f5ac99c 291-293
+test/diagnostics/diagnostics_test_case.rb
+  s_d23409d772f820::t_70c29b6b826a3d 33-39
+lib/dash/diagnostics/host_stats.rb
+  s_d23409d772f820::t_f460408d029408 53-55,57
+test/cli/app_test.rb
+  s_d23409d772f820::t_b7546a62e68611 1232,1243
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "38992b5bb561630b01d3e64d6100bf56161364dd",
+  "prompts": {},
+  "sessions": {
+    "s_d23409d772f820": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "33a3ec28-fddf-42bd-bd6e-bd072ff2b346",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
