@@ -251,7 +251,7 @@ class Dash::Configuration::Proxy
   end
 
   def loadbalancer_on_proxy_host?
-    load_balancing? && config.proxy_hosts.include?(effective_loadbalancer)
+    load_balancing? && config.baseline_proxy_hosts.include?(effective_loadbalancer)
   end
 
   def custom_ssl_certificate?
@@ -443,8 +443,9 @@ class Dash::Configuration::Proxy
       load_balancing? ? %i[ per_app both ] : %i[ edge per_app both ]
     end
 
+    # A baseline host: the load balancer must not move with the pool.
     def primary_role_first_host
-      config.primary_role&.hosts&.first
+      config.primary_role&.baseline_hosts&.first
     end
 
     # Auto-activation needs a role the load balancer can actually front. The
@@ -452,10 +453,14 @@ class Dash::Configuration::Proxy
     # Dash::Cli::Proxy#loadbalancer), so a proxy-less primary role would boot a
     # load balancer with an empty --target. An explicit `loadbalancer:` setting
     # skips this check — the operator asked for it.
+    #
+    # A scaled proxied role turns it on too, even with one baseline host: its members can
+    # only reach traffic through the load balancer's target list.
     def auto_load_balanced_primary_role?
       primary_role = config.primary_role
+      return false unless primary_role.present?
 
-      primary_role.present? && primary_role.running_proxy? && Array(primary_role.hosts).size > 1
+      (primary_role.running_proxy? && primary_role.baseline_hosts.size > 1) || config.scaled_roles.any?(&:running_proxy?)
     end
 
     # Flags for dash-proxy's dynamic domain source (runtime TLS hostnames).

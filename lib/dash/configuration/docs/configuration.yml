@@ -205,6 +205,12 @@ accessories:
 proxy:
   ...
 
+# Autoscale
+#
+# The provider that holds the pool members of scaled roles, see dash docs autoscale:
+autoscale:
+  ...
+
 # SSHKit
 #
 # See dash docs sshkit:

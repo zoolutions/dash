@@ -3,7 +3,7 @@ class Dash::Configuration::Role
 
   delegate :argumentize, :optionize, to: Dash::Utils
 
-  attr_reader :name, :config, :specialized_env, :specialized_logging, :specialized_proxy, :healthcheck, :replicas, :drain
+  attr_reader :name, :config, :specialized_env, :specialized_logging, :specialized_proxy, :healthcheck, :replicas, :drain, :scale
 
   delegate :numbers, to: :replicas, prefix: :replica
   delegate :signal, :wait, to: :drain, prefix: true
@@ -42,6 +42,13 @@ class Dash::Configuration::Role
       drain_config: specializations["drain"],
       context: "servers/#{name}/drain"
 
+    if (scale_config = specializations["scale"])
+      @scale = Dash::Configuration::Role::Scale.new \
+        scale_config: scale_config,
+        baseline: baseline_hosts.size,
+        context: "servers/#{name}/scale"
+    end
+
     initialize_specialized_proxy
 
     if running_proxy? && drain.configured?
@@ -53,12 +60,39 @@ class Dash::Configuration::Role
     hosts.first
   end
 
+  # Baseline hosts first, then the pool members the provider reports started. Every command
+  # that reads a role's hosts sees the members; nothing else has to know about them.
   def hosts
+    scaled? ? (baseline_hosts + active_members.map(&:host)).uniq : baseline_hosts
+  end
+
+  # The hosts deploy.yml lists for the role. Configuration-time checks read these and never
+  # #hosts, which for a scaled role asks the autoscale provider.
+  def baseline_hosts
     tagged_hosts.keys
   end
 
+  def scaled?
+    !scale.nil?
+  end
+
+  # Every pool member of the role, whatever its state.
+  def members
+    scaled? ? config.pool.members_for(self) : []
+  end
+
+  def active_members
+    members.select(&:started?)
+  end
+
+  def member_host?(host)
+    !baseline_hosts.include?(host) && active_members.any? { |member| member.host == host }
+  end
+
+  # A member carries no tags: deploy.yml does not list it.
   def env_tags(host)
-    tagged_hosts.fetch(host).collect { |tag| config.env_tag(tag) }.compact
+    tags = tagged_hosts.fetch(host) { member_host?(host) ? [] : raise(KeyError, "#{host} is not a host of role #{name}") }
+    tags.collect { |tag| config.env_tag(tag) }.compact
   end
 
   # The role's own hosts carrying `tag` in deploy.yml. Accessory `tag:`/`tags:` resolution
@@ -324,8 +358,8 @@ class Dash::Configuration::Role
 
   def ensure_one_host_for_ssl
     # Skip SSL validation when a loadbalancer is present or custom certificates are provided
-    if running_proxy? && proxy.ssl? && hosts.size > 1 && !proxy.loadbalancer.present? && !proxy.custom_ssl_certificate?
-      raise Dash::ConfigurationError, "SSL is only supported on a single server unless you provide custom certificates or configure a loadbalancer, found #{hosts.size} servers for role #{name}"
+    if running_proxy? && proxy.ssl? && baseline_hosts.size > 1 && !proxy.loadbalancer.present? && !proxy.custom_ssl_certificate?
+      raise Dash::ConfigurationError, "SSL is only supported on a single server unless you provide custom certificates or configure a loadbalancer, found #{baseline_hosts.size} servers for role #{name}"
     end
   end
 

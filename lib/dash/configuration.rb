@@ -16,17 +16,19 @@ class Dash::Configuration
   delegate :argumentize, :optionize, to: Dash::Utils
 
   attr_reader :destination, :raw_config, :secrets
-  attr_reader :accessories, :aliases, :boot, :builder, :env, :logging, :output, :proxy, :proxy_boot, :report, :servers, :ssh, :sshkit, :registry
+  attr_reader :accessories, :aliases, :autoscale, :boot, :builder, :env, :logging, :output, :proxy, :proxy_boot, :report, :servers, :ssh, :sshkit, :registry
 
   include Validation
 
   class << self
-    def create_from(config_file:, destination: nil, version: nil)
+    # `explicit_hosts` / `explicit_roles` are --hosts and --roles, which the pool needs before
+    # Commander can filter by them: filtering reads all_hosts, and that asks the pool.
+    def create_from(config_file:, destination: nil, version: nil, explicit_hosts: nil, explicit_roles: nil)
       ENV["DASH_DESTINATION"] = ENV["KAMAL_DESTINATION"] = destination
 
       raw_config = load_raw_config(config_file: config_file, destination: destination)
 
-      new raw_config, destination: destination, version: version
+      new raw_config, destination: destination, version: version, explicit_hosts: explicit_hosts, explicit_roles: explicit_roles
     end
 
     def load_raw_config(config_file:, destination: nil)
@@ -55,10 +57,12 @@ class Dash::Configuration
       end
   end
 
-  def initialize(raw_config, destination: nil, version: nil, validate: true)
+  def initialize(raw_config, destination: nil, version: nil, validate: true, explicit_hosts: nil, explicit_roles: nil)
     @raw_config = ActiveSupport::InheritableOptions.new(raw_config)
     @destination = destination
     @declared_version = version
+    @explicit_hosts = explicit_hosts
+    @explicit_roles = explicit_roles
 
     validate! raw_config, example: validation_yml.symbolize_keys, context: "", with: Dash::Configuration::Validator::Configuration
 
@@ -70,6 +74,7 @@ class Dash::Configuration
 
     @accessories = @raw_config.accessories&.keys&.collect { |name| Accessory.new(name, config: self) } || []
     @aliases = @raw_config.aliases&.keys&.to_h { |name| [ name, Alias.new(name, config: self) ] } || {}
+    @autoscale = Autoscale.new(config: self)
     @boot = Boot.new(config: self)
     @builder = Builder.new(config: self)
     @env = Env.new(config: @raw_config.env || {}, secrets: secrets)
@@ -103,6 +108,9 @@ class Dash::Configuration
     ensure_proxy_protocol_names_its_peers
     ensure_max_idle_conns_meaningful
     ensure_replicas_fit_their_roles
+    ensure_scaled_roles_have_a_provider
+    ensure_upcloud_templates_are_complete
+    ensure_scaled_proxied_roles_have_a_loadbalancer
   end
 
   # Resolves every secret the deploy will need so a missing secret fails fast,
@@ -114,7 +122,9 @@ class Dash::Configuration
     builder.secrets
 
     roles.each do |role|
-      role.secrets_io(role.hosts.first) if role.hosts.any?
+      # A baseline host when there is one: the same secrets, without asking the pool.
+      host = role.baseline_hosts.first || role.hosts.first
+      role.secrets_io(host) if host
 
       if role.running_proxy?
         role.proxy.run&.secrets_io
@@ -214,6 +224,16 @@ class Dash::Configuration
     roles.select(&:running_proxy?)
   end
 
+  def scaled_roles
+    roles.select(&:scaled?)
+  end
+
+  # Built on first use, never while the configuration loads: asking the provider is a
+  # network call, and loading deploy.yml must not need the network.
+  def pool
+    @pool ||= Dash::Autoscale::Pool.new(config: self, explicit_hosts: @explicit_hosts, explicit_roles: @explicit_roles)
+  end
+
   def load_balancing?
     proxy&.load_balancing?
   end
@@ -228,6 +248,12 @@ class Dash::Configuration
 
   def proxy_hosts
     (proxy_roles.flat_map(&:hosts) + proxy_accessories.flat_map(&:hosts)).uniq
+  end
+
+  # proxy_hosts without the pool members, for what must not ask the provider - where the
+  # load balancer runs is decided by deploy.yml alone.
+  def baseline_proxy_hosts
+    (proxy_roles.flat_map(&:baseline_hosts) + proxy_accessories.flat_map(&:hosts)).uniq
   end
 
   def image
@@ -364,8 +390,9 @@ class Dash::Configuration
   def to_h
     {
       roles: role_names,
-      hosts: all_hosts,
-      primary_host: primary_host,
+      hosts: baseline_hosts,
+      members: scaled_roles.to_h { |role| [ role.name.to_s, "#{role.scale.members} members from #{autoscale.provider_name}, #{role.scale.min}-#{role.scale.max} hosts" ] }.presence,
+      primary_host: primary_role&.baseline_hosts&.first,
       version: version,
       repository: repository,
       absolute_image: absolute_image,
@@ -403,13 +430,13 @@ class Dash::Configuration
           raise Dash::ConfigurationError, "The primary_role #{primary_role_name} isn't defined"
         end
 
-        if primary_role.hosts.empty?
+        if primary_role.baseline_hosts.empty?
           raise Dash::ConfigurationError, "No servers specified for the #{primary_role.name} primary_role"
         end
 
         unless allow_empty_roles?
           roles.each do |role|
-            if role.hosts.empty?
+            if role.baseline_hosts.empty?
               raise Dash::ConfigurationError, "No servers specified for the #{role.name} role. You can ignore this with allow_empty_roles: true"
             end
           end
@@ -459,7 +486,7 @@ class Dash::Configuration
     # accepts the container as ready once it is merely still running after readiness_delay,
     # then stops the old one. Warn-only for now so existing configs keep deploying.
     def ensure_unproxied_roles_are_readiness_gated
-      offenders = roles.reject { |role| role.hosts.empty? || role.running_proxy? || role.readiness_gated? }
+      offenders = roles.reject { |role| role.baseline_hosts.empty? || role.running_proxy? || role.readiness_gated? }
       return true if offenders.empty?
 
       warn "Non-proxied role(s) #{offenders.map(&:name).join(", ")} have no healthcheck. " \
@@ -476,7 +503,7 @@ class Dash::Configuration
     # port hands that address to whoever asks. Warn rather than raise: a proxy on
     # a private network with no other route in is a legitimate configuration.
     def ensure_proxy_protocol_names_its_peers
-      offenders = all_hosts.select { |host| proxy_run(host)&.proxy_protocol_unrestricted? }
+      offenders = baseline_hosts.select { |host| proxy_runs(host, baseline: true).first&.proxy_protocol_unrestricted? }
       return true if offenders.empty?
 
       warn "Host(s) #{offenders.sort.join(", ")}: proxy_protocol is enabled without proxy_protocol_allow_ips, " \
@@ -513,6 +540,46 @@ class Dash::Configuration
     # one, which Servers.new builds roles ahead of.
     def ensure_replicas_fit_their_roles
       roles.each { |role| role.replicas.ensure_fits!(role, volumes: Array(raw_config.volumes)) }
+    end
+
+    # A scaled role's extra hosts come from the provider; without one there is nothing to
+    # power on, and every command would fail at the first `hosts` read instead of here.
+    def ensure_scaled_roles_have_a_provider
+      return true if autoscale.configured?
+
+      if (role = scaled_roles.first)
+        raise Dash::ConfigurationError, "servers/#{role.name}/scale: needs a provider for its members, set autoscale/provider (see dash docs autoscale)"
+      end
+
+      true
+    end
+
+    # UpCloud builds a server from the template; an exec `create` script reads its own.
+    def ensure_upcloud_templates_are_complete
+      return true unless autoscale.provider_name == "upcloud"
+
+      scaled_roles.select { |role| role.scale.create? }.each do |role|
+        missing = %w[ storage plan zone ].select { |key| role.scale.template[key].blank? }
+
+        if missing.any?
+          raise Dash::ConfigurationError, "servers/#{role.name}/scale/template: #{missing.join(", ")} #{missing.one? ? "is" : "are"} required to create an UpCloud server"
+        end
+      end
+
+      true
+    end
+
+    # A member of a proxied role reaches traffic through the load balancer's target list -
+    # that is the only way a host joins or leaves a dash-proxy service across hosts.
+    def ensure_scaled_proxied_roles_have_a_loadbalancer
+      return true unless proxy.loadbalancer == false
+
+      if (role = scaled_roles.find(&:running_proxy?))
+        raise Dash::ConfigurationError, "servers/#{role.name}/scale: a scaled role behind dash-proxy needs the load balancer, " \
+          "remove proxy/loadbalancer: false"
+      end
+
+      true
     end
 
     # dash-proxy resolves a zero max_idle_conns to its default of 100
@@ -636,16 +703,24 @@ class Dash::Configuration
     end
 
     def ensure_no_conflicting_proxy_runs
-      all_hosts.each do |host|
-        run_configs = proxy_runs(host)
+      baseline_hosts.each do |host|
+        run_configs = proxy_runs(host, baseline: true)
         if run_configs.uniq.size > 1
           raise Dash::ConfigurationError, "Conflicting proxy run configurations for host #{host}"
         end
       end
     end
 
-    def proxy_runs(host)
-      (host_roles(host) + host_accessories(host)).map(&:proxy).compact.map(&:run).compact
+    # `baseline: true` for the checks run while the configuration loads, which must not ask
+    # the autoscale provider. A member shares its role's proxy run, so they lose nothing.
+    def proxy_runs(host, baseline: false)
+      host_roles = baseline ? roles.select { |role| role.baseline_hosts.include?(host) } : host_roles(host)
+      (host_roles + host_accessories(host)).map(&:proxy).compact.map(&:run).compact
+    end
+
+    # all_hosts without the pool members.
+    def baseline_hosts
+      (roles.flat_map(&:baseline_hosts) + accessories.flat_map(&:hosts)).uniq
     end
 
     # `loadbalancer: true` resolves to the primary role's first host, so an

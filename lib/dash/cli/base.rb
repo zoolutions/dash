@@ -130,7 +130,9 @@ module Dash::Cli
           commander.configure \
             config_file: Pathname.new(File.expand_path(options[:config_file])),
             destination: options[:destination],
-            version: options[:version]
+            version: options[:version],
+            explicit_hosts: options[:hosts]&.split(","),
+            explicit_roles: options[:roles]&.split(",")
 
           commander.specific_hosts    = options[:hosts]&.split(",")
           commander.specific_roles    = options[:roles]&.split(",")

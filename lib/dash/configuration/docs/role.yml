@@ -106,6 +106,61 @@ servers:
       signal: TSTP
       wait: 20
 
+    # Scale
+    #
+    # Extra hosts a role can run on beyond the ones listed under `hosts`, which stay the
+    # baseline: always on, deployed as before, never stopped by dash. The extra hosts are
+    # pool members that live in the cloud provider named under the root `autoscale:` key
+    # (see dash docs autoscale), not in this file. dash finds them by their labels —
+    # `dash.service=<service>`, `dash.destination=<destination, or -  without one>` and
+    # `dash.role=<role>` — and every member that is `started` is a host of the role for
+    # every command; stopped members are never touched. A provider that cannot be reached
+    # fails the command. `--hosts` then names the member hosts to act on, with a warning —
+    # for one scaled role at a time (pick it with `--roles` when there are more).
+    #
+    # `min` and `max` count HOSTS, the baseline included, so `min` is at least the number of
+    # `hosts`; `replicas` counts containers per host. `dash scale set <role> <count>` counts
+    # containers across all of them.
+    #
+    # A scaled role behind dash-proxy needs the load balancer, which turns on by itself for
+    # it even with one baseline host; `proxy/loadbalancer: false` is an error for it.
+    #
+    # The keys of the autoscaling controller (`schedule`, `warmup`, `signal`, `up`, `down`,
+    # `cooldown`, `step`, `hold_when`) are not accepted yet.
+    scale:
+      min: 2
+      max: 4
+
+      # How extra hosts come to exist. `power` (the default) powers stopped members on and
+      # off again; they are created beforehand, with Terraform for example, carrying the
+      # three labels. `create` creates a member from `template` when one is needed and
+      # destroys it when it leaves. On UpCloud a stopped server's compute is free only on
+      # Cloud Native plans; any other plan bills a powered-off member as if it ran.
+      members: power
+
+      # What a `create` member is built from (UpCloud): the template storage to clone, the
+      # plan and zone, the user dash connects as with its SSH keys, the private network
+      # (SDN) to attach — required when `address` is private — and cloud-init user data,
+      # for a Tailscale join for example. Only `create` uses it, and `create` requires it.
+      template:
+        storage: 01234567-89ab-cdef-0123-456789abcdef
+        plan: CLOUDNATIVE-8xCPU-16GB
+        zone: de-fra1
+        login_user: deploy
+        ssh_keys:
+          - "ssh-ed25519 AAAA... deploy"
+        network: 03abcdef-0123-4567-89ab-cdef01234567
+        user_data: |
+          #!/bin/sh
+          tailscale up --authkey ...
+
+      # Which of a member's addresses dash connects to: private (the default), public or
+      # utility.
+      address: private
+
+      # Seconds from powering a member on (or creating it) until it answers SSH, default 300.
+      boot_timeout: 300
+
     # Option values are shell-escaped before reaching `docker run`, but `${...}` is
     # deliberately left for the deploy host's shell to expand. Role `env` is never
     # defined in that shell, so `${MY_VAR}` resolves to empty. Use the bare `$MY_VAR`

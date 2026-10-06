@@ -524,6 +524,33 @@ class CliMainTest < CliTestCase
     end
   end
 
+  test "config of a scaled role notes its members without asking the provider" do
+    Dash::Autoscale::Pool.any_instance.expects(:members_for).never
+
+    run_command("config", config_file: "deploy_with_scale").tap do |output|
+      config = YAML.load(output)
+
+      assert_equal [ "1.1.1.2", "1.1.1.1" ], config[:hosts]
+      assert_equal({ "payments" => "power members from upcloud, 1-3 hosts" }, config[:members])
+    end
+  end
+
+  test "--hosts naming a member carries on with a warning when the provider is down" do
+    Dash::Autoscale::Provider::Upcloud.any_instance.stubs(:members).raises(Dash::Autoscale::ProviderError, "upcloud: GET /1.3/server answered 503")
+    Dash::Autoscale::Pool.any_instance.expects(:warn).once.with(regexp_matches(/taking 10\.0\.0\.22 from --hosts as started members, unverified/))
+
+    run_command("app", "details", "--hosts", "10.0.0.22", config_file: "deploy_with_scale").tap do |output|
+      assert_match /docker ps --filter label=service=app --filter label=destination= --filter label=role=payments on 10\.0\.0\.22/, output
+    end
+  end
+
+  test "a provider that is down fails a command without --hosts" do
+    Dash::Autoscale::Provider::Upcloud.any_instance.stubs(:members).raises(Dash::Autoscale::ProviderError, "upcloud: GET /1.3/server answered 503")
+
+    error = assert_raises(Dash::Autoscale::ProviderError) { run_command("app", "details", config_file: "deploy_with_scale") }
+    assert_equal "Could not read the payments pool: upcloud: GET /1.3/server answered 503", error.message
+  end
+
   test "config with roles" do
     run_command("config", config_file: "deploy_with_roles").tap do |output|
       config = YAML.load(output)
@@ -1033,6 +1060,31 @@ class CliMainTest < CliTestCase
     run_command("deploy", config_file: "deploy_with_loadbalancer_false").tap do |output|
       assert_match /Deploying app \(version 999\)/, output
       assert_no_match /loadbalancer:/, output
+    end
+  end
+
+  test "deploy config banner counts the pool members of a scaled role" do
+    Dash::Autoscale::Pool.any_instance.stubs(:members_for).returns([])
+    Dash::Autoscale::Pool.any_instance.stubs(:members_for).with { |role| role.name == "payments" }.returns([
+      Dash::Autoscale::Member.new(id: "m1", host: "10.0.0.22", role: "payments", state: "started"),
+      Dash::Autoscale::Member.new(id: "m2", host: "10.0.0.23", role: "payments", state: "stopped")
+    ])
+    Dash::Cli::Main.any_instance.expects(:invoke).at_least_once
+
+    run_command("deploy", config_file: "deploy_with_scale").tap do |output|
+      assert_match /payments: 1 host \(1\.1\.1\.2\) \+ 1 of 2 members active \(10\.0\.0\.22\) × 1–3 replicas — readiness/, output
+      assert_match /web: 1 host \(1\.1\.1\.1\) — readiness/, output
+    end
+  end
+
+  test "deploy config banner says why a scaled web role load balances" do
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    Dash::Autoscale::Pool.any_instance.stubs(:members_for).returns([])
+    Dash::Cli::Main.any_instance.expects(:invoke).at_least_once
+
+    run_command("deploy", config_file: "deploy_with_scale_web").tap do |output|
+      assert_match /web: 1 host \(1\.1\.1\.1\) \+ 0 of 0 members active — readiness/, output
+      assert_match /loadbalancer: 1\.1\.1\.1 \(auto-enabled: role web scales across hosts\)/, output
     end
   end
 

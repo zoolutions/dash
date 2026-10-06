@@ -21,7 +21,8 @@ class Dash::Diagnostics::Doctor < Dash::Diagnostics::Base
     certificate: "Certificates",
     readiness: "Readiness",
     dockerfile: "Dockerfile",
-    drift: "Drift"
+    drift: "Drift",
+    pool: "Pool"
   }.freeze
 
   STATUS_COLORS = { ok: :green, warn: :yellow, fail: :red }.freeze
@@ -50,13 +51,24 @@ class Dash::Diagnostics::Doctor < Dash::Diagnostics::Base
 
   attr_reader :results
 
+  # The roles this run is about. DASH.roles builds the host scope, which asks the autoscale
+  # pool - so it is only used when --hosts narrowed the run, and the pool has been read
+  # already to filter by them. Otherwise --roles, or every role, straight from deploy.yml.
+  def self.scoped_roles
+    DASH.specific_hosts ? DASH.roles : (DASH.specific_roles || DASH.config.roles)
+  end
+
   def initialize(registry: true)
     @results = []
     @registry = registry
   end
 
+  # Pool checks first: when the provider cannot be asked, the member hosts are unknown, so
+  # the checks that need every host report that once instead of crashing on it.
   def run
-    @results = host_check_results + endpoint_check_results + config_check_results + drift_check_results
+    pool = pool_check_results
+    @results = without_pool(:ssh) { host_check_results } + without_pool(:dns) { endpoint_check_results } +
+      config_check_results + pool + drift_check_results
   end
 
   def failures
@@ -124,6 +136,16 @@ class Dash::Diagnostics::Doctor < Dash::Diagnostics::Base
 
     def config_check_results
       Dash::Diagnostics::Doctor::ConfigChecks.new.run
+    end
+
+    def pool_check_results
+      Dash::Diagnostics::Doctor::PoolChecks.new.run
+    end
+
+    def without_pool(check)
+      yield
+    rescue Dash::Autoscale::ProviderError => e
+      [ Result.new(check, "pool", :fail, "not run, the pool members are unknown (#{e.message})") ]
     end
 
     # Whether the proxies route to what runs. A target that is not running, or a host the

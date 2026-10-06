@@ -1,0 +1,43 @@
+# Autoscale
+#
+# Where the pool members of scaled roles (see `scale` in dash docs role) live. dash asks the
+# provider for them at the start of a command — the provider is the source of truth for
+# which extra hosts are running, so there is no state file to drift.
+
+# UpCloud
+#
+# Members are UpCloud servers carrying the `dash.service`, `dash.destination` and
+# `dash.role` labels. The API user's credentials are secrets: a one-element array names
+# the secret to read, as for `registry/password`. They are sent to the UpCloud API as
+# HTTP basic auth and nowhere else.
+#
+# Set exactly one provider.
+autoscale:
+  provider:
+    upcloud:
+      username:
+        - UPCLOUD_USERNAME
+      password:
+        - UPCLOUD_PASSWORD
+
+# Exec
+#
+# Your own scripts, for any other cloud. Each runs locally with the role's labels as
+# DASH_SERVICE, DASH_DESTINATION (`-` without a destination) and DASH_ROLE in its
+# environment, plus DASH_MEMBER_ID and DASH_HOST for the member it acts on, and
+# DASH_STOP_TIMEOUT (seconds) for `stop`. Only `members`, `start` and `stop` are
+# required; `create` and `destroy` are for `members: create` roles.
+#
+# `members` prints one JSON object per line —
+# `{"id": "...", "host": "10.0.0.22", "role": "payments", "state": "started"}`, where
+# state is started, stopped, maintenance or error — and `create` prints the new
+# member the same way. A script that exits non-zero fails the command, and the last
+# line of its stderr is the error dash shows.
+autoscale:
+  provider:
+    exec:
+      members: bin/pool-members
+      start: bin/pool-start
+      stop: bin/pool-stop
+      create: bin/pool-create
+      destroy: bin/pool-destroy

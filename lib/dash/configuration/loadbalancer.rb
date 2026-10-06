@@ -95,7 +95,7 @@ class Dash::Configuration::Loadbalancer < Dash::Configuration::Proxy
 
   # When loadbalancer is on a proxy host, it takes over the proxy role
   def on_proxy_host?
-    config.proxy_hosts.include?(config.proxy.effective_loadbalancer)
+    config.baseline_proxy_hosts.include?(config.proxy.effective_loadbalancer)
   end
 
   private

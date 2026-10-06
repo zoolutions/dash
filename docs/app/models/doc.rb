@@ -61,6 +61,7 @@ class Doc
   page "Logging",          group: "Configuration", slug: "logging", view: "Config::Logging"
   page "Output",           group: "Configuration", slug: "output", view: "Config::Output"
   page "Deploy report",    group: "Configuration", slug: "report", view: "Config::Report"
+  page "Autoscale",        group: "Configuration", slug: "autoscale", view: "Config::Autoscale"
 
   # Reference
   page "Commands", group: "Reference"
