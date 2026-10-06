@@ -1,0 +1,48 @@
+lib/dash/cli/scale/join.rb
+  s_413b3ef539574a::t_f3dd31a25b818a 1-46,48-61,63-64,66-84,86-99,101-102,104-117
+  s_413b3ef539574a::t_b21b230b905706 47,62,65,85,100,103
+lib/dash/configuration/role.rb
+  s_413b3ef539574a::t_56df0e0ddc5a9b 88,90
+lib/dash/cli/proxy.rb
+  s_413b3ef539574a::t_d200f2a54cd8d9 449
+lib/dash/cli/proxy/loadbalancer_deploy.rb
+  s_413b3ef539574a::t_d200f2a54cd8d9 4,6-12,15-18
+  s_413b3ef539574a::t_12c93faf20f83c 1-3,5,13-14,19-20
+lib/dash/cli/scale/leave.rb
+  s_413b3ef539574a::t_8a4f0530311570 1-22,24-30,32-46
+  s_413b3ef539574a::t_b21b230b905706 23,31
+test/cli/scale/host_plan_test.rb
+  s_413b3ef539574a::t_996fc529e42349 1-4,6-11,13-19,21-24,26-29,31-36,38-41,43-47,49-54,56-61,63-67,69-79,82-84
+  s_413b3ef539574a::t_cc856a726185dd 5,12,20,25,30,37,42,48,55,62,68,80-81
+lib/dash/cli/scale/power_off.rb
+  s_413b3ef539574a::t_0a1acec30686c2 1-21
+lib/dash/cli/scale.rb
+  s_413b3ef539574a::t_66786a5e44c1d4 5-8,10-11,18-19,47-68,73-81,88-89,99-172
+  s_413b3ef539574a::t_b21b230b905706 69-72
+test/cli/scale_hosts_test.rb
+  s_413b3ef539574a::t_e49c189ff5c76d 78,106,129-130,144,205,285-290
+  s_413b3ef539574a::t_80db686b9363b2 116
+  s_413b3ef539574a::t_7057737454bf5f 120-121
+  s_413b3ef539574a::t_45b84e3ee9900f 1-77,79-105,107-115,117-119,122-128,131-143,145-204,206-284,291-299
+lib/dash/cli/scale/host_plan.rb
+  s_413b3ef539574a::t_996fc529e42349 1-2,4-24,26-66
+  s_413b3ef539574a::t_cc856a726185dd 3,25
+test/configuration/scaled_roles_test.rb
+  s_413b3ef539574a::t_56df0e0ddc5a9b 64-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "961640e8e1cc94db84090499a1c4a8c632742972",
+  "prompts": {},
+  "sessions": {
+    "s_413b3ef539574a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8cd97621-d3e0-4522-9ff2-11a107a5c982",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
