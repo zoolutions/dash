@@ -42,7 +42,10 @@ class Dash::Cli::Scale::Join
         cli.invoke_narrowed "dash:cli:app:boot", Dash::Cli::App, version: version
       end
 
-      cli.deploy_loadbalancer if role.running_proxy?
+      if role.running_proxy?
+        cli.deploy_loadbalancer
+        @in_loadbalancer = host
+      end
       cli.run_hook "post-scale-out", role: role.name, hosts: host, replicas: count.to_s
       cli.report "Joined #{member.id} (#{host}) to #{role}"
       host
@@ -50,7 +53,13 @@ class Dash::Cli::Scale::Join
       # The created server, or the member started; nil when a create failed before the
       # provider returned one, and then there is nothing to power off.
       member = @created || @member
-      power_off(member) if member && !@keep_on_failure
+
+      unless @keep_on_failure
+        # Out of the load balancer before it goes, or it would forward to a stopped host.
+        cli.deploy_loadbalancer(except: @in_loadbalancer) if @in_loadbalancer
+        power_off(member) if member
+      end
+
       raise e
     end
   end

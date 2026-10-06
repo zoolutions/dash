@@ -15,6 +15,7 @@ class Dash::Autoscale::Pool
     @explicit_hosts = Array(explicit_hosts).presence
     @explicit_roles = Array(explicit_roles).presence
     @members = {}
+    @degraded = {}
     @mutex = Mutex.new
   end
 
@@ -34,12 +35,19 @@ class Dash::Autoscale::Pool
     members
   end
 
+  # Whether the role's members came from --hosts because the provider did not answer, so
+  # the role's full host list is unknown.
+  def degraded?(role)
+    members_for(role)
+    @degraded.fetch(role.name, false)
+  end
+
   def active_for(role)
     members_for(role).select(&:started?)
   end
 
   def refresh!
-    @mutex.synchronize { @members.clear }
+    @mutex.synchronize { @members.clear; @degraded.clear }
     self
   end
 
@@ -61,6 +69,8 @@ class Dash::Autoscale::Pool
 
     def degraded(role, error)
       raise Dash::Autoscale::ProviderError, "Could not read the #{role} pool: #{error.message}" unless explicit_hosts
+
+      @degraded[role.name] = true
 
       scoped = config.scaled_roles.select { |candidate| explicit_roles.nil? || Dash::Utils.filter_specific_items(explicit_roles, [ candidate ]).any? }
       return [] unless scoped.include?(role)

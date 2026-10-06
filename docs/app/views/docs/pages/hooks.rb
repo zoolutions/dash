@@ -24,7 +24,7 @@ class Views::Docs::Pages::Hooks < DocsUI::Page
     [ "pre-loadbalancer-reboot", "before the load balancer container is replaced", "proxy reboot, proxy boot (config drift)", "", "dash" ],
     [ "post-loadbalancer-reboot", "after the new load balancer container is up", "proxy reboot, proxy boot (config drift)", "", "dash" ],
     [ "pre-scale-out", "before `dash scale set` adds containers of a role, or a pool member joins it", "scale set", "", "dash" ],
-    [ "post-scale-out", "after the new containers are ready (a joined member is in the load balancer)", "scale set", "", "dash" ],
+    [ "post-scale-out", "after the new containers are ready (a joined member of a proxied role is in the load balancer)", "scale set", "", "dash" ],
     [ "pre-scale-in", "before `dash scale set` removes containers of a role, or a pool member leaves it", "scale set", "", "dash" ],
     [ "post-scale-in", "after they are stopped (drained first, when the proxy or `drain` applies) and a leaving member is powered off", "scale set", "", "dash" ],
     [ "docker-setup", "after Docker is confirmed installed on every host", "server bootstrap, setup", "", "" ]

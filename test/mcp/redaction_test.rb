@@ -45,6 +45,7 @@ class McpRedactionTest < McpTestCase
 
     assert_no_match "upcloud-api-secret", text
     assert_no_match "upcloud-api-user", text
+    assert_no_match [ "upcloud-api-user:upcloud-api-secret" ].pack("m0"), text
     assert_match "answered 401", text
     assert_equal [ "Basic #{[ "upcloud-api-user:upcloud-api-secret" ].pack("m0")}" ], sent, "the credentials went to the API as basic auth"
   end

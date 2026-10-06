@@ -26,8 +26,9 @@ class Dash::Configuration::Loadbalancer < Dash::Configuration::Proxy
   # The hosts the load balancer forwards to: every host of every role that
   # runs a proxy. One source of truth for the deploy step and the reboot
   # re-registration, so their target lists cannot diverge.
+  # Once each: a host two proxied roles share is one target.
   def target_hosts
-    config.roles.select(&:running_proxy?).flat_map(&:hosts)
+    config.roles.select(&:running_proxy?).flat_map(&:hosts).uniq
   end
 
   def directory

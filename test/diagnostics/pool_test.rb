@@ -42,6 +42,27 @@ class DiagnosticsPoolTest < DiagnosticsTestCase
     assert_nil payments[:pool]
   end
 
+  test "keeps to the run's --hosts" do
+    stub_members member("m1", "10.0.0.22", "started"), member("m2", "10.0.0.23", "started")
+    DASH.specific_hosts = [ "1.1.1.2", "10.0.0.22" ]
+    stub_capture "10.0.0.22", "{{.Names}}\\t{{.Status}}", "app-payments-abc\tUp\n"
+
+    payments = Dash::Diagnostics::Pool.new.to_h[:roles].first
+    assert_equal [ "m1" ], payments[:pool].map { |entry| entry[:id] }
+    assert_equal [ "1.1.1.2" ], payments[:baseline]
+  end
+
+  test "another role's provider outage does not error this role's pool" do
+    configure :deploy_with_scale
+    Dash::Autoscale::Pool.any_instance.stubs(:members_for).with { |role| role.name == "payments" }.returns([ member("m1", "10.0.0.22", "started") ])
+    DASH.stubs(:hosts).raises(Dash::Autoscale::ProviderError, "another role's pool is down")
+    stub_capture "10.0.0.22", "{{.Names}}\\t{{.Status}}", "app-payments-abc\tUp\n"
+
+    payments = Dash::Diagnostics::Pool.new.to_h[:roles].first
+    assert_nil payments[:error]
+    assert_equal [ "abc" ], payments[:pool].first[:versions]
+  end
+
   test "an unscaled configuration has no pool" do
     configure :deploy_simple
 

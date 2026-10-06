@@ -26,7 +26,7 @@ class Dash::Diagnostics::Scale < Dash::Diagnostics::Base
     end
 
     def role_status(role)
-      read = per_host(role.hosts & DASH.hosts) { |backend, host| { replicas: self.class.replicas(role, backend.capture_with_info(*DASH.app(role: role, host: host).replica_status)) } }
+      read = per_host(in_scope(role.hosts)) { |backend, host| { replicas: self.class.replicas(role, backend.capture_with_info(*DASH.app(role: role, host: host).replica_status)) } }
       hosts = read.reject { |host| host[:error] }.to_h { |host| [ host[:host], host[:replicas] ] }
 
       status = { role: role.name, min: role.replicas.min, max: role.replicas.max, total: hosts.values.sum(&:size),
@@ -35,6 +35,12 @@ class Dash::Diagnostics::Scale < Dash::Diagnostics::Base
       status
     rescue Dash::Autoscale::ProviderError => e
       { role: role.name, error: e.message }
+    end
+
+    # The run's --hosts, read directly: DASH.hosts would expand every role's hosts, and one
+    # other pool that cannot be read would fail this role too.
+    def in_scope(hosts)
+      DASH.specific_hosts ? hosts & DASH.specific_hosts : hosts
     end
 
     def members(role, hosts)

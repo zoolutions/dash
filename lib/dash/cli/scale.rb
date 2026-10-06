@@ -110,6 +110,11 @@ class Dash::Cli::Scale < Dash::Cli::Base
     # stay, adds before removals; members leave between the two, so a scale-in empties
     # members before the baseline gives anything up.
     def scale_across_hosts(role, count)
+      if DASH.config.pool.degraded?(role)
+        raise ArgumentError, "the #{role} pool could not be read, so dash scale set cannot count the containers it runs; " \
+          "try again once the provider answers"
+      end
+
       running = running_replicas(role)
       members = role.active_members
       plan = Dash::Cli::Scale::HostPlan.new(baseline: role.baseline_hosts, members: members.map(&:host), target: count,
@@ -137,14 +142,8 @@ class Dash::Cli::Scale < Dash::Cli::Base
       say "#{role} now runs #{count} containers on #{counts.size} #{"host".pluralize(counts.size)}", :magenta
     end
 
-    # Members named with --hosts while the provider was down cannot be powered on or off.
     def ensure_members_can_move(role, members, plan)
       return if plan.joins.zero? && plan.leaving.empty?
-
-      if members.any? { |member| !member.verified }
-        raise ArgumentError, "#{role} needs members to #{plan.joins.positive? ? "join" : "leave"}, but its pool could not be read; " \
-          "dash scale set only changes the containers on the hosts it has until the provider answers"
-      end
 
       if role.scale.power? && (stopped = role.members.count(&:stopped?)) < plan.joins
         raise ArgumentError, "#{role} needs #{plan.joins} more #{"host".pluralize(plan.joins)} but has #{stopped} stopped " \

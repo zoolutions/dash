@@ -16,15 +16,21 @@ class Dash::Diagnostics::Pool < Dash::Diagnostics::Base
 
     def role_pool(role)
       head = { role: role.name, provider: DASH.config.autoscale.provider_name, members: role.scale.members.to_s,
-        min: role.scale.min, max: role.scale.max, baseline: role.baseline_hosts }
-      members = role.members
-      read = per_host(members.select(&:started?).map(&:host) & DASH.hosts) do |backend, host|
+        min: role.scale.min, max: role.scale.max, baseline: in_scope(role.baseline_hosts) }
+      members = role.members.select { |member| in_scope([ member.host ]).any? }
+      read = per_host(members.select(&:started?).map(&:host)) do |backend, host|
         { versions: Dash::Diagnostics::Scale.replicas(role, backend.capture_with_info(*DASH.app(role: role, host: host).replica_status)).map { |replica| replica[:version] }.uniq }
       end.index_by { |entry| entry[:host] }
 
       head.merge(pool: members.map { |member| member_entry(member, read[member.host]) })
     rescue Dash::Autoscale::ProviderError => e
       head.merge(error: e.message)
+    end
+
+    # The run's --hosts, read directly: DASH.hosts would expand every role's hosts, and one
+    # other pool that cannot be read would fail this role too.
+    def in_scope(hosts)
+      DASH.specific_hosts ? hosts & DASH.specific_hosts : hosts
     end
 
     def member_entry(member, read)

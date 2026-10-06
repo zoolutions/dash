@@ -138,6 +138,22 @@ class CliScaleHostsTest < CliTestCase
     assert_equal({ skip_loadbalancer: true }, @narrowed[2].last, "the member's proxy boot must not touch the shared load balancer")
   end
 
+  test "a leaving member stays a load balancer target while another proxied role runs on it" do
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    deploy = YAML.load_file("test/fixtures/deploy_with_scale_web.yml")
+    deploy["servers"]["api"] = { "hosts" => [ "10.0.0.40" ], "proxy" => { "host" => "api.example.com" } }
+    File.write("test/fixtures/deploy_tmp_shared_member.yml", deploy.to_yaml)
+    @provider.members_list.find { |member| member.id == "w1" }.state = "started"
+    stub_running "1.1.1.1" => [ "app-web-123" ], "10.0.0.40" => [ "app-web-123" ]
+    stub_loadbalancer_owner
+
+    run_command("set", "web", "1", config: :tmp_shared_member).tap do |output|
+      assert_match 'dash-proxy deploy app --target="10.0.0.40:80,1.1.1.1:80" ', output
+    end
+  ensure
+    FileUtils.rm_f "test/fixtures/deploy_tmp_shared_member.yml"
+  end
+
   test "a web member leaves the load balancer before its containers stop and it powers off" do
     Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
     @provider.members_list.find { |member| member.id == "w1" }.state = "started"
@@ -217,6 +233,37 @@ class CliScaleHostsTest < CliTestCase
     FileUtils.rm_f "test/fixtures/deploy_tmp_scale_create.yml"
   end
 
+  test "a join that fails after the load balancer took the member takes it out again before powering it off" do
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    stub_running "1.1.1.1" => [ "app-web-123" ], "10.0.0.40" => [ "app-web-123" ]
+    stub_loadbalancer_owner
+    record_narrowed_invokes
+    Dash::Cli::Scale.any_instance.stubs(:run_hook)
+    Dash::Cli::Scale.any_instance.stubs(:run_hook).with("post-scale-out", anything).raises(Dash::Cli::HookError, "post-scale-out failed")
+
+    error = nil
+    output = stdouted do
+      Dash::Cli::Scale.start([ "set", "web", "2", "-c", "test/fixtures/deploy_with_scale_web.yml" ])
+    rescue Dash::Cli::HookError => e
+      error = e
+    end
+
+    assert_equal "post-scale-out failed", error&.message
+    assert_equal [ [ :start, "w1" ], [ :stop, "w1", 60 ] ], @provider.calls
+
+    joined = output.index('dash-proxy deploy app --target="1.1.1.1:80,10.0.0.40:80"')
+    left = output.index('dash-proxy deploy app --target="1.1.1.1:80" ', joined.to_i + 1)
+    assert joined, output
+    assert left, "the rollback must redeploy the load balancer without the member: #{output}"
+  end
+
+  test "a stopped member is not stopped again before it is destroyed" do
+    @provider.members_list << member("gone", "10.0.0.50", "payments", "stopped")
+    Dash::Cli::Scale::PowerOff.new(payments_role, @provider.members_list.last, @provider).run(destroy: true)
+
+    assert_equal [ [ :destroy, "gone" ] ], @provider.calls
+  end
+
   test "a member that never answers SSH fails the join after boot_timeout" do
     stub_running "1.1.1.2" => [ "app-payments-123", "app-payments.2-123", "app-payments.3-123" ]
     Dash::Cli::Scale.any_instance.stubs(:on_hosts).raises(SSHKit::Runner::ExecuteError.new(Errno::ECONNREFUSED.new))
@@ -277,13 +324,22 @@ class CliScaleHostsTest < CliTestCase
     assert_empty @provider.calls
   end
 
+  test "a pool that could not be read refuses scale set, even with only baseline hosts named" do
+    Dash::Autoscale::Provider.stubs(:for).returns(stub(name: "fake").tap { |provider| provider.stubs(:members).raises(Dash::Autoscale::ProviderError, "down") })
+    Dash::Autoscale::Pool.any_instance.stubs(:warn)
+    stub_running "1.1.1.2" => [ "app-payments-123", "app-payments.2-123" ]
+
+    error = assert_raises(ArgumentError) { run_command("set", "payments", "1", "--hosts", "1.1.1.2") }
+    assert_match "the payments pool could not be read", error.message
+  end
+
   test "with members from --hosts a member is never powered on or off" do
     Dash::Autoscale::Provider.stubs(:for).returns(stub(members: nil).tap { |provider| provider.stubs(:members).raises(Dash::Autoscale::ProviderError, "down") })
     Dash::Autoscale::Pool.any_instance.stubs(:warn)
     stub_running "1.1.1.2" => [ "app-payments-123" ], "10.0.0.22" => [ "app-payments-123" ]
 
     error = assert_raises(ArgumentError) { run_command("set", "payments", "1", "--hosts", "1.1.1.2,10.0.0.22") }
-    assert_match "payments needs members to leave, but its pool could not be read", error.message
+    assert_match "the payments pool could not be read", error.message
   end
 
   test "status lists the members, and flags a started one running nothing as an orphan" do
@@ -311,6 +367,10 @@ class CliScaleHostsTest < CliTestCase
   private
     def run_command(*command, config: :with_scale)
       stdouted { Dash::Cli::Scale.start([ *command, "-c", "test/fixtures/deploy_#{config}.yml" ]) }
+    end
+
+    def payments_role
+      Dash::Configuration.create_from(config_file: Pathname.new(File.expand_path("test/fixtures/deploy_with_scale.yml"))).role(:payments)
     end
 
     def member(id, host, role, state)

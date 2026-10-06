@@ -14,8 +14,13 @@ class Dash::Cli::Scale::PowerOff
   def run(destroy:)
     timeout = (@role.stop_timeout || DEFAULT_STOP_TIMEOUT) + SHUTDOWN_ALLOWANCE
 
-    @provider.stop(@member, timeout: timeout)
-    @provider.wait_until(@member, state: "stopped", timeout: timeout + SHUTDOWN_ALLOWANCE)
+    # A member a failed join left stopped refuses a second stop (UpCloud answers
+    # SERVER_STATE_ILLEGAL), which would skip the destroy.
+    unless @provider.state(@member) == "stopped"
+      @provider.stop(@member, timeout: timeout)
+      @provider.wait_until(@member, state: "stopped", timeout: timeout + SHUTDOWN_ALLOWANCE)
+    end
+
     @provider.destroy(@member) if destroy
   end
 end
