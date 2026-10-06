@@ -48,7 +48,7 @@ class AutoscalePoolTest < ActiveSupport::TestCase
     @provider.stubs(:members).raises(Dash::Autoscale::ProviderError, "upcloud: GET /1.3/server failed (SocketError: down)")
 
     error = assert_raises(Dash::Autoscale::ProviderError) { config.pool.members_for(role) }
-    assert_equal "Could not read the payments pool from upcloud: upcloud: GET /1.3/server failed (SocketError: down)", error.message
+    assert_equal "Could not read the payments pool: upcloud: GET /1.3/server failed (SocketError: down)", error.message
   end
 
   test "with --hosts the named non-baseline hosts are taken as unverified members, with one warning" do
@@ -56,7 +56,7 @@ class AutoscalePoolTest < ActiveSupport::TestCase
     config = load_fixture(explicit_hosts: [ "10.0.0.22", "1.1.1.2", "10.0.0.*" ])
     pool = config.pool
 
-    pool.expects(:warn).once.with("Could not read the payments pool from upcloud (down); taking 10.0.0.22 from --hosts as started members, unverified")
+    pool.expects(:warn).once.with("Could not read the payments pool (down); taking 10.0.0.22 from --hosts as started members, unverified")
     members = pool.members_for(config.role(:payments))
     pool.refresh!.members_for(config.role(:payments))
 
@@ -69,12 +69,25 @@ class AutoscalePoolTest < ActiveSupport::TestCase
 
     config = Dash::Configuration.new(deploy.symbolize_keys, explicit_hosts: [ "10.0.0.22" ])
     error = assert_raises(Dash::Autoscale::ProviderError) { config.pool.members_for(config.role(:payments)) }
-    assert_match(/--hosts could mean members of payments or web; name one with --roles/, error.message)
+    assert_match(/Could not read the pool \(down\), and --hosts could mean members of payments or web; name one with --roles/, error.message)
 
     config = Dash::Configuration.new(deploy.symbolize_keys, explicit_hosts: [ "10.0.0.22" ], explicit_roles: [ "web" ])
     config.pool.stubs(:warn)
     assert_equal [], config.pool.members_for(config.role(:payments))
     assert_equal [ "10.0.0.22" ], config.pool.members_for(config.role(:web)).map(&:host)
+  end
+
+  test "an accessory host named with --hosts is never taken for a member" do
+    @provider.stubs(:members).raises(Dash::Autoscale::ProviderError, "down")
+    deploy = YAML.load_file(fixture_path).merge("accessories" => { "redis" => { "image" => "redis", "host" => "10.0.0.50" } })
+    config = Dash::Configuration.new(deploy.symbolize_keys, explicit_hosts: [ "10.0.0.50", "10.0.0.22" ])
+    config.pool.stubs(:warn)
+
+    assert_equal [ "10.0.0.22" ], config.pool.members_for(config.role(:payments)).map(&:host)
+  end
+
+  test "members the provider reports are verified" do
+    assert_equal true, member("m1", "10.0.0.22", "started").verified
   end
 
   test "--hosts naming a member reaches Commander through the configuration" do

@@ -14,6 +14,7 @@ class Dash::Diagnostics::Doctor::PoolChecks
 
     def role_results(role)
       members = role.members
+      return [ unverified_result(role, members), loadbalancer_result(role) ].compact if members.any? { |member| !member.verified }
 
       [ provider_result(role, members), capacity_result(role, members), *stuck_results(role, members), loadbalancer_result(role) ].compact
     rescue Dash::Autoscale::ProviderError => e
@@ -23,6 +24,12 @@ class Dash::Diagnostics::Doctor::PoolChecks
     def provider_result(role, members)
       active = members.count(&:started?)
       result role.name, :ok, "#{DASH.config.autoscale.provider_name} answered: #{members.size} #{"member".pluralize(members.size)}, #{active} started"
+    end
+
+    # Only --hosts produces unverified members, and only when the provider did not answer.
+    def unverified_result(role, members)
+      result role.name, :warn, "#{DASH.config.autoscale.provider_name} did not answer: #{members.size} #{"member".pluralize(members.size)} " \
+        "taken from --hosts, unverified (#{members.map(&:host).join(", ")})"
     end
 
     def capacity_result(role, members)

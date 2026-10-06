@@ -20,15 +20,23 @@ class Dash::Diagnostics::Doctor::EndpointChecks
 
     # Roles and accessories that run behind the proxy with custom domains.
     def proxied_units
-      @proxied_units ||= (DASH.roles + DASH.config.proxy_accessories).select do |unit|
+      @proxied_units ||= (Dash::Diagnostics::Doctor.scoped_roles + DASH.config.proxy_accessories).select do |unit|
         unit.running_proxy? && unit.proxy.hosts.any?
       end
     end
 
     def dns_results
       proxied_units.flat_map do |unit|
-        unit.proxy.hosts.map { |domain| dns_check(domain, unit.hosts, acme_issued: acme_issued?(unit)) }
+        unit.proxy.hosts.map { |domain| dns_check_of(unit, domain) }
       end
+    end
+
+    # A scaled role's hosts come from the autoscale pool; when it cannot be read, its DNS
+    # cannot be compared, but its certificates still can.
+    def dns_check_of(unit, domain)
+      dns_check(domain, unit.hosts, acme_issued: acme_issued?(unit))
+    rescue Dash::Autoscale::ProviderError => e
+      result :dns, domain, :fail, "not compared, the hosts of #{unit.name} are unknown (#{e.message})"
     end
 
     # Whether this unit's certificate comes from ACME rather than the operator.

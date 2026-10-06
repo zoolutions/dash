@@ -60,13 +60,13 @@ class Dash::Autoscale::Pool
     end
 
     def degraded(role, error)
-      raise Dash::Autoscale::ProviderError, "Could not read the #{role} pool from #{provider_name}: #{error.message}" unless explicit_hosts
+      raise Dash::Autoscale::ProviderError, "Could not read the #{role} pool: #{error.message}" unless explicit_hosts
 
       scoped = config.scaled_roles.select { |candidate| explicit_roles.nil? || Dash::Utils.filter_specific_items(explicit_roles, [ candidate ]).any? }
       return [] unless scoped.include?(role)
 
       if scoped.many?
-        raise Dash::Autoscale::ProviderError, "Could not read the pool from #{provider_name} (#{error.message}), " \
+        raise Dash::Autoscale::ProviderError, "Could not read the pool (#{error.message}), " \
           "and --hosts could mean members of #{scoped.map(&:name).join(" or ")}; name one with --roles"
       end
 
@@ -74,18 +74,14 @@ class Dash::Autoscale::Pool
     end
 
     def unverified(role, error)
-      baseline = config.roles.flat_map(&:baseline_hosts)
+      baseline = config.roles.flat_map(&:baseline_hosts) + config.accessories.flat_map(&:hosts)
       # A wildcard names no host; only literal --hosts entries can stand in for members.
       hosts = explicit_hosts.grep_v(/[*?\[{]/) - baseline
 
-      warn_once "Could not read the #{role} pool from #{provider_name} (#{error.message}); " \
+      warn_once "Could not read the #{role} pool (#{error.message}); " \
         "taking #{hosts.any? ? hosts.join(", ") : "no hosts"} from --hosts as started members, unverified"
 
       hosts.map { |host| Dash::Autoscale::Member.new(id: nil, host: host, role: role.name, state: "started", labels: labels_for(role), verified: false) }
-    end
-
-    def provider_name
-      config.autoscale.provider_name
     end
 
     def warn_once(message)

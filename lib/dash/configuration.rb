@@ -109,6 +109,7 @@ class Dash::Configuration
     ensure_max_idle_conns_meaningful
     ensure_replicas_fit_their_roles
     ensure_scaled_roles_have_a_provider
+    ensure_upcloud_templates_are_complete
     ensure_scaled_proxied_roles_have_a_loadbalancer
   end
 
@@ -121,7 +122,9 @@ class Dash::Configuration
     builder.secrets
 
     roles.each do |role|
-      role.secrets_io(role.baseline_hosts.first) if role.baseline_hosts.any?
+      # A baseline host when there is one: the same secrets, without asking the pool.
+      host = role.baseline_hosts.first || role.hosts.first
+      role.secrets_io(host) if host
 
       if role.running_proxy?
         role.proxy.run&.secrets_io
@@ -546,6 +549,21 @@ class Dash::Configuration
 
       if (role = scaled_roles.first)
         raise Dash::ConfigurationError, "servers/#{role.name}/scale: needs a provider for its members, set autoscale/provider (see dash docs autoscale)"
+      end
+
+      true
+    end
+
+    # UpCloud builds a server from the template; an exec `create` script reads its own.
+    def ensure_upcloud_templates_are_complete
+      return true unless autoscale.provider_name == "upcloud"
+
+      scaled_roles.select { |role| role.scale.create? }.each do |role|
+        missing = %w[ storage plan zone ].select { |key| role.scale.template[key].blank? }
+
+        if missing.any?
+          raise Dash::ConfigurationError, "servers/#{role.name}/scale/template: #{missing.join(", ")} #{missing.one? ? "is" : "are"} required to create an UpCloud server"
+        end
       end
 
       true

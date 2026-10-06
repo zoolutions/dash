@@ -60,17 +60,16 @@ class Dash::Autoscale::Provider::Upcloud < Dash::Autoscale::Provider::Base
     def member_from(server, labels:, address:)
       Dash::Autoscale::Member.new \
         id: server["uuid"],
-        host: address_of(server, address) || raise(Dash::Autoscale::ProviderError, "upcloud: server #{server["uuid"]} has no #{address} address, set scale/address to one it has"),
+        host: address_of(server, address) || raise(Dash::Autoscale::ProviderError, "upcloud: server #{server["uuid"]} has no #{address} IPv4 address, set scale/address to one it has"),
         role: labels["dash.role"],
         state: server["state"],
         labels: labels,
         created_at: server["created"]
     end
 
-    # IPv4 first: an IPv6 host would need brackets everywhere dash builds `host:port`.
+    # IPv4 only: an IPv6 host would need brackets everywhere dash builds `host:port`.
     def address_of(server, access)
-      addresses = Array(server.dig("ip_addresses", "ip_address")).select { |ip| ip["access"] == access }
-      (addresses.find { |ip| ip["family"] == "IPv4" } || addresses.first)&.fetch("address")
+      Array(server.dig("ip_addresses", "ip_address")).find { |ip| ip["access"] == access && ip["family"] == "IPv4" }&.fetch("address")
     end
 
     # Public and utility interfaces always, so a member can pull its image and reach the

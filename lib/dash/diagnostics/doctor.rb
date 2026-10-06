@@ -51,6 +51,13 @@ class Dash::Diagnostics::Doctor < Dash::Diagnostics::Base
 
   attr_reader :results
 
+  # The roles this run is about. DASH.roles builds the host scope, which asks the autoscale
+  # pool - so it is only used when --hosts narrowed the run, and the pool has been read
+  # already to filter by them. Otherwise --roles, or every role, straight from deploy.yml.
+  def self.scoped_roles
+    DASH.specific_hosts ? DASH.roles : (DASH.specific_roles || DASH.config.roles)
+  end
+
   def initialize(registry: true)
     @results = []
     @registry = registry
@@ -60,7 +67,7 @@ class Dash::Diagnostics::Doctor < Dash::Diagnostics::Base
   # the checks that need every host report that once instead of crashing on it.
   def run
     pool = pool_check_results
-    @results = without_pool(:ssh) { host_check_results } + without_pool(:certificate) { endpoint_check_results } +
+    @results = without_pool(:ssh) { host_check_results } + without_pool(:dns) { endpoint_check_results } +
       config_check_results + pool + drift_check_results
   end
 

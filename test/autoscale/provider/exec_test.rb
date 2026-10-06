@@ -63,6 +63,25 @@ class AutoscaleProviderExecTest < ActiveSupport::TestCase
     assert_raises_message(/exec: member m1 has state "running"/) { @provider.members(labels: LABELS, address: "private") }
   end
 
+  test "a member without an id or a host, or a row that is not an object, is an error" do
+    expect_script "bin/pool-members", output: %({"id":"m1","state":"started","role":"payments"}\n)
+    assert_raises_message(/exec: a member needs an id and a host, got/) { @provider.members(labels: LABELS, address: "private") }
+
+    expect_script "bin/pool-members", output: %({"host":"10.0.0.22","state":"started","role":"payments"}\n)
+    assert_raises_message(/exec: a member needs an id and a host, got/) { @provider.members(labels: LABELS, address: "private") }
+
+    expect_script "bin/pool-members", output: "[]\nnull\n"
+    assert_raises_message(/exec: expected one JSON object per line, got "\[\]"/) { @provider.members(labels: LABELS, address: "private") }
+  end
+
+  test "only the last line of a failing script's stderr is kept" do
+    expect_script "bin/pool-members", stderr: "debug: token=abc123\n#{"x" * 300}\n", success: false, exitstatus: 1
+
+    error = assert_raises(Dash::Autoscale::ProviderError) { @provider.members(labels: LABELS, address: "private") }
+    assert_no_match(/token=abc123/, error.message)
+    assert_operator error.message.length, :<, 250
+  end
+
   test "state comes from the members script" do
     member = Dash::Autoscale::Member.new(id: "m2", role: "payments", labels: LABELS)
     expect_script "bin/pool-members", output: %({"id":"m2","host":"h","role":"payments","state":"maintenance"}\n)

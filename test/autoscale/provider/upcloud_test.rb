@@ -33,7 +33,14 @@ class AutoscaleProviderUpcloudTest < ActiveSupport::TestCase
     respond list(server("u1", LABELS)), details("u1", "started", [ ip("public", "94.1.1.1") ])
 
     error = assert_raises(Dash::Autoscale::ProviderError) { @provider.members(labels: LABELS, address: "private") }
-    assert_equal "upcloud: server u1 has no private address, set scale/address to one it has", error.message
+    assert_equal "upcloud: server u1 has no private IPv4 address, set scale/address to one it has", error.message
+  end
+
+  test "an IPv6-only member is an error, never an unbracketed host" do
+    respond list(server("u1", LABELS)), details("u1", "started", [ ip("private", "fd00::1", "IPv6") ])
+
+    error = assert_raises(Dash::Autoscale::ProviderError) { @provider.members(labels: LABELS, address: "private") }
+    assert_equal "upcloud: server u1 has no private IPv4 address, set scale/address to one it has", error.message
   end
 
   test "requests authenticate with basic auth and never put credentials in the path" do

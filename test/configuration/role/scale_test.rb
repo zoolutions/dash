@@ -88,6 +88,19 @@ class ConfigurationRoleScaleTest < ActiveSupport::TestCase
     assert_raises_message(/servers\/payments\/scale\/template\/network: is required when address is private/) { role(:payments) }
   end
 
+  test "an UpCloud create template names its storage, plan and zone" do
+    @deploy[:servers]["payments"]["scale"] = { "max" => 2, "members" => "create", "address" => "public", "template" => { "plan" => "p" } }
+
+    assert_raises_message(/servers\/payments\/scale\/template: storage, zone are required to create an UpCloud server/) { config }
+  end
+
+  test "an exec create template is the script's business" do
+    @deploy[:autoscale] = { "provider" => { "exec" => { "members" => "a", "start" => "b", "stop" => "c", "create" => "d" } } }
+    @deploy[:servers]["payments"]["scale"] = { "max" => 2, "members" => "create", "address" => "public", "template" => { "plan" => "p" } }
+
+    assert config.role(:payments).scale.create?
+  end
+
   test "the controller's keys are not accepted yet" do
     %w[ schedule warmup signal up down cooldown step hold_when ].each do |key|
       @deploy[:servers]["payments"]["scale"] = { "max" => 2, key => {} }

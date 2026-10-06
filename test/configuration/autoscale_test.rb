@@ -86,6 +86,12 @@ class ConfigurationAutoscaleTest < ActiveSupport::TestCase
     assert_raises_message(%r{autoscale/provider/upcloud/password: is required}) { config }
   end
 
+  test "a secret reference needs a name" do
+    @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => [ "" ], "password" => "p" } } }
+
+    assert_raises_message(%r{autoscale/provider/upcloud/username: is required}) { config }
+  end
+
   test "unknown providers are rejected" do
     @deploy[:autoscale] = { "provider" => { "hetzner" => {} } }
 

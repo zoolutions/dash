@@ -45,7 +45,7 @@ class Dash::Autoscale::Provider::Exec < Dash::Autoscale::Provider::Base
       output, error, status = Open3.capture3(env(labels, member).merge(extra_env), script)
 
       unless status.success?
-        raise Dash::Autoscale::ProviderError, "exec: #{script} exited #{status.exitstatus}#{": #{error.strip}" if error.present?}"
+        raise Dash::Autoscale::ProviderError, "exec: #{script} exited #{status.exitstatus}#{": #{last_line(error)}" if error.present?}"
       end
 
       output
@@ -64,6 +64,12 @@ class Dash::Autoscale::Provider::Exec < Dash::Autoscale::Provider::Base
       return if line.nil?
 
       data = JSON.parse(line)
+      raise JSON::ParserError unless data.is_a?(Hash)
+
+      if data["id"].to_s.blank? || data["host"].to_s.blank?
+        raise Dash::Autoscale::ProviderError, "exec: a member needs an id and a host, got #{line.strip.truncate(80).inspect}"
+      end
+
       state = data["state"].to_s
 
       unless Dash::Autoscale::Member::STATES.include?(state)
@@ -74,6 +80,12 @@ class Dash::Autoscale::Provider::Exec < Dash::Autoscale::Provider::Base
         labels: labels.merge("dash.role" => data["role"] || labels["dash.role"]), created_at: data["created_at"])
     rescue JSON::ParserError
       raise Dash::Autoscale::ProviderError, "exec: expected one JSON object per line, got #{line.strip.truncate(80).inspect}"
+    end
+
+    # The last line says why a script failed; anything above it is the script's own chatter,
+    # and the message ends up in errors and saved reports.
+    def last_line(output)
+      output.lines.map(&:strip).reject(&:blank?).last.to_s.truncate(200)
     end
 
     def labels_of(member)

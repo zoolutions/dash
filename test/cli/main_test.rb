@@ -548,7 +548,7 @@ class CliMainTest < CliTestCase
     Dash::Autoscale::Provider::Upcloud.any_instance.stubs(:members).raises(Dash::Autoscale::ProviderError, "upcloud: GET /1.3/server answered 503")
 
     error = assert_raises(Dash::Autoscale::ProviderError) { run_command("app", "details", config_file: "deploy_with_scale") }
-    assert_equal "Could not read the payments pool from upcloud: upcloud: GET /1.3/server answered 503", error.message
+    assert_equal "Could not read the payments pool: upcloud: GET /1.3/server answered 503", error.message
   end
 
   test "config with roles" do

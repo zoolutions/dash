@@ -115,7 +115,8 @@ servers:
     # `dash.service=<service>`, `dash.destination=<destination, or -  without one>` and
     # `dash.role=<role>` — and every member that is `started` is a host of the role for
     # every command; stopped members are never touched. A provider that cannot be reached
-    # fails the command, unless `--hosts` names the hosts to act on.
+    # fails the command. `--hosts` then names the member hosts to act on, with a warning —
+    # for one scaled role at a time (pick it with `--roles` when there are more).
     #
     # `min` and `max` count HOSTS, the baseline included, so `min` is at least the number of
     # `hosts`; `replicas` counts containers per host. `dash scale set <role> <count>` counts

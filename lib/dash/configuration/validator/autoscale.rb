@@ -1,6 +1,7 @@
 class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
   PROVIDERS = %w[ upcloud exec ]
   CREDENTIALS = %w[ username password ]
+  SCRIPTS = %w[ members start stop create destroy ]
   REQUIRED_SCRIPTS = %w[ members start stop ]
 
   # Root keys of the autoscaling controller (zoolutions/dash#180, phases 2-3).
@@ -15,7 +16,8 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
       provider = config["provider"]
       error "is required" if provider.nil?
       validate_type! provider, Hash
-      check_unknown_keys! provider, example["provider"]
+      # Against the constants, not the example: the docs show each provider on its own.
+      check_unknown_keys! provider, PROVIDERS.index_with(nil)
       error "set exactly one of #{PROVIDERS.join(" or ")}" unless provider.size == 1
 
       validate_upcloud!(provider["upcloud"]) if provider.key?("upcloud")
@@ -33,12 +35,12 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
     def validate_upcloud!(upcloud)
       with_context("upcloud") do
         validate_type! upcloud, Hash
-        check_unknown_keys! upcloud, example.dig("provider", "upcloud")
+        check_unknown_keys! upcloud, CREDENTIALS.index_with(nil)
 
         CREDENTIALS.each do |key|
           with_context(key) do
             value = upcloud[key]
-            error "is required" if value.blank?
+            error "is required" if value.blank? || (value.is_a?(Array) && value.first.blank?)
 
             unless value.is_a?(String) || (value.is_a?(Array) && value.size == 1 && value.first.is_a?(String))
               error "should be a string or an array with one string (for secret lookup)"
@@ -51,7 +53,7 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
     def validate_exec!(exec)
       with_context("exec") do
         validate_type! exec, Hash
-        check_unknown_keys! exec, example.dig("provider", "exec")
+        check_unknown_keys! exec, SCRIPTS.index_with(nil)
 
         exec.each { |key, value| with_context(key) { validate_type! value, String } }
         REQUIRED_SCRIPTS.each { |key| with_context(key) { error "is required" if exec[key].blank? } }

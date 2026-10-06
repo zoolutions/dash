@@ -64,6 +64,17 @@ class ConfigurationScaledRolesTest < ActiveSupport::TestCase
     assert_raises(KeyError) { role.env_tags("9.9.9.9") }
   end
 
+  test "a role with only members resolves its secrets on a member" do
+    stub_members "workers" => [ member("m1", "10.0.0.22", "started") ]
+    deploy = base_deploy.deep_merge(servers: { "workers" => { "hosts" => [], "cmd" => "bin/jobs", "healthcheck" => false, "scale" => { "max" => 2 } } },
+      allow_empty_roles: true, autoscale: exec_provider)
+    config = Dash::Configuration.new(deploy)
+
+    Dash::Configuration::Role.any_instance.expects(:secrets_io).with("1.1.1.1")
+    Dash::Configuration::Role.any_instance.expects(:secrets_io).with("10.0.0.22")
+    config.validate_secrets!
+  end
+
   test "dash config lists the baseline hosts and notes the members" do
     Dash::Autoscale::Pool.any_instance.expects(:members_for).never
     config = load_fixture("deploy_with_scale").to_h
@@ -136,7 +147,7 @@ class ConfigurationScaledRolesTest < ActiveSupport::TestCase
     Dash::Autoscale::Provider::Upcloud.any_instance.stubs(:members).raises(Dash::Autoscale::ProviderError, "upcloud: GET /1.3/server answered 401")
 
     error = assert_raises(Dash::Autoscale::ProviderError) { load_fixture("deploy_with_scale").role(:payments).hosts }
-    assert_equal "Could not read the payments pool from upcloud: upcloud: GET /1.3/server answered 401", error.message
+    assert_equal "Could not read the payments pool: upcloud: GET /1.3/server answered 401", error.message
   end
 
   private
