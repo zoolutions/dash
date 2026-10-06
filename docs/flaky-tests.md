@@ -55,3 +55,33 @@ at-exit hook from a signal.
 
 **Do not** paper over this with a retry on the `Run tests` step — a silent nonzero exit from a
 suite that reported success is exactly the failure mode a retry would hide permanently.
+
+---
+
+## 2026-10-06 — `CliAppTest#test_boot_with_worker_errors` loses a host's `ERROR` line (#176)
+
+**Signature class:** thread leakage into a shared buffered IO — test infrastructure.
+
+**Evidence:** PR #175, run 36534812792 attempt 1, `Tests (Ruby 3.2)`, seed 60316. The captured
+output held `ERROR Failed to boot workers on 1.1.1.4` but no line at all for 1.1.1.3, though
+that host's boot had failed too.
+
+**Root cause:** `stdouted` reopens `$stdout` onto a buffered Tempfile, and MRI drops lines when
+several threads write to one buffered IO at once — so a line one SSHKit host thread wrote was
+lost under another host's burst. The burst is large here: `Object.any_instance.stubs(:sleep)`
+plus the poller's wall-clock deadline spins the readiness loop ~20k times in its 1s, echoing
+two lines per attempt. A standalone repro (two threads, 20k + 200 lines into a reopened
+`$stdout`) lost 231 lines over 20 rounds on 3.4.2 and 1895 on 3.2.8 — which is why 3.2 hit it.
+
+**Fix:** `stdouted`/`stderred` set `sync = true` on the reopened stream, so every write goes
+straight through under the IO's lock; `capture` restores the original mode afterwards.
+`test/stdouted_test.rb` fences it (10/10 red without the fix, 0/10 with).
+
+Fixing the capture surfaced a second, latent race in `boot with web barrier closed`: its
+`dash-proxy deploy` failure was a one-shot `expects`, so the second web host fell through to
+the generic stub, succeeded, and opened the barrier whenever it beat the failing host to it.
+Both hosts now fail (`.twice`).
+
+**Reproduction:** require a probe that writes to `$stderr` on every `Backend#error` call — it
+widens the window enough that the test failed 29/30 before the fix (0/50 after). Plain runs of
+the single test did not reproduce locally (0/100 under 4× concurrent load).

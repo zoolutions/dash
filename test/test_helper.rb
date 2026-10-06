@@ -101,12 +101,16 @@ class ActiveSupport::TestCase
   ].freeze
 
   private
+    # `capture` reopens the stream onto a buffered Tempfile, and a command writes to it
+    # from one SSHKit thread per host. MRI drops lines when several threads write to one
+    # buffered IO at once (#176), so the capture is unbuffered: each write goes straight
+    # through under the IO's own lock. `capture` restores the original stream's mode after.
     def stdouted
-      capture(:stdout) { yield }.strip
+      capture(:stdout) { $stdout.sync = true; yield }.strip
     end
 
     def stderred
-      capture(:stderr) { yield }.strip
+      capture(:stderr) { $stderr.sync = true; yield }.strip
     end
 
     def stub_stdin_tty

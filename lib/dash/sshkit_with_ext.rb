@@ -45,10 +45,10 @@ class SSHKit::Backend::Abstract
       $stdout.binmode
       $stdout.write(output)
     else
-      unless quiet
-        puts "#{type} Host: #{host}"
-      end
-      puts "#{output}\n\n"
+      # One write: hosts print from parallel threads onto an unbuffered stdout, so a header
+      # written on its own can end up above another host's output.
+      header = "#{type} Host: #{host}\n" unless quiet
+      puts "#{header}#{output}\n\n"
     end
   end
 
