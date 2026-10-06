@@ -99,7 +99,9 @@ jobs:
       - name: Run tests
         run: bin/test
         env:
-          RUBYOPT: ${{ startsWith(matrix.ruby-version, '3.4.') && '--enable=frozen-string-literal' || '' }}
+          # Exact matches: the matrix pins "3.4" / "4.0" with no patch level, so a
+          # prefix like '3.4.' never matched and this flag silently never applied (#170).
+          RUBYOPT: ${{ (matrix.ruby-version == '3.4' || matrix.ruby-version == '4.0') && '--enable=frozen-string-literal' || '' }}
 
       - name: Check disk usage
         if: always()
