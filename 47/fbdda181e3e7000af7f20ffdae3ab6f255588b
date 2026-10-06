@@ -1,0 +1,54 @@
+lib/dash/diagnostics/scale.rb
+  s_413b3ef539574a::t_043c12071f65b5 4-7,9-18,29,32,34-37,40-43
+lib/dash/mcp/tools/scale_status_tool.rb
+  s_413b3ef539574a::t_24097e51d205c6 4
+docs/app/views/docs/pages/hooks.rb
+  s_413b3ef539574a::t_e1e136e0970acc 26-29,79-82
+lib/dash/mcp/server.rb
+  s_413b3ef539574a::t_24097e51d205c6 17
+lib/dash/mcp/tools/drift_tool.rb
+  s_413b3ef539574a::t_24097e51d205c6 7-9
+lib/dash/diagnostics/pool.rb
+  s_413b3ef539574a::t_043c12071f65b5 1-35
+test/diagnostics/drift_test.rb
+  s_413b3ef539574a::t_b3da0088f74f14 56-69,106-114
+lib/dash/cli/scale.rb
+  s_413b3ef539574a::t_24097e51d205c6 240-243,254-259
+lib/dash/mcp/tools/pool_members_tool.rb
+  s_413b3ef539574a::t_24097e51d205c6 1-15
+test/mcp/redaction_test.rb
+  s_413b3ef539574a::t_b60d233034e479 2,37-42,49
+  s_413b3ef539574a::t_feda5caaf4adb7 35-36,43-48,50-51
+test/cli/scale_hosts_test.rb
+  s_413b3ef539574a::t_feda5caaf4adb7 253-266
+test/diagnostics/pool_test.rb
+  s_413b3ef539574a::t_b3da0088f74f14 1-59
+lib/dash/mcp/session.rb
+  s_413b3ef539574a::t_24097e51d205c6 25-26
+test/mcp/server_test.rb
+  s_413b3ef539574a::t_feda5caaf4adb7 7
+test/mcp/session_test.rb
+  s_413b3ef539574a::t_feda5caaf4adb7 4-11
+test/diagnostics/scale_test.rb
+  s_413b3ef539574a::t_b3da0088f74f14 31-54
+lib/dash/mcp.rb
+  s_413b3ef539574a::t_5b8356c2ccd53f 22
+lib/dash/diagnostics/drift.rb
+  s_413b3ef539574a::t_043c12071f65b5 14-16,43,89,93-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "47fbdda181e3e7000af7f20ffdae3ab6f255588b",
+  "prompts": {},
+  "sessions": {
+    "s_413b3ef539574a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8cd97621-d3e0-4522-9ff2-11a107a5c982",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
