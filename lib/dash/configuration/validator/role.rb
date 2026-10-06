@@ -1,10 +1,15 @@
 class Dash::Configuration::Validator::Role < Dash::Configuration::Validator
+  # Keys of the autoscaling controller (zoolutions/dash#180, phases 2-3). Named so that a
+  # half-configured controller fails with a reason, not a generic unknown-key error.
+  CONTROLLER_KEYS = %w[ schedule warmup signal up down cooldown step hold_when ]
+
   def validate!
     validate_type! config, Array, Hash
 
     if config.is_a?(Array)
       validate_servers!(config)
     else
+      validate_no_controller_keys!(config["scale"])
       super
       validate_labels!(config["labels"])
       validate_docker_options!(config["options"])
@@ -13,6 +18,16 @@ class Dash::Configuration::Validator::Role < Dash::Configuration::Validator
   end
 
   private
+    def validate_no_controller_keys!(scale)
+      return unless scale.is_a?(Hash)
+
+      if (key = (scale.keys.map(&:to_s) & CONTROLLER_KEYS).first)
+        with_context("scale") do
+          error "#{key} belongs to the autoscaling controller, which is not part of dash yet (zoolutions/dash#180)"
+        end
+      end
+    end
+
     # `healthcheck: false` is the explicit opt-out from the readiness gate, so the
     # example's hash shape is not the only legal one.
     def validate_key_override!(key, value)

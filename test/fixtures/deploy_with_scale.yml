@@ -1,0 +1,32 @@
+service: app
+image: dhh/app
+servers:
+  web:
+    - "1.1.1.1"
+  payments:
+    hosts:
+      - "1.1.1.2"
+    cmd: bundle exec sidekiq -q payments
+    healthcheck: false
+    replicas:
+      min: 1
+      max: 3
+    drain:
+      signal: TSTP
+      wait: 5
+    scale:
+      min: 1
+      max: 3
+autoscale:
+  provider:
+    upcloud:
+      username:
+        - UPCLOUD_USERNAME
+      password:
+        - UPCLOUD_PASSWORD
+registry:
+  username: user
+  password: pw
+builder:
+  arch: amd64
+readiness_delay: 0

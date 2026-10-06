@@ -414,15 +414,32 @@ class Dash::Cli::Main < Dash::Cli::Base
 
       say "Deploying #{config.service}#{" to #{config.destination}" if config.destination} (version #{config.abbreviated_version})", :magenta
       config.roles.each do |role|
-        hosts = "#{role.hosts.count} #{"host".pluralize(role.hosts.count)} (#{role.hosts.join(", ")})"
         replicas = " #{role.replicas}" if role.replicas.scalable?
-        say "  #{role.name}: #{hosts}#{replicas} — readiness: #{role.readiness_description}", (:yellow if role.readiness_source == :none)
+        say "  #{role.name}: #{banner_hosts(role)}#{replicas} — readiness: #{role.readiness_description}", (:yellow if role.readiness_source == :none)
       end
       say "  proxy: #{config.proxy_hosts.join(", ")}" if config.proxy_hosts.any?
       if config.proxy.load_balancing?
-        reason = " (auto-enabled: primary role #{config.primary_role.name} has #{config.primary_role.hosts.count} hosts)" unless config.proxy.loadbalancer.present?
-        say "  loadbalancer: #{config.proxy.effective_loadbalancer}#{reason}"
+        say "  loadbalancer: #{config.proxy.effective_loadbalancer}#{loadbalancer_reason(config) unless config.proxy.loadbalancer.present?}"
       end
       say "  timeouts: deploy #{config.deploy_timeout}s, drain #{config.drain_timeout}s, readiness delay #{config.readiness_delay}s"
+    end
+
+    def banner_hosts(role)
+      baseline = role.baseline_hosts
+      hosts = "#{baseline.count} #{"host".pluralize(baseline.count)} (#{baseline.join(", ")})"
+      return hosts unless role.scaled?
+
+      active = role.active_members.map(&:host)
+      "#{hosts} + #{active.count} of #{role.members.count} members active#{" (#{active.join(", ")})" if active.any?}"
+    end
+
+    def loadbalancer_reason(config)
+      primary = config.primary_role
+
+      if primary.running_proxy? && primary.baseline_hosts.count > 1
+        " (auto-enabled: primary role #{primary.name} has #{primary.baseline_hosts.count} hosts)"
+      elsif (scaled = config.scaled_roles.find(&:running_proxy?))
+        " (auto-enabled: role #{scaled.name} scales across hosts)"
+      end
     end
 end

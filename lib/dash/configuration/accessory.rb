@@ -246,9 +246,9 @@ class Dash::Configuration::Accessory
 
     def hosts_from_roles
       if accessory_config.key?("role")
-       config.role(accessory_config["role"])&.hosts
+       config.role(accessory_config["role"])&.baseline_hosts
       elsif accessory_config.key?("roles")
-        accessory_config["roles"].flat_map { |role| config.role(role)&.hosts }
+        accessory_config["roles"].flat_map { |role| config.role(role)&.baseline_hosts }
       end
     end
 

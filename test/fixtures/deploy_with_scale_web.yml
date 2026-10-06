@@ -1,0 +1,20 @@
+service: app
+image: dhh/app
+servers:
+  web:
+    hosts:
+      - "1.1.1.1"
+    scale:
+      min: 1
+      max: 3
+autoscale:
+  provider:
+    exec:
+      members: bin/pool-members
+      start: bin/pool-start
+      stop: bin/pool-stop
+registry:
+  username: user
+  password: pw
+builder:
+  arch: amd64
