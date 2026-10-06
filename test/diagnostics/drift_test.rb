@@ -53,6 +53,20 @@ class DiagnosticsDriftTest < DiagnosticsTestCase
     ], drift.entries
   end
 
+  test "member_not_targeted for a started member the load balancer does not forward to" do
+    drift = scaled_drift(containers: { "1.1.1.1" => [ web("aaaaaaaaaaaa1") ], "10.0.0.40" => [ web("bbbbbbbbbbbb1") ] }, targets: [ "1.1.1.1" ],
+      members: [ Dash::Autoscale::Member.new(id: "w1", host: "10.0.0.40", role: "web", state: "started") ])
+
+    assert_equal [ { code: "member_not_targeted", host: "1.1.1.1", role: "web", detail: "member w1 (10.0.0.40) is started but the load balancer does not forward to it" } ], drift.entries
+  end
+
+  test "member_orphan for a started member running nothing of its role" do
+    drift = scaled_drift(containers: { "1.1.1.1" => [ web("aaaaaaaaaaaa1") ], "10.0.0.40" => [] }, targets: [ "1.1.1.1", "10.0.0.40" ],
+      members: [ Dash::Autoscale::Member.new(id: "w1", host: "10.0.0.40", role: "web", state: "started") ])
+
+    assert_equal [ { code: "member_orphan", host: "10.0.0.40", role: "web", detail: "member w1 is started but runs no web container" } ], drift.entries
+  end
+
   test "version_mismatch and multiple_running_versions" do
     drift = drift_for(containers: {
       "1.1.1.1" => [ web("aaaaaaaaaaaa1"), web("dddddddddddd1", name: "app-web-998", version: "998") ],
@@ -89,6 +103,15 @@ class DiagnosticsDriftTest < DiagnosticsTestCase
   end
 
   private
+    def scaled_drift(containers:, targets:, members:)
+      configure :deploy_with_scale_web
+      Dash::Autoscale::Pool.any_instance.stubs(:members_for).returns(members)
+      Dash::Diagnostics::Drift.new(
+        containers: { hosts: containers.map { |host, list| { host: host, containers: list } } },
+        proxy_services: { hosts: containers.keys.map { |host| proxy_host(host, Array(containers[host]).map { |container| container[:id][0, 12] }) },
+          loadbalancer: { host: "1.1.1.1", services: { "app" => { "targets" => targets.map { |target| "#{target}:80" } } } } })
+    end
+
     def drift_for(containers:, services:, loadbalancer: nil, lock: nil)
       Dash::Diagnostics::Drift.new(
         containers: { hosts: containers.map { |host, list| list == :error ? { host: host, error: "down" } : { host: host, containers: list } } },

@@ -1,4 +1,5 @@
 require_relative "mcp_test_case"
+require "net/http"
 
 class McpRedactionTest < McpTestCase
   SECRETS = { "MYSQL_ROOT_PASSWORD" => "mysql-root-secret", "KAMAL_REGISTRY_PASSWORD" => "registry-secret-pw" }
@@ -29,6 +30,23 @@ class McpRedactionTest < McpTestCase
     assert_equal "[REDACTED]", config.dig("config", "ssh_options", "keys")
     assert_equal "[REDACTED]", config.dig("config", "ssh_options", "key_data")
     assert_equal "root", config.dig("config", "ssh_options", "user")
+  end
+
+  test "pool_members never carries the UpCloud credentials" do
+    credentials = { "UPCLOUD_USERNAME" => "upcloud-api-user", "UPCLOUD_PASSWORD" => "upcloud-api-secret" }
+    credentials.each { |key, value| Dash::Secrets.any_instance.stubs(:[]).with(key).returns(value) }
+    sent = []
+    unauthorized = Net::HTTPUnauthorized.new("1.1", "401", "Unauthorized").tap { |response| response.stubs(:body).returns("{}") }
+    http = stub("http")
+    http.stubs(:request).with { |request| sent << request["Authorization"] }.returns(unauthorized)
+    Net::HTTP.stubs(:start).yields(http)
+
+    text, _ = call_tool("pool_members", {}, on: server(session(fixture: :deploy_with_scale, secrets: credentials)))
+
+    assert_no_match "upcloud-api-secret", text
+    assert_no_match "upcloud-api-user", text
+    assert_match "answered 401", text
+    assert_equal [ "Basic #{[ "upcloud-api-user:upcloud-api-secret" ].pack("m0")}" ], sent, "the credentials went to the API as basic auth"
   end
 
   test "an error message is redacted too" do

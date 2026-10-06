@@ -1,6 +1,14 @@
 require_relative "mcp_test_case"
 
 class McpSessionTest < McpTestCase
+  test "the operator's --hosts reach the pool, so a provider outage can fall back to them" do
+    Dash::Autoscale::Provider::Upcloud.any_instance.stubs(:members).raises(Dash::Autoscale::ProviderError, "down")
+    Dash::Autoscale::Pool.any_instance.stubs(:warn)
+
+    hosts = session(fixture: :deploy_with_scale, hosts: [ "1.1.1.2", "10.0.0.22" ]).answer { DASH.hosts }
+    assert_equal [ "1.1.1.2", "10.0.0.22" ], hosts.sort
+  end
+
   setup do
     @seen = []
     Dash::Diagnostics::Containers.any_instance.stubs(:snapshot).with { @seen << DASH.hosts.dup; true }.returns(hosts: [])

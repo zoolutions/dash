@@ -250,6 +250,20 @@ class CliScaleHostsTest < CliTestCase
     assert_match "payments needs members to leave, but its pool could not be read", error.message
   end
 
+  test "status lists the members, and flags a started one running nothing as an orphan" do
+    @provider.members_list.find { |member| member.id == "m1" }.state = "started"
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| args.join(" ").include?("{{.Names}}\\t{{.Status}}") }.returns("")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
+      .with { |*args| SSHKit::Backend.current.host.to_s == "1.1.1.2" && args.join(" ").include?("{{.Names}}\\t{{.Status}}") }.returns("app-payments-123\tUp 2 hours\n")
+
+    run_command("status", "payments").tap do |output|
+      assert_match "payments: 1 container (replicas min 1, max 3 per host on 1 to 3 hosts)", output
+      assert_match /member m1\s+10\.0\.0\.22\s+started - orphan: started, but runs nothing of the role/, output
+      assert_match /member m2\s+10\.0\.0\.23\s+stopped/, output
+    end
+  end
+
   test "an unscaled role scales as before" do
     stub_running "1.1.1.1" => [ "app-web-123" ]
 

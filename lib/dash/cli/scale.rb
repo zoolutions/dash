@@ -237,7 +237,10 @@ class Dash::Cli::Scale < Dash::Cli::Base
     end
 
     def print_status(role)
-      say "#{role[:role]}: #{role[:total]} #{"container".pluralize(role[:total])} (replicas min #{role[:min]}, max #{role[:max]} per host)"
+      return say("#{role[:role]}: #{role[:error]}", :red) if role[:error]
+
+      hosts = " on #{role[:scale][:min]} to #{role[:scale][:max]} hosts" if role[:scale]
+      say "#{role[:role]}: #{role[:total]} #{"container".pluralize(role[:total])} (replicas min #{role[:min]}, max #{role[:max]} per host#{hosts})"
 
       role[:hosts].each do |host, replicas|
         say format("  %-20s %-3s %s", host, "-", "no replicas running") if replicas.empty?
@@ -248,5 +251,11 @@ class Dash::Cli::Scale < Dash::Cli::Base
       end
 
       role[:unread].each { |host| say format("  %-20s %-3s %s", host[:host], "-", "could not read (#{host[:error]})"), :red }
+      Array(role[:members]).each { |member| print_member(member) }
+    end
+
+    def print_member(member)
+      orphan = " - orphan: started, but runs nothing of the role" if member[:orphan]
+      say format("  member %-12s %-20s %s%s", member[:id] || "?", member[:host], member[:state], orphan), (:yellow if member[:orphan])
     end
 end
