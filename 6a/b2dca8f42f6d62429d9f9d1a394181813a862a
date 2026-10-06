@@ -1,0 +1,65 @@
+test/diagnostics/doctor_pool_checks_test.rb
+  s_413b3ef539574a::t_2d83d99db116b5 74-101
+  s_413b3ef539574a::t_36d8d565482574 33,70
+test/autoscale/provider/upcloud_test.rb
+  s_413b3ef539574a::t_36d8d565482574 36-43
+lib/dash/configuration/validator/autoscale.rb
+  s_413b3ef539574a::t_928a75a47600b0 43
+  s_413b3ef539574a::t_3208c399211e71 4,19-20,38,56
+test/autoscale/pool_test.rb
+  s_413b3ef539574a::t_36d8d565482574 51,59,72,80-90
+lib/dash/autoscale/provider_error.rb
+  s_413b3ef539574a::t_928a75a47600b0 1-3
+lib/dash/autoscale/pool.rb
+  s_413b3ef539574a::t_928a75a47600b0 63,69,77,81
+test/configuration/scaled_roles_test.rb
+  s_413b3ef539574a::t_36d8d565482574 67-77,150
+lib/dash/configuration.rb
+  s_413b3ef539574a::t_928a75a47600b0 112,125-127,557-566
+lib/dash/diagnostics/doctor.rb
+  s_413b3ef539574a::t_81e96eefa2b94b 54-60,70
+lib/dash/diagnostics/doctor/endpoint_checks.rb
+  s_413b3ef539574a::t_81e96eefa2b94b 23,30,34-39
+lib/dash/cli/main.rb
+  s_413b3ef539574a::t_81e96eefa2b94b 382-383,386-387,391-392
+lib/dash/diagnostics/doctor/config_checks.rb
+  s_413b3ef539574a::t_81e96eefa2b94b 14
+lib/dash/configuration/docs/autoscale.yml
+  s_413b3ef539574a::t_3208c399211e71 7,9-14,23-37
+test/configuration/autoscale_test.rb
+  s_413b3ef539574a::t_36d8d565482574 89-94
+test/cli/doctor_test.rb
+  s_413b3ef539574a::t_2d83d99db116b5 98-103
+  s_413b3ef539574a::t_87c257f3dd57e5 104
+  s_413b3ef539574a::t_36d8d565482574 92,95
+test/cli/main_test.rb
+  s_413b3ef539574a::t_36d8d565482574 551
+lib/dash/configuration/docs/role.yml
+  s_413b3ef539574a::t_3208c399211e71 118-119
+lib/dash/autoscale/provider/exec.rb
+  s_413b3ef539574a::t_928a75a47600b0 48,67-72,85-88
+test/configuration/role/scale_test.rb
+  s_413b3ef539574a::t_36d8d565482574 91-103
+lib/dash/autoscale/provider/upcloud.rb
+  s_413b3ef539574a::t_928a75a47600b0 63,70,72
+lib/dash/diagnostics/doctor/pool_checks.rb
+  s_413b3ef539574a::t_81e96eefa2b94b 17,29-32
+test/autoscale/provider/exec_test.rb
+  s_413b3ef539574a::t_36d8d565482574 66-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "6ab2dca8f42f6d62429d9f9d1a394181813a862a",
+  "prompts": {},
+  "sessions": {
+    "s_413b3ef539574a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8cd97621-d3e0-4522-9ff2-11a107a5c982",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
