@@ -453,12 +453,14 @@ class CliAppTest < CliTestCase
     SSHKit::Backend::Abstract.any_instance.stubs(:execute).returns("")
     SSHKit::Backend::Abstract.any_instance.stubs(:execute)
       .with(:docker, :container, :ls, "--all", "--filter", "'name=^app-web-latest$'", "--quiet", "|", :xargs, :docker, :stop, raise_on_non_zero_exit: false)
-    # Both web hosts fail. A one-shot expectation failed only the first, and the other
-    # host's deploy then fell through to the generic stub and opened the barrier - whether
-    # the workers saw it closed depended on which web thread got there first.
+    # Every web host's deploy fails. A one-shot expectation failed only the first, and the
+    # other host's deploy then fell through to the generic stub and opened the barrier -
+    # whether the workers saw it closed depended on which web thread got there first. No
+    # exact count: the web hosts call it from parallel threads, and the assertions below
+    # are what prove both failed.
     SSHKit::Backend::Abstract.any_instance.expects(:execute)
       .with(:docker, :exec, "dash-proxy", "dash-proxy", :deploy, "app-web", "--target=\"123:80\"", "--deploy-timeout=\"1s\"", "--drain-timeout=\"30s\"", "--buffer-requests", "--buffer-responses", "--log-request-header=\"Cache-Control\"", "--log-request-header=\"Last-Modified\"", "--log-request-header=\"User-Agent\"")
-      .twice.raises(SSHKit::Command::Failed.new("Failed to deploy"))
+      .at_least_once.raises(SSHKit::Command::Failed.new("Failed to deploy"))
 
     stderred do
       run_command("boot", config: :with_roles, host: nil, allow_execute_error: true).tap do |output|
