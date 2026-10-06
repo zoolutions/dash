@@ -1,0 +1,34 @@
+lib/dash/autoscale/state_store.rb
+  s_8de475f5d8ed7f::t_ea738e4112d0f3 1-115
+lib/dash/commands/autoscale.rb
+  s_8de475f5d8ed7f::t_574379f7742c5b 1-103
+test/commands/autoscale_test.rb
+  s_8de475f5d8ed7f::t_f0df6d4c296423 1-72
+lib/dash/cli/scale.rb
+  s_8de475f5d8ed7f::t_26df4a9f39a891 73-84
+test/autoscale/state_store_test.rb
+  s_8de475f5d8ed7f::t_250a4e20b20f1a 1-129
+test/cli/scale_hosts_test.rb
+  s_8de475f5d8ed7f::t_f517553db96a54 283-284
+  s_8de475f5d8ed7f::t_35c026b945dc43 421
+  s_8de475f5d8ed7f::t_6effeeaaa68c95 420,422-427
+  s_8de475f5d8ed7f::t_40a26ea06df2ea 260-282,285-307
+lib/dash/cli/scale/leave.rb
+  s_8de475f5d8ed7f::t_26df4a9f39a891 6-9,14,20,28,31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "b11927bd3aa87e6b80096da3c52f7316e13bd7c1",
+  "prompts": {},
+  "sessions": {
+    "s_8de475f5d8ed7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0493fb39-330b-4fa2-974d-5232732770d9",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
