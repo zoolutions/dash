@@ -27,9 +27,9 @@ class Dash::Cli::Scale::Join
   # The member's host, once it serves.
   def run
     deadline = monotonic_now + role.scale.boot_timeout
-    member = power_on
 
     begin
+      member = power_on
       host = joined_host(member)
       wait_for_ssh(host, deadline)
       cli.run_hook "pre-scale-out", role: role.name, hosts: host, replicas: count.to_s
@@ -38,7 +38,7 @@ class Dash::Cli::Scale::Join
         cli.invoke_narrowed "dash:cli:server:bootstrap", Dash::Cli::Server if created?
         cli.invoke_narrowed "dash:cli:registry:login", Dash::Cli::Registry, skip_local: true
         cli.invoke_narrowed "dash:cli:app:stale_containers", Dash::Cli::App, stop: true
-        cli.invoke_narrowed "dash:cli:proxy:boot", Dash::Cli::Proxy if role.running_proxy?
+        cli.invoke_narrowed "dash:cli:proxy:boot", Dash::Cli::Proxy, skip_loadbalancer: true if role.running_proxy?
         cli.invoke_narrowed "dash:cli:app:boot", Dash::Cli::App, version: version
       end
 
@@ -47,7 +47,10 @@ class Dash::Cli::Scale::Join
       cli.report "Joined #{member.id} (#{host}) to #{role}"
       host
     rescue StandardError => e
-      power_off(member) unless @keep_on_failure
+      # The created server, or the member started; nil when a create failed before the
+      # provider returned one, and then there is nothing to power off.
+      member = @created || @member
+      power_off(member) if member && !@keep_on_failure
       raise e
     end
   end
@@ -58,17 +61,16 @@ class Dash::Cli::Scale::Join
     end
 
     def power_on
-      member = if created?
+      if created?
         cli.report "Creating a #{role} member...", :magenta
-        provider.create(labels: pool.labels_for(role), template: role.scale.template, address: role.scale.address)
+        @created = provider.create(labels: pool.labels_for(role), template: role.scale.template, address: role.scale.address)
       else
         cli.report "Powering on #{@member.id} (#{@member.host}) for #{role}...", :magenta
         provider.start(@member)
-        @member
       end
 
-      provider.wait_until(member, state: "started", timeout: role.scale.boot_timeout)
-      member
+      provider.wait_until(@created || @member, state: "started", timeout: role.scale.boot_timeout)
+      @created || @member
     end
 
     # A created server may not have its address until it runs, so the host is read back

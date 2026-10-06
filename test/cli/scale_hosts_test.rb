@@ -135,6 +135,7 @@ class CliScaleHostsTest < CliTestCase
     end
 
     assert_equal [ "dash:cli:registry:login", "dash:cli:app:stale_containers", "dash:cli:proxy:boot", "dash:cli:app:boot" ], @narrowed.map(&:first)
+    assert_equal({ skip_loadbalancer: true }, @narrowed[2].last, "the member's proxy boot must not touch the shared load balancer")
   end
 
   test "a web member leaves the load balancer before its containers stop and it powers off" do
@@ -190,6 +191,32 @@ class CliScaleHostsTest < CliTestCase
     assert_equal [ [ :start, "m1" ] ], @provider.calls
   end
 
+  test "a member that never reaches started is powered off again" do
+    stub_running "1.1.1.2" => [ "app-payments-123", "app-payments.2-123", "app-payments.3-123" ]
+    record_narrowed_invokes
+    @provider.define_singleton_method(:wait_until) do |member, state:, timeout:, interval: 5|
+      state == "started" ? raise(Dash::Autoscale::ProviderError, "fake: #{member.id} is maintenance, not started, after #{timeout}s") : state
+    end
+
+    error = assert_raises(Dash::Autoscale::ProviderError) { run_command("set", "payments", "4") }
+    assert_match "m1 is maintenance, not started", error.message
+    assert_equal [ [ :start, "m1" ], [ :stop, "m1", 60 ] ], @provider.calls
+    assert_empty @narrowed
+  end
+
+  test "a created member that never reaches started is destroyed" do
+    deploy_with_create
+    stub_running "1.1.1.2" => [ "app-payments-123", "app-payments.2-123", "app-payments.3-123" ]
+    @provider.define_singleton_method(:wait_until) do |member, state:, timeout:, interval: 5|
+      state == "started" ? raise(Dash::Autoscale::ProviderError, "fake: not started") : state
+    end
+
+    assert_raises(Dash::Autoscale::ProviderError) { run_command("set", "payments", "4", config: :tmp_scale_create) }
+    assert_equal [ [ :create, "payments" ], [ :stop, "new1", 60 ], [ :destroy, "new1" ] ], @provider.calls
+  ensure
+    FileUtils.rm_f "test/fixtures/deploy_tmp_scale_create.yml"
+  end
+
   test "a member that never answers SSH fails the join after boot_timeout" do
     stub_running "1.1.1.2" => [ "app-payments-123", "app-payments.2-123", "app-payments.3-123" ]
     Dash::Cli::Scale.any_instance.stubs(:on_hosts).raises(SSHKit::Runner::ExecuteError.new(Errno::ECONNREFUSED.new))
@@ -218,6 +245,15 @@ class CliScaleHostsTest < CliTestCase
     FileUtils.rm_f "test/fixtures/deploy_tmp_scale_create.yml"
   end
 
+  test "an orphan worker member leaves without waiting out a drain it has nothing for" do
+    @provider.members_list.find { |member| member.id == "m1" }.state = "started"
+    stub_running "1.1.1.2" => [ "app-payments-123" ], "10.0.0.22" => []
+    Dash::Cli::Scale::ReplicaLeave.any_instance.expects(:sleep).never
+
+    run_command("set", "payments", "1")
+    assert_equal [ [ :stop, "m1", 60 ] ], @provider.calls
+  end
+
   test "refuses a count beyond scale max times replicas max, naming both bounds" do
     error = assert_raises(ArgumentError) { run_command("set", "payments", "10") }
 
@@ -241,7 +277,7 @@ class CliScaleHostsTest < CliTestCase
     assert_empty @provider.calls
   end
 
-  test "with members from --hosts only the containers on the hosts it has change" do
+  test "with members from --hosts a member is never powered on or off" do
     Dash::Autoscale::Provider.stubs(:for).returns(stub(members: nil).tap { |provider| provider.stubs(:members).raises(Dash::Autoscale::ProviderError, "down") })
     Dash::Autoscale::Pool.any_instance.stubs(:warn)
     stub_running "1.1.1.2" => [ "app-payments-123" ], "10.0.0.22" => [ "app-payments-123" ]

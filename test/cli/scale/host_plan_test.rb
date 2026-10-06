@@ -58,6 +58,14 @@ class CliScaleHostPlanTest < ActiveSupport::TestCase
     assert_equal({ "b1" => 1, "m1" => 1 }, plan.counts)
   end
 
+  test "scale min joins members even when the hosts it has could hold the count" do
+    plan = plan(baseline: [ "b1" ], target: 3, hosts_min: 2)
+
+    assert_equal 1, plan.joins
+    assert_equal({ "b1" => 2 }, plan.counts)
+    assert_equal [ 1 ], plan.join_counts
+  end
+
   test "a count the hosts cannot split within min and max is refused" do
     error = assert_raises(ArgumentError) { plan(baseline: [ "b1" ], target: 4, min: 3, max: 3) }
 

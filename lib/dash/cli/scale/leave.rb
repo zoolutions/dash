@@ -36,7 +36,9 @@ class Dash::Cli::Scale::Leave
       role, running = self.role, @running
 
       cli.on_hosts([ host ]) do
-        if role.running_proxy?
+        if running.empty?
+          # An orphan: nothing of the role to stop or drain.
+        elsif role.running_proxy?
           running.each { |replica, version| execute *DASH.app(role: role, host: host, replica: replica).stop(version: version) }
         else
           Dash::Cli::Scale::ReplicaLeave.new(host, role, running, self, running: running.keys).run

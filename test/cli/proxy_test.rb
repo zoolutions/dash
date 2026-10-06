@@ -9,6 +9,16 @@ class CliProxyTest < CliTestCase
     end
   end
 
+  test "boot --skip-loadbalancer boots the per-host proxies and leaves the load balancer host alone" do
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+
+    run_command("boot", "--skip-loadbalancer", fixture: :with_loadbalancer).tap do |output|
+      assert_match "docker run --name dash-proxy", output
+      assert_no_match(/on lb\.example\.com/, output)
+      assert_no_match "load-balancer", output
+    end
+  end
+
   test "boot adopts the pre-rename volume on a dedicated loadbalancer host before creating the container" do
     Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
 
