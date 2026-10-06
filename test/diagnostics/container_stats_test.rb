@@ -21,12 +21,22 @@ class DiagnosticsContainerStatsTest < DiagnosticsTestCase
   end
 
   test "a container that stopped between docker ps and docker stats keeps its labels, without stats" do
+    stub_capture "1.1.1.1", "docker stats", [ ps_line("app-web-999", id: "aaaaaaaaaaaa", role: "web"), ps_line("app-web.2-999", id: "bbbbbbbbbbbb", role: "web"),
+      "--%--", stats_line("aaaaaaaaaaaa", "app-web-999") ].join("\n")
+
+    host = Dash::Diagnostics::ContainerStats.new(hosts: [ "1.1.1.1" ]).to_h[:hosts].first
+
+    assert_nil host[:containers].last[:stats]
+    assert_nil host[:stats_error]
+  end
+
+  test "containers listed but no sample at all is a failed sample, not containers that all stopped" do
     stub_capture "1.1.1.1", "docker stats", [ ps_line("app-web-999", id: "aaaaaaaaaaaa", role: "web"), "--%--", "" ].join("\n")
 
-    container = Dash::Diagnostics::ContainerStats.new(hosts: [ "1.1.1.1" ]).to_h[:hosts].first[:containers].first
+    host = Dash::Diagnostics::ContainerStats.new(hosts: [ "1.1.1.1" ], accessories: []).to_h[:hosts].first
 
-    assert_equal "app-web-999", container[:name]
-    assert_nil container[:stats]
+    assert_equal "app-web-999", host[:containers].first[:name]
+    assert_match "docker stats", host[:stats_error]
   end
 
   test "a host running nothing of this service reports nothing, and docker stats is never asked for everything" do

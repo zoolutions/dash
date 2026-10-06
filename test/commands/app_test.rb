@@ -692,7 +692,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     config = Dash::Configuration.new(@config, version: "999")
 
     assert_equal \
-      "docker container ls --all --filter label=service=app --filter label=destination= --format '{{json .}}'",
+      "docker container ls --all --filter label=service=app --filter label=destination= --format '{{json .}}{{\"\\t\"}}{{json (.Label \"role\")}}'",
       Dash::Commands::App.new(config).list_containers_json.join(" ")
   end
 
@@ -700,7 +700,7 @@ class CommandsAppTest < ActiveSupport::TestCase
     config = Dash::Configuration.new(@config, version: "999")
 
     assert_equal \
-      "docker ps --filter label=service=app --filter label=destination= --filter status=running --filter status=restarting --format '{{json .}}' || echo --unreadable-- ; " \
+      "docker ps --filter label=service=app --filter label=destination= --filter status=running --filter status=restarting --format '{{json .}}{{\"\\t\"}}{{json (.Label \"role\")}}' || echo --unreadable-- ; " \
       "echo --%-- ; " \
       "docker ps --quiet --filter label=service=app --filter label=destination= --filter status=running --filter status=restarting " \
       "| xargs -r docker stats --no-stream --format '{{json .}}' || echo --stats-unreadable--",

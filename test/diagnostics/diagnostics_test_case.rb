@@ -30,8 +30,12 @@ class DiagnosticsTestCase < ActiveSupport::TestCase
         .raises(Errno::ECONNREFUSED)
     end
 
-    def ps_line(name, id:, role:, state: "running", status: "Up 2 hours (healthy)")
-      { "ID" => id, "Names" => name, "Image" => "dhh/app:999", "State" => state, "Status" => status,
-        "Labels" => "service=app,role=#{role},destination=", "CreatedAt" => "2026-10-05 10:00:00 +0000 UTC" }.to_json
+    # One line of the app's `docker ps`: the container's JSON, a tab, then docker's own value
+    # of its `role` label.
+    def ps_line(name, id:, role:, state: "running", status: "Up 2 hours (healthy)", labels: "service=app,role=#{role},destination=")
+      ps = { "ID" => id, "Names" => name, "Image" => "dhh/app:999", "State" => state, "Status" => status,
+        "Labels" => labels, "CreatedAt" => "2026-10-05 10:00:00 +0000 UTC" }
+
+      "#{ps.to_json}\t#{role.to_json}"
     end
 end

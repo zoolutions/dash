@@ -50,9 +50,10 @@ class Dash::Diagnostics::HostStats < Dash::Diagnostics::Base
 
     # `df -Pk`: a header, then "filesystem 1024-blocks used available capacity% mount".
     def disk(section)
-      _, blocks, used, available, capacity, mount = section.to_s.lines.last.to_s.split
-      return unless capacity.to_s.end_with?("%") && (blocks = Integer(blocks.to_s, 10, exception: false))
+      _, *numbers, capacity, mount = section.to_s.lines.last.to_s.split
+      blocks, used, available = numbers.map { |number| Integer(number.to_s, 10, exception: false) }
+      return unless numbers.size == 3 && blocks && used && available && capacity.to_s.match?(/\A\d+%\z/) && mount
 
-      { mount: mount, total_bytes: blocks * KIB, used_bytes: used.to_i * KIB, available_bytes: available.to_i * KIB, used_percent: capacity.to_f }
+      { mount: mount, total_bytes: blocks * KIB, used_bytes: used * KIB, available_bytes: available * KIB, used_percent: capacity.to_f }
     end
 end

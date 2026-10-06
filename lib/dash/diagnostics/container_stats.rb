@@ -44,8 +44,12 @@ class Dash::Diagnostics::ContainerStats < Dash::Diagnostics::Base
         container.merge(stats: sample && stats_of(sample))
       end
 
+      # Containers listed but not one sample: docker stats failed in a way its exit status
+      # hid (the second docker ps failing hands xargs -r nothing, and xargs exits 0).
+      failed = stats_lines.include?(STATS_UNREADABLE) || (containers.any? && by_id.empty?)
+
       { containers: containers }.tap do |entry|
-        entry[:stats_error] = "docker stats failed, so these containers have no sample" if stats_lines.include?(STATS_UNREADABLE)
+        entry[:stats_error] = "docker stats failed, so these containers have no sample" if failed
       end
     end
 

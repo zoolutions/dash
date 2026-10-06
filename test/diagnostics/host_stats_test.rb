@@ -44,6 +44,16 @@ class DiagnosticsHostStatsTest < DiagnosticsTestCase
     assert_equal({ host: "1.1.1.1", load: nil, cpus: nil, memory: nil, swap: nil, disk: { root: nil, docker_root: nil }, uptime_seconds: nil }, host)
   end
 
+  test "a df line it cannot fully read is nil, not made-up numbers" do
+    garbage = "Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/sda1 82000000 lots some 5x% /"
+    stub_capture "1.1.1.1", "/proc/loadavg", sections(LOADAVG, "2", MEMINFO, garbage, DF_DOCKER, "1.0 1.0")
+
+    host = Dash::Diagnostics::HostStats.new(hosts: [ "1.1.1.1" ]).to_h[:hosts].first
+
+    assert_nil host[:disk][:root]
+    assert_equal 75.0, host[:disk][:docker_root][:used_percent]
+  end
+
   test "an unreachable host is an error entry" do
     stub_unreachable "1.1.1.1", "/proc/loadavg"
 

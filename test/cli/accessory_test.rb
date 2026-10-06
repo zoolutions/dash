@@ -288,6 +288,9 @@ class CliAccessoryTest < CliTestCase
 
     stats = JSON.parse(run_command("stats", "all", "--json"))
     assert_equal [], stats["hosts"]
+    mysql = stats["accessories"].find { |entry| entry["accessory"] == "mysql" }
+    assert_equal "1.1.1.3", mysql["host"]
+    assert_equal [ "app-mysql", 3.0, 40 ], [ mysql.dig("containers", 0, "name"), mysql.dig("containers", 0, "stats", "cpu_percent"), mysql.dig("containers", 0, "stats", "pids") ]
     assert_equal [ "busybox", "mysql", "redis" ], stats["accessories"].map { |entry| entry["accessory"] }.uniq.sort
   end
 

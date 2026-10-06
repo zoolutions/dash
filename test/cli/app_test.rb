@@ -1229,7 +1229,7 @@ class CliAppTest < CliTestCase
   test "containers --json is every container per host as JSON" do
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with { |*args| args.join(" ").include?("{{json .}}") }
-      .returns({ "ID" => "aaa", "Names" => "app-web-999", "State" => "running", "Status" => "Up", "Labels" => "role=web" }.to_json)
+      .returns("#{{ "ID" => "aaa", "Names" => "app-web-999", "State" => "running", "Status" => "Up", "Labels" => "role=web" }.to_json}\t\"web\"")
 
     containers = JSON.parse(run_command("containers", "--json"))
 
@@ -1240,7 +1240,7 @@ class CliAppTest < CliTestCase
 
 
   test "stats prints each container's cpu, memory and pids" do
-    output = [ { "ID" => "aaaaaaaaaaaa", "Names" => "app-web-999", "State" => "running", "Status" => "Up", "Labels" => "role=web" }.to_json, "--%--",
+    output = [ "#{{ "ID" => "aaaaaaaaaaaa", "Names" => "app-web-999", "State" => "running", "Status" => "Up", "Labels" => "role=web" }.to_json}\t\"web\"", "--%--",
       { "Container" => "aaaaaaaaaaaa", "ID" => "aaaaaaaaaaaa", "Name" => "app-web-999", "CPUPerc" => "12.50%", "MemUsage" => "120MiB / 1.9GiB", "MemPerc" => "6%", "NetIO" => "0B / 0B", "BlockIO" => "0B / 0B", "PIDs" => "23" }.to_json ].join("\n")
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).with { |*args| args.join(" ").include?("docker stats") }.returns(output)
 
