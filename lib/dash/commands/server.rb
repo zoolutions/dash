@@ -9,6 +9,22 @@ class Dash::Commands::Server < Dash::Commands::Base
       [ :wc, "-l" ]
   end
 
+  # Load, CPU count, memory, disk for / and Docker's data root, and uptime, one section
+  # each in one round trip. df -Pk rather than -B1, which busybox df lacks. getconf is
+  # POSIX; where it is missing the CPU count is nil and the rest still answers.
+  def stats
+    sections = [
+      [ :cat, "/proc/loadavg" ],
+      [ :getconf, "_NPROCESSORS_ONLN" ],
+      [ :grep, "-E", "'^(MemTotal|MemAvailable|SwapTotal|SwapFree):'", "/proc/meminfo" ],
+      [ :df, "-Pk", "/" ],
+      [ :df, "-Pk", %("$(docker info --format '{{.DockerRootDir}}')") ],
+      [ :cat, "/proc/uptime" ]
+    ]
+
+    chain(*sections.flat_map { |section| [ section, [ :echo, SECTION_SEPARATOR ] ] }[0...-1])
+  end
+
   # Lists TCP listeners on the given port, one line per listener, no header.
   def listeners_on(port)
     [ :ss, "-ltnH", :sport, "=", ":#{port}" ]

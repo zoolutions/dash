@@ -81,7 +81,7 @@ class DiagnosticsDriftTest < DiagnosticsTestCase
   end
 
   test "take captures the three snapshots it compares" do
-    Dash::Diagnostics::Containers.any_instance.expects(:to_h).returns(hosts: [])
+    Dash::Diagnostics::Containers.expects(:new).with(accessories: []).returns(stub(to_h: { hosts: [] }))
     Dash::Diagnostics::ProxyServices.any_instance.expects(:to_h).returns(hosts: [])
     Dash::Diagnostics::Lock.any_instance.expects(:to_h).returns(lock: { held: false })
 

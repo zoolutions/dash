@@ -5,7 +5,7 @@ class Dash::Commands::App < Dash::Commands::Base
 
   # Separates the two answers #boot_state and #stale_state return. A container id is hex
   # and a version is a name suffix, so neither can produce this line on its own.
-  BOOT_STATE_SEPARATOR = "--%--"
+  BOOT_STATE_SEPARATOR = SECTION_SEPARATOR
 
   # Printed in place of the running containers when docker could not list them, so a boot
   # can tell "nothing runs" from "could not ask" - the chain's `;` hides the exit status.

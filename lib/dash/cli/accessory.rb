@@ -130,6 +130,22 @@ class Dash::Cli::Accessory < Dash::Cli::Base
     end
   end
 
+  desc "stats [NAME]", "Show CPU, memory, network and block I/O of an accessory (a one-second sample; NAME=all for every accessory)"
+  option :json, type: :boolean, default: false, desc: "Print the stats per host as JSON"
+  def stats(name)
+    return error_on_missing_accessory(name) unless name == "all" || DASH.config.accessory(name)
+
+    accessories = name == "all" ? DASH.config.accessories : [ DASH.config.accessory(name) ]
+    snapshot = -> { Dash::Diagnostics::ContainerStats.new(hosts: [], accessories: accessories).to_h }
+    return puts_json(&snapshot) if options[:json]
+
+    pre_connect_if_required
+    entries = snapshot.call[:accessories]
+    return say "No host in scope runs #{name == "all" ? "an accessory" : name}", :yellow if entries.empty?
+
+    entries.each { |host| puts Dash::Cli::StatsTable.lines("Accessory #{host[:accessory]}", host) }
+  end
+
   desc "details [NAME]", "Show details about accessory on host (use NAME=all to show all accessories)"
   def details(name)
     quiet = options[:quiet]

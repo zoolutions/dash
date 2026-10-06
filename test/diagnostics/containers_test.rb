@@ -36,15 +36,26 @@ class DiagnosticsContainersTest < DiagnosticsTestCase
     assert_equal [], hosts[0][:containers]
   end
 
-  test "a label value with a comma does not cost the host its answer" do
-    line = { "ID" => "aaa", "Names" => "app-web-999", "State" => "running", "Status" => "Up",
-             "Labels" => "traefik.http.routers.app.rule=Host(a,b),role=web,service=app" }.to_json
+  test "the role is docker's own label value, so no other label's text can fake it" do
+    line = ps_line("app-web-999", id: "aaa", role: "web", labels: "note=x,role=workers,role=web,traefik.rule=Host(a,b),service=app")
     stub_capture "1.1.1.1", "{{json .}}", line
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).with { |*args| SSHKit::Backend.current.host.to_s != "1.1.1.1" }.returns("")
 
     container = Dash::Diagnostics::Containers.new.to_h[:hosts].first[:containers].first
 
     assert_equal [ "web", 1, "999" ], container.values_at(:role, :replica, :version)
+  end
+
+  test "lists each accessory's container on its own hosts" do
+    configure :deploy_with_accessories
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).returns("")
+    stub_capture "1.1.1.3", "label=service=app-mysql",
+      { "ID" => "mmm", "Names" => "app-mysql", "Image" => "mysql:5.7", "State" => "exited", "Status" => "Exited (1) 2 minutes ago", "Labels" => "service=app-mysql" }.to_json
+
+    mysql = Dash::Diagnostics::Containers.new.to_h[:accessories].find { |entry| entry[:accessory] == "mysql" }
+
+    assert_equal({ host: "1.1.1.3", accessory: "mysql", containers: [ { name: "app-mysql", id: "mmm", accessory: "mysql", state: "exited",
+      status: "Exited (1) 2 minutes ago", health: nil, image: "mysql:5.7", created_at: nil } ] }, mysql)
   end
 
   test "is JSON-safe" do

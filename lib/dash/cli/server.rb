@@ -1,4 +1,6 @@
 class Dash::Cli::Server < Dash::Cli::Base
+  HOST_STATS_COLUMNS = "%-20s %-16s %4s %-20s %-16s %-12s %-12s %s".freeze
+
   desc "exec", "Run a custom command on the server (use --help to show options)"
   option :interactive, type: :boolean, aliases: "-i", default: false, desc: "Run the command interactively (use for console/bash)"
   option :raw, type: :boolean, default: false, desc: "Output raw, unmodified stdout"
@@ -34,6 +36,16 @@ class Dash::Cli::Server < Dash::Cli::Base
     end
   end
 
+  desc "stats", "Show load, memory, swap, disk and uptime of the servers"
+  option :json, type: :boolean, default: false, desc: "Print the stats per host as JSON"
+  def stats
+    return puts_json { Dash::Diagnostics::HostStats.new.to_h } if options[:json]
+
+    pre_connect_if_required
+    puts format(HOST_STATS_COLUMNS, "HOST", "LOAD 1/5/15", "CPUS", "MEMORY USED", "SWAP USED", "DISK /", "DISK DOCKER", "UPTIME")
+    Dash::Diagnostics::HostStats.new.to_h[:hosts].each { |host| puts host_stats_line(host) }
+  end
+
   desc "bootstrap", "Set up Docker to run dash apps"
   def bootstrap
     modify(lock: true) do
@@ -67,4 +79,33 @@ class Dash::Cli::Server < Dash::Cli::Base
       run_hook "docker-setup"
     end
   end
+
+  private
+    def host_stats_line(host)
+      return format("%-20s ERROR %s", host[:host], host[:error]) if host[:error]
+
+      load = host[:load] ? host[:load].values_at(:one, :five, :fifteen).join("/") : "-"
+      memory = host[:memory] ? "#{host[:memory][:used_percent]}% of #{Dash::Utils.human_bytes(host[:memory][:total_bytes])}" : "-"
+      format(HOST_STATS_COLUMNS, host[:host], load, host[:cpus] || "-", memory, swap_used(host[:swap]), disk_used(host[:disk][:root]), disk_used(host[:disk][:docker_root]), uptime(host[:uptime_seconds]))
+    end
+
+    # A host with no swap configured reads "none" rather than a 0% that suggests headroom.
+    def swap_used(swap)
+      return "-" unless swap
+      return "none" if swap[:total_bytes].to_i.zero?
+
+      used = ((swap[:total_bytes] - swap[:free_bytes]) * 100.0 / swap[:total_bytes]).round
+      "#{used}% of #{Dash::Utils.human_bytes(swap[:total_bytes])}"
+    end
+
+    def disk_used(disk)
+      disk ? "#{disk[:used_percent].round}%" : "-"
+    end
+
+    def uptime(seconds)
+      return "-" unless seconds
+
+      days, rest = seconds.divmod(86_400)
+      days > 0 ? "#{days}d #{rest / 3600}h" : "#{rest / 3600}h #{rest % 3600 / 60}m"
+    end
 end

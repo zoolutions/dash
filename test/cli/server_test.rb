@@ -104,6 +104,21 @@ class CliServerTest < CliTestCase
     end
   end
 
+
+  test "stats prints a line per host, and --json the document" do
+    sections = [ "0.52 0.48 0.40 2/345 6789", "2", "MemTotal: 4028424 kB\nMemAvailable: 2014212 kB\nSwapTotal: 1048572 kB\nSwapFree: 524286 kB",
+      "Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/sda1 82000000 41000000 41000000 50% /", "", "90000.0 1.0" ].join("\n--%--\n")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).with { |*args| args.join(" ").include?("/proc/loadavg") }.returns(sections)
+
+    run_command("stats").tap do |output|
+      assert_match(/^HOST +LOAD 1\/5\/15 +CPUS +MEMORY USED +SWAP USED +DISK \/ +DISK DOCKER +UPTIME$/, output)
+      assert_match(/^1\.1\.1\.1 +0\.52\/0\.48\/0\.4 +2 +50\.0% of 4\.1GB +50% of 1\.1GB +50% +- +1d 1h$/, output)
+    end
+
+    hosts = JSON.parse(run_command("stats", "--json"))["hosts"]
+    assert_equal 0.26, hosts.first.dig("load", "per_cpu")
+  end
+
   private
     def run_command(*command)
       stdouted { Dash::Cli::Server.start([ *command, "-c", "test/fixtures/deploy_with_accessories.yml" ]) }

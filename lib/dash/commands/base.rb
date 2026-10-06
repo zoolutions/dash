@@ -8,6 +8,10 @@ module Dash::Commands
     # healthcheck-less container that died still reports why.
     NO_HEALTHCHECK = "no-healthcheck"
 
+    # Separates the answers of several commands chained into one round trip. Each half is
+    # docker or /proc output, none of which prints this line on its own.
+    SECTION_SEPARATOR = "--%--"
+
     DOCKER_HEALTH_STATUS_FORMAT = "'{{if .State.Health}}{{.State.Health.Status}}{{else}}#{NO_HEALTHCHECK}:{{.State.Status}}{{end}}'"
 
     # The statuses a boot accepts as ready. Dash::Cli::Healthcheck::Poller decides what a

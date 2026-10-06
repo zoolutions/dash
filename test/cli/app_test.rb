@@ -1229,13 +1229,27 @@ class CliAppTest < CliTestCase
   test "containers --json is every container per host as JSON" do
     SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info)
       .with { |*args| args.join(" ").include?("{{json .}}") }
-      .returns({ "ID" => "aaa", "Names" => "app-web-999", "State" => "running", "Status" => "Up", "Labels" => "role=web" }.to_json)
+      .returns("#{{ "ID" => "aaa", "Names" => "app-web-999", "State" => "running", "Status" => "Up", "Labels" => "role=web" }.to_json}\t\"web\"")
 
     containers = JSON.parse(run_command("containers", "--json"))
 
     assert_equal "1.1.1.1", containers["hosts"].first["host"]
     assert_equal({ "name" => "app-web-999", "role" => "web", "replica" => 1, "version" => "999" },
       containers["hosts"].first["containers"].first.slice("name", "role", "replica", "version"))
+  end
+
+
+  test "stats prints each container's cpu, memory and pids" do
+    output = [ "#{{ "ID" => "aaaaaaaaaaaa", "Names" => "app-web-999", "State" => "running", "Status" => "Up", "Labels" => "role=web" }.to_json}\t\"web\"", "--%--",
+      { "Container" => "aaaaaaaaaaaa", "ID" => "aaaaaaaaaaaa", "Name" => "app-web-999", "CPUPerc" => "12.50%", "MemUsage" => "120MiB / 1.9GiB", "MemPerc" => "6%", "NetIO" => "0B / 0B", "BlockIO" => "0B / 0B", "PIDs" => "23" }.to_json ].join("\n")
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture_with_info).with { |*args| args.join(" ").include?("docker stats") }.returns(output)
+
+    run_command("stats").tap do |output|
+      assert_match "App Host: 1.1.1.1", output
+      assert_match(/app-web-999 +web +1 +12\.5% +125\.8MB \/ 2\.0GB +0B \/ 0B +0B \/ 0B +23$/, output)
+    end
+
+    assert_equal 12.5, JSON.parse(run_command("stats", "--json"))["hosts"].first["containers"].first.dig("stats", "cpu_percent")
   end
 
   private

@@ -190,10 +190,19 @@ class Dash::Cli::App < Dash::Cli::Base
   desc "containers", "Show app containers on servers"
   option :json, type: :boolean, default: false, desc: "Print every container per host as JSON (role, replica, version, state, health)"
   def containers
-    return puts_json { Dash::Diagnostics::Containers.new.to_h } if options[:json]
+    return puts_json { Dash::Diagnostics::Containers.new(accessories: []).to_h } if options[:json]
 
     quiet = options[:quiet]
     on(DASH.app_hosts) { |host| puts_by_host host, capture_with_info(*DASH.app.list_containers), quiet: quiet }
+  end
+
+  desc "stats", "Show CPU, memory, network and block I/O of the app containers (a one-second sample per host)"
+  option :json, type: :boolean, default: false, desc: "Print the stats per host as JSON"
+  def stats
+    return puts_json { Dash::Diagnostics::ContainerStats.new(accessories: []).to_h } if options[:json]
+
+    pre_connect_if_required
+    Dash::Diagnostics::ContainerStats.new(accessories: []).to_h[:hosts].each { |host| puts Dash::Cli::StatsTable.lines("App", host) }
   end
 
   desc "stale_containers", "Detect app stale containers"

@@ -5,7 +5,9 @@ require_relative "mcp_test_case"
 # command, fails here until the shape is reviewed and added.
 class McpReadOnlyTest < McpTestCase
   READ_ONLY_CAPTURES = [
-    /\Adocker container ls --all( --filter \S+)+ --format '\{\{json \.\}\}'\z/,                        # containers
+    /\Adocker ps --all --filter label=service=\S+ --format '\{\{json \.\}\}'\z/,                                     # accessory containers
+    /\Adocker logs \S+ +( --since [\w:.+-]+ +)? --tail \d+ --timestamps 2>&1\z/,                                       # accessory logs
+    /\Adocker container ls --all( --filter \S+)+ --format '\{\{json \.\}\}\{\{"\\t"\}\}\{\{json \(\.Label "role"\)\}\}'\z/,                        # containers
     /\Adocker exec \S+ dash-proxy list --json\z/,                                                         # proxy and load balancer routes
     %r{\Astat \S+ > /dev/null && cat \S+ \| base64 -d\z},                                                 # deploy lock
     /\Atail -n \d+ \S+\z/,                                                                                # audit log
@@ -13,7 +15,9 @@ class McpReadOnlyTest < McpTestCase
     /\Adocker inspect \S+ --format '\{\{\.Config\.Image\}\}' \| awk -F: '\{print \$NF\}'\z/,              # doctor: proxy version
     /\Adocker inspect \S+ --format '\{\{range \.Mounts\}\}\{\{println \.Destination\}\}\{\{end\}\}'\z/,   # doctor: proxy socket
     /\Ass -ltnH sport = :\d+\z/,                                                                          # doctor: ports
-    /\Adocker ps( --filter \S+)+ --format "\{\{\.Names\}\}\\t\{\{\.Status\}\}"\z/                           # scale status
+    /\Adocker ps( --filter \S+)+ --format "\{\{\.Names\}\}\\t\{\{\.Status\}\}"\z/,                          # scale status
+    /\Adocker ps( --filter \S+)+ --format '\{\{json \.\}\}(\{\{"\\t"\}\}\{\{json \(\.Label "role"\)\}\})?' \|\| echo --unreadable-- ; echo --%-- ; docker ps --quiet( --filter \S+)+ \| xargs -r docker stats --no-stream --format '\{\{json \.\}\}' \|\| echo --stats-unreadable--\z/, # container stats
+    %r{\Acat /proc/loadavg ; echo --%-- ; getconf _NPROCESSORS_ONLN ; echo --%-- ; grep -E '\^\(MemTotal\|MemAvailable\|SwapTotal\|SwapFree\):' /proc/meminfo ; echo --%-- ; df -Pk / ; echo --%-- ; df -Pk "\$\(docker info --format '\{\{\.DockerRootDir\}\}'\)" ; echo --%-- ; cat /proc/uptime\z} # host stats
   ].freeze
 
   # Only the doctor executes, and only these: it checks exit statuses, not output.
@@ -30,8 +34,12 @@ class McpReadOnlyTest < McpTestCase
   end
 
   test "every tool only reads" do
-    server = self.server(session(fixture: :deploy_with_loadbalancer, allow_logs: true))
+    server = self.server(session(fixture: :deploy_with_accessories, allow_logs: true))
     arguments = { "logs" => { since: "15m", grep: "x" }, "audit" => { lines: 10 } }
+    call_tool("logs", { accessory: "mysql", since: "1h" }, on: server)
+    @captures.each { |command| assert READ_ONLY_CAPTURES.any? { |shape| shape.match?(command) }, "accessory logs captured: #{command}" }
+    assert @captures.any? { |command| command.start_with?("docker logs app-mysql") }, "the accessory's logs were not read"
+    assert_empty @executes, "accessory logs executed commands"
 
     Dash::Mcp::Server::TOOLS.map(&:tool_name).each do |name|
       @captures.clear

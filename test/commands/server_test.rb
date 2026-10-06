@@ -27,6 +27,14 @@ class CommandsServerTest < ActiveSupport::TestCase
       Dash::Commands::Auditor.new(config).record("noted").first(ENSURE_RUN_DIRECTORY.length)
   end
 
+  test "stats reads load, cpus, memory, disk and uptime in one round trip" do
+    assert_equal \
+      "cat /proc/loadavg ; echo --%-- ; getconf _NPROCESSORS_ONLN ; echo --%-- ; " \
+      "grep -E '^(MemTotal|MemAvailable|SwapTotal|SwapFree):' /proc/meminfo ; echo --%-- ; " \
+      "df -Pk / ; echo --%-- ; df -Pk \"$(docker info --format '{{.DockerRootDir}}')\" ; echo --%-- ; cat /proc/uptime",
+      new_command.stats.join(" ")
+  end
+
   test "listeners on port" do
     assert_equal "ss -ltnH sport = :80", new_command.listeners_on(80).join(" ")
   end
