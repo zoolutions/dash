@@ -66,4 +66,24 @@ class McpAutoscaleToolsTest < McpTestCase
     assert error
     assert_match "The autoscale state lives on 1.1.1.1, outside this server's --hosts and --roles", text
   end
+
+  test "a controller host that is an app host outside the --hosts ceiling is refused" do
+    Dash::Autoscale::Provider.stubs(:for).returns(stub(members: []))
+    Dash::Configuration::Autoscale.any_instance.stubs(:controller).returns("1.1.1.2")
+
+    text, error = call_tool("controller_status", {}, on: server(session(fixture: :deploy_with_scale_controller, hosts: [ "1.1.1.1" ])))
+
+    assert error
+    assert_match "The autoscale state lives on 1.1.1.2, outside this server's --hosts and --roles", text
+  end
+
+  test "a controller host that is an accessory host is within the ceiling's reach" do
+    Dash::Autoscale::Provider.stubs(:for).returns(stub(members: []))
+    Dash::Configuration::Autoscale.any_instance.stubs(:controller).returns("1.1.1.9")
+
+    text, error = call_tool("controller_status", {}, on: server(session(fixture: :deploy_with_scale_controller, hosts: [ "1.1.1.1" ])))
+
+    assert error
+    assert_match "The autoscale state lives on 1.1.1.9, outside this server's --hosts and --roles", text
+  end
 end

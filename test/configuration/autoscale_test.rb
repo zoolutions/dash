@@ -152,7 +152,7 @@ class ConfigurationAutoscaleTest < ActiveSupport::TestCase
 
   test "controller must be a host name" do
     { "" => %r{autoscale/controller: should be a host name}, " " => %r{autoscale/controller: should be a host name},
-      [ "10.0.0.50" ] => %r{autoscale/controller: should be a host name}, 1 => %r{autoscale/controller: should be a host name} }.each do |value, pattern|
+      [ "10.0.0.50" ] => %r{autoscale/controller: should be a host name}, " 10.0.0.50" => %r{autoscale/controller: should be a host name}, 1 => %r{autoscale/controller: should be a host name} }.each do |value, pattern|
       @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } }, "controller" => value }
 
       assert_raises_message(pattern) { config }

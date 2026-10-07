@@ -38,6 +38,10 @@ servers:
         - cron: "0 9 * * 1-5"
           for: 1h
           min: 4
+accessories:
+  db:
+    image: postgres:16
+    host: 1.1.1.9
 autoscale:
   provider:
     upcloud:

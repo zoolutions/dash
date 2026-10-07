@@ -194,7 +194,15 @@ class CliAutoscaleTest < CliTestCase
 
     assert_match(%r{mv #{STATE}/pause/payments\.json\.tmp #{STATE}/pause/payments\.json on 10\.0\.0\.50}, output)
     assert_match(%r{rm -f #{STATE}/pause/payments\.json on 10\.0\.0\.50}, output)
-    assert_no_match(/ on 1\.1\.1\.1/, output)
+    assert_no_match(%r{#{STATE}\S* on 1\.1\.1\.1}, output)
+  end
+
+  test "pause and resume keep their audit lines on the primary host, where dash audit reads them" do
+    output = run_command("pause", "payments", "-v", config: :with_scale_controller) + run_command("resume", "payments", "-v", config: :with_scale_controller)
+
+    assert_match(/Paused autoscaling of payments until resumed.*audit\.log on 1\.1\.1\.1/, output)
+    assert_match(/Resumed autoscaling of payments.*audit\.log on 1\.1\.1\.1/, output)
+    assert_no_match(/audit\.log on 10\.0\.0\.50/, output)
   end
 
   test "pause without --for holds until resumed" do

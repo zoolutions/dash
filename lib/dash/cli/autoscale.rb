@@ -82,8 +82,8 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
       store = Dash::Autoscale::StateStore.new(self)
       store.ensure_directory
       store.write_pause(role.name, pause.to_h)
-      execute *DASH.auditor.record("Paused autoscaling of #{role} #{until_text}"), verbosity: :debug
     end
+    audit "Paused autoscaling of #{role} #{until_text}"
 
     say "Paused autoscaling of #{role} #{until_text}", :magenta
   end
@@ -94,8 +94,8 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
 
     on(Dash::Autoscale::StateStore.host) do
       Dash::Autoscale::StateStore.new(self).remove_pause(role.name)
-      execute *DASH.auditor.record("Resumed autoscaling of #{role}"), verbosity: :debug
     end
+    audit "Resumed autoscaling of #{role}"
 
     say "Resumed autoscaling of #{role}", :magenta
   end
@@ -199,6 +199,11 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
 
     def performer
       Dash::Git.user_name.presence || ENV["USER"] || "unknown"
+    end
+
+    # On the primary host, where `dash audit` reads, wherever the state lives.
+    def audit(line)
+      on(DASH.config.primary_role.baseline_hosts.first) { execute *DASH.auditor.record(line), verbosity: :debug }
     end
 
     def print_explain(explain)
