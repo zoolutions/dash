@@ -1,0 +1,70 @@
+test/commands/autoscale_test.rb
+  s_2e73c863824976::t_3fbbadb3d723da 71
+  s_2e73c863824976::t_90810b7ec5189b 49-53
+lib/dash/cli/main.rb
+  s_2e73c863824976::t_2791298a38933b 325-327
+lib/dash/autoscale/state_store.rb
+  s_2e73c863824976::t_90810b7ec5189b 44-46
+lib/dash/commands/autoscale.rb
+  s_2e73c863824976::t_90810b7ec5189b 38-46,108-112,114
+lib/dash/diagnostics/doctor/controller_checks.rb
+  s_2e73c863824976::t_3af1e69f3ebff9 1-44
+lib/dash/mcp/tools/controller_status_tool.rb
+  s_2e73c863824976::t_8ef707046d9b1a 1-18
+lib/dash/cli/autoscale.rb
+  s_2e73c863824976::t_2791298a38933b 1-234
+lib/dash/mcp/server.rb
+  s_2e73c863824976::t_13446fed59473a 28-29
+  s_2e73c863824976::t_8ef707046d9b1a 18-20
+lib/dash/configuration/docs/autoscale.yml
+  s_2e73c863824976::t_24891aa93573f7 59-104
+lib/dash/configuration/docs/role.yml
+  s_2e73c863824976::t_24891aa93573f7 130-131
+lib/dash/diagnostics/controller_status.rb
+  s_2e73c863824976::t_b8312d524ba54c 1-39
+lib/dash/mcp/tools/autoscale_explain_tool.rb
+  s_2e73c863824976::t_8ef707046d9b1a 1-29
+lib/dash/mcp.rb
+  s_2e73c863824976::t_8ef707046d9b1a 23-25
+test/diagnostics/autoscale_test.rb
+  s_2e73c863824976::t_8b39df8ce5ea53 1-114
+test/mcp/server_test.rb
+  s_2e73c863824976::t_8ef707046d9b1a 7-8,23
+test/diagnostics/doctor_controller_checks_test.rb
+  s_2e73c863824976::t_3af1e69f3ebff9 1-80
+lib/dash/mcp/tools/autoscale_decisions_tool.rb
+  s_2e73c863824976::t_8ef707046d9b1a 1-21
+docs/app/views/docs/pages/debugging.rb
+  s_2e73c863824976::t_ee39bc029fdbec 21-23,49-51
+test/cli/autoscale_test.rb
+  s_2e73c863824976::t_6e46d0022d4805 1-30,35-65,67-81,83-204,206-207,217-236
+  s_2e73c863824976::t_dc0b1833a590e2 66,82,208-216
+  s_2e73c863824976::t_d0cf5c438b907f 31-34,205
+lib/dash/diagnostics/autoscale_decisions.rb
+  s_2e73c863824976::t_4ec4139385d7f4 8
+  s_2e73c863824976::t_b8312d524ba54c 1-7,9-17
+test/mcp/read_only_test.rb
+  s_2e73c863824976::t_4ec4139385d7f4 20-22,36,40-51
+docs/app/views/docs/pages/commands.rb
+  s_2e73c863824976::t_ee39bc029fdbec 84-92,112,179-187
+lib/dash/diagnostics/doctor.rb
+  s_2e73c863824976::t_3af1e69f3ebff9 25-26,72,146-149
+lib/dash/diagnostics/autoscale_explain.rb
+  s_2e73c863824976::t_b8312d524ba54c 1-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "e62fe859b429dfea81d8dbebed70ae1726795f74",
+  "prompts": {},
+  "sessions": {
+    "s_2e73c863824976": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8711917e-f15c-480e-bb61-df622d8a2637",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
