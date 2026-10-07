@@ -18,6 +18,9 @@ class Views::Docs::Pages::Debugging < DocsUI::Page
     [ "dash lock status --json", "Whether the deploy lock is held, by whom, since when, why" ],
     [ "dash report show --json [--last N]", "The saved deploy reports, most recent first (at most 20)" ],
     [ "dash scale status --json", "Per role: replica bounds and each host's slots" ],
+    [ "dash autoscale explain ROLE --json", "What the autoscale controller's next tick would decide for ROLE, with every input" ],
+    [ "dash autoscale history [ROLE] --json", "The controller's decision log: actions, reason codes, errors and inputs" ],
+    [ "dash autoscale status --json", "The controller's heartbeat (running, stale or stopped) and the paused roles" ],
     [ "dash app stats [--json]", "Each container's CPU, memory against its limit, network and block I/O, PIDs" ],
     [ "dash accessory stats NAME|all [--json]", "The same for an accessory's container on its hosts" ],
     [ "dash server stats [--json]", "Each host's load against its CPUs, memory, swap, disk for / and Docker's data root, uptime" ]
@@ -43,6 +46,9 @@ class Views::Docs::Pages::Debugging < DocsUI::Page
     [ "deploy_reports", "dash report show --json (last: up to 20)" ],
     [ "logs", "dash app logs or dash accessory logs (role or accessory), off unless allowed (lines: up to 500, since, grep)" ],
     [ "scale_status", "dash scale status --json" ],
+    [ "autoscale_explain", "dash autoscale explain ROLE --json (role)" ],
+    [ "autoscale_decisions", "dash autoscale history --json (role, lines: up to 500)" ],
+    [ "controller_status", "dash autoscale status --json" ],
     [ "container_stats", "dash app stats --json and dash accessory stats all --json together" ],
     [ "host_stats", "dash server stats --json" ]
   ].freeze

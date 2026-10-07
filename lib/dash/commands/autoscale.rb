@@ -35,8 +35,15 @@ class Dash::Commands::Autoscale < Dash::Commands::Base
     append decode(lines.map { |line| "#{line}\n" }.join), decisions_file
   end
 
-  def read_decisions(lines:)
-    any [ :tail, "-n", Integer(lines.to_s, 10), decisions_file, "2>", "/dev/null" ], [ :true ]
+  # The last `lines` entries, or the last `lines` of one role's (the log writes `role` first).
+  def read_decisions(lines:, role: nil)
+    lines = Integer(lines.to_s, 10)
+
+    if role
+      any pipe([ :grep, "-F", Dash::Utils.single_quote(%("role":"#{role_name(role)}")), decisions_file, "2>", "/dev/null" ], [ :tail, "-n", lines ]), [ :true ]
+    else
+      any [ :tail, "-n", lines, decisions_file, "2>", "/dev/null" ], [ :true ]
+    end
   end
 
   def count_decisions
@@ -98,8 +105,12 @@ class Dash::Commands::Autoscale < Dash::Commands::Base
     end
 
     def pause_file(role)
-      raise ArgumentError, "#{role.to_s.inspect} is not a role name dash can keep a pause file for" unless ROLE_NAME.match?(role.to_s)
+      File.join(pause_directory, "#{role_name(role)}#{PAUSE_EXTENSION}")
+    end
 
-      File.join(pause_directory, "#{role}#{PAUSE_EXTENSION}")
+    def role_name(role)
+      raise ArgumentError, "#{role.to_s.inspect} is not a role name dash can keep autoscale state for" unless ROLE_NAME.match?(role.to_s)
+
+      role.to_s
     end
 end

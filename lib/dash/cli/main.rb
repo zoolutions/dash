@@ -322,6 +322,9 @@ class Dash::Cli::Main < Dash::Cli::Base
   desc "app", "Manage application"
   subcommand "app", Dash::Cli::App
 
+  desc "autoscale", "Run the autoscale controller, and read what it decided"
+  subcommand "autoscale", Dash::Cli::Autoscale
+
   desc "build", "Build application image"
   subcommand "build", Dash::Cli::Build
 

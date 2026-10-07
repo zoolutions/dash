@@ -56,3 +56,49 @@ autoscale:
   interval: 10
   lock_wait_timeout: 60
   timezone: Europe/Stockholm
+
+# Running the controller
+#
+# `dash autoscale run` is a long-lived process on an ops host - any machine with a
+# checkout of the app, its `.dash/secrets` and SSH access to the servers, like the one you
+# deploy from. It keeps its state on the primary role's first host, under the app's run
+# directory: a heartbeat, the decision log, the pauses and what it remembers between ticks
+# (cooldowns, warmups, unreachable members). Every operator's `dash autoscale status`,
+# `history` and `explain`, `dash doctor` and `dash mcp` read it from there.
+#
+# One controller per app and destination: a second one refuses to start while the first
+# one's heartbeat is fresh (three intervals), unless started with `--takeover`, and the
+# first stops at its next tick. TERM or INT lets the tick in progress finish - a member
+# joining included - before it exits, so give the service manager more time to stop it
+# than the slowest join takes: `boot_timeout` plus the app's boot.
+#
+# ```ini
+# # /etc/systemd/system/dash-autoscale.service
+# [Unit]
+# Description=dash autoscale controller
+# After=network-online.target
+#
+# [Service]
+# WorkingDirectory=/srv/myapp
+# ExecStart=/usr/local/bin/bundle exec dash autoscale run --metrics-port 9394
+# Restart=always
+# TimeoutStopSec=600
+#
+# [Install]
+# WantedBy=multi-user.target
+# ```
+#
+# Or in a container, with the checkout and an SSH key mounted:
+#
+# ```sh
+# docker run -d --restart unless-stopped --name dash-autoscale \
+#   -v /srv/myapp:/app -w /app -v ~/.ssh:/root/.ssh:ro \
+#   ruby:3.4 sh -c "bundle install && bundle exec dash autoscale run"
+# ```
+#
+# `--once` runs a single tick and exits, for cron; the state on the primary host carries
+# cooldowns and warmups from one run to the next. `--dry-run` decides and prints without
+# acting or writing anything. `--metrics-port` serves Prometheus metrics at `/metrics`
+# (on 127.0.0.1 unless `--metrics-bind` says otherwise). `dash autoscale explain ROLE`
+# shows what the next tick would decide and why; `dash autoscale pause ROLE --for 2h`
+# keeps the controller's hands off a role, `resume ROLE` gives it back.

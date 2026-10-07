@@ -1,0 +1,29 @@
+class Dash::Mcp::Tools::AutoscaleExplainTool < Dash::Mcp::BaseTool
+  tool_name "autoscale_explain"
+  title "Autoscale explain"
+  description <<~DESC
+    One live evaluation of a scaled role by the autoscale policy, as the controller's next tick would make it, without acting:
+    the action (scale_out, scale_in, replace_member, hold), the container counts from and to, the reason codes (schedule_floor,
+    at_min, at_max, at_target, cooldown, warming_up, paused, lock_busy, member_unreachable, host_unreachable, pool_unreadable,
+    action_failed), when a hold can next change (eligible_at), and every input: running count, floor, bounds, active schedule
+    windows, cooldowns, last scale times, warming and unreachable members, pause. controlled is false for a role without a
+    schedule, which the controller leaves alone.
+  DESC
+  input_schema properties: { role: { type: "string", description: "The scaled role" } }, required: [ "role" ], additionalProperties: false
+
+  def self.call(server_context:, role:)
+    answer(server_context) do
+      scaled = DASH.config.role(role) || raise(ArgumentError, "No role named #{role} (#{DASH.config.roles.map(&:name).join(",")})")
+      raise ArgumentError, "#{role} is outside this server's --roles" unless DASH.roles.include?(scaled)
+      ensure_state_host_in_scope
+
+      Dash::Diagnostics::AutoscaleExplain.new(role: scaled).to_h
+    end
+  end
+
+  # The controller's state lives on the primary role's first baseline host.
+  def self.ensure_state_host_in_scope
+    host = Dash::Autoscale::StateStore.host
+    raise ArgumentError, "The autoscale state lives on #{host}, outside this server's --hosts" if DASH.specific_hosts && !DASH.specific_hosts.include?(host)
+  end
+end

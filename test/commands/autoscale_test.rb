@@ -46,6 +46,11 @@ class CommandsAutoscaleTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { command.read_decisions(lines: "50; rm -rf /") }
   end
 
+  test "reads the last decision lines of one role" do
+    assert_equal %(grep -F '"role":"payments"' #{DIR}/decisions.jsonl 2> /dev/null | tail -n 20 || true), command.read_decisions(lines: 20, role: "payments").join(" ")
+    assert_raises(ArgumentError) { command.read_decisions(lines: 20, role: "x'; rm -rf /") }
+  end
+
   test "counts and trims the decision log" do
     assert_equal "wc -l < #{DIR}/decisions.jsonl 2> /dev/null || echo 0", command.count_decisions.join(" ")
     assert_equal "tail -n 5000 #{DIR}/decisions.jsonl > #{DIR}/decisions.jsonl.tmp && mv #{DIR}/decisions.jsonl.tmp #{DIR}/decisions.jsonl",
@@ -63,7 +68,7 @@ class CommandsAutoscaleTest < ActiveSupport::TestCase
     [ "../web", ".hidden", "pay ments", "a;b", "a/b", "" ].each do |name|
       [ -> { command.write_pause(name, "{}") }, -> { command.remove_pause(name) } ].each do |call|
         error = assert_raises(ArgumentError, &call)
-        assert_equal "#{name.inspect} is not a role name dash can keep a pause file for", error.message
+        assert_equal "#{name.inspect} is not a role name dash can keep autoscale state for", error.message
       end
     end
   end

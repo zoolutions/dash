@@ -41,9 +41,9 @@ class Dash::Autoscale::StateStore
     execute @commands.write_state(dump(state))
   end
 
-  # The last `lines` entries of the decision log, oldest first.
-  def decisions(lines:)
-    capture(@commands.read_decisions(lines: lines)).lines.filter_map { |line| parse("decisions.jsonl", line) if line.strip.present? }
+  # The last `lines` entries of the decision log (of one role's, with `role`), oldest first.
+  def decisions(lines:, role: nil)
+    capture(@commands.read_decisions(lines: lines, role: role)).lines.filter_map { |line| parse("decisions.jsonl", line) if line.strip.present? }
   end
 
   # Decisions or hashes.

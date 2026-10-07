@@ -127,7 +127,8 @@ servers:
     #
     # `schedule`, `warmup`, `cooldown` and `step` drive the autoscaling controller
     # (`dash autoscale run`), which then owns the role's count: a manual `dash scale set`
-    # lasts until its next tick unless the role is paused. The keys of the reactive rules
+    # lasts until its next tick unless the role is paused (`dash autoscale pause ROLE`). A
+    # scaled role without a `schedule` stays manual. The keys of the reactive rules
     # (`signal`, `up`, `down`, `hold_when`) are not accepted yet.
     scale:
       min: 2
