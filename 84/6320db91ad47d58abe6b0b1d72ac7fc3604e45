@@ -1,0 +1,34 @@
+test/autoscale/controller_test.rb
+  s_2e73c863824976::t_5a292cc14c6867 147-185
+lib/dash/autoscale/controller.rb
+  s_2e73c863824976::t_16728ae9167b2b 100,104,149-152,184-213,237-239,243-244,259
+  s_2e73c863824976::t_5a292cc14c6867 101-103,253,260
+test/autoscale/state_store_test.rb
+  s_2e73c863824976::t_16728ae9167b2b 127
+test/cli/autoscale_test.rb
+  s_2e73c863824976::t_5a292cc14c6867 60-70
+lib/dash/cli/autoscale.rb
+  s_2e73c863824976::t_16728ae9167b2b 135,137-140,155
+test/autoscale/metrics_server_test.rb
+  s_2e73c863824976::t_5a292cc14c6867 22-32
+lib/dash/autoscale/state_store.rb
+  s_2e73c863824976::t_16728ae9167b2b 32,34
+lib/dash/autoscale/metrics_server.rb
+  s_2e73c863824976::t_16728ae9167b2b 45-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "846320db91ad47d58abe6b0b1d72ac7fc3604e45",
+  "prompts": {},
+  "sessions": {
+    "s_2e73c863824976": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8711917e-f15c-480e-bb61-df622d8a2637",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
