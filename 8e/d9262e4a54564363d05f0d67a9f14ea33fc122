@@ -1,0 +1,64 @@
+lib/dash/autoscale/state_store.rb
+  s_1688ebddfe889f::t_ac3a44ccfa8c72 3-7,15
+test/autoscale/state_store_test.rb
+  s_1688ebddfe889f::t_0976a92fd97382 20,140-147,150
+  s_1688ebddfe889f::t_1db6794dbc7581 17-19,21-22
+lib/dash/mcp/tools/autoscale_explain_tool.rb
+  s_1688ebddfe889f::t_ac3a44ccfa8c72 42-44,47-48
+lib/dash/autoscale/controller.rb
+  s_1688ebddfe889f::t_9b52d0cd16361b 9,15
+lib/dash/autoscale/role_state.rb
+  s_1688ebddfe889f::t_9b52d0cd16361b 2
+lib/dash/cli/autoscale.rb
+  s_1688ebddfe889f::t_9b52d0cd16361b 3-4
+test/diagnostics/autoscale_test.rb
+  s_1688ebddfe889f::t_9b52d0cd16361b 4-5
+  s_1688ebddfe889f::t_19ca7633af566f 120-133
+lib/dash/configuration/autoscale.rb
+  s_1688ebddfe889f::t_ac3a44ccfa8c72 30-35
+lib/dash/autoscale/pause.rb
+  s_1688ebddfe889f::t_9b52d0cd16361b 3-4
+lib/dash/configuration/validator/autoscale.rb
+  s_1688ebddfe889f::t_ac3a44ccfa8c72 38-41
+lib/dash/diagnostics/autoscale_decisions.rb
+  s_1688ebddfe889f::t_9b52d0cd16361b 2
+lib/dash/commands/autoscale.rb
+  s_1688ebddfe889f::t_9b52d0cd16361b 4
+lib/dash/configuration/docs/autoscale.yml
+  s_1688ebddfe889f::t_76d46221780089 52-54,65-78,113
+  s_1688ebddfe889f::t_ac3a44ccfa8c72 58
+lib/dash/diagnostics/autoscale_explain.rb
+  s_1688ebddfe889f::t_9b52d0cd16361b 3
+docs/app/views/docs/pages/commands.rb
+  s_1688ebddfe889f::t_9b52d0cd16361b 184-186
+test/fixtures/deploy_with_scale_controller.yml
+  s_1688ebddfe889f::t_837f22067d9a84 1-57
+test/autoscale/controller_test.rb
+  s_1688ebddfe889f::t_9b52d0cd16361b 10
+  s_1688ebddfe889f::t_19ca7633af566f 113-125
+lib/dash/diagnostics/controller_status.rb
+  s_1688ebddfe889f::t_9b52d0cd16361b 2
+test/mcp/autoscale_tools_test.rb
+  s_1688ebddfe889f::t_19ca7633af566f 57-68
+test/cli/autoscale_test.rb
+  s_1688ebddfe889f::t_9b52d0cd16361b 4
+  s_1688ebddfe889f::t_19ca7633af566f 192-199
+test/configuration/autoscale_test.rb
+  s_1688ebddfe889f::t_1db6794dbc7581 141-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "8ed9262e4a54564363d05f0d67a9f14ea33fc122",
+  "prompts": {},
+  "sessions": {
+    "s_1688ebddfe889f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0bd3e16b-1fd0-4eeb-9ebc-5ffe37a51e19",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
