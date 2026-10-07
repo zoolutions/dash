@@ -70,6 +70,22 @@ class Dash::Cli::Scale < Dash::Cli::Base
       say message, color
     end
 
+    # Takes out a started member that no longer answers SSH, under the deploy lock, without
+    # a command reaching it (see Dash::Cli::Scale::Leave). Its run directory is never
+    # ensured: acquiring the lock would otherwise SSH to every host of the app, it included.
+    # `count` is the role's container count, for the scale-in hooks.
+    def replace_unreachable(role, member, count:)
+      skipped = !role.baseline_hosts.include?(member.host) && !DASH.run_directory_ensured_on.include?(member.host)
+      DASH.run_directory_ensured_on << member.host if skipped
+
+      modify(lock: true) do
+        Dash::Cli::Scale::Leave.new(role, member, self, running: {}, count: count, reachable: false).run
+      end
+    ensure
+      # The same host may come back as a powered-on member, whose run directory is then real.
+      DASH.run_directory_ensured_on.delete(member.host) if skipped
+    end
+
     def deploy_loadbalancer(except: nil)
       targets = DASH.loadbalancer_config.target_hosts - Array(except)
 

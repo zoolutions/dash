@@ -257,6 +257,57 @@ class CliScaleHostsTest < CliTestCase
     assert left, "the rollback must redeploy the load balancer without the member: #{output}"
   end
 
+  test "an unreachable web member is replaced with no command reaching it: out of the load balancer, then powered off" do
+    Dash::Configuration::Proxy.any_instance.unstub(:load_balancing?)
+    @provider.members_list.find { |member| member.id == "w1" }.state = "started"
+    stub_loadbalancer_owner
+
+    output = stdouted { replace_unreachable(:with_scale_web, "web", "w1", count: 1) }
+
+    assert_match 'dash-proxy deploy app --target="1.1.1.1:80" ', output
+    assert_match "Removing w1 (10.0.0.40) from web, unreachable...", output
+    assert_match "Removed w1 (10.0.0.40) from web", output
+    assert_no_match(/on 10\.0\.0\.40/, output)
+    assert_equal [ [ :stop, "w1", 60 ] ], @provider.calls
+    assert_not_includes DASH.run_directory_ensured_on, "10.0.0.40", "a member powered on again later gets its run directory ensured"
+  end
+
+  test "an unreachable worker member is powered off without a drain, under the deploy lock, with the scale-in hooks" do
+    @provider.members_list.find { |member| member.id == "m1" }.state = "started"
+    Dash::Cli::Scale.any_instance.stubs(:run_hook)
+    Dash::Cli::Scale.any_instance.expects(:run_hook).with("pre-scale-in", role: "payments", hosts: "10.0.0.22", replicas: "3")
+    Dash::Cli::Scale.any_instance.expects(:run_hook).with("post-scale-in", role: "payments", hosts: "10.0.0.22", replicas: "3")
+    Dash::Cli::Scale::ReplicaLeave.any_instance.expects(:run).never
+
+    output = stdouted { replace_unreachable(:with_scale, "payments", "m1", count: 3) }
+
+    assert_operator output.index("Acquiring the deploy lock"), :<, output.index("Removing m1 (10.0.0.22) from payments, unreachable")
+    assert_operator output.index("Removed m1 (10.0.0.22) from payments"), :<, output.index("Releasing the deploy lock")
+    assert_no_match(/on 10\.0\.0\.22/, output)
+    assert_equal [ [ :stop, "m1", 60 ] ], @provider.calls
+  end
+
+  test "an unreachable created member is destroyed" do
+    deploy_with_create
+    @provider.members_list << member("new1", "10.0.0.30", "payments", "started")
+
+    output = stdouted { replace_unreachable(:tmp_scale_create, "payments", "new1", count: 3) }
+
+    assert_match "Removing new1 (10.0.0.30) from payments, unreachable...", output
+    assert_no_match(/on 10\.0\.0\.30/, output)
+    assert_equal [ [ :stop, "new1", 60 ], [ :destroy, "new1" ] ], @provider.calls
+  ensure
+    FileUtils.rm_f "test/fixtures/deploy_tmp_scale_create.yml"
+  end
+
+  test "a baseline host is never replaced" do
+    error = assert_raises(ArgumentError) do
+      stdouted { replace_unreachable(:with_scale, "payments", nil, count: 3, member: member("b", "1.1.1.2", "payments", "started")) }
+    end
+    assert_match "1.1.1.2 is a baseline host of payments, dash scale never stops it", error.message
+    assert_empty @provider.calls
+  end
+
   test "a stopped member is not stopped again before it is destroyed" do
     @provider.members_list << member("gone", "10.0.0.50", "payments", "stopped")
     Dash::Cli::Scale::PowerOff.new(payments_role, @provider.members_list.last, @provider).run(destroy: true)
@@ -367,6 +418,14 @@ class CliScaleHostsTest < CliTestCase
   private
     def run_command(*command, config: :with_scale)
       stdouted { Dash::Cli::Scale.start([ *command, "-c", "test/fixtures/deploy_#{config}.yml" ]) }
+    end
+
+    def replace_unreachable(config, role_name, member_id, count:, member: nil)
+      cli = Dash::Cli::Scale.new([], { "config_file" => "test/fixtures/deploy_#{config}.yml" }, invocations: { Dash::Cli::Scale => [ "set" ] })
+      role = DASH.config.role(role_name)
+      member ||= role.members.find { |candidate| candidate.id == member_id }
+
+      cli.replace_unreachable(role, member, count: count)
     end
 
     def payments_role

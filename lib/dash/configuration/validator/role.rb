@@ -1,7 +1,7 @@
 class Dash::Configuration::Validator::Role < Dash::Configuration::Validator
-  # Keys of the autoscaling controller (zoolutions/dash#180, phases 2-3). Named so that a
-  # half-configured controller fails with a reason, not a generic unknown-key error.
-  CONTROLLER_KEYS = %w[ schedule warmup signal up down cooldown step hold_when ]
+  # Keys of the reactive autoscaling rules (zoolutions/dash#180, phase 3). Named so that a
+  # half-configured rule fails with a reason, not a generic unknown-key error.
+  CONTROLLER_KEYS = %w[ signal up down hold_when ]
 
   def validate!
     validate_type! config, Array, Hash
@@ -23,7 +23,7 @@ class Dash::Configuration::Validator::Role < Dash::Configuration::Validator
 
       if (key = (scale.keys.map(&:to_s) & CONTROLLER_KEYS).first)
         with_context("scale") do
-          error "#{key} belongs to the autoscaling controller, which is not part of dash yet (zoolutions/dash#180)"
+          error "#{key} belongs to the reactive autoscaling rules, which are not part of dash yet (zoolutions/dash#180, Phase 3)"
         end
       end
     end

@@ -46,6 +46,7 @@ class Dash::Configuration::Role
       @scale = Dash::Configuration::Role::Scale.new \
         scale_config: scale_config,
         baseline: baseline_hosts.size,
+        replicas: replicas,
         context: "servers/#{name}/scale"
     end
 

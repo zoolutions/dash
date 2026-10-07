@@ -41,3 +41,18 @@ autoscale:
       stop: bin/pool-stop
       create: bin/pool-create
       destroy: bin/pool-destroy
+
+# Controller
+#
+# How `dash autoscale run` ticks. Every `interval` seconds (default 10, at least 5) it reads
+# the pool and the running containers, and scales each role with a `scale/schedule` to its
+# target through `dash scale set`, under the deploy lock. A tick waits up to
+# `lock_wait_timeout` seconds (default 60) for a lock someone else holds, then holds the
+# role until the next tick. Schedule crons are evaluated in `timezone`, an IANA name
+# (default UTC; this example evaluates them in Stockholm time).
+autoscale:
+  provider:
+    ...
+  interval: 10
+  lock_wait_timeout: 60
+  timezone: Europe/Stockholm

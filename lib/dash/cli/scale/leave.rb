@@ -3,16 +3,21 @@
 # after. A worker member is drained slot by slot (drain signal, drain wait, stop) the way a
 # replica scale-in is. Then the provider powers it off, or deletes it for `members: create`.
 # A baseline host never leaves: dash scale does not stop what deploy.yml lists.
+#
+# `reachable: false` replaces a member that stopped answering SSH (the autoscale controller,
+# after `scale.boot_timeout`): nothing is run on it - no drain, no `docker stop` - but it
+# still leaves the load balancer and the provider still powers it off (or deletes it).
 class Dash::Cli::Scale::Leave
   attr_reader :role, :member, :cli, :count
 
   # `running` is { replica => version } on the member.
-  def initialize(role, member, cli, running:, count:)
+  def initialize(role, member, cli, running:, count:, reachable: true)
     @role = role
     @member = member
     @cli = cli
     @running = running
     @count = count
+    @reachable = reachable
   end
 
   def run
@@ -20,10 +25,10 @@ class Dash::Cli::Scale::Leave
     raise ArgumentError, "#{host} is a baseline host of #{role}, dash scale never stops it" if role.baseline_hosts.include?(host)
 
     cli.run_hook "pre-scale-in", role: role.name, hosts: host, replicas: count.to_s
-    cli.report "Removing #{member.id} (#{host}) from #{role}...", :magenta
+    cli.report "Removing #{member.id} (#{host}) from #{role}#{", unreachable" unless @reachable}...", :magenta
 
     cli.deploy_loadbalancer(except: (host unless shared_with_another_proxied_role?(host))) if role.running_proxy?
-    stop_containers(host)
+    stop_containers(host) if @reachable
     Dash::Cli::Scale::PowerOff.new(role, member, DASH.config.pool.provider).run(destroy: role.scale.create?)
     DASH.config.pool.refresh!
 
