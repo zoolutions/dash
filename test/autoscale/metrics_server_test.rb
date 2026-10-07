@@ -30,6 +30,19 @@ class AutoscaleMetricsServerTest < ActiveSupport::TestCase
     socket&.close
   end
 
+  test "a client that stalls mid-request does not block the next scrape" do
+    server = Dash::Autoscale::MetricsServer.new(@metrics, bind: "127.0.0.1", port: 0, timeout: 0.2).start
+    stalled = TCPSocket.new("127.0.0.1", server.port)
+    stalled.write "GET /met"
+
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    assert_equal "200", Net::HTTP.get_response(URI("http://127.0.0.1:#{server.port}/metrics")).code
+    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 2
+  ensure
+    stalled&.close
+    server&.stop
+  end
+
   test "anything else is a 404" do
     assert_equal "404", Net::HTTP.get_response(URI("http://127.0.0.1:#{@server.port}/")).code
   end

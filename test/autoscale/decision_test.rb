@@ -1,6 +1,10 @@
 require "test_helper"
 
 class AutoscaleDecisionTest < ActiveSupport::TestCase
+  test "an error handed in as an exception is its message in JSON" do
+    assert_equal({ "1.1.1.2" => "down" }, Dash::Autoscale::Decision.json_safe("1.1.1.2" => RuntimeError.new("down")))
+  end
+
   AT = Time.utc(2026, 10, 14, 22, 0, 5)
 
   test "to_h is JSON-safe: ISO 8601 times in UTC, strings for symbols, all the way down" do

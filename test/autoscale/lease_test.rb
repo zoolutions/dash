@@ -24,6 +24,11 @@ class AutoscaleLeaseTest < ActiveSupport::TestCase
     assert Dash::Autoscale::Lease.new(heartbeat(last_tick_at: NOW - 89, interval: 30), now: NOW).alive?
   end
 
+  test "a heartbeat from the future is believed only as far ahead as an old one would be" do
+    assert Dash::Autoscale::Lease.new(heartbeat(last_tick_at: NOW + 29, interval: 10), now: NOW).alive?
+    assert_not Dash::Autoscale::Lease.new(heartbeat(last_tick_at: NOW + 3600, interval: 10), now: NOW).alive?
+  end
+
   test "a controller that stopped holds nothing" do
     assert_not Dash::Autoscale::Lease.new(heartbeat(last_tick_at: NOW - 1, stopped_at: (NOW - 1).iso8601), now: NOW).alive?
   end

@@ -70,7 +70,10 @@ autoscale:
 # one's heartbeat is fresh (three intervals), unless started with `--takeover`, and the
 # first stops at its next tick. TERM or INT lets the tick in progress finish - a member
 # joining included - before it exits, so give the service manager more time to stop it
-# than the slowest join takes: `boot_timeout` plus the app's boot.
+# than the slowest tick takes. A tick acts on its roles one after another, and each
+# action may first wait `lock_wait_timeout` for the deploy lock and then join members one
+# at a time, each within `boot_timeout` plus the app's boot - budget for the roles that
+# can scale out together.
 #
 # ```ini
 # # /etc/systemd/system/dash-autoscale.service
@@ -82,7 +85,7 @@ autoscale:
 # WorkingDirectory=/srv/myapp
 # ExecStart=/usr/local/bin/bundle exec dash autoscale run --metrics-port 9394
 # Restart=always
-# TimeoutStopSec=600
+# TimeoutStopSec=900
 #
 # [Install]
 # WantedBy=multi-user.target
@@ -98,7 +101,7 @@ autoscale:
 #
 # `--once` runs a single tick and exits, for cron; the state on the primary host carries
 # cooldowns and warmups from one run to the next. `--dry-run` decides and prints without
-# acting or writing anything. `--metrics-port` serves Prometheus metrics at `/metrics`
+# acting or writing the controller's state (only the `--record` file, when given). `--metrics-port` serves Prometheus metrics at `/metrics`
 # (on 127.0.0.1 unless `--metrics-bind` says otherwise). `dash autoscale explain ROLE`
 # shows what the next tick would decide and why; `dash autoscale pause ROLE --for 2h`
 # keeps the controller's hands off a role, `resume ROLE` gives it back.

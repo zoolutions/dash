@@ -64,6 +64,7 @@ class Dash::Autoscale::Controller
       raise Dash::Autoscale::LeaseHeld, "Another autoscale controller is running: #{lease.describe}. Stop it, or start this one with --takeover"
     end
 
+    @role_names = roles.map(&:name)
     with_store { |store| store.write_heartbeat(heartbeat(@started_at)) }
   end
 
@@ -100,7 +101,7 @@ class Dash::Autoscale::Controller
     unless dry_run?
       acting = entries.any? { |entry| !entry.decision.hold? }
       keeping_heartbeat { execute(entries) } if acting
-      persist(entries, state, now, recheck_lease: acting)
+      persist(entries, state, now)
     end
 
     decisions = entries.map(&:decision)
@@ -116,11 +117,7 @@ class Dash::Autoscale::Controller
   def release
     return if dry_run? || @started_at.nil?
 
-    with_store do |store|
-      if store.heartbeat["controller_id"] == id
-        store.write_heartbeat(heartbeat(@last_tick_at || @started_at).merge(stopped_at: @clock.call))
-      end
-    end
+    with_store { |store| store.write_heartbeat_if_held(id, heartbeat(@last_tick_at || @started_at).merge(stopped_at: @clock.call)) }
   rescue StandardError => e
     cli.report "Could not mark the autoscale controller stopped: #{e.class}: #{e.message}", :yellow
   end
@@ -144,10 +141,6 @@ class Dash::Autoscale::Controller
       quietly do
         with_store { |store| [ store.heartbeat, store.state, store.pauses ] }
       end
-    end
-
-    def read_heartbeat
-      quietly { with_store(&:heartbeat) }
     end
 
     def ensure_lease(heartbeat)
@@ -197,16 +190,13 @@ class Dash::Autoscale::Controller
     ensure
       done = true
       beat&.wakeup if beat&.alive?
-      beat&.join(5)
+      # Without a timeout: a beat still writing must land before anything after it (the
+      # tick's own heartbeat, or release's stopped_at), never after.
+      beat&.join
     end
 
     def beat_heartbeat
-      with_store do |store|
-        if store.heartbeat["controller_id"] == id
-          store.write_heartbeat(heartbeat(@clock.call))
-          true
-        end
-      end
+      with_store { |store| store.write_heartbeat_if_held(id, heartbeat(@clock.call)) }
     rescue StandardError
       true # a missed beat is retried on the next one
     end
@@ -250,26 +240,28 @@ class Dash::Autoscale::Controller
         eligible_at: decision.eligible_at, at: decision.at, error: message)
     end
 
-    def persist(entries, state, now, recheck_lease: false)
+    def persist(entries, state, now)
       logged = entries.select { |entry| entry.state.log?(entry.decision) }.each { |entry| entry.state.logged(entry.decision) }.map(&:decision)
       roles_state = state.fetch("roles", {}).merge(entries.to_h { |entry| [ entry.role.name, entry.state.to_h ] })
       checked_at = Dash::Autoscale::Timestamp.parse(state["decisions_checked_at"])
       check = checked_at.nil? || now - checked_at >= TRIM_CHECK_INTERVAL
 
-      # Another controller may have taken over while this tick acted; the state is its now.
-      ensure_lease(read_heartbeat) if recheck_lease
+      # The heartbeat first, and only while it still names this controller: one command on
+      # the host checks and writes, so a takeover since the tick started (or while it acted)
+      # is never overwritten, and its state is left to the controller that took over.
+      beat_at = @clock.call
+      held = quietly { with_store { |store| store.write_heartbeat_if_held(id, heartbeat(beat_at)) } }
+      raise Dash::Autoscale::LeaseLost, "Another autoscale controller took over while this one ticked" unless held
 
+      @last_tick_at = beat_at
       quietly do
         with_store do |store|
           store.append_decisions(logged)
           trim(store) if check
           updated = state.merge("roles" => roles_state, "decisions_checked_at" => Dash::Autoscale::Timestamp.dump(check ? now : checked_at))
           store.write_state(updated) unless updated == state
-          store.write_heartbeat(heartbeat(now))
         end
       end
-
-      @last_tick_at = now
     end
 
     def trim(store)
@@ -278,7 +270,7 @@ class Dash::Autoscale::Controller
 
     def heartbeat(last_tick_at)
       { controller_id: id, hostname: Socket.gethostname, pid: Process.pid, version: Dash::VERSION, mode: @mode,
-        started_at: @started_at, last_tick_at: last_tick_at, interval: interval, roles: roles.map(&:name) }
+        started_at: @started_at, last_tick_at: last_tick_at, interval: interval, roles: @role_names }
     end
 
     def with_store(&block)

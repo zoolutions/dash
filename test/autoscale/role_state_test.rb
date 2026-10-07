@@ -65,6 +65,8 @@ class AutoscaleRoleStateTest < ActiveSupport::TestCase
     assert state.log?(hold)
     state.logged(hold)
     assert_not state.log?(hold)
+    assert state.log?(Dash::Autoscale::Decision.new(role: "payments", action: "hold", from: 3, to: 3, reasons: [ "cooldown" ], at: NOW)),
+      "a hold whose reasons changed is logged"
     assert state.log?(out)
     state.logged(out)
     assert state.log?(out), "every action is logged, even a repeated one"

@@ -6,9 +6,10 @@ require "socket"
 # is one short request.
 class Dash::Autoscale::MetricsServer
   READ_TIMEOUT = 5
+  MAX_HEADER_LINES = 100
 
-  def initialize(metrics, bind:, port:)
-    @metrics, @bind, @port = metrics, bind, port
+  def initialize(metrics, bind:, port:, timeout: READ_TIMEOUT)
+    @metrics, @bind, @port, @timeout = metrics, bind, port, timeout
   end
 
   def start
@@ -23,7 +24,7 @@ class Dash::Autoscale::MetricsServer
 
   def stop
     @server&.close
-    @thread&.join(READ_TIMEOUT)
+    @thread&.join(@timeout)
   rescue IOError
     nil
   end
@@ -38,13 +39,19 @@ class Dash::Autoscale::MetricsServer
       # Closed by #stop.
     end
 
-    # One bad client never stops the endpoint.
+    # One bad client never stops the endpoint: every read times out (IO::TimeoutError), and a
+    # request gets READ_TIMEOUT and MAX_HEADER_LINES in all, so a slow drip cannot hold it.
     def answer(client)
-      request = client.wait_readable(READ_TIMEOUT) && client.gets
-      method, path = request.to_s.split(" ", 3)
+      client.timeout = @timeout
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + @timeout
+      method, path = client.gets.to_s.split(" ", 3)
       # The headers are read too: closing a socket with them unread resets the connection,
       # and a scraper can see the reset before the body.
-      while client.wait_readable(READ_TIMEOUT) && (line = client.gets) && line != "\r\n" && line != "\n"; end
+      MAX_HEADER_LINES.times do
+        break if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+        line = client.gets
+        break if line.nil? || line.strip.empty?
+      end
 
       if method == "GET" && path == "/metrics"
         respond client, "200 OK", @metrics.render

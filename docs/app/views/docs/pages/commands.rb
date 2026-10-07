@@ -183,8 +183,8 @@ class Views::Docs::Pages::Commands < DocsUI::Page
         The controller scales through `dash scale set`, under the deploy lock,
         and keeps its heartbeat, decision log and pauses on the primary host,
         so every operator's checkout reads the same state. How to run it, and
-        the keys it reads, are under `autoscale` and `scale` in
-        [Configuration](/docs/configuration). dash-only.
+        the keys it reads, are in [Autoscale](/docs/autoscale) and under
+        `scale` in [Roles](/docs/role). dash-only.
       MD
     end
   end

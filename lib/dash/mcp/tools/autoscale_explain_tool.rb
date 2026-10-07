@@ -13,17 +13,26 @@ class Dash::Mcp::Tools::AutoscaleExplainTool < Dash::Mcp::BaseTool
 
   def self.call(server_context:, role:)
     answer(server_context) do
-      scaled = DASH.config.role(role) || raise(ArgumentError, "No role named #{role} (#{DASH.config.roles.map(&:name).join(",")})")
-      raise ArgumentError, "#{role} is outside this server's --roles" unless DASH.roles.include?(scaled)
       ensure_state_host_in_scope
-
-      Dash::Diagnostics::AutoscaleExplain.new(role: scaled).to_h
+      Dash::Diagnostics::AutoscaleExplain.new(role: scoped_role(role)).to_h
     end
   end
 
-  # The controller's state lives on the primary role's first baseline host.
+  # Checked against the --roles names, never DASH.roles: that would ask the provider for
+  # the pool, and a pool that does not answer is an answer explain should give.
+  def self.scoped_role(name)
+    role = DASH.config.role(name) || raise(ArgumentError, "No role named #{name} (#{DASH.config.roles.map(&:name).join(",")})")
+    raise ArgumentError, "#{name} is outside this server's --roles" if DASH.specific_roles && !DASH.specific_roles.include?(role)
+
+    role
+  end
+
+  # The controller's state lives on the primary role's first baseline host, which the
+  # server's --hosts, or the hosts of its --roles, must include (as lock_status asks).
   def self.ensure_state_host_in_scope
     host = Dash::Autoscale::StateStore.host
-    raise ArgumentError, "The autoscale state lives on #{host}, outside this server's --hosts" if DASH.specific_hosts && !DASH.specific_hosts.include?(host)
+    hosts = DASH.specific_hosts || DASH.specific_roles&.flat_map(&:baseline_hosts)
+
+    raise ArgumentError, "The autoscale state lives on #{host}, outside this server's --hosts and --roles" if hosts && !hosts.include?(host)
   end
 end

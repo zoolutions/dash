@@ -36,8 +36,12 @@ class Dash::Autoscale::Lease
     heartbeat["stopped_at"].present?
   end
 
+  # Ages are read on another machine's clock than they were written with, so a heartbeat
+  # from the future is believed only as far ahead as it would be believed old: a skewed
+  # clock cannot hold the lease for longer than a stale one would.
   def alive?
-    !stopped? && !age.nil? && age <= STALE_AFTER_INTERVALS * interval
+    limit = STALE_AFTER_INTERVALS * interval
+    !stopped? && !age.nil? && age.between?(-limit, limit)
   end
 
   def held_by_another?(id)

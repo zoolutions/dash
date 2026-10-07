@@ -4,14 +4,16 @@
 class Dash::Diagnostics::AutoscaleDecisions < Dash::Diagnostics::Base
   DEFAULT_LINES = 50
 
-  def initialize(role: nil, lines: DEFAULT_LINES)
-    @role, @lines = role, Dash::Diagnostics::Lines.bounded(lines)
+  # `within`: only these roles' decisions, of the last `lines` (a --roles scope).
+  def initialize(role: nil, lines: DEFAULT_LINES, within: nil)
+    @role, @lines, @within = role, Dash::Diagnostics::Lines.bounded(lines), within
   end
 
   private
     def snapshot
       per_host([ Dash::Autoscale::StateStore.host ]) do |backend, _host|
-        { decisions: Dash::Autoscale::StateStore.new(backend).decisions(lines: @lines, role: @role) }
+        decisions = Dash::Autoscale::StateStore.new(backend).decisions(lines: @lines, role: @role)
+        { decisions: @within ? decisions.select { |decision| @within.include?(decision["role"]) } : decisions }
       end.first
     end
 end

@@ -22,6 +22,20 @@ class Dash::Commands::Autoscale < Dash::Commands::Base
     write_json json, heartbeat_file
   end
 
+  # Writes the heartbeat only while it is missing or names `id`, and prints `held` when it
+  # did: the check and the write are one command, so a takeover between them is the width
+  # of a `grep`, not of a tick.
+  def write_heartbeat_if_held(id, json)
+    raise ArgumentError, "#{id.inspect} is not a controller id" unless /\A\h+\z/.match?(id.to_s)
+
+    any \
+      combine(
+        any([ :test, "!", "-s", heartbeat_file ], [ :grep, "-qF", Dash::Utils.single_quote(%("controller_id":"#{id}")), heartbeat_file ]),
+        write_json(json, heartbeat_file),
+        [ :echo, "held" ]),
+      [ :true ]
+  end
+
   def read_state
     read_file state_file
   end

@@ -7,6 +7,8 @@
 class Dash::Diagnostics::AutoscaleExplain < Dash::Diagnostics::Base
   def initialize(role:, now: Time.now.utc)
     raise ArgumentError, "#{role} has no scale, so the autoscale controller never touches it" unless role.scaled?
+    # Read on some of its hosts, the role's count would be too low and the decision wrong.
+    raise ArgumentError, "explain observes every host of #{role}; it cannot be narrowed with --hosts" if DASH.specific_hosts
 
     @role, @now = role, now
   end

@@ -34,8 +34,18 @@ class Dash::Autoscale::StateStore
     @backend.execute(*@commands.write_heartbeat(dump(heartbeat)), verbosity: :debug)
   end
 
+  # The heartbeat, only while it is missing or names controller `id`. Whether it was written.
+  def write_heartbeat_if_held(id, heartbeat)
+    @backend.capture(*@commands.write_heartbeat_if_held(id, dump(heartbeat)), verbosity: :debug).strip == "held"
+  end
+
   def state
     read_object "state.json", @commands.read_state
+  end
+
+  # Whether `file` held something that is not a JSON object when last read.
+  def malformed?(file)
+    @warned.include?(file)
   end
 
   def write_state(state)

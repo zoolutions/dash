@@ -13,6 +13,13 @@ class DiagnosticsDoctorControllerChecksTest < DiagnosticsTestCase
     assert_empty checks.run
   end
 
+  test "keeps to the run's --roles" do
+    configure "deploy_with_scale_schedule"
+    DASH.specific_roles = [ "web" ]
+
+    assert_empty checks.run
+  end
+
   test "a running controller is ok" do
     configure "deploy_with_scale_schedule"
     stub_state "heartbeat.json", heartbeat(last_tick_at: (NOW - 4).iso8601).to_json

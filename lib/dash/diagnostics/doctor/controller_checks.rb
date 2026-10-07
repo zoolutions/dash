@@ -7,10 +7,12 @@ class Dash::Diagnostics::Doctor::ControllerChecks
     @now = now
   end
 
+  # Within the run's --roles, like the other checks.
   def run
-    return [] if DASH.config.scaled_roles.none? { |role| role.scale.schedule.any? }
+    roles = Dash::Diagnostics::Doctor.scoped_roles
+    return [] if roles.none? { |role| role.scaled? && role.scale.schedule.any? }
 
-    status = Dash::Diagnostics::ControllerStatus.new(now: @now).to_h
+    status = Dash::Diagnostics::ControllerStatus.new(now: @now, roles: roles).to_h
     return [ result(status[:state_host], :warn, "could not read the controller heartbeat (#{status[:error]})") ] if status[:error]
 
     [ controller_result(status), *status[:pauses].map { |pause| pause_result(pause) } ]

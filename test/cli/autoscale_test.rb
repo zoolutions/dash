@@ -70,7 +70,8 @@ class CliAutoscaleTest < CliTestCase
 
   test "run refuses --hosts and too short an interval" do
     assert_match "narrow it with --roles", assert_raises(ArgumentError) { run_command("run", "--hosts", "1.1.1.2") }.message
-    assert_match "--interval must be at least 5 seconds", assert_raises(ArgumentError) { run_command("run", "--interval", "2") }.message
+    assert_match "--interval must be a whole number of seconds, at least 5", assert_raises(ArgumentError) { run_command("run", "--interval", "2") }.message
+    assert_match "not 4.9", assert_raises(ArgumentError) { run_command("run", "--interval", "4.9") }.message
   end
 
   test "scale set runs through dash scale set, waiting for the deploy lock, again and again" do
@@ -148,8 +149,10 @@ class CliAutoscaleTest < CliTestCase
 
     output = run_command("history")
 
-    assert_match "2026-10-14T20:00:00Z  payments: scale_out 1 -> 6 (schedule_floor)", output
-    assert_match "2026-10-14T20:00:10Z  payments: hold 6 -> 6 (lock_busy) - Timed out", output
+    scale_out = output.index("2026-10-14T20:00:00Z  payments: scale_out 1 -> 6 (schedule_floor)")
+    hold = output.index("2026-10-14T20:00:10Z  payments: hold 6 -> 6 (lock_busy) - Timed out")
+    assert scale_out && hold, output
+    assert_operator scale_out, :<, hold, "oldest first"
   end
 
   test "history of one role, as JSON" do

@@ -163,8 +163,10 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
     def tick_interval
       return unless options[:interval]
 
-      interval = options[:interval].to_i
-      raise ArgumentError, "--interval must be at least #{MINIMUM_INTERVAL} seconds, not #{options[:interval]}" if interval < MINIMUM_INTERVAL
+      interval = Integer(options[:interval].to_s, 10, exception: false)
+      if interval.nil? || interval < MINIMUM_INTERVAL
+        raise ArgumentError, "--interval must be a whole number of seconds, at least #{MINIMUM_INTERVAL}, not #{options[:interval]}"
+      end
 
       interval
     end

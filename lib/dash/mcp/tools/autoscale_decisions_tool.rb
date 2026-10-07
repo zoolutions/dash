@@ -12,10 +12,10 @@ class Dash::Mcp::Tools::AutoscaleDecisionsTool < Dash::Mcp::BaseTool
 
   def self.call(server_context:, role: nil, lines: Dash::Diagnostics::AutoscaleDecisions::DEFAULT_LINES)
     answer(server_context) do
-      raise ArgumentError, "No role named #{role} (#{DASH.config.roles.map(&:name).join(",")})" if role && !DASH.config.role(role)
+      Dash::Mcp::Tools::AutoscaleExplainTool.scoped_role(role) if role
       Dash::Mcp::Tools::AutoscaleExplainTool.ensure_state_host_in_scope
 
-      Dash::Diagnostics::AutoscaleDecisions.new(role: role, lines: lines).to_h
+      Dash::Diagnostics::AutoscaleDecisions.new(role: role, lines: lines, within: DASH.specific_roles&.map(&:name)).to_h
     end
   end
 end

@@ -56,6 +56,21 @@ class AutoscaleStateStoreTest < ActiveSupport::TestCase
     @store.write_state("roles" => {})
   end
 
+  test "says whether it wrote the heartbeat it held" do
+    @backend.stubs(:capture).with { |*args| args.join(" ").include?("grep -qF") }.returns("held\n").then.returns("")
+
+    assert @store.write_heartbeat_if_held("ab12", "controller_id" => "ab12")
+    assert_not @store.write_heartbeat_if_held("ab12", "controller_id" => "ab12")
+  end
+
+  test "remembers which file was malformed" do
+    @backend.stubs(:capture).returns("{not json")
+
+    capture_io { @store.heartbeat }
+    assert @store.malformed?("heartbeat.json")
+    assert_not @store.malformed?("state.json")
+  end
+
   test "creates its directory" do
     @backend.expects(:execute).with(:mkdir, "-p", "#{DIR}/pause")
 

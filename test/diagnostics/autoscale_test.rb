@@ -42,6 +42,13 @@ class DiagnosticsAutoscaleTest < DiagnosticsTestCase
     assert_equal "scale_out", explain.dig(:decision, :action)
   end
 
+  test "explain refuses to read a role on only some of its hosts" do
+    DASH.specific_hosts = [ "1.1.1.2" ]
+
+    error = assert_raises(ArgumentError) { Dash::Diagnostics::AutoscaleExplain.new(role: DASH.config.role(:payments), now: NOW) }
+    assert_match "cannot be narrowed with --hosts", error.message
+  end
+
   test "explain refuses a role without scale" do
     error = assert_raises(ArgumentError) { Dash::Diagnostics::AutoscaleExplain.new(role: DASH.config.role(:web), now: NOW) }
     assert_equal "web has no scale, so the autoscale controller never touches it", error.message
@@ -56,6 +63,13 @@ class DiagnosticsAutoscaleTest < DiagnosticsTestCase
 
     assert_equal "1.1.1.1", decisions[:host]
     assert_equal [ "scale_out" ], decisions[:decisions].map { |decision| decision["action"] }
+  end
+
+  test "decisions within a --roles scope leave the other roles out" do
+    lines = [ { "role" => "payments", "action" => "hold" }, { "role" => "reports", "action" => "hold" } ].map(&:to_json).join("\n")
+    stub_state "tail -n 50", lines
+
+    assert_equal [ "reports" ], Dash::Diagnostics::AutoscaleDecisions.new(within: [ "reports" ]).to_h[:decisions].map { |decision| decision["role"] }
   end
 
   test "decisions from a host that does not answer is an error, not a crash" do
@@ -87,6 +101,23 @@ class DiagnosticsAutoscaleTest < DiagnosticsTestCase
 
     stub_state "heartbeat.json", ""
     assert_nil Dash::Diagnostics::ControllerStatus.new(now: NOW).to_h[:controller]
+  end
+
+  test "status: a heartbeat that is not JSON is an error, not a controller that never ran" do
+    stub_state "heartbeat.json", "{not json"
+
+    status = capture_io { @status = Dash::Diagnostics::ControllerStatus.new(now: NOW).to_h }.then { @status }
+    assert_equal "heartbeat.json is not valid JSON", status[:error]
+    assert_nil status[:controller]
+  end
+
+  test "status keeps to the roles it is given" do
+    stub_state "grep -H", ".dash/apps/app/autoscale/pause/payments.json:#{JSON.generate("until" => "indefinite")}\n"
+
+    status = Dash::Diagnostics::ControllerStatus.new(now: NOW, roles: [ DASH.config.role(:reports) ]).to_h
+
+    assert_equal [ "reports" ], status[:roles]
+    assert_empty status[:pauses]
   end
 
   test "status from a host that does not answer is an error, not a crash" do

@@ -3,22 +3,27 @@
 # since its last tick - read as `running`, `stale` (no tick for three of its intervals) or
 # `stopped`, plus the pauses still in force. `controller` is nil when none ever ran.
 class Dash::Diagnostics::ControllerStatus < Dash::Diagnostics::Base
-  def initialize(now: Time.now.utc)
-    @now = now
+  # `roles`: the roles this run is about (the doctor's scope); their schedules and pauses.
+  def initialize(now: Time.now.utc, roles: DASH.config.roles)
+    @now, @roles = now, roles
   end
 
   private
     def snapshot
       host = Dash::Autoscale::StateStore.host
-      roles = DASH.config.scaled_roles.select { |role| role.scale.schedule.any? }.map(&:name)
+      roles = @roles.select { |role| role.scaled? && role.scale.schedule.any? }.map(&:name)
       read = per_host([ host ]) do |backend, _host|
         store = Dash::Autoscale::StateStore.new(backend)
-        { heartbeat: store.heartbeat, pauses: store.pauses }
+        heartbeat = store.heartbeat
+        # A corrupted heartbeat is not the same as none: say so instead of "never ran".
+        next { error: "heartbeat.json is not valid JSON" } if store.malformed?("heartbeat.json")
+
+        { heartbeat: heartbeat, pauses: store.pauses }
       end.first
 
       return { state_host: host, roles: roles, error: read[:error] } if read[:error]
 
-      { state_host: host, roles: roles, controller: controller(read[:heartbeat]), pauses: pauses(read[:pauses]) }
+      { state_host: host, roles: roles, controller: controller(read[:heartbeat]), pauses: pauses(read[:pauses].slice(*@roles.map(&:name))) }
     end
 
     def controller(heartbeat)

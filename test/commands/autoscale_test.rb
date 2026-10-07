@@ -46,6 +46,12 @@ class CommandsAutoscaleTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { command.read_decisions(lines: "50; rm -rf /") }
   end
 
+  test "writes the heartbeat only while it is missing or names this controller, in one command" do
+    assert_match %r{\Atest ! -s #{DIR}/heartbeat\.json \|\| grep -qF '"controller_id":"ab12"' #{DIR}/heartbeat\.json && echo "e30=" \| base64 -d > #{DIR}/heartbeat\.json\.tmp && mv #{DIR}/heartbeat\.json\.tmp #{DIR}/heartbeat\.json && echo held \|\| true\z},
+      command.write_heartbeat_if_held("ab12", "{}").join(" ")
+    assert_raises(ArgumentError) { command.write_heartbeat_if_held("x'; rm -rf /", "{}") }
+  end
+
   test "reads the last decision lines of one role" do
     assert_equal %(grep -F '"role":"payments"' #{DIR}/decisions.jsonl 2> /dev/null | tail -n 20 || true), command.read_decisions(lines: 20, role: "payments").join(" ")
     assert_raises(ArgumentError) { command.read_decisions(lines: 20, role: "x'; rm -rf /") }

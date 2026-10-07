@@ -26,6 +26,13 @@ class AutoscaleControllerTest < DiagnosticsTestCase
     def decision_count = count
 
     def write_heartbeat(value) = write("heartbeat", value)
+
+    def write_heartbeat_if_held(id, value)
+      return false unless heartbeat.empty? || heartbeat["controller_id"] == id
+
+      write("heartbeat", value)
+      true
+    end
     def write_state(value) = write("state", value)
 
     def append_decisions(decisions)
@@ -188,8 +195,40 @@ class AutoscaleControllerTest < DiagnosticsTestCase
     controller = start
 
     tick(controller, BILLING)
-
     assert_equal [ "10.0.0.24" ], @store.state.dig("roles", "payments", "joined").keys
+
+    # A day later the window is over and the cooldown long past, but m3 joined 60s ago.
+    @store.files["state"]["roles"]["payments"]["joined"]["10.0.0.24"] = (QUIET - 60).iso8601
+    observe "payments", current: 6
+    decision = tick(controller, QUIET).first
+
+    assert_equal [ "warming_up" ], decision.reasons
+    assert_equal 1, @cli.scale_sets.size
+  end
+
+  test "the heartbeat a tick writes carries the time it was written, not the tick's start" do
+    clock = BILLING
+    controller = Dash::Autoscale::Controller.new(cli: @cli, clock: -> { clock }).tap(&:start)
+    @cli.on_scale_set = ->(_role, _count) { clock += 600 }
+
+    controller.tick
+
+    assert_equal (BILLING + 600).iso8601, @store.heartbeat["last_tick_at"]
+    assert_equal (BILLING + 600).iso8601, @store.state.dig("roles", "payments", "last_scale_out_at"), "stamped when the scale-out finished"
+  end
+
+  test "a takeover during a tick that took no action is not overwritten" do
+    observe "payments", current: 1
+    controller = start
+    Dash::Autoscale::Observation.stubs(:take).with { |role| role.name == "reports" }.with do
+      @store.files["heartbeat"] = { "controller_id" => "other" }
+      true
+    end.returns(Dash::Autoscale::Observation.new(role: DASH.config.role(:reports), current: 1))
+    @store.writes.clear
+
+    assert_raises(Dash::Autoscale::LeaseLost) { tick(controller, QUIET) }
+    assert_equal({ "controller_id" => "other" }, @store.heartbeat)
+    assert_empty @store.writes
   end
 
   test "a paused role is left alone" do
