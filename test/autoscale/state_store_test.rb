@@ -14,6 +14,12 @@ class AutoscaleStateStoreTest < ActiveSupport::TestCase
     assert_equal "1.1.1.1", Dash::Autoscale::StateStore.host(config)
   end
 
+  test "lives on autoscale/controller when it is set, without asking the pool" do
+    Dash::Autoscale::Pool.any_instance.expects(:members_for).never
+
+    assert_equal "10.0.0.50", Dash::Autoscale::StateStore.host(config(controller: "10.0.0.50"))
+  end
+
   test "a missing file reads as empty" do
     @backend.stubs(:capture).returns("")
 
@@ -131,11 +137,17 @@ class AutoscaleStateStoreTest < ActiveSupport::TestCase
   end
 
   private
-    def config
-      @config ||= Dash::Configuration.new({
+    def config(**autoscale)
+      return build_config(autoscale) if autoscale.any?
+
+      @config ||= build_config
+    end
+
+    def build_config(autoscale = {})
+      Dash::Configuration.new({
         service: "app", image: "dhh/app", registry: { "username" => "dhh", "password" => "secret" }, builder: { "arch" => "amd64" },
         servers: { "web" => [ "1.1.1.1", "1.1.1.2" ], "payments" => { "hosts" => [ "1.1.1.3" ], "cmd" => "sidekiq", "healthcheck" => false, "scale" => { "max" => 2 } } },
-        autoscale: { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } } }
+        autoscale: { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } } }.merge(autoscale.stringify_keys)
       })
     end
 

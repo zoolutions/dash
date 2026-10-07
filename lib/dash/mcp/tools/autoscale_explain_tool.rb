@@ -39,9 +39,13 @@ class Dash::Mcp::Tools::AutoscaleExplainTool < Dash::Mcp::BaseTool
   end
 
   # The controller's state lives on the primary role's first baseline host, which the
-  # server's --hosts, or the hosts of its --roles, must include (as lock_status asks).
+  # server's --hosts, or the hosts of its --roles, must include (as lock_status asks). The
+  # ceiling is over app hosts: a state host on `autoscale.controller` that is not one of
+  # them is outside its reach, and always answers.
   def self.ensure_state_host_in_scope
     host = Dash::Autoscale::StateStore.host
+    return unless DASH.config.roles.flat_map(&:baseline_hosts).include?(host)
+
     hosts = DASH.specific_hosts || DASH.specific_roles&.flat_map(&:baseline_hosts)
 
     raise ArgumentError, "The autoscale state lives on #{host}, outside this server's --hosts and --roles" if hosts && !hosts.include?(host)

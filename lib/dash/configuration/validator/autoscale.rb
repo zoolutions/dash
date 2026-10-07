@@ -35,6 +35,10 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
     end
 
     def validate_controller!
+      with_context("controller") do
+        host = config["controller"]
+        error "should be a host name" unless host.nil? || (host.is_a?(String) && host.strip.present?)
+      end
       with_context("interval") { validate_at_least! config["interval"], MINIMUM_INTERVAL, " seconds" }
       with_context("lock_wait_timeout") { validate_at_least! config["lock_wait_timeout"], 0 }
 

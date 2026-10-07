@@ -6,13 +6,13 @@ require "socket"
 # through `dash scale set` (or replace an unreachable member) under the deploy lock -
 # never by building a join itself.
 #
-# Its state lives on the primary host (Dash::Autoscale::StateStore) and is read at the
+# Its state lives on the state host (Dash::Autoscale::StateStore) and is read at the
 # start of every tick, so a restart or a `--once` run from cron behaves like the long-lived
 # loop. The heartbeat is the lease: a second controller refuses to start while it is
 # alive, and this one stops when it names another controller.
 #
 # A failure in one role becomes that role's `action_failed` (or `lock_busy`) hold and the
-# tick moves on. A tick that fails as a whole (the primary host down) is reported and the
+# tick moves on. A tick that fails as a whole (the state host down) is reported and the
 # loop goes on; only a lost lease or a deploy.yml that no longer loads stops it.
 class Dash::Autoscale::Controller
   include SSHKit::DSL

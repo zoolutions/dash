@@ -1,7 +1,8 @@
 require_relative "diagnostics_test_case"
 
 # The controller's state as dash autoscale explain / history / status and the MCP tools
-# read it: from the primary host (1.1.1.1), never crashing on a host that does not answer.
+# read it: from the state host (1.1.1.1, the primary host, unless autoscale/controller names
+# another), never crashing on a host that does not answer.
 class DiagnosticsAutoscaleTest < DiagnosticsTestCase
   NOW = Time.utc(2026, 10, 14, 21, 0) # 23:00 in Stockholm: inside the payments window
 
@@ -114,6 +115,20 @@ class DiagnosticsAutoscaleTest < DiagnosticsTestCase
     status = capture_io { @status = Dash::Diagnostics::ControllerStatus.new(now: NOW).to_h }.then { @status }
     assert_equal "heartbeat.json is not valid JSON", status[:error]
     assert_nil status[:controller]
+  end
+
+  test "status, decisions and explain read the state from autoscale/controller when it is set" do
+    configure :deploy_with_scale_controller
+    hosts = []
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture).with { |*args| hosts << SSHKit::Backend.current.host.to_s if args.join(" ").include?("autoscale/"); true }.returns("")
+    stub_capture "1.1.1.2", "{{.Names}}\\t{{.Status}}", "app-payments-123\tUp\n"
+
+    assert_equal "10.0.0.50", Dash::Diagnostics::ControllerStatus.new(now: NOW).to_h[:state_host]
+    Dash::Diagnostics::AutoscaleDecisions.new.to_h
+    assert_equal "10.0.0.50", Dash::Diagnostics::AutoscaleExplain.new(role: DASH.config.role(:payments), now: NOW).to_h[:state_host]
+
+    assert_not_empty hosts
+    assert_equal [ "10.0.0.50" ], hosts.uniq
   end
 
   test "status keeps to the roles it is given" do

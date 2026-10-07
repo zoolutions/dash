@@ -1,7 +1,7 @@
 # `dash autoscale`: the controller that holds each scheduled role at its target
 # (Dash::Autoscale::Controller), and the commands that read what it decided and why. The
-# controller's state lives on the primary host, so every operator's checkout reads the
-# same heartbeat, decisions and pauses.
+# controller's state lives on one host - `autoscale.controller`, or the primary host
+# without it - so every operator's checkout reads the same heartbeat, decisions and pauses.
 class Dash::Cli::Autoscale < Dash::Cli::Base
   MINIMUM_INTERVAL = 5
   LOCK_WAIT_INTERVAL = 5
