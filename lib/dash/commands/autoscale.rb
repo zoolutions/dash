@@ -22,6 +22,21 @@ class Dash::Commands::Autoscale < Dash::Commands::Base
     write_json json, heartbeat_file
   end
 
+  # Prints `taken` and writes nothing when the heartbeat names another controller;
+  # otherwise - missing, naming `id`, or corrupted - writes it and prints `held`. A write
+  # that fails exits non-zero, as any failed command does. The check and the write are one
+  # command, so a takeover between them is the width of a `grep`, not of a tick.
+  def write_heartbeat_if_held(id, json)
+    raise ArgumentError, "#{id.inspect} is not a controller id" unless /\A\h+\z/.match?(id.to_s)
+
+    any \
+      combine(
+        [ :grep, "-qF", Dash::Utils.single_quote(%("controller_id":")), heartbeat_file, "2>", "/dev/null" ],
+        [ "!", :grep, "-qF", Dash::Utils.single_quote(%("controller_id":"#{id}")), heartbeat_file ],
+        [ :echo, "taken" ]),
+      [ "(", *combine(write_json(json, heartbeat_file), [ :echo, "held" ]), ")" ]
+  end
+
   def read_state
     read_file state_file
   end
@@ -35,8 +50,17 @@ class Dash::Commands::Autoscale < Dash::Commands::Base
     append decode(lines.map { |line| "#{line}\n" }.join), decisions_file
   end
 
-  def read_decisions(lines:)
-    any [ :tail, "-n", Integer(lines.to_s, 10), decisions_file, "2>", "/dev/null" ], [ :true ]
+  # The last `lines` entries, or the last `lines` of these roles' (the log writes `role`
+  # first), filtered on the host before the tail so other roles cannot crowd them out.
+  def read_decisions(lines:, roles: nil)
+    lines = Integer(lines.to_s, 10)
+
+    if roles
+      patterns = roles.flat_map { |role| [ "-e", Dash::Utils.single_quote(%("role":"#{role_name(role)}")) ] }
+      any pipe([ :grep, "-F", *patterns, decisions_file, "2>", "/dev/null" ], [ :tail, "-n", lines ]), [ :true ]
+    else
+      any [ :tail, "-n", lines, decisions_file, "2>", "/dev/null" ], [ :true ]
+    end
   end
 
   def count_decisions
@@ -98,8 +122,12 @@ class Dash::Commands::Autoscale < Dash::Commands::Base
     end
 
     def pause_file(role)
-      raise ArgumentError, "#{role.to_s.inspect} is not a role name dash can keep a pause file for" unless ROLE_NAME.match?(role.to_s)
+      File.join(pause_directory, "#{role_name(role)}#{PAUSE_EXTENSION}")
+    end
 
-      File.join(pause_directory, "#{role}#{PAUSE_EXTENSION}")
+    def role_name(role)
+      raise ArgumentError, "#{role.to_s.inspect} is not a role name dash can keep autoscale state for" unless ROLE_NAME.match?(role.to_s)
+
+      role.to_s
     end
 end

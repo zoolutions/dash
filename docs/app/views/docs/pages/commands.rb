@@ -81,6 +81,15 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     [ "status [ROLE]", "Show the containers of each role per host; --json for a document" ]
   ].freeze
 
+  AUTOSCALE = [
+    [ "run", "Run the controller: every interval, scale each role with a scale/schedule to its target; --once, --dry-run, --metrics-port, --takeover" ],
+    [ "explain ROLE", "Evaluate ROLE as the next tick would, with every input, without acting; --json" ],
+    [ "history [ROLE]", "Show the controller's last decisions; --lines, --json" ],
+    [ "status", "Show which controller runs, when it last ticked, and the paused roles; --json" ],
+    [ "pause ROLE", "Keep the controller off ROLE, for good or --for a while (30m, 2h, 1d)" ],
+    [ "resume ROLE", "Let the controller scale ROLE again" ]
+  ].freeze
+
   OTHERS = [
     [ "dash server bootstrap", "Set up Docker to run dash apps" ],
     [ "dash server exec", "Run a custom command on the server" ],
@@ -100,6 +109,7 @@ class Views::Docs::Pages::Commands < DocsUI::Page
     accessory_commands
     build_commands
     scale_commands
+    autoscale_commands
     other_commands
   end
 
@@ -162,6 +172,19 @@ class Views::Docs::Pages::Commands < DocsUI::Page
         within each host's `replicas` bounds, at the version already running.
         It takes the deploy lock, and the next deploy keeps it. dash-only — see
         [Replicas](/docs/worker-roles#replicas).
+      MD
+    end
+  end
+
+  def autoscale_commands
+    DocsUI::Section("dash autoscale", description: "Hold each scheduled role at its target, and read what the controller decided.") do
+      subcommand_table AUTOSCALE
+      md <<~'MD'
+        The controller scales through `dash scale set`, under the deploy lock,
+        and keeps its heartbeat, decision log and pauses on the primary host,
+        so every operator's checkout reads the same state. How to run it, and
+        the keys it reads, are in [Autoscale](/docs/autoscale) and under
+        `scale` in [Roles](/docs/role). dash-only.
       MD
     end
   end

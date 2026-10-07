@@ -22,7 +22,8 @@ class Dash::Diagnostics::Doctor < Dash::Diagnostics::Base
     readiness: "Readiness",
     dockerfile: "Dockerfile",
     drift: "Drift",
-    pool: "Pool"
+    pool: "Pool",
+    controller: "Controller"
   }.freeze
 
   STATUS_COLORS = { ok: :green, warn: :yellow, fail: :red }.freeze
@@ -68,7 +69,7 @@ class Dash::Diagnostics::Doctor < Dash::Diagnostics::Base
   def run
     pool = pool_check_results
     @results = without_pool(:ssh) { host_check_results } + without_pool(:dns) { endpoint_check_results } +
-      config_check_results + pool + drift_check_results
+      config_check_results + pool + controller_check_results + drift_check_results
   end
 
   def failures
@@ -140,6 +141,12 @@ class Dash::Diagnostics::Doctor < Dash::Diagnostics::Base
 
     def pool_check_results
       Dash::Diagnostics::Doctor::PoolChecks.new.run
+    end
+
+    def controller_check_results
+      Dash::Diagnostics::Doctor::ControllerChecks.new.run
+    rescue StandardError => e
+      [ Result.new(:controller, "controller", :warn, "could not check the autoscale controller (#{e.class}: #{e.message})") ]
     end
 
     def without_pool(check)

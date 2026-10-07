@@ -46,6 +46,20 @@ class CommandsAutoscaleTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { command.read_decisions(lines: "50; rm -rf /") }
   end
 
+  test "writes the heartbeat unless it names another controller, in one command" do
+    assert_equal %(grep -qF '"controller_id":"' #{DIR}/heartbeat.json 2> /dev/null && ! grep -qF '"controller_id":"ab12"' #{DIR}/heartbeat.json && echo taken || ) +
+      %(( echo "e30=" | base64 -d > #{DIR}/heartbeat.json.tmp && mv #{DIR}/heartbeat.json.tmp #{DIR}/heartbeat.json && echo held )),
+      command.write_heartbeat_if_held("ab12", "{}").join(" ")
+    assert_raises(ArgumentError) { command.write_heartbeat_if_held("x'; rm -rf /", "{}") }
+  end
+
+  test "reads the last decision lines of some roles, filtered before the tail" do
+    assert_equal %(grep -F -e '"role":"payments"' #{DIR}/decisions.jsonl 2> /dev/null | tail -n 20 || true), command.read_decisions(lines: 20, roles: [ "payments" ]).join(" ")
+    assert_equal %(grep -F -e '"role":"payments"' -e '"role":"web"' #{DIR}/decisions.jsonl 2> /dev/null | tail -n 20 || true),
+      command.read_decisions(lines: 20, roles: [ "payments", "web" ]).join(" ")
+    assert_raises(ArgumentError) { command.read_decisions(lines: 20, roles: [ "x'; rm -rf /" ]) }
+  end
+
   test "counts and trims the decision log" do
     assert_equal "wc -l < #{DIR}/decisions.jsonl 2> /dev/null || echo 0", command.count_decisions.join(" ")
     assert_equal "tail -n 5000 #{DIR}/decisions.jsonl > #{DIR}/decisions.jsonl.tmp && mv #{DIR}/decisions.jsonl.tmp #{DIR}/decisions.jsonl",
@@ -63,7 +77,7 @@ class CommandsAutoscaleTest < ActiveSupport::TestCase
     [ "../web", ".hidden", "pay ments", "a;b", "a/b", "" ].each do |name|
       [ -> { command.write_pause(name, "{}") }, -> { command.remove_pause(name) } ].each do |call|
         error = assert_raises(ArgumentError, &call)
-        assert_equal "#{name.inspect} is not a role name dash can keep a pause file for", error.message
+        assert_equal "#{name.inspect} is not a role name dash can keep autoscale state for", error.message
       end
     end
   end

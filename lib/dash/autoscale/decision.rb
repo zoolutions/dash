@@ -18,6 +18,7 @@ Dash::Autoscale::Decision = Struct.new(:role, :action, :from, :to, :reasons, :in
     when Array then value.map { |item| json_safe(item) }
     when Time, ActiveSupport::TimeWithZone then value.utc.iso8601
     when Symbol then value.to_s
+    when Exception then value.message
     else value
     end
   end

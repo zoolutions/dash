@@ -56,6 +56,27 @@ class AutoscaleStateStoreTest < ActiveSupport::TestCase
     @store.write_state("roles" => {})
   end
 
+  test "says whether it wrote the heartbeat, false only when another controller holds it" do
+    @backend.stubs(:capture).with { |*args| args.join(" ").include?("grep -qF") }.returns("held\n").then.returns("taken\n")
+
+    assert @store.write_heartbeat_if_held("ab12", "controller_id" => "ab12")
+    assert_not @store.write_heartbeat_if_held("ab12", "controller_id" => "ab12")
+  end
+
+  test "reads no decisions for an empty set of roles, without asking the host" do
+    @backend.expects(:capture).never
+
+    assert_equal [], @store.decisions(lines: 50, roles: [])
+  end
+
+  test "remembers which file was malformed" do
+    @backend.stubs(:capture).returns("{not json")
+
+    capture_io { @store.heartbeat }
+    assert @store.malformed?("heartbeat.json")
+    assert_not @store.malformed?("state.json")
+  end
+
   test "creates its directory" do
     @backend.expects(:execute).with(:mkdir, "-p", "#{DIR}/pause")
 
@@ -124,7 +145,7 @@ class AutoscaleStateStoreTest < ActiveSupport::TestCase
 
     def expect_written(file, data)
       @backend.expects(:execute).with do |*args|
-        command = args.join(" ")
+        command = args.reject { |arg| arg.is_a?(Hash) }.join(" ")
         encoded = command[/echo "([^"]+)"/, 1]
         command.end_with?("mv #{DIR}/#{file}.tmp #{DIR}/#{file}") && JSON.parse(Base64.strict_decode64(encoded)) == data
       end

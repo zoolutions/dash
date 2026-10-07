@@ -29,21 +29,34 @@ class Dash::Autoscale::StateStore
     read_object "heartbeat.json", @commands.read_heartbeat
   end
 
+  # Written every tick, and during a long scale action, so it prints only with --verbose.
   def write_heartbeat(heartbeat)
-    execute @commands.write_heartbeat(dump(heartbeat))
+    @backend.execute(*@commands.write_heartbeat(dump(heartbeat)), verbosity: :debug)
+  end
+
+  # The heartbeat, unless it names another controller: false then. A failed write raises.
+  def write_heartbeat_if_held(id, heartbeat)
+    @backend.capture(*@commands.write_heartbeat_if_held(id, dump(heartbeat)), verbosity: :debug).strip != "taken"
   end
 
   def state
     read_object "state.json", @commands.read_state
   end
 
+  # Whether `file` held something that is not a JSON object when last read.
+  def malformed?(file)
+    @warned.include?(file)
+  end
+
   def write_state(state)
     execute @commands.write_state(dump(state))
   end
 
-  # The last `lines` entries of the decision log, oldest first.
-  def decisions(lines:)
-    capture(@commands.read_decisions(lines: lines)).lines.filter_map { |line| parse("decisions.jsonl", line) if line.strip.present? }
+  # The last `lines` entries of the decision log (of these roles', with `roles`), oldest first.
+  def decisions(lines:, roles: nil)
+    return [] if roles&.empty?
+
+    capture(@commands.read_decisions(lines: lines, roles: roles)).lines.filter_map { |line| parse("decisions.jsonl", line) if line.strip.present? }
   end
 
   # Decisions or hashes.
