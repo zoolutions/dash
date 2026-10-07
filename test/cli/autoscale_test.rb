@@ -156,7 +156,7 @@ class CliAutoscaleTest < CliTestCase
   end
 
   test "history of one role, as JSON" do
-    stub_state %(grep -F '"role":"payments"'), { "role" => "payments", "action" => "hold" }.to_json
+    stub_state %(grep -F -e '"role":"payments"'), { "role" => "payments", "action" => "hold" }.to_json
 
     assert_equal [ "hold" ], JSON.parse(run_command("history", "payments", "--lines", "5", "--json"))["decisions"].map { |decision| decision["action"] }
   end

@@ -4,7 +4,7 @@
 # `stopped`, plus the pauses still in force. `controller` is nil when none ever ran.
 class Dash::Diagnostics::ControllerStatus < Dash::Diagnostics::Base
   # `roles`: the roles this run is about (the doctor's scope); their schedules and pauses.
-  def initialize(now: Time.now.utc, roles: DASH.config.roles)
+  def initialize(now: Time.now.utc, roles: DASH.specific_roles || DASH.config.roles)
     @now, @roles = now, roles
   end
 

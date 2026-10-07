@@ -56,11 +56,17 @@ class AutoscaleStateStoreTest < ActiveSupport::TestCase
     @store.write_state("roles" => {})
   end
 
-  test "says whether it wrote the heartbeat it held" do
-    @backend.stubs(:capture).with { |*args| args.join(" ").include?("grep -qF") }.returns("held\n").then.returns("")
+  test "says whether it wrote the heartbeat, false only when another controller holds it" do
+    @backend.stubs(:capture).with { |*args| args.join(" ").include?("grep -qF") }.returns("held\n").then.returns("taken\n")
 
     assert @store.write_heartbeat_if_held("ab12", "controller_id" => "ab12")
     assert_not @store.write_heartbeat_if_held("ab12", "controller_id" => "ab12")
+  end
+
+  test "reads no decisions for an empty set of roles, without asking the host" do
+    @backend.expects(:capture).never
+
+    assert_equal [], @store.decisions(lines: 50, roles: [])
   end
 
   test "remembers which file was malformed" do

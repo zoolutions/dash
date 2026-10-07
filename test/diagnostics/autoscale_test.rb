@@ -42,7 +42,7 @@ class DiagnosticsAutoscaleTest < DiagnosticsTestCase
     assert_equal "scale_out", explain.dig(:decision, :action)
   end
 
-  test "explain refuses to read a role on only some of its hosts" do
+  test "explain refuses --hosts, which could leave some of the role's hosts unread" do
     DASH.specific_hosts = [ "1.1.1.2" ]
 
     error = assert_raises(ArgumentError) { Dash::Diagnostics::AutoscaleExplain.new(role: DASH.config.role(:payments), now: NOW) }
@@ -57,19 +57,24 @@ class DiagnosticsAutoscaleTest < DiagnosticsTestCase
   test "decisions reads the tail of the log, of one role or all" do
     line = JSON.generate("role" => "payments", "action" => "scale_out", "from" => 1, "to" => 6, "reasons" => [ "schedule_floor" ])
     SSHKit::Backend::Abstract.any_instance.stubs(:capture)
-      .with { |*args| args.join(" ").include?(%(grep -F '"role":"payments"')) && args.join(" ").include?("tail -n 20") }.returns("#{line}\n")
+      .with { |*args| args.join(" ").include?(%(grep -F -e '"role":"payments"')) && args.join(" ").include?("tail -n 20") }.returns("#{line}\n")
 
-    decisions = Dash::Diagnostics::AutoscaleDecisions.new(role: "payments", lines: 20).to_h
+    decisions = Dash::Diagnostics::AutoscaleDecisions.new(roles: [ "payments" ], lines: 20).to_h
 
     assert_equal "1.1.1.1", decisions[:host]
     assert_equal [ "scale_out" ], decisions[:decisions].map { |decision| decision["action"] }
   end
 
-  test "decisions within a --roles scope leave the other roles out" do
-    lines = [ { "role" => "payments", "action" => "hold" }, { "role" => "reports", "action" => "hold" } ].map(&:to_json).join("\n")
-    stub_state "tail -n 50", lines
+  test "decisions of some roles are filtered on the host before the tail" do
+    stub_state %(grep -F -e '"role":"payments"' -e '"role":"reports"'), { "role" => "reports", "action" => "hold" }.to_json
 
-    assert_equal [ "reports" ], Dash::Diagnostics::AutoscaleDecisions.new(within: [ "reports" ]).to_h[:decisions].map { |decision| decision["role"] }
+    assert_equal [ "reports" ], Dash::Diagnostics::AutoscaleDecisions.new(roles: [ "payments", "reports" ]).to_h[:decisions].map { |decision| decision["role"] }
+  end
+
+  test "status keeps to the run's --roles by default" do
+    DASH.specific_roles = [ "reports" ]
+
+    assert_equal [ "reports" ], Dash::Diagnostics::ControllerStatus.new(now: NOW).to_h[:roles]
   end
 
   test "decisions from a host that does not answer is an error, not a crash" do

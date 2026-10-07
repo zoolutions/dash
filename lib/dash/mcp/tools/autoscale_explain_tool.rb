@@ -18,13 +18,24 @@ class Dash::Mcp::Tools::AutoscaleExplainTool < Dash::Mcp::BaseTool
     end
   end
 
-  # Checked against the --roles names, never DASH.roles: that would ask the provider for
-  # the pool, and a pool that does not answer is an answer explain should give.
   def self.scoped_role(name)
     role = DASH.config.role(name) || raise(ArgumentError, "No role named #{name} (#{DASH.config.roles.map(&:name).join(",")})")
-    raise ArgumentError, "#{name} is outside this server's --roles" if DASH.specific_roles && !DASH.specific_roles.include?(role)
+    raise ArgumentError, "#{name} is outside this server's --roles and --hosts" unless roles_in_scope.include?(role)
 
     role
+  end
+
+  # The roles within --roles, and with a baseline host within --hosts - from deploy.yml,
+  # never DASH.roles: that would ask the provider for the pool, and a pool that does not
+  # answer is an answer explain should give.
+  def self.roles_in_scope
+    roles = DASH.specific_roles || DASH.config.roles
+    DASH.specific_hosts ? roles.select { |role| (role.baseline_hosts & DASH.specific_hosts).any? } : roles
+  end
+
+  # nil when nothing narrows the server: every role's decisions.
+  def self.role_names_in_scope
+    roles_in_scope.map(&:name) if DASH.specific_roles || DASH.specific_hosts
   end
 
   # The controller's state lives on the primary role's first baseline host, which the

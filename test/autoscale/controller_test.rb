@@ -217,6 +217,14 @@ class AutoscaleControllerTest < DiagnosticsTestCase
     assert_equal (BILLING + 600).iso8601, @store.state.dig("roles", "payments", "last_scale_out_at"), "stamped when the scale-out finished"
   end
 
+  test "a heartbeat write that fails is a failed tick, not a lost lease" do
+    controller = start
+    @store.define_singleton_method(:write_heartbeat_if_held) { |*| raise SSHKit::Command::Failed, "No space left on device" }
+
+    error = assert_raises(SSHKit::Runner::ExecuteError) { tick(controller, QUIET) }
+    assert_match "No space left on device", error.message
+  end
+
   test "a takeover during a tick that took no action is not overwritten" do
     observe "payments", current: 1
     controller = start

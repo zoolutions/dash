@@ -22,18 +22,19 @@ class Dash::Commands::Autoscale < Dash::Commands::Base
     write_json json, heartbeat_file
   end
 
-  # Writes the heartbeat only while it is missing or names `id`, and prints `held` when it
-  # did: the check and the write are one command, so a takeover between them is the width
-  # of a `grep`, not of a tick.
+  # Prints `taken` and writes nothing when the heartbeat names another controller;
+  # otherwise - missing, naming `id`, or corrupted - writes it and prints `held`. A write
+  # that fails exits non-zero, as any failed command does. The check and the write are one
+  # command, so a takeover between them is the width of a `grep`, not of a tick.
   def write_heartbeat_if_held(id, json)
     raise ArgumentError, "#{id.inspect} is not a controller id" unless /\A\h+\z/.match?(id.to_s)
 
     any \
       combine(
-        any([ :test, "!", "-s", heartbeat_file ], [ :grep, "-qF", Dash::Utils.single_quote(%("controller_id":"#{id}")), heartbeat_file ]),
-        write_json(json, heartbeat_file),
-        [ :echo, "held" ]),
-      [ :true ]
+        [ :grep, "-qF", Dash::Utils.single_quote(%("controller_id":")), heartbeat_file, "2>", "/dev/null" ],
+        [ "!", :grep, "-qF", Dash::Utils.single_quote(%("controller_id":"#{id}")), heartbeat_file ],
+        [ :echo, "taken" ]),
+      [ "(", *combine(write_json(json, heartbeat_file), [ :echo, "held" ]), ")" ]
   end
 
   def read_state
@@ -49,12 +50,14 @@ class Dash::Commands::Autoscale < Dash::Commands::Base
     append decode(lines.map { |line| "#{line}\n" }.join), decisions_file
   end
 
-  # The last `lines` entries, or the last `lines` of one role's (the log writes `role` first).
-  def read_decisions(lines:, role: nil)
+  # The last `lines` entries, or the last `lines` of these roles' (the log writes `role`
+  # first), filtered on the host before the tail so other roles cannot crowd them out.
+  def read_decisions(lines:, roles: nil)
     lines = Integer(lines.to_s, 10)
 
-    if role
-      any pipe([ :grep, "-F", Dash::Utils.single_quote(%("role":"#{role_name(role)}")), decisions_file, "2>", "/dev/null" ], [ :tail, "-n", lines ]), [ :true ]
+    if roles
+      patterns = roles.flat_map { |role| [ "-e", Dash::Utils.single_quote(%("role":"#{role_name(role)}")) ] }
+      any pipe([ :grep, "-F", *patterns, decisions_file, "2>", "/dev/null" ], [ :tail, "-n", lines ]), [ :true ]
     else
       any [ :tail, "-n", lines, decisions_file, "2>", "/dev/null" ], [ :true ]
     end

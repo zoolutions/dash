@@ -190,9 +190,10 @@ class Dash::Autoscale::Controller
     ensure
       done = true
       beat&.wakeup if beat&.alive?
-      # Without a timeout: a beat still writing must land before anything after it (the
-      # tick's own heartbeat, or release's stopped_at), never after.
-      beat&.join
+      # A beat still writing should land before anything after it (the tick's own heartbeat,
+      # or release's stopped_at), but a write that hangs must not hold the tick: past two
+      # intervals the beat is killed.
+      beat.kill unless beat.nil? || beat.join(2 * interval)
     end
 
     def beat_heartbeat
@@ -251,6 +252,8 @@ class Dash::Autoscale::Controller
       # is never overwritten, and its state is left to the controller that took over.
       beat_at = @clock.call
       held = quietly { with_store { |store| store.write_heartbeat_if_held(id, heartbeat(beat_at)) } }
+      # Only a heartbeat naming another controller is a lost lease; a write that failed
+      # raised above and is this tick's failure, which the loop survives.
       raise Dash::Autoscale::LeaseLost, "Another autoscale controller took over while this one ticked" unless held
 
       @last_tick_at = beat_at

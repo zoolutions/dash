@@ -23,13 +23,27 @@ class McpAutoscaleToolsTest < McpTestCase
     assert_match "reports is outside this server's --roles", text
   end
 
-  test "decisions keep to --roles, with or without a role" do
-    lines = [ { "role" => "payments", "action" => "hold" }, { "role" => "reports", "action" => "hold" } ].map(&:to_json).join("\n")
-    SSHKit::Backend::Abstract.any_instance.stubs(:capture).with { |*args| args.join(" ").include?("tail -n") }.returns(lines)
+  test "decisions keep to --roles, with or without a role, filtered before the tail" do
+    reads = []
+    SSHKit::Backend::Abstract.any_instance.stubs(:capture).with { |*args| reads << args.join(" ") if args.join(" ").include?("tail -n"); true }.returns("")
     scoped = server(session(fixture: :deploy_with_scale_schedule, roles: [ "web", "payments" ]))
 
-    assert_equal [ "payments" ], call_json("autoscale_decisions", {}, on: scoped)["decisions"].map { |decision| decision["role"] }
+    call_json("autoscale_decisions", {}, on: scoped)
+    assert_match %(grep -F -e '"role":"web"' -e '"role":"payments"'), reads.last
     assert call_tool("autoscale_decisions", { role: "reports" }, on: scoped).last
+  end
+
+  test "a --hosts ceiling alone still scopes roles, by their baseline hosts" do
+    Dash::Autoscale::Provider.stubs(:for).returns(stub(members: []))
+    scoped = server(session(fixture: :deploy_with_scale_schedule, hosts: [ "1.1.1.1", "1.1.1.2" ]))
+
+    text, error = call_tool("autoscale_decisions", { role: "reports" }, on: scoped)
+    assert error
+    assert_match "reports is outside this server's --roles and --hosts", text
+
+    text, error = call_tool("autoscale_explain", { role: "payments" }, on: scoped)
+    assert error
+    assert_match "cannot be narrowed with --hosts", text
   end
 
   test "the state host must be within the --roles ceiling's hosts" do

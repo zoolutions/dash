@@ -46,7 +46,7 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
   option :json, type: :boolean, default: false, desc: "Print the decisions as JSON"
   def history(role_name = nil)
     role = scaled_role(role_name).name if role_name
-    history = -> { Dash::Diagnostics::AutoscaleDecisions.new(role: role, lines: options[:lines]).to_h }
+    history = -> { Dash::Diagnostics::AutoscaleDecisions.new(roles: ([ role ] if role), lines: options[:lines]).to_h }
 
     if options[:json]
       puts_json(&history)

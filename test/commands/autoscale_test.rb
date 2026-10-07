@@ -46,15 +46,18 @@ class CommandsAutoscaleTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { command.read_decisions(lines: "50; rm -rf /") }
   end
 
-  test "writes the heartbeat only while it is missing or names this controller, in one command" do
-    assert_match %r{\Atest ! -s #{DIR}/heartbeat\.json \|\| grep -qF '"controller_id":"ab12"' #{DIR}/heartbeat\.json && echo "e30=" \| base64 -d > #{DIR}/heartbeat\.json\.tmp && mv #{DIR}/heartbeat\.json\.tmp #{DIR}/heartbeat\.json && echo held \|\| true\z},
+  test "writes the heartbeat unless it names another controller, in one command" do
+    assert_equal %(grep -qF '"controller_id":"' #{DIR}/heartbeat.json 2> /dev/null && ! grep -qF '"controller_id":"ab12"' #{DIR}/heartbeat.json && echo taken || ) +
+      %(( echo "e30=" | base64 -d > #{DIR}/heartbeat.json.tmp && mv #{DIR}/heartbeat.json.tmp #{DIR}/heartbeat.json && echo held )),
       command.write_heartbeat_if_held("ab12", "{}").join(" ")
     assert_raises(ArgumentError) { command.write_heartbeat_if_held("x'; rm -rf /", "{}") }
   end
 
-  test "reads the last decision lines of one role" do
-    assert_equal %(grep -F '"role":"payments"' #{DIR}/decisions.jsonl 2> /dev/null | tail -n 20 || true), command.read_decisions(lines: 20, role: "payments").join(" ")
-    assert_raises(ArgumentError) { command.read_decisions(lines: 20, role: "x'; rm -rf /") }
+  test "reads the last decision lines of some roles, filtered before the tail" do
+    assert_equal %(grep -F -e '"role":"payments"' #{DIR}/decisions.jsonl 2> /dev/null | tail -n 20 || true), command.read_decisions(lines: 20, roles: [ "payments" ]).join(" ")
+    assert_equal %(grep -F -e '"role":"payments"' -e '"role":"web"' #{DIR}/decisions.jsonl 2> /dev/null | tail -n 20 || true),
+      command.read_decisions(lines: 20, roles: [ "payments", "web" ]).join(" ")
+    assert_raises(ArgumentError) { command.read_decisions(lines: 20, roles: [ "x'; rm -rf /" ]) }
   end
 
   test "counts and trims the decision log" do

@@ -19,7 +19,7 @@ class McpReadOnlyTest < McpTestCase
     /\Adocker ps( --filter \S+)+ --format '\{\{json \.\}\}(\{\{"\\t"\}\}\{\{json \(\.Label "role"\)\}\})?' \|\| echo --unreadable-- ; echo --%-- ; docker ps --quiet( --filter \S+)+ \| xargs -r docker stats --no-stream --format '\{\{json \.\}\}' \|\| echo --stats-unreadable--\z/, # container stats
     %r{\Acat \S+/autoscale/(heartbeat|state)\.json 2> /dev/null \|\| echo ""\z},                                      # autoscale state
     %r{\Agrep -H "" \S+/autoscale/pause/\* 2> /dev/null \|\| true\z},                                             # autoscale pauses
-    %r{\A(grep -F '"role":"[\w.-]+"' \S+/autoscale/decisions\.jsonl 2> /dev/null \| )?tail -n \d+( \S+/autoscale/decisions\.jsonl 2> /dev/null)? \|\| true\z}, # autoscale decisions
+    %r{\A(grep -F( -e '"role":"[\w.-]+"')+ \S+/autoscale/decisions\.jsonl 2> /dev/null \| )?tail -n \d+( \S+/autoscale/decisions\.jsonl 2> /dev/null)? \|\| true\z}, # autoscale decisions
     %r{\Acat /proc/loadavg ; echo --%-- ; getconf _NPROCESSORS_ONLN ; echo --%-- ; grep -E '\^\(MemTotal\|MemAvailable\|SwapTotal\|SwapFree\):' /proc/meminfo ; echo --%-- ; df -Pk / ; echo --%-- ; df -Pk "\$\(docker info --format '\{\{\.DockerRootDir\}\}'\)" ; echo --%-- ; cat /proc/uptime\z} # host stats
   ].freeze
 

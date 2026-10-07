@@ -34,9 +34,9 @@ class Dash::Autoscale::StateStore
     @backend.execute(*@commands.write_heartbeat(dump(heartbeat)), verbosity: :debug)
   end
 
-  # The heartbeat, only while it is missing or names controller `id`. Whether it was written.
+  # The heartbeat, unless it names another controller: false then. A failed write raises.
   def write_heartbeat_if_held(id, heartbeat)
-    @backend.capture(*@commands.write_heartbeat_if_held(id, dump(heartbeat)), verbosity: :debug).strip == "held"
+    @backend.capture(*@commands.write_heartbeat_if_held(id, dump(heartbeat)), verbosity: :debug).strip != "taken"
   end
 
   def state
@@ -52,9 +52,11 @@ class Dash::Autoscale::StateStore
     execute @commands.write_state(dump(state))
   end
 
-  # The last `lines` entries of the decision log (of one role's, with `role`), oldest first.
-  def decisions(lines:, role: nil)
-    capture(@commands.read_decisions(lines: lines, role: role)).lines.filter_map { |line| parse("decisions.jsonl", line) if line.strip.present? }
+  # The last `lines` entries of the decision log (of these roles', with `roles`), oldest first.
+  def decisions(lines:, roles: nil)
+    return [] if roles&.empty?
+
+    capture(@commands.read_decisions(lines: lines, roles: roles)).lines.filter_map { |line| parse("decisions.jsonl", line) if line.strip.present? }
   end
 
   # Decisions or hashes.
