@@ -29,8 +29,9 @@ class Dash::Autoscale::StateStore
     read_object "heartbeat.json", @commands.read_heartbeat
   end
 
+  # Written every tick, and during a long scale action, so it prints only with --verbose.
   def write_heartbeat(heartbeat)
-    execute @commands.write_heartbeat(dump(heartbeat))
+    @backend.execute(*@commands.write_heartbeat(dump(heartbeat)), verbosity: :debug)
   end
 
   def state

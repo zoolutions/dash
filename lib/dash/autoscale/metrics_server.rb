@@ -42,6 +42,9 @@ class Dash::Autoscale::MetricsServer
     def answer(client)
       request = client.wait_readable(READ_TIMEOUT) && client.gets
       method, path = request.to_s.split(" ", 3)
+      # The headers are read too: closing a socket with them unread resets the connection,
+      # and a scraper can see the reset before the body.
+      while client.wait_readable(READ_TIMEOUT) && (line = client.gets) && line != "\r\n" && line != "\n"; end
 
       if method == "GET" && path == "/metrics"
         respond client, "200 OK", @metrics.render

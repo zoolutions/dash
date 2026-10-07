@@ -144,6 +144,45 @@ class AutoscaleControllerTest < DiagnosticsTestCase
     assert_equal [ [ "payments", 3 ], [ "payments", 1 ] ], @cli.scale_sets
   end
 
+  test "the heartbeat keeps beating while a scale action runs" do
+    controller = start
+    controller.stubs(:interval).returns(0.01)
+    @cli.on_scale_set = ->(_role, _count) { sleep 0.2 }
+    @store.writes.clear
+
+    tick(controller, BILLING)
+
+    assert_operator @store.writes.count("heartbeat"), :>=, 3, @store.writes.inspect
+  end
+
+  test "a beat that finds another controller's heartbeat does not overwrite it" do
+    controller = start
+    @store.files["heartbeat"] = { "controller_id" => "other" }
+
+    assert_not controller.send(:beat_heartbeat)
+    assert_equal({ "controller_id" => "other" }, @store.heartbeat)
+  end
+
+  test "a controller that lost the lease while it acted persists nothing" do
+    controller = start
+    @cli.on_scale_set = ->(_role, _count) { @store.files["heartbeat"] = { "controller_id" => "other" } }
+    @store.writes.clear
+
+    assert_raises(Dash::Autoscale::LeaseLost) { tick(controller, BILLING) }
+    assert_empty @store.writes
+  end
+
+  test "a scale-out whose joined members cannot be read is still a scale-out" do
+    controller = start
+    @cli.on_scale_set = ->(_role, _count) { Dash::Autoscale::Pool.any_instance.stubs(:refresh!).raises(Dash::Autoscale::ProviderError, "down") }
+
+    decision = tick(controller, BILLING).first
+
+    assert_equal "scale_out", decision.action
+    assert_equal BILLING.iso8601, @store.state.dig("roles", "payments", "last_scale_out_at")
+    assert @cli.reports.any? { |line| line.include?("could not be read for their warmup") }
+  end
+
   test "a member the scale-out powered on warms up and holds the next scale-in" do
     @cli.on_scale_set = ->(_role, _count) { @members << member("m3", "10.0.0.24", "started") }
     controller = start

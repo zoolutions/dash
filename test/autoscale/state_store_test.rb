@@ -124,7 +124,7 @@ class AutoscaleStateStoreTest < ActiveSupport::TestCase
 
     def expect_written(file, data)
       @backend.expects(:execute).with do |*args|
-        command = args.join(" ")
+        command = args.reject { |arg| arg.is_a?(Hash) }.join(" ")
         encoded = command[/echo "([^"]+)"/, 1]
         command.end_with?("mv #{DIR}/#{file}.tmp #{DIR}/#{file}") && JSON.parse(Base64.strict_decode64(encoded)) == data
       end

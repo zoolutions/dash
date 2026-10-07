@@ -132,9 +132,12 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
   end
 
   private
+    # A signal during the tick lets it finish (a join in flight included), then it exits.
     def run_once(controller)
-      controller.start
-      controller.tick
+      trapping_signals(controller) do
+        controller.start
+        controller.tick
+      end
     ensure
       controller.release
     end
@@ -149,7 +152,7 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
       server&.stop
     end
 
-    # TERM and INT only ask the loop to stop: the tick in progress, and a join in it, finish.
+    # TERM and INT only ask the controller to stop: the tick in progress, and a join in it, finish.
     def trapping_signals(controller)
       previous = %w[ TERM INT ].to_h { |signal| [ signal, trap(signal) { controller.stop! } ] }
       yield

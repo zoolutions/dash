@@ -57,6 +57,17 @@ class CliAutoscaleTest < CliTestCase
     assert_equal "DEFAULT", trap("TERM", previous)
   end
 
+  test "TERM during run --once lets the tick finish" do
+    Dash::Autoscale::Controller.any_instance.stubs(:start)
+    Dash::Autoscale::Controller.any_instance.stubs(:release)
+    Dash::Autoscale::Controller.any_instance.stubs(:tick).with { Process.kill("TERM", Process.pid); sleep 0.1; true }.returns([])
+    Dash::Autoscale::Controller.any_instance.expects(:stop!)
+
+    previous = trap("TERM", "DEFAULT")
+    run_command("run", "--once")
+    assert_equal "DEFAULT", trap("TERM", previous)
+  end
+
   test "run refuses --hosts and too short an interval" do
     assert_match "narrow it with --roles", assert_raises(ArgumentError) { run_command("run", "--hosts", "1.1.1.2") }.message
     assert_match "--interval must be at least 5 seconds", assert_raises(ArgumentError) { run_command("run", "--interval", "2") }.message

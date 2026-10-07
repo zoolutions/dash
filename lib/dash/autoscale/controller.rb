@@ -97,8 +97,11 @@ class Dash::Autoscale::Controller
     ensure_lease(heartbeat)
 
     entries = roles.map { |role| evaluate(role, now, state, pauses) }
-    execute(entries) unless dry_run?
-    persist(entries, state, now) unless dry_run?
+    unless dry_run?
+      acting = entries.any? { |entry| !entry.decision.hold? }
+      keeping_heartbeat { execute(entries) } if acting
+      persist(entries, state, now, recheck_lease: acting)
+    end
 
     decisions = entries.map(&:decision)
     @metrics.record_tick(decisions: decisions, at: @clock.call, duration: monotonic - started,
@@ -143,6 +146,10 @@ class Dash::Autoscale::Controller
       end
     end
 
+    def read_heartbeat
+      quietly { with_store(&:heartbeat) }
+    end
+
     def ensure_lease(heartbeat)
       return if dry_run? || heartbeat["controller_id"].blank? || heartbeat["controller_id"] == id
 
@@ -174,6 +181,36 @@ class Dash::Autoscale::Controller
       skipped&.each { |host| DASH.run_directory_ensured_on.delete(host) }
     end
 
+    # A join can take minutes (lock wait, boot_timeout, the app's boot). The heartbeat keeps
+    # beating meanwhile, so the lease stays alive and status does not read the controller as
+    # stuck exactly while it scales. A beat that finds another controller's id stops beating.
+    def keeping_heartbeat
+      done = false
+      beat = Thread.new do
+        until done
+          Kernel.sleep(interval)
+          break if done || !beat_heartbeat
+        end
+      end
+
+      yield
+    ensure
+      done = true
+      beat&.wakeup if beat&.alive?
+      beat&.join(5)
+    end
+
+    def beat_heartbeat
+      with_store do |store|
+        if store.heartbeat["controller_id"] == id
+          store.write_heartbeat(heartbeat(@clock.call))
+          true
+        end
+      end
+    rescue StandardError
+      true # a missed beat is retried on the next one
+    end
+
     def carry_out(entry)
       role, decision, observation = entry.role, entry.decision, entry.evaluation.observation
 
@@ -197,9 +234,14 @@ class Dash::Autoscale::Controller
 
     # The members a scale-out powered on warm up from now. Members someone else joined are
     # not known to be warming, so they never hold a scale-in.
+    #
+    # The scale-out already happened, so a pool that cannot be read now is only reported:
+    # the members it joined go without a warmup rather than the action being logged failed.
     def record_joins(entry, before)
       DASH.config.pool.refresh!
       entry.state.joined_at(entry.role.active_members.map(&:host) - before, now: @clock.call)
+    rescue StandardError => e
+      cli.report "#{entry.role}: scaled out, but the members it joined could not be read for their warmup (#{e.class}: #{e.message})", :yellow
     end
 
     def failed(decision, reason, message)
@@ -208,11 +250,14 @@ class Dash::Autoscale::Controller
         eligible_at: decision.eligible_at, at: decision.at, error: message)
     end
 
-    def persist(entries, state, now)
+    def persist(entries, state, now, recheck_lease: false)
       logged = entries.select { |entry| entry.state.log?(entry.decision) }.each { |entry| entry.state.logged(entry.decision) }.map(&:decision)
       roles_state = state.fetch("roles", {}).merge(entries.to_h { |entry| [ entry.role.name, entry.state.to_h ] })
       checked_at = Dash::Autoscale::Timestamp.parse(state["decisions_checked_at"])
       check = checked_at.nil? || now - checked_at >= TRIM_CHECK_INTERVAL
+
+      # Another controller may have taken over while this tick acted; the state is its now.
+      ensure_lease(read_heartbeat) if recheck_lease
 
       quietly do
         with_store do |store|
