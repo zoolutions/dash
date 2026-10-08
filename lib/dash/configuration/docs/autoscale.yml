@@ -73,9 +73,11 @@ autoscale:
 # `dash doctor` and `dash mcp` read and write it there too.
 #
 # Without `controller`, the state lives on the primary role's first host. Setting or
-# changing `controller` starts from a fresh state - cooldowns, warmups and pauses are not
-# carried over, and the old host's files are left where they were - so stop the old
-# controller first, and pause again any role that should stay paused.
+# changing `controller` migrates nothing: the controller uses whatever state the selected
+# host holds - none on a new host, so cooldowns, warmups and pauses start fresh; the files
+# it had before, pauses included, on a host it used earlier. The old host's files stay
+# where they were. Stop the old controller first, then check `dash autoscale status` on
+# the new host for pauses that are missing or stale.
 #
 # One controller per app and destination: a second one refuses to start while the first
 # one's heartbeat is fresh (three intervals), unless started with `--takeover`, and the

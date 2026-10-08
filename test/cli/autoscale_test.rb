@@ -1,7 +1,7 @@
 require_relative "cli_test_case"
 
 # payments (scale 1-3 hosts, replicas 1-3) has a schedule; the state lives on 1.1.1.1, the
-# primary role's first baseline host (10.0.0.50 in the autoscale/controller fixture).
+# primary role's first baseline host; the autoscale/controller fixture overrides it with 10.0.0.50.
 class CliAutoscaleTest < CliTestCase
   STATE = ".dash/apps/app/autoscale"
 
