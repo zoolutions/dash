@@ -27,6 +27,12 @@ class Dash::Configuration::Autoscale
     provider_config&.keys&.first&.to_s
   end
 
+  # The ops host that runs `dash autoscale run` and keeps its state, or nil to keep it on
+  # the primary role's first baseline host (see Dash::Autoscale::StateStore.host).
+  def controller
+    autoscale_config&.fetch("controller", nil)
+  end
+
   # Seconds between the controller's ticks.
   def interval
     autoscale_config&.fetch("interval", nil) || DEFAULT_INTERVAL

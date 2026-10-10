@@ -1,5 +1,5 @@
 # What the controller remembers about one scaled role between ticks, in `state.json` on
-# the primary host so a restart or a `--once` run from cron carries on where the last tick
+# the state host so a restart or a `--once` run from cron carries on where the last tick
 # stopped: when it last scaled out and in (cooldown), when each member it joined came up
 # (warmup), since when each started member has not answered (replacement after
 # `boot_timeout`), and the last decision it logged (the log only takes changes).

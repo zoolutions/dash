@@ -1,7 +1,7 @@
 require_relative "cli_test_case"
 
 # payments (scale 1-3 hosts, replicas 1-3) has a schedule; the state lives on 1.1.1.1, the
-# primary role's first baseline host.
+# primary role's first baseline host; the autoscale/controller fixture overrides it with 10.0.0.50.
 class CliAutoscaleTest < CliTestCase
   STATE = ".dash/apps/app/autoscale"
 
@@ -187,6 +187,22 @@ class CliAutoscaleTest < CliTestCase
     assert_match(/Paused autoscaling of payments until \d{4}-\d\d-\d\dT/, output)
     encoded = output[/echo "([A-Za-z0-9+\/=]+)" \| base64 -d > #{STATE}\/pause/, 1]
     assert_equal "Jane", JSON.parse(Base64.decode64(encoded))["by"]
+  end
+
+  test "pause and resume write to autoscale/controller when it is set, never to the primary host" do
+    output = run_command("pause", "payments", config: :with_scale_controller) + run_command("resume", "payments", config: :with_scale_controller)
+
+    assert_match(%r{mv #{STATE}/pause/payments\.json\.tmp #{STATE}/pause/payments\.json on 10\.0\.0\.50}, output)
+    assert_match(%r{rm -f #{STATE}/pause/payments\.json on 10\.0\.0\.50}, output)
+    assert_no_match(%r{#{STATE}\S* on 1\.1\.1\.1}, output)
+  end
+
+  test "pause and resume keep their audit lines on the primary host, where dash audit reads them" do
+    output = run_command("pause", "payments", "-v", config: :with_scale_controller) + run_command("resume", "payments", "-v", config: :with_scale_controller)
+
+    assert_match(/Paused autoscaling of payments until resumed.*audit\.log on 1\.1\.1\.1/, output)
+    assert_match(/Resumed autoscaling of payments.*audit\.log on 1\.1\.1\.1/, output)
+    assert_no_match(/audit\.log on 10\.0\.0\.50/, output)
   end
 
   test "pause without --for holds until resumed" do

@@ -7,7 +7,7 @@ class AutoscaleControllerTest < DiagnosticsTestCase
   BILLING = Time.utc(2026, 10, 14, 21, 0)   # 23:00 in Stockholm, a Wednesday: inside the payments window
   QUIET = Time.utc(2026, 10, 17, 12, 0)     # a Saturday afternoon: no window
 
-  # The in-memory stand-in for the files on the primary host, JSON round-tripped like them.
+  # The in-memory stand-in for the files on the state host, JSON round-tripped like them.
   class FakeStore
     attr_accessor :files, :decisions, :writes, :trimmed, :count
 
@@ -108,6 +108,19 @@ class AutoscaleControllerTest < DiagnosticsTestCase
     tick(controller, BILLING + 10)
     assert_equal [ [ "payments", 6 ] ], @cli.scale_sets, "at the floor it holds"
     assert_equal BILLING.iso8601, @store.state.dig("roles", "payments", "last_scale_out_at")
+  end
+
+  test "keeps its state on autoscale/controller when it is set" do
+    configure :deploy_with_scale_controller
+    @cli = FakeCli.new(Pathname.new(File.expand_path("../fixtures/deploy_with_scale_controller.yml", __dir__)))
+    hosts = []
+    Dash::Autoscale::StateStore.stubs(:new).with { |backend| hosts << backend.host.to_s }.returns(@store)
+
+    tick(start, BILLING)
+
+    assert_equal [ [ "payments", 6 ] ], @cli.scale_sets
+    assert_not_empty hosts
+    assert_equal [ "10.0.0.50" ], hosts.uniq
   end
 
   test "a steady role adds nothing to the decision log, and the heartbeat is written every tick" do

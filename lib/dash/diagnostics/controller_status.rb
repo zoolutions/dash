@@ -1,5 +1,5 @@
 # `dash autoscale status`, the MCP `controller_status` tool and the doctor's controller
-# check: the heartbeat on the primary host - which controller, where, which dash, how long
+# check: the heartbeat on the state host - which controller, where, which dash, how long
 # since its last tick - read as `running`, `stale` (no tick for three of its intervals) or
 # `stopped`, plus the pauses still in force. `controller` is nil when none ever ran.
 class Dash::Diagnostics::ControllerStatus < Dash::Diagnostics::Base

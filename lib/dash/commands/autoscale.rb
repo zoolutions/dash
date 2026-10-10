@@ -1,7 +1,7 @@
 require "base64"
 
 # The autoscaling controller's state files, under `<app_directory>/autoscale/` on the
-# primary role's first baseline host: `heartbeat.json`, `state.json`, `decisions.jsonl`
+# state host (Dash::Autoscale::StateStore.host): `heartbeat.json`, `state.json`, `decisions.jsonl`
 # and one `pause/<role>.json` file per paused role. JSON travels base64-encoded and is decoded
 # on the host, so no value is ever shell-quoted; a file is written beside its target and
 # moved into place, so a reader never sees half of one. See Dash::Autoscale::StateStore.

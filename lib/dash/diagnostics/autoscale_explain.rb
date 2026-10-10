@@ -1,6 +1,6 @@
 # `dash autoscale explain ROLE` and the MCP `autoscale_explain` tool: one live policy
 # evaluation for a scaled role, from the same inputs the controller's next tick reads -
-# the running containers, the pool, and the state and pauses on the primary host - with
+# the running containers, the pool, and the state and pauses on the state host - with
 # every input and `eligible_at`. Decides, never acts, writes nothing, needs no running
 # controller. State that cannot be read is `state_error`, and the role is evaluated as if
 # the controller remembered nothing.

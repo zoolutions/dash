@@ -1,6 +1,7 @@
 # `dash autoscale pause ROLE [--for DURATION]`: the controller leaves the role alone until
 # `ends_at` (a Time) or for good (`:indefinite`) - `resume ROLE` removes it. Kept as
-# `pause/<role>.json` on the primary host, beside the controller's other state.
+# `pause/<role>.json` on the state host (Dash::Autoscale::StateStore.host), beside the
+# controller's other state.
 class Dash::Autoscale::Pause
   INDEFINITE = "indefinite"
 

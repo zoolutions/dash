@@ -138,6 +138,27 @@ class ConfigurationAutoscaleTest < ActiveSupport::TestCase
     end
   end
 
+  test "no controller host by default" do
+    @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } } }
+
+    assert_nil config.autoscale.controller
+  end
+
+  test "controller names the ops host that keeps the state" do
+    @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } }, "controller" => "10.0.0.50" }
+
+    assert_equal "10.0.0.50", config.autoscale.controller
+  end
+
+  test "controller must be a host name" do
+    { "" => %r{autoscale/controller: should be a host name}, " " => %r{autoscale/controller: should be a host name},
+      [ "10.0.0.50" ] => %r{autoscale/controller: should be a host name}, " 10.0.0.50" => %r{autoscale/controller: should be a host name}, 1 => %r{autoscale/controller: should be a host name} }.each do |value, pattern|
+      @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } }, "controller" => value }
+
+      assert_raises_message(pattern) { config }
+    end
+  end
+
   private
     def config
       Dash::Configuration.new(@deploy)

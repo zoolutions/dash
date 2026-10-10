@@ -181,8 +181,9 @@ class Views::Docs::Pages::Commands < DocsUI::Page
       subcommand_table AUTOSCALE
       md <<~'MD'
         The controller scales through `dash scale set`, under the deploy lock,
-        and keeps its heartbeat, decision log and pauses on the primary host,
-        so every operator's checkout reads the same state. How to run it, and
+        and keeps its heartbeat, decision log and pauses on one host
+        (`autoscale.controller`, or the primary host without it), so every
+        operator's checkout reads the same state. How to run it, and
         the keys it reads, are in [Autoscale](/docs/autoscale) and under
         `scale` in [Roles](/docs/role). dash-only.
       MD

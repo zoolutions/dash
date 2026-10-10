@@ -1,9 +1,10 @@
 require "json"
 
-# The controller's state, kept on the primary role's first baseline host (never a member,
-# which comes and goes) so every operator's CLI and `dash mcp` read the same files with no
-# extra configuration: the heartbeat that doubles as the single-controller lease, per-role
-# state (unreachable-since times, last scale-out and scale-in), the decision log, and pauses.
+# The controller's state, kept on `autoscale.controller` - the ops host that runs it - or,
+# without that key, on the primary role's first baseline host (never a member, which comes
+# and goes), so every operator's CLI and `dash mcp` read the same files: the heartbeat that
+# doubles as the single-controller lease, per-role state (unreachable-since times, last
+# scale-out and scale-in), the decision log, and pauses.
 #
 # Runs Dash::Commands::Autoscale through the SSHKit backend it is handed (call it from
 # inside `on(StateStore.host)`). A missing file is empty state; a malformed one is too, with
@@ -11,7 +12,7 @@ require "json"
 # string-keyed hashes, as JSON has them.
 class Dash::Autoscale::StateStore
   def self.host(config = DASH.config)
-    config.primary_role.baseline_hosts.first
+    config.autoscale.controller || config.primary_role.baseline_hosts.first
   end
 
   def initialize(backend, config: DASH.config)

@@ -49,22 +49,35 @@ autoscale:
 # target through `dash scale set`, under the deploy lock. A tick waits up to
 # `lock_wait_timeout` seconds (default 60) for a lock someone else holds, then holds the
 # role until the next tick. Schedule crons are evaluated in `timezone`, an IANA name
-# (default UTC; this example evaluates them in Stockholm time).
+# (default UTC; this example evaluates them in Stockholm time). `controller` names the
+# ops host that runs it and keeps its state (see below); without it, the state lives on
+# the primary role's first host.
 autoscale:
   provider:
     ...
+  controller: 10.0.0.50
   interval: 10
   lock_wait_timeout: 60
   timezone: Europe/Stockholm
 
 # Running the controller
 #
-# `dash autoscale run` is a long-lived process on an ops host - any machine with a
-# checkout of the app, its `.dash/secrets` and SSH access to the servers, like the one you
-# deploy from. It keeps its state on the primary role's first host, under the app's run
-# directory: a heartbeat, the decision log, the pauses and what it remembers between ticks
-# (cooldowns, warmups, unreachable members). Every operator's `dash autoscale status`,
-# `history` and `explain`, `dash doctor` and `dash mcp` read it from there.
+# `dash autoscale run` is a long-lived process on an ops host - a machine with a checkout
+# of the app, its `.dash/secrets` and SSH access to the servers. Name that host in
+# `controller` and run the controller there: it keeps its state on that host, under the
+# app's run directory - a heartbeat, the decision log, the pauses and what it remembers
+# between ticks (cooldowns, warmups, unreachable members) - away from the app servers that
+# are busiest when the app is in trouble. It reaches its own state over SSH, like every
+# other host, so the ops host needs an SSH key (and `ssh/user`) that logs into itself.
+# Every operator's `dash autoscale status`, `history` and `explain`, `pause` and `resume`,
+# `dash doctor` and `dash mcp` read and write it there too.
+#
+# Without `controller`, the state lives on the primary role's first host. Setting or
+# changing `controller` migrates nothing: the controller uses whatever state the selected
+# host holds - none on a new host, so cooldowns, warmups and pauses start fresh; the files
+# it had before, pauses included, on a host it used earlier. The old host's files stay
+# where they were. Stop the old controller first, then check `dash autoscale status` on
+# the new host for pauses that are missing or stale.
 #
 # One controller per app and destination: a second one refuses to start while the first
 # one's heartbeat is fresh (three intervals), unless started with `--takeover`, and the
@@ -99,7 +112,7 @@ autoscale:
 #   ruby:3.4 sh -c "bundle install && bundle exec dash autoscale run"
 # ```
 #
-# `--once` runs a single tick and exits, for cron; the state on the primary host carries
+# `--once` runs a single tick and exits, for cron; the state on the controller host carries
 # cooldowns and warmups from one run to the next. `--dry-run` decides and prints without
 # acting or writing the controller's state (only the `--record` file, when given). `--metrics-port` serves Prometheus metrics at `/metrics`
 # (on 127.0.0.1 unless `--metrics-bind` says otherwise). `dash autoscale explain ROLE`
