@@ -36,7 +36,7 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 
 ## Typical Implementation Flow
 
-1. **Proxy (if cross-repo)** — implement in `../kamal-proxy`, release image `v<base>.<n>` before touching the gem (hard ordering constraint, see `.claude/rules/upstream-sync.md`)
+1. **Proxy (if cross-repo)** — implement in `../kamal-proxy`, release image `v<base>.<n>` before touching the gem (hard ordering constraint, see `AGENTS.md` → Release flow)
 2. **Configuration** — add the option under `lib/dash/configuration/` (e.g. `proxy/run.rb`, `role.rb`), document it in `lib/dash/configuration/docs/*.yml`
 3. **Commands** — teach `lib/dash/commands/*` to build the docker/proxy CLI invocation
 4. **Cli** — wire the Thor command in `lib/dash/cli/*`, including hooks if relevant
@@ -45,7 +45,7 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 
 ## When to Delegate vs. Do Directly
 
-**Delegate (Task tool, Explore agents with `model: haiku` / Plan agents with `model: sonnet` — see `.claude/rules/agents.md`) when**:
+**Delegate (Task tool, Explore agents with `model: haiku` / Plan agents with `model: sonnet` — see `AGENTS.md`) when**:
 - A new Thor command touches `Cli`, `Configuration`, and `Commands` together
 - Deep domain expertise is needed (SSHKit internals, proxy RPC contract, Docker buildx)
 - Work is cross-repo (gem + proxy) and needs sequencing
@@ -75,7 +75,7 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 | Loadbalancer feature | Auto-activation for >1 web host — dind integration fixtures need `loadbalancer: false` under `proxy:` |
 | `Cli::App` / `Cli::Accessory` | Matching `Commands::*` builder and `test/cli/*_test.rb` + `test/commands/*_test.rb` |
 | `Configuration::Role` | Server/role resolution in `Commander` |
-| Any release-adjacent change | `.claude/rules/upstream-sync.md` release ordering (proxy image before gem) |
+| Any release-adjacent change | `AGENTS.md` → Release flow release ordering (proxy image before gem) |
 
 ## Common Mistakes to Avoid
 
@@ -102,7 +102,7 @@ A cross-repo feature (e.g. exposing a new proxy flag) touches **both** layer cak
 - [ ] `bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'` passes (unit)
 - [ ] `bin/test` passes if the change is integration-relevant (needs Docker + published proxy image)
 - [ ] Release ordering respected if this ships a version bump: proxy image before `rake release`
-- [ ] If this session implemented a change (a plan-only run has an empty diff, and the validator BLOCKs an empty change): run the `fable-validator` agent on the combined diff first, with the task or PR body (`gh pr view <PR> --json body`) as the issue and the base branch. On BLOCK do not open or merge: report the blockers instead of calling it ready.
+- [ ] If this session implemented a change (a plan-only run has an empty diff, and the validator BLOCKs an empty change): run the `flow:fable-validator` agent on the combined diff first, with the task or PR body (`gh pr view <PR> --json body`) as the issue and the base branch. On BLOCK do not open or merge: report the blockers instead of calling it ready.
 
 ## Handoff
 

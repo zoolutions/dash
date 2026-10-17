@@ -79,4 +79,4 @@ Pattern language imported from pgbus (mhenrixon/pgbus issues):
 
 R1 first: everything is S-sized, fixes real bugs, and exposes already-built capability (rollout!) — maximum value per line changed. R2 delivers the #1 pain (per-route timeouts) plus a coherent "timeouts story" no kamal-proxy user gets today without fronting nginx/traefik. R3 items are independent S-sized middlewares — good filler between larger efforts. R4's on-demand TLS is the single biggest differentiator (an existing user base is waiting on the stuck PR) but M-sized and touches dash's cert registry — schedule it for a focused block. R5 is a grab bag ordered by demand.
 
-Version grammar: gem releases `2.12.0.N` (four-segment over the upstream base), proxy image tags `v0.9.2.N` until upstream tags a new base. Release ordering (proxy before gem) per `.claude/rules/upstream-sync.md`.
+Version grammar: gem releases `2.12.0.N` (four-segment over the upstream base), proxy image tags `v0.9.2.N` until upstream tags a new base. Release ordering (proxy before gem) per `AGENTS.md` → Release flow.

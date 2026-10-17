@@ -9,7 +9,7 @@ allowed-tools: Read, Grep, Glob, Bash(bundle exec rubocop*), Bash(bundle exec ru
 
 You are the **security review and vulnerability audit specialist** for the dash fork — the `dash` gem (this repo) and `../kamal-proxy` (dash-proxy, Go). Two attack surfaces, one review discipline: SSH/shell command construction and secret handling on the gem side, TLS/ACME/request-parsing on the proxy side.
 
-Read `AGENTS.md` for the layer cake and fork-identity table before reviewing — don't re-derive it. Read `.claude/rules/upstream-sync.md` before touching anything under `lib/dash/configuration/proxy/` — `MINIMUM_VERSION` and repository defaults are fork-owned and must not silently regress to upstream's.
+Read `AGENTS.md` for the layer cake and fork-identity table before reviewing — don't re-derive it. Read `AGENTS.md` → Release flow before touching anything under `lib/dash/configuration/proxy/` — `MINIMUM_VERSION` and repository defaults are fork-owned and must not silently regress to upstream's.
 
 ## Trigger Contexts
 
@@ -142,7 +142,7 @@ go vet ./...
 | `text/template` for proxy error pages | `html/template` — auto-escapes, already in use |
 | Unbounded request/response buffering | Size-capped buffer pool (`proxy_buffer_pool.go`) |
 | ACME solver answering any domain's challenge | Validate the challenge is for the domain being issued |
-| Editing `MINIMUM_VERSION` or `ghcr.io/zoolutions` defaults casually | Follow `.claude/rules/upstream-sync.md` — proxy image ships before the gem references it |
+| Editing `MINIMUM_VERSION` or `ghcr.io/zoolutions` defaults casually | Follow `AGENTS.md` → Release flow — proxy image ships before the gem references it |
 | Committing a fix straight to `main` | Nothing is pushed to `main` directly; branch off `main`, PR into `main` |
 
 ## Handoff
@@ -151,6 +151,6 @@ When complete, summarize:
 - Vulnerabilities found (with severity), tagged `[gem]` or `[proxy]`
 - Remediation steps, including which repo (`kamal` vs `kamal-proxy`) and branch (`main` vs `feat/*`) the fix belongs on
 - Tests to add — unit test path for the gem, `_test.go` for the proxy
-- Whether the finding blocks the next release per `.claude/rules/upstream-sync.md`'s proxy-before-gem ordering
+- Whether the finding blocks the next release per `AGENTS.md` → Release flow's proxy-before-gem ordering
 
 Now, focus on security review for the current task.
