@@ -1,7 +1,7 @@
 # dash
 
 Project instructions for every agent: Claude Code (`CLAUDE.md` imports this file), Grok, Cursor,
-Copilot, Codex. Claude-only extras (rules, skills, commands) live under `.claude/`.
+Copilot, Codex. Claude-only extras (commands, settings) live under `.claude/`; the workflow itself is the `flow` plugin.
 
 **dash** (`zoolutions/dash`) — deploy web apps anywhere. Began as a fork of [basecamp/kamal](https://github.com/basecamp/kamal); made a clean break in 2026-08 (issue #115) and now moves independently — no upstream remote, no sync, no contributions back. Published on rubygems.org as `dash`; the executable is `dash` and the Ruby namespace is `Dash::` (stage 2, issue #117). The server run directory is `.dash/` as of stage 3b; the remaining on-server artifacts (`kamal-proxy` container, `kamal` network, `KAMAL_*` env vars) keep their names until stage 3c ships (see Staged rename below).
 
@@ -17,7 +17,7 @@ Copilot, Codex. Claude-only extras (rules, skills, commands) live under `.claude
 
 ### Never Do
 
-1. **NO pushing directly to `main`** — everything lands via PR (ruleset-enforced; admin bypass is for migrations, not routine)
+1. **NO pushing directly to `main`** — everything lands via PR (ruleset-enforced; admin bypass is for migrations and, once the review gate holds, the one-approval rule; not routine)
 2. **NO upstream syncs** — the fork network is left; basecamp code arrives only by deliberate cherry-pick, never via an `upstream` remote
 3. **NO `-suffix` versions** like `v1.0.0-rc1` for the proxy — `Gem::Version` parses `-` as a prerelease, which sorts OLDER than the base and hard-fails `dash proxy boot`
 4. **NO gem release before the proxy image exists** — the tag named by `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` must be pullable from `ghcr.io/zoolutions/dash-proxy` first (`rake release` gates on this)
@@ -29,7 +29,7 @@ Copilot, Codex. Claude-only extras (rules, skills, commands) live under `.claude
 
 1. **Branch features off `main`**, PR back into `main`
 2. **Interpolate `MINIMUM_VERSION` in test expectations** — never hardcode proxy versions
-3. **Run unit tests + rubocop before pushing**; `bin/test` before merging
+3. **Run unit tests + rubocop before pushing**; `bin/test` before merging when deploy/proxy/boot paths changed (Workflow → Verify; CI runs the full suite on the PR)
 
 ## Commands
 
@@ -77,8 +77,8 @@ Gem tags are plain `vX.Y.Z` (own semver, 3.x line). Historical `dash-v*` tags ar
 ## Labels
 
 Every pull request carries exactly one `type` label and at least one `area`
-label from `.github/labels.yml` — never a `status` label. `/plan` labels the
-issue, `/lfg` copies the issue's `type` and `area` labels onto the PR (never
+label from `.github/labels.yml` — never a `status` label. `/flow:plan` labels the
+issue, `/flow:lfg` copies the issue's `type` and `area` labels onto the PR (never
 `plan` or another status label). Without an issue, the type comes from the
 change's conventional-commit prefix and the areas from
 `bin/labels infer $(git diff --name-only origin/main...HEAD)`. Labels change in
@@ -111,30 +111,50 @@ labels kit (canonical copy in docs-kit): never edit them in place.
 - CI: rubocop + actionlint/zizmor + Ruby 3.2–4.0 matrix on `main`.
 - Multi-host fixtures with a >1-host primary role need `loadbalancer: false` under `proxy:` — the loadbalancer auto-activates and the dind harness can't support it.
 
-## Slash Commands
+## Workflow
 
-| Command | Purpose |
-|---------|---------|
-| `/lfg` | Full autonomous workflow: branch off `main` → understand → plan → TDD → verify → PR into `main` |
-| `/plan` | Read-only planning → GitHub issue or `docs/plans/` markdown (execute with `/lfg`) |
-| `/architect` | Coordinate multi-layer work across the Thor CLI → Commander → Commands → Configuration cake |
-| `/tdd` | Enforce RED → GREEN → REFACTOR with Minitest + Mocha |
-| `/security` | Audit SSH command construction, secret handling, shell escaping, error-page paths |
-| `/perf` | Baseline vs `main` in a worktree — command construction only (dash has no bench suite) |
-| `/review-pr` | Review a PR for pattern + project-constraint compliance |
-| `/github-review-pr` | Full PR pass: fix CI failures, then process review comments |
-| `/github-review-failures` | Diagnose + fix CI failures until green |
-| `/github-review-comments` | Process unresolved PR review comments |
-| `/finish-prs` | Drive a set of open PRs to merge-ready, one at a time |
-| `/debug-flaky` | Root-cause an intermittent test failure — evidence → repro → stress-proofed fix; never skip/retry |
+- **Verify:** `bundle exec rubocop --parallel` · `bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'` (unit, no Docker) · `bin/test` before merging when deploy/proxy/boot paths changed (Docker + the published proxy image at `MINIMUM_VERSION`)
+- **Specs:** fast loop `bundle exec ruby -Itest <test file>`; full suite `bin/test`; two worktrees at once: unit yes, integration one at a time (shared Docker daemon)
+- **CI:** required `Tests (Ruby 3.2)`, `3.3`, `3.4`, `4.0`, `cubic · AI code reviewer` (branch must be up to date); `RuboCop` and `GitHub Actions audit` report only; `Docs site / Build & test` on `docs/**` or `.github/workflows/docs-ci.yml`; full suite on the PR; failure report none
+- **Review bot:** cubic
+- **Merge:** squash — `gh pr merge <PR> --squash --delete-branch`; fallback after the gate, when only the ruleset's one-approval rule blocks: `--admin` (Critical Rules #1)
+- **PR contract:** `## Summary`, `## Test plan`; exactly one `type` + at least one `area` label (`## Labels`); plain Markdown body, backticks never escaped, `--body-file` for long ones
+- **Conflicts:** merge `main` forward, never rebase; `lib/dash/version.rb` — main's (only `rake release` writes it); `Gemfile.lock` `docs/Gemfile.lock` — either side, then `bundle install`, never hand-merged; `dash.gemspec` — keep both sides' dependencies; `lib/dash/configuration/proxy/run.rb` — keep the `ghcr.io/zoolutions` repository, a `MINIMUM_VERSION` conflict is a release-ordering question (flag it); `test/{cli,commands}/proxy_test.rb` — keep the ghcr org and the `MINIMUM_VERSION` interpolation; `test/integration/docker/deployer/setup.sh` — literal tag equal to `MINIMUM_VERSION`; `git rerere` is on, `git diff --staged` before trusting a replay
+- **Worktree setup:** `bundle install`; undo none
+- **Release:** `bin/release <v>` (proxy image first, see Release flow); changelog none (release notes under `docs/release-notes/`); prep none; lockfiles `Gemfile.lock` `docs/Gemfile.lock`; docs `deploy-docs.yml` on release; human none
+- **Main health:** `gh run list --workflow ci.yml --branch main --event push --limit 1 --json conclusion,headSha`
+- **Upstream:** libraries we own `zoolutions/*` (the proxy is `zoolutions/dash-proxy`); scrub none
+- **Bench:** none (the gem has no bench suite and none is invented: reason about loop and SSH call counts; the proxy's is `make bench` in `../kamal-proxy`)
 
-**Models.** Sessions run on `opus` (Opus 5.5) with `fable` (Fable 5.1) as the advisor (`.claude/settings.json`). Fable is spent where judgment matters most: `/plan` runs on Fable, the advisor is consulted at decision points (before choosing an approach, a schema or public API, a migration, a dependency, anything irreversible, and when a failure repeats), and the `fable-validator` agent checks every finished implementation before its pull request opens (`/lfg`, Phase 6.5). Commands pin their tier by alias, never by full model ID: `opus` for orchestration, security, full PR review, payments and production debugging; `sonnet` for the implementation specialists and TDD; `haiku` for mechanical scans. Every spawned agent names its `model:`; one that does not runs on `sonnet` (`CLAUDE_CODE_SUBAGENT_MODEL`), never on the session's model. Plan mode cannot take a model of its own: it runs on Opus and asks the advisor.
+## Agent commands
+
+Plugins (`.claude/settings.json`): `/flow:lfg`, `/flow:plan`, `/flow:follow-through`, `/flow:finish-prs`,
+`/flow:github-review-pr` (`-failures`, `-comments`), `/flow:review-pr`, `/flow:tdd`, `/flow:debug-flaky`,
+the `flow:fable-validator` agent; `/ruby-gem:release`, `/ruby-gem:perf`. Local (`.claude/commands/`):
+`/architect` (Thor CLI → Commander → Commands → Configuration across the gem and `../kamal-proxy`),
+`/security` (SSH command construction, secrets, shell escaping, error-page paths).
+
+**Models.** Sessions run on `opus` with `fable` as the advisor (`.claude/settings.json`); consult it
+before choosing an approach, a public API, a dependency, anything irreversible, and when a failure
+repeats. Every spawned agent names its `model:`; one that does not runs on `sonnet`
+(`CLAUDE_CODE_SUBAGENT_MODEL`), never on the session's model. A new Thor command or config option goes
+through a Plan agent first (it touches `Cli`, `Configuration` and `test/` together); a proxy-version
+change is cross-repo, so sequence `../kamal-proxy` first.
+
+## Code rules
+
+- Keep the layers apart: `Cli` parses options and orchestrates `on()`/`modify()`; `Commands` builds argv arrays (pure, no SSH; `argumentize`/`optionize`, never hand-built shell strings); `Configuration` turns `deploy.yml` into objects.
+- Rescue the specific `SSHKit::Command::Failed` / Docker error and re-raise the rest, never `StandardError` → nil. No shared mutable state inside `on()` blocks.
+- New proxy-image code uses `ghcr.io/zoolutions/dash-proxy` (`Proxy::Run#repository`, `Proxy::Boot#repository_name`), not `basecamp/kamal-proxy`. Loadbalancer-only code (`Cli::Proxy#loadbalancer`, `DASH.loadbalancer`, `Configuration::Proxy#load_balancing?`) stays behind `load_balancing?` checks.
+- Tests: Minitest + Mocha (`any_instance.stubs`), no RSpec; `SSHKit::Backend::Printer` prints instead of executing, assert the printed command; no real SSH, network or secrets in unit tests (fixtures under `test/fixtures/`). 100% coverage for `Proxy::Run`, `Commander`, `Configuration`, `Commands::Proxy`/loadbalancer activation and `Cli::Main` hooks.
+- A unit test that varies by host is new reach outside the process (Docker, network, clock): fix that, don't add a known-failures list.
+- `bin/labels` and `.github/LABELS.md` are the shared labels kit (canonical copy in docs-kit, `script/labels-kit sync`): never edit them here.
+- Performance claims need a same-machine before/after from `main` in a worktree; otherwise say "measured after only".
 
 ## More Documentation
 
 - `docs/` — the documentation site: a self-contained docs-kit Rails app (own bundle, RSpec, CI job `docs-ci.yml`), deployed to https://dash.zoolutions.llc by `deploy-docs.yml` on each release. The Configuration pages are GENERATED from `lib/dash/configuration/docs/*.yml` (parsed by `docs/app/models/config_doc.rb`); a new doc YAML fails `docs/spec/config_docs_spec.rb` until registered in `docs/app/models/doc.rb`.
 - `ROADMAP.md` — evidence-linked improvement roadmap
-- `.claude/rules/` — coding-style, git-workflow, testing, agents, performance, striving-for-excellence, upstream-sync (historical)
-- `.claude/commands/` — the slash commands above
+- `.claude/commands/` — the local commands above
 - Proxy repo: `../kamal-proxy/CLAUDE.md` — cross-repo release ordering
 - Upstream kamal docs (shared basics): https://kamal-deploy.org
