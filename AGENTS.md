@@ -17,7 +17,7 @@ Copilot, Codex. Claude-only extras (commands, settings) live under `.claude/`; t
 
 ### Never Do
 
-1. **NO pushing directly to `main`** — everything lands via PR (ruleset-enforced; admin bypass is for migrations, not routine)
+1. **NO pushing directly to `main`** — everything lands via PR (ruleset-enforced; admin bypass is for migrations and, once the review gate holds, the one-approval rule; not routine)
 2. **NO upstream syncs** — the fork network is left; basecamp code arrives only by deliberate cherry-pick, never via an `upstream` remote
 3. **NO `-suffix` versions** like `v1.0.0-rc1` for the proxy — `Gem::Version` parses `-` as a prerelease, which sorts OLDER than the base and hard-fails `dash proxy boot`
 4. **NO gem release before the proxy image exists** — the tag named by `Dash::Configuration::Proxy::Run::MINIMUM_VERSION` must be pullable from `ghcr.io/zoolutions/dash-proxy` first (`rake release` gates on this)
@@ -29,7 +29,7 @@ Copilot, Codex. Claude-only extras (commands, settings) live under `.claude/`; t
 
 1. **Branch features off `main`**, PR back into `main`
 2. **Interpolate `MINIMUM_VERSION` in test expectations** — never hardcode proxy versions
-3. **Run unit tests + rubocop before pushing**; `bin/test` before merging
+3. **Run unit tests + rubocop before pushing**; `bin/test` before merging when deploy/proxy/boot paths changed (Workflow → Verify; CI runs the full suite on the PR)
 
 ## Commands
 
@@ -115,9 +115,9 @@ labels kit (canonical copy in docs-kit): never edit them in place.
 
 - **Verify:** `bundle exec rubocop --parallel` · `bundle exec ruby -Itest -e 'Dir["test/**/*_test.rb"].grep_v(/integration/).each { |f| require File.expand_path(f) }'` (unit, no Docker) · `bin/test` before merging when deploy/proxy/boot paths changed (Docker + the published proxy image at `MINIMUM_VERSION`)
 - **Specs:** fast loop `bundle exec ruby -Itest <test file>`; full suite `bin/test`; two worktrees at once: unit yes, integration one at a time (shared Docker daemon)
-- **CI:** required `Tests (Ruby 3.2)`, `3.3`, `3.4`, `4.0`, `cubic · AI code reviewer` (branch must be up to date); `RuboCop` and `GitHub Actions audit` report only; `Docs site / Build & test` on `docs/**` only; full suite on the PR; failure report none
+- **CI:** required `Tests (Ruby 3.2)`, `3.3`, `3.4`, `4.0`, `cubic · AI code reviewer` (branch must be up to date); `RuboCop` and `GitHub Actions audit` report only; `Docs site / Build & test` on `docs/**` or `.github/workflows/docs-ci.yml`; full suite on the PR; failure report none
 - **Review bot:** cubic
-- **Merge:** squash — `gh pr merge <PR> --squash --delete-branch`; fallback after the gate: `--admin` for the ruleset's one-approval rule
+- **Merge:** squash — `gh pr merge <PR> --squash --delete-branch`; fallback after the gate, when only the ruleset's one-approval rule blocks: `--admin` (Critical Rules #1)
 - **PR contract:** `## Summary`, `## Test plan`; exactly one `type` + at least one `area` label (`## Labels`); plain Markdown body, backticks never escaped, `--body-file` for long ones
 - **Conflicts:** merge `main` forward, never rebase; `lib/dash/version.rb` — main's (only `rake release` writes it); `Gemfile.lock` `docs/Gemfile.lock` — either side, then `bundle install`, never hand-merged; `dash.gemspec` — keep both sides' dependencies; `lib/dash/configuration/proxy/run.rb` — keep the `ghcr.io/zoolutions` repository, a `MINIMUM_VERSION` conflict is a release-ordering question (flag it); `test/{cli,commands}/proxy_test.rb` — keep the ghcr org and the `MINIMUM_VERSION` interpolation; `test/integration/docker/deployer/setup.sh` — literal tag equal to `MINIMUM_VERSION`; `git rerere` is on, `git diff --staged` before trusting a replay
 - **Worktree setup:** `bundle install`; undo none
