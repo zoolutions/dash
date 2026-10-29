@@ -99,9 +99,11 @@ servers:
     #
     # How a replica of a role WITHOUT the proxy leaves when `dash scale set` removes it:
     # `signal` is sent first (e.g. TSTP, so Sidekiq stops taking new jobs), then dash
-    # waits `wait` seconds before `docker stop`. Keep `wait` inside the stop budget
-    # described on the worker roles page. A role behind dash-proxy has no drain: the proxy
-    # drains it, so setting one there is an error.
+    # waits `wait` seconds before `docker stop`. A role with a `sidekiq` scale signal stops
+    # waiting as soon as Sidekiq reports nothing busy in the leaving containers, so `wait`
+    # is then the most it waits. Keep `wait` inside the stop budget described on the worker
+    # roles page. A role behind dash-proxy has no drain: the proxy drains it, so setting one
+    # there is an error.
     drain:
       signal: TSTP
       wait: 20

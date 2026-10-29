@@ -84,6 +84,12 @@ class CommandsAppReplicasTest < ActiveSupport::TestCase
       new_command(role: "payments", host: "1.1.1.2", replica: 3).signal("TSTP", version: "123").join(" ")
   end
 
+  test "container_hostname reads the slot's container hostname, which Sidekiq reports" do
+    assert_equal \
+      "docker container ls --all --filter 'name=^app-payments\\.3-123$' --quiet | xargs docker inspect --format '{{.Config.Hostname}}'",
+      new_command(role: "payments", host: "1.1.1.2", replica: 3).container_hostname(version: "123").join(" ")
+  end
+
   test "info and remove_containers cover every slot of the role" do
     assert_equal "docker ps --filter label=service=app --filter label=destination= --filter label=role=web", new_command.info.join(" ")
     assert_equal "docker container prune --force --filter label=service=app --filter label=destination= --filter label=role=web", new_command.remove_containers.join(" ")

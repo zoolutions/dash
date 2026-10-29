@@ -145,7 +145,7 @@ class CliScaleTest < CliTestCase
   test "set waits drain.wait even without a drain signal" do
     stub_running "1.1.1.1" => [ "app-web-123" ]
 
-    leave = Dash::Cli::Scale::ReplicaLeave.new("1.1.1.2", stub(running_proxy?: false, drain_signal: nil, drain_wait: 7, to_s: "payments"), { 2 => "123" }, stub(info: nil), running: [ 1, 2 ])
+    leave = Dash::Cli::Scale::ReplicaLeave.new("1.1.1.2", stub(running_proxy?: false, scaled?: false, drain_signal: nil, drain_wait: 7, to_s: "payments"), { 2 => "123" }, stub(info: nil), running: [ 1, 2 ])
     leave.expects(:sleep).with(7)
     leave.send(:drain)
   end

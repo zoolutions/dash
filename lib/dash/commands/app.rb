@@ -123,6 +123,12 @@ class Dash::Commands::App < Dash::Commands::Base
     pipe container_id_for_version(version), xargs(docker(:kill, "--signal=#{signal}"))
   end
 
+  # The slot's container hostname (`--hostname` at boot), which Sidekiq reports as its
+  # process's `hostname` - how a drain asks Sidekiq what that container is still working on.
+  def container_hostname(version:)
+    pipe container_id_for_version(version), xargs(docker(:inspect, "--format", "'{{.Config.Hostname}}'"))
+  end
+
   # Every running container of the role with docker's status line, for `dash scale status`.
   def replica_status
     active_containers_ps format: '"{{.Names}}\t{{.Status}}"'
