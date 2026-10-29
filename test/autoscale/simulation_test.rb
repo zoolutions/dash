@@ -48,6 +48,27 @@ class AutoscaleSimulationTest < ActiveSupport::TestCase
     assert_equal 1, payments(result)[:unrecorded_guards]
   end
 
+  test "a guard whose source changed since the recording is not replayed against the new one" do
+    @scale["hold_when"] = [ { "source" => "prometheus", "query" => "max(x)", "above" => 100 } ]
+
+    result = simulate(ramp(guard: 195))
+    assert_equal 2, actions(result).count { |_, action| action == "scale_out" }
+    assert_equal 1, payments(result)[:unrecorded_guards]
+  end
+
+  test "a role with a schedule and no signal is replayed too: its floor needs no sample" do
+    @scale = @scale.except("signal", "up", "down", "hold_when").merge("schedule" => [ { "cron" => "0 2 15 * *", "for" => "10m", "min" => 6 } ])
+
+    assert_equal [ [ 0, "scale_out", 2, 6 ], [ 600, "scale_in", 6, 4 ], [ 1200, "scale_in", 4, 2 ] ], actions(simulate(ramp))
+  end
+
+  test "a role with no replayable tick has no counts to sum" do
+    result = simulate(ramp.map { |line| without_signal(line) })
+
+    assert_equal [ 0, 141 ], payments(result).values_at(:replayed, :not_replayable)
+    assert_equal({ scale_outs: 0, scale_ins: 0, peak: 2, minimum: 2, container_seconds: 2800 }, payments(result)[:simulated])
+  end
+
   test "a scale-out onto new hosts warms them up, which holds a scale-in" do
     @scale["warmup"] = 1000
 
@@ -135,7 +156,7 @@ class AutoscaleSimulationTest < ActiveSupport::TestCase
         servers: { "web" => [ "1.1.1.1" ],
           "payments" => { "hosts" => [ "1.1.1.3" ], "cmd" => "bundle exec sidekiq", "healthcheck" => false, "replicas" => { "min" => 1, "max" => 2 }, "scale" => @scale } },
         autoscale: { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } },
-          "redis" => { "url" => "redis://cache:6379" }, "postgres" => { "url" => "postgres://db/app" } }
+          "redis" => { "url" => "redis://cache:6379" }, "postgres" => { "url" => "postgres://db/app" }, "prometheus" => { "url" => "http://10.0.0.9:9090" } }
       })
     end
 end

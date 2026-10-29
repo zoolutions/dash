@@ -29,7 +29,8 @@ class Dash::Diagnostics::Doctor::SignalChecks
     end
 
     def guard_result(target, guard, from)
-      return source_result(target, guard, from) if guard[:error] || guard[:value].nil?
+      return source_result(target, guard, from) if guard[:error]
+      return result(target, :warn, "#{guard[:source]} answered with no value in #{guard[:latency_ms]}ms, #{from}; without a value it holds a scale-out") if guard[:value].nil?
 
       if guard[:holding]
         result target, :warn, "#{guard[:source]} answered #{guard[:value]} in #{guard[:latency_ms]}ms, #{from}; above #{guard[:above]}, so it holds a scale-out"

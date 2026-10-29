@@ -235,8 +235,9 @@ servers:
       # seconds, up after one breach, down after 10 minutes. In an app whose roles share a
       # database, give every signalled role a `hold_when` guard on it. `dash autoscale signal
       # ROLE` reads the signal and guards live, as the controller does. Simulation replays
-      # what the queue did with the containers that really ran, not the simulated ones, so
-      # it is a guide, not a forecast.
+      # what the queue did with the containers that really ran, not the simulated ones; it
+      # starts its cooldowns at the tick that acted, where live they start once the scale
+      # finishes, and its breach windows empty - so it is a guide, not a forecast.
       signal:
         source: sidekiq
         queues:

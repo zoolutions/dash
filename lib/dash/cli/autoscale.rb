@@ -47,7 +47,13 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
     role = scaled_role(role_name)
     sample = -> { Dash::Diagnostics::AutoscaleSignal.new(role: role).to_h }
 
-    options[:json] ? puts_json(&sample) : print_signal(sample.call)
+    if options[:json]
+      puts_json(&sample)
+    else
+      # A source with `via:` is reached through an SSH tunnel.
+      pre_connect_if_required
+      print_signal(sample.call)
+    end
   end
 
   desc "simulate", "Replay a dash autoscale run --record file with deploy.yml's thresholds now: every simulated action, and a summary per role"
@@ -272,6 +278,8 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
     end
 
     def simulation_summary(summary)
+      return "no tick replayed" if summary[:peak].nil?
+
       "#{summary[:scale_outs]} #{"scale-out".pluralize(summary[:scale_outs])}, #{summary[:scale_ins]} #{"scale-in".pluralize(summary[:scale_ins])}, " \
         "peak #{summary[:peak]}, minimum #{summary[:minimum]}, #{summary[:container_seconds]} container-seconds"
     end

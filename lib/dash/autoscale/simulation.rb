@@ -12,8 +12,14 @@ require "json"
 # `scale.warmup`, as joined members do. The world's own holds are replayed: a recorded
 # pause, an unreadable pool, unreadable baseline hosts.
 #
-# Known limit: the recorded signal is what the queue did with the containers that actually
-# ran, not with the simulated ones.
+# Known limits, so a replay with the same thresholds can differ from what ran:
+# - the recorded signal is what the queue did with the containers that actually ran, not
+#   with the simulated ones;
+# - a simulated action's cooldown and warmup start at its tick, where live they start once
+#   `dash scale set` returns (a join can take minutes), so the simulation can act again a
+#   tick or more early;
+# - the breach windows start empty, so a recording that begins inside a breach scales
+#   `up.for` (or `down.for`) later than live did.
 class Dash::Autoscale::Simulation
   ACTIONS = %w[ scale_out scale_in ].freeze
 
@@ -128,20 +134,28 @@ class Dash::Autoscale::Simulation
           Dash::Autoscale::Sample.new(value: recorded["value"], at: Dash::Autoscale::Timestamp.parse(recorded["at"]) || at, error: recorded["error"])
         end
 
-        # The recorded readings against the current bounds; a guard with no recording is left out.
+        # The recorded readings against the current bounds. A guard with no recording at its
+        # index, or one of another source (hold_when reordered or changed), is left out.
         def guards(recorded, at)
-          readings = Array(recorded).select { |reading| reading.is_a?(Hash) }.index_by { |reading| reading["index"] }
-
           @scale.guards.each_with_index.filter_map do |guard, index|
-            next unless (reading = readings[index])
+            next unless (reading = recorded_reading(recorded, guard, index))
 
             Dash::Autoscale::Guard::Reading.new(index: index, source: guard.source, above: guard.above, sample: sample(reading, at))
           end
         end
 
+        def recorded_reading(recorded, guard, index)
+          Array(recorded).find { |reading| reading.is_a?(Hash) && reading["index"] == index && reading["source"] == guard.source }
+        end
+
+        # The current guards no replayed tick has a recording for.
         def unrecorded_guards
-          recorded = @ticks.filter_map { |_, decision| decision.dig("inputs", "guards") if decision["inputs"].is_a?(Hash) }.map(&:size).max.to_i
-          missing = @scale.signal? ? @scale.guards.size - recorded : 0
+          return unless @scale.signal?
+
+          recorded = @ticks.filter_map { |_, decision| decision["inputs"] if decision["inputs"].is_a?(Hash) && decision["inputs"]["signal"].is_a?(Hash) }
+          return if recorded.empty?
+
+          missing = @scale.guards.each_with_index.count { |guard, index| recorded.none? { |inputs| recorded_reading(inputs["guards"], guard, index) } }
           missing if missing.positive?
         end
 

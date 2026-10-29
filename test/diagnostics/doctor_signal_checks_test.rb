@@ -48,6 +48,13 @@ class DiagnosticsDoctorSignalChecksTest < DiagnosticsTestCase
     assert_match %r{\Apostgres answered 195\.0 in [\d.]+ms, from this machine \(laptop\); above 180, so it holds a scale-out\z}, checks.last.detail
   end
 
+  test "a guard that answers without a value says it holds a scale-out" do
+    sources redis: AutoscaleSignalFakes::Redis.new([ "LINDEX", "queue:payments", -1 ] => nil), postgres: AutoscaleSignalFakes::Postgres.new(GUARD => nil)
+
+    assert_equal :warn, checks.last.status
+    assert_match %r{\Apostgres answered with no value in [\d.]+ms, from this machine \(laptop\); without a value it holds a scale-out\z}, checks.last.detail
+  end
+
   test "the doctor runs it" do
     Dash::Diagnostics::Doctor.any_instance.stubs(:host_check_results).returns([])
     Dash::Diagnostics::Doctor.any_instance.stubs(:endpoint_check_results).returns([])

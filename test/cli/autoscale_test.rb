@@ -161,6 +161,13 @@ class CliAutoscaleTest < CliTestCase
     assert_in_delta 12.5, signal.dig("signal", "value"), 1
   end
 
+  test "signal runs the pre-connect hook first, as a via: tunnel opens SSH" do
+    stub_signal_sources
+    Dash::Cli::Autoscale.any_instance.expects(:pre_connect_if_required)
+
+    run_command("signal", "payments", config: :with_scale_signal)
+  end
+
   test "signal on a role without one says so" do
     assert_match "reports has no scale/signal, so there is nothing to sample", run_command("signal", "reports", config: :with_scale_signal)
   end
@@ -198,6 +205,20 @@ class CliAutoscaleTest < CliTestCase
 
     assert_match "  1 tick not replayable: recorded without a signal (before Phase 3), or not evaluated", output
     assert_match %r{line 14: }, output
+  end
+
+  test "simulate keeps to --roles" do
+    output = run_command("simulate", "--samples", record_file, "--roles", "web", config: :with_scale_signal)
+
+    assert_no_match "payments", output
+    assert_match "No role in ", output
+  end
+
+  test "simulate says when a role had no tick it could replay" do
+    path = File.join(Dir.mktmpdir, "record.jsonl")
+    File.write(path, JSON.generate(at: "2026-10-15T02:00:00Z", decisions: [ { role: "payments", action: "hold", reasons: [ "action_failed" ], inputs: {} } ]) + "\n")
+
+    assert_match "  simulated: no tick replayed", run_command("simulate", "--samples", path, config: :with_scale_signal)
   end
 
   test "simulate needs a file that exists" do
