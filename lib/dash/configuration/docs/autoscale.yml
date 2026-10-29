@@ -45,13 +45,23 @@ autoscale:
 # Controller
 #
 # How `dash autoscale run` ticks. Every `interval` seconds (default 10, at least 5) it reads
-# the pool and the running containers, and scales each role with a `scale/schedule` to its
-# target through `dash scale set`, under the deploy lock. A tick waits up to
+# the pool and the running containers, and scales each role with a `scale/schedule` or a
+# `scale/signal` toward its target through `dash scale set`, under the deploy lock. A tick waits up to
 # `lock_wait_timeout` seconds (default 60) for a lock someone else holds, then holds the
 # role until the next tick. Schedule crons are evaluated in `timezone`, an IANA name
 # (default UTC; this example evaluates them in Stockholm time). `controller` names the
 # ops host that runs it and keeps its state (see below); without it, the state lives on
 # the primary role's first host.
+#
+# `redis`, `postgres` and `prometheus` are where signals and guards read from (see
+# `scale/signal` and `scale/hold_when` in dash docs role): a sidekiq signal reads Redis, a
+# pgbus signal and a postgres guard read Postgres. Each `url` is a secret (a one-element
+# array) or a literal URL, read from the machine the controller runs on. `via` names a host
+# to tunnel the connection through over SSH, for a database only the app servers reach;
+# `rediss://` cannot go through `via` (the certificate cannot be verified through a
+# tunnel). Postgres reads run in a read-only transaction. `token` is an optional bearer
+# token for Prometheus. The controller's Gemfile needs `redis-client` for Redis and `pg` for
+# Postgres; dash does not depend on either.
 autoscale:
   provider:
     ...
@@ -59,6 +69,17 @@ autoscale:
   interval: 10
   lock_wait_timeout: 60
   timezone: Europe/Stockholm
+  redis:
+    url:
+      - REDIS_URL
+    via: 10.0.0.31
+  postgres:
+    url:
+      - DATABASE_URL
+  prometheus:
+    url: http://10.0.0.9:9090
+    token:
+      - PROMETHEUS_TOKEN
 
 # Running the controller
 #

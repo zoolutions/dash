@@ -25,6 +25,6 @@ class Dash::Diagnostics::AutoscaleExplain < Dash::Diagnostics::Base
       pause = Dash::Autoscale::Pause.from(read.dig(:pauses, @role.name))
       decision = Dash::Autoscale::Evaluation.new(role: @role, now: @now, state: state, pause: pause).decide
 
-      { role: @role.name, controlled: @role.scale.schedule.any?, state_host: host, state_error: read[:error], decision: decision.to_h }.compact
+      { role: @role.name, controlled: @role.controlled?, state_host: host, state_error: read[:error], decision: decision.to_h }.compact
     end
 end

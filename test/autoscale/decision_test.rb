@@ -43,7 +43,8 @@ class AutoscaleDecisionTest < ActiveSupport::TestCase
   test "the codes" do
     assert_equal %w[ scale_out scale_in replace_member hold ], Dash::Autoscale::Decision::ACTIONS
     assert_includes Dash::Autoscale::Decision::REASONS, "lock_busy"
-    assert_equal 12, Dash::Autoscale::Decision::REASONS.size
+    assert_includes Dash::Autoscale::Decision::REASONS, "held_by_guard"
+    assert_equal 16, Dash::Autoscale::Decision::REASONS.size
   end
 
   private

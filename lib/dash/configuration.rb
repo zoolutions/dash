@@ -111,6 +111,8 @@ class Dash::Configuration
     ensure_scaled_roles_have_a_provider
     ensure_upcloud_templates_are_complete
     ensure_scaled_proxied_roles_have_a_loadbalancer
+    ensure_signal_sources_are_configured
+    ensure_pgbus_signals_have_no_drain_signal
   end
 
   # Resolves every secret the deploy will need so a missing secret fails fast,
@@ -577,6 +579,33 @@ class Dash::Configuration
       if (role = scaled_roles.find(&:running_proxy?))
         raise Dash::ConfigurationError, "servers/#{role.name}/scale: a scaled role behind dash-proxy needs the load balancer, " \
           "remove proxy/loadbalancer: false"
+      end
+
+      true
+    end
+
+    # A signal or guard reads through its autoscale/<connection> block; without one the
+    # controller would hold the role with missing_data forever instead of failing here.
+    def ensure_signal_sources_are_configured
+      scaled_roles.select { |role| role.scale.signal? }.each do |role|
+        readers = [ [ "signal", role.scale.signal ] ] + role.scale.guards.each_with_index.map { |guard, index| [ "hold_when/#{index}", guard ] }
+
+        readers.each do |key, reader|
+          next if autoscale.source?(reader.connection)
+
+          raise Dash::ConfigurationError, "servers/#{role.name}/scale/#{key}: #{reader.source} reads #{reader.connection.capitalize}, " \
+            "set autoscale/#{reader.connection} (see dash docs autoscale)"
+        end
+      end
+
+      true
+    end
+    # pgbus has no quiet mode: a drain signal changes nothing, and the drain wait only delays
+    # the stop that drains it. Legal, so warn.
+    def ensure_pgbus_signals_have_no_drain_signal
+      scaled_roles.select { |role| role.scale.signal&.source == "pgbus" && role.drain_signal }.each do |role|
+        warn "Role #{role.name}: a pgbus signal with drain/signal #{role.drain_signal} - pgbus has no quiet mode and ignores it. " \
+          "It drains its jobs on docker stop, so give the role a stop timeout of at least pgbus's drain_timeout (30s by default)."
       end
 
       true

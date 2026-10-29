@@ -101,12 +101,108 @@ class ConfigurationRoleScaleTest < ActiveSupport::TestCase
     assert config.role(:payments).scale.create?
   end
 
-  test "the reactive rules' keys are not accepted yet" do
-    %w[ signal up down hold_when ].each do |key|
-      @deploy[:servers]["payments"]["scale"] = { "max" => 2, key => {} }
+  test "a signal, its band and its guards" do
+    with_sources
+    @deploy[:servers]["payments"]["replicas"] = { "min" => 1, "max" => 2 }
+    @deploy[:servers]["payments"]["scale"] = { "max" => 4,
+      "signal" => { "source" => "sidekiq", "queues" => [ "default", "billing" ] },
+      "up" => { "above" => 10, "for" => "30s" }, "down" => { "below" => 2.5, "for" => "10m" },
+      "hold_when" => [ { "source" => "prometheus", "query" => "max(pgbouncer_pools_client_waiting_connections)", "above" => 0 },
+        { "source" => "postgres", "query" => "SELECT count(*) FROM pg_stat_activity", "above" => 180 } ] }
+    scale = role(:payments).scale
 
-      assert_raises_message(/servers\/payments\/scale: #{key} belongs to the reactive autoscaling rules, which are not part of dash yet \(zoolutions\/dash#180, Phase 3\)/) { role(:payments) }
+    assert scale.signal?
+    assert scale.controlled?
+    assert role(:payments).controlled?
+    assert_equal({ source: "sidekiq", queues: [ "default", "billing" ] }, scale.signal.to_h)
+    assert_equal [ 10, 30, 2.5, 600 ], [ scale.up_above, scale.up_for, scale.down_below, scale.down_for ]
+    assert_equal [ [ "prometheus", 0 ], [ "postgres", 180 ] ], scale.guards.map { |guard| [ guard.source, guard.above ] }
+  end
+
+  test "up.for defaults to one sample, down.for to ten minutes" do
+    with_sources
+    @deploy[:servers]["payments"]["scale"] = { "max" => 4, "signal" => { "source" => "prometheus", "query" => "max(lag)" },
+      "up" => { "above" => 10 }, "down" => { "below" => 2 } }
+    scale = role(:payments).scale
+
+    assert_equal [ 0, 600 ], [ scale.up_for, scale.down_for ]
+    assert_empty scale.guards
+  end
+
+  test "without a signal or a schedule a scaled role is not controlled" do
+    @deploy[:servers]["payments"]["scale"] = { "max" => 4 }
+
+    assert_not role(:payments).scale.signal?
+    assert_not role(:payments).scale.controlled?
+    assert_not role(:payments).controlled?
+  end
+
+  test "signal, band and guard validation" do
+    with_sources
+    band = { "up" => { "above" => 10 }, "down" => { "below" => 2 } }
+    sidekiq = { "source" => "sidekiq", "queues" => [ "default" ] }
+
+    { { "signal" => { "source" => "proxy" } }.merge(band) => %r{scale/signal/source: proxy \(web queue time\) comes with Phase 4 \(zoolutions/dash#180\), use sidekiq, pgbus or prometheus},
+      { "signal" => { "source" => "kafka" } }.merge(band) => %r{scale/signal/source: must be sidekiq, pgbus or prometheus, not kafka},
+      { "signal" => { "source" => "sidekiq" } }.merge(band) => %r{scale/signal/queues: is required for sidekiq},
+      { "signal" => { "source" => "pgbus", "queues" => [] } }.merge(band) => %r{scale/signal/queues: is required for pgbus},
+      { "signal" => { "source" => "sidekiq", "queues" => [ "bad queue" ] } }.merge(band) => %r{scale/signal/queues/0: "bad queue" should be letters, digits},
+      { "signal" => { "source" => "sidekiq", "queues" => "default" } }.merge(band) => %r{scale/signal/queues: should be an array},
+      { "signal" => sidekiq.merge("query" => "x") }.merge(band) => %r{scale/signal/query: is only used with prometheus},
+      { "signal" => sidekiq.merge("prefix" => "p_") }.merge(band) => %r{scale/signal/prefix: is only used with pgbus},
+      { "signal" => { "source" => "pgbus", "queues" => [ "default" ], "prefix" => "bad prefix" } }.merge(band) => %r{scale/signal/prefix: "bad prefix" should be letters, digits},
+      { "signal" => { "source" => "prometheus" } }.merge(band) => %r{scale/signal/query: is required for prometheus},
+      { "signal" => { "source" => "prometheus", "query" => "max(x)", "queues" => [ "a" ] } }.merge(band) => %r{scale/signal/queues: is only used with sidekiq and pgbus},
+      { "signal" => sidekiq.merge("sideways" => 1) }.merge(band) => %r{scale/signal: unknown key: sideways},
+      { "signal" => "sidekiq" }.merge(band) => %r{scale/signal: should be a hash},
+      { "signal" => sidekiq, "up" => { "above" => 10 } } => %r{scale/down: is required with a signal},
+      { "signal" => sidekiq, "down" => { "below" => 2 } } => %r{scale/up: is required with a signal},
+      band => %r{scale/up: needs a signal},
+      { "hold_when" => [] } => %r{scale/hold_when: needs a signal},
+      { "signal" => sidekiq, "up" => { "above" => 2 }, "down" => { "below" => 2 } } => %r{scale: up/above \(2\) must be greater than down/below \(2\)},
+      { "signal" => sidekiq, "up" => { "above" => "10" }, "down" => { "below" => 2 } } => %r{scale/up/above: should be a finite number},
+      { "signal" => sidekiq, "up" => { "above" => Float::INFINITY }, "down" => { "below" => 2 } } => %r{scale/up/above: should be a finite number},
+      { "signal" => sidekiq, "up" => { "above" => 10 }, "down" => { "below" => -Float::INFINITY } } => %r{scale/down/below: should be a finite number},
+      { "signal" => sidekiq, "up" => { "above" => Float::NAN }, "down" => { "below" => 2 } } => %r{scale/up/above: should be a finite number},
+      { "signal" => sidekiq, "up" => { "for" => 30 }, "down" => { "below" => 2 } } => %r{scale/up/above: is required},
+      { "signal" => sidekiq, "up" => { "above" => 10, "for" => "2d" }, "down" => { "below" => 2 } } => %r{scale/up/for: must be 0 seconds to 1 day, not 2d},
+      { "signal" => sidekiq, "up" => { "above" => 10 }, "down" => { "below" => 2, "for" => "soon" } } => %r{scale/down/for: "soon" should be seconds},
+      { "signal" => sidekiq, "up" => { "above" => 10, "below" => 3 }, "down" => { "below" => 2 } } => %r{scale/up: unknown key: below},
+      { "signal" => sidekiq, "up" => 10, "down" => { "below" => 2 } } => %r{scale/up: should be a hash},
+      { "signal" => sidekiq, "hold_when" => [ { "source" => "redis", "query" => "x", "above" => 1 } ] }.merge(band) => %r{scale/hold_when/0/source: must be prometheus or postgres, not redis},
+      { "signal" => sidekiq, "hold_when" => [ { "source" => "postgres", "above" => 1 } ] }.merge(band) => %r{scale/hold_when/0/query: is required},
+      { "signal" => sidekiq, "hold_when" => [ { "source" => "postgres", "query" => "SELECT 1" } ] }.merge(band) => %r{scale/hold_when/0/above: is required},
+      { "signal" => sidekiq, "hold_when" => [ { "source" => "postgres", "query" => "SELECT 1", "above" => 1, "below" => 0 } ] }.merge(band) => %r{scale/hold_when/0: unknown key: below},
+      { "signal" => sidekiq, "hold_when" => { "source" => "postgres" } }.merge(band) => %r{scale/hold_when: should be an array} }.each do |keys, pattern|
+      @deploy[:servers]["payments"]["scale"] = { "max" => 4 }.merge(keys)
+
+      assert_raises_message(pattern) { role(:payments) }
     end
+  end
+
+  test "each source a signal or guard reads needs its autoscale block" do
+    { { "source" => "sidekiq", "queues" => [ "default" ] } => %r{servers/payments/scale/signal: sidekiq reads Redis, set autoscale/redis},
+      { "source" => "pgbus", "queues" => [ "default" ] } => %r{servers/payments/scale/signal: pgbus reads Postgres, set autoscale/postgres},
+      { "source" => "prometheus", "query" => "max(x)" } => %r{servers/payments/scale/signal: prometheus reads Prometheus, set autoscale/prometheus} }.each do |signal, pattern|
+      @deploy[:servers]["payments"]["scale"] = { "max" => 4, "signal" => signal, "up" => { "above" => 10 }, "down" => { "below" => 2 } }
+
+      assert_raises_message(pattern) { config }
+    end
+
+    @deploy[:autoscale]["redis"] = { "url" => "redis://cache:6379" }
+    @deploy[:servers]["payments"]["scale"] = { "max" => 4, "signal" => { "source" => "sidekiq", "queues" => [ "default" ] },
+      "up" => { "above" => 10 }, "down" => { "below" => 2 }, "hold_when" => [ { "source" => "postgres", "query" => "SELECT 1", "above" => 1 } ] }
+    assert_raises_message(%r{servers/payments/scale/hold_when/0: postgres reads Postgres, set autoscale/postgres}) { config }
+  end
+
+  test "a pgbus signal on a role with a drain signal warns: pgbus ignores it" do
+    with_sources
+    @deploy[:servers]["payments"]["drain"] = { "signal" => "TSTP", "wait" => 60 }
+    @deploy[:servers]["payments"]["scale"] = { "max" => 4, "signal" => { "source" => "pgbus", "queues" => [ "default" ] },
+      "up" => { "above" => 10 }, "down" => { "below" => 2 } }
+
+    _, stderr = capture_io { config }
+    assert_match %r{payments: a pgbus signal with drain/signal TSTP - pgbus has no quiet mode and ignores it}, stderr
   end
 
   test "controller defaults: no schedule, warmup is boot_timeout, cooldowns 60/600, step one host's worth" do
@@ -226,6 +322,11 @@ class ConfigurationRoleScaleTest < ActiveSupport::TestCase
   private
     def config
       Dash::Configuration.new(@deploy)
+    end
+
+    def with_sources
+      @deploy[:autoscale].merge!("redis" => { "url" => "redis://cache:6379" }, "postgres" => { "url" => "postgres://db/app" },
+        "prometheus" => { "url" => "http://10.0.0.9:9090" })
     end
 
     def role(name)

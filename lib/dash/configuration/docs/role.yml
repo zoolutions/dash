@@ -99,9 +99,11 @@ servers:
     #
     # How a replica of a role WITHOUT the proxy leaves when `dash scale set` removes it:
     # `signal` is sent first (e.g. TSTP, so Sidekiq stops taking new jobs), then dash
-    # waits `wait` seconds before `docker stop`. Keep `wait` inside the stop budget
-    # described on the worker roles page. A role behind dash-proxy has no drain: the proxy
-    # drains it, so setting one there is an error.
+    # waits `wait` seconds before `docker stop`. A role with a `sidekiq` scale signal stops
+    # waiting as soon as Sidekiq reports the leaving containers' processes quiet with
+    # nothing busy (it reports both every few seconds), so `wait` is then the most it waits. Keep `wait` inside the stop budget described on the worker
+    # roles page. A role behind dash-proxy has no drain: the proxy drains it, so setting one
+    # there is an error.
     drain:
       signal: TSTP
       wait: 20
@@ -125,11 +127,10 @@ servers:
     # A scaled role behind dash-proxy needs the load balancer, which turns on by itself for
     # it even with one baseline host; `proxy/loadbalancer: false` is an error for it.
     #
-    # `schedule`, `warmup`, `cooldown` and `step` drive the autoscaling controller
+    # `schedule`, `signal`, `warmup`, `cooldown` and `step` drive the autoscaling controller
     # (`dash autoscale run`), which then owns the role's count: a manual `dash scale set`
     # lasts until its next tick unless the role is paused (`dash autoscale pause ROLE`). A
-    # scaled role without a `schedule` stays manual. The keys of the reactive rules
-    # (`signal`, `up`, `down`, `hold_when`) are not accepted yet.
+    # scaled role with neither a `schedule` nor a `signal` stays manual.
     scale:
       min: 2
       max: 4
@@ -191,15 +192,72 @@ servers:
       warmup: 300
 
       # Seconds between the controller's actions. A scale-in step waits `down` (default
-      # 600) after the last scale-out or scale-in. A schedule floor scales out at once:
-      # `up` (default 60) is for the reactive rules to come.
+      # 600) after the last scale-out or scale-in. A signal-driven scale-out waits `up`
+      # (default 60) after the last one. A schedule floor scales out at once, whatever the
+      # cooldown.
       cooldown:
         up: 60
         down: 600
 
-      # Containers removed per scale-in step, default `replicas/max` (one host's worth).
-      # Scale-out goes straight to the target.
+      # Containers added or removed per signal-driven step, and removed per scale-in step
+      # back to a floor; default `replicas/max` (one host's worth). A step lands on a count
+      # the hosts can split. Scale-out to a schedule floor goes straight to it.
       step: 3
+
+      # The reactive rules: the controller reads `signal` every tick and holds it inside a
+      # band. Above `up/above` for `up/for` it scales out by `step`, at most once per
+      # `cooldown/up`, up to scale max × replicas max. Below `down/below` for `down/for` it
+      # scales in by `step`, at most once per `cooldown/down`, never below the floor (scale
+      # min × replicas min, raised by schedule windows) and never while a member warms up.
+      # Inside the band it holds. A sample it cannot read holds the role (`missing_data`),
+      # and starts both windows over; a floor still applies.
+      #
+      # `source` is one of:
+      #
+      # - `sidekiq`: the age in seconds of the oldest job across `queues`, read from Redis
+      #   (`autoscale/redis`). Sidekiq 7's float seconds and Sidekiq 8's integer
+      #   milliseconds are both read. Draining a Sidekiq container on scale-in ends as soon
+      #   as Sidekiq reports it quiet with nothing busy, instead of always waiting
+      #   `drain/wait`.
+      # - `pgbus`: the age in seconds of the oldest claimable message across `queues`,
+      #   read from Postgres (`autoscale/postgres`): the pgmq table `pgmq.q_<prefix><queue>`,
+      #   `prefix` defaulting to `pgbus_`. Scheduled messages do not count. pgbus has no
+      #   quiet mode, so leave `drain/signal` unset and give the role a stop timeout of at
+      #   least pgbus's `drain_timeout`.
+      # - `prometheus`: the value of one PromQL `query` (`autoscale/prometheus`), the
+      #   largest when it returns several series. An empty result is a missing sample.
+      #
+      # A role with a `schedule` and no `signal` keeps returning to its floor a step at a time.
+      signal:
+        source: sidekiq
+        queues:
+          - default
+          - billing
+
+      # Scale out above this, after this long above it (seconds, or a number with s, m, h
+      # or d, at most 1d). `for` defaults to 0: the first sample above.
+      up:
+        above: 10
+        for: 30s
+
+      # Scale in below this, after this long below it (default 10m). `up/above` must be
+      # greater than `down/below`.
+      down:
+        below: 2
+        for: 10m
+
+      # Saturation guards: while any query reads above its `above` - or cannot be read -
+      # a signal-driven scale-out holds (`held_by_guard`), since more containers would only
+      # queue on what is already full. `source` is `prometheus` (a PromQL query) or
+      # `postgres` (SQL, run read-only with a 5 second timeout; the first column of the
+      # first row). Guards never hold a schedule floor: a window is capacity asked for.
+      hold_when:
+        - source: prometheus
+          query: max(pgbouncer_pools_client_waiting_connections)
+          above: 0
+        - source: postgres
+          query: SELECT count(*) FROM pg_stat_activity
+          above: 180
 
     # Option values are shell-escaped before reaching `docker run`, but `${...}` is
     # deliberately left for the deploy host's shell to expand. Role `env` is never

@@ -5,9 +5,11 @@ class Dash::Mcp::Tools::AutoscaleExplainTool < Dash::Mcp::BaseTool
     One live evaluation of a scaled role by the autoscale policy, as the controller's next tick would make it, without acting:
     the action (scale_out, scale_in, replace_member, hold), the container counts from and to, the reason codes (schedule_floor,
     at_min, at_max, at_target, cooldown, warming_up, paused, lock_busy, member_unreachable, host_unreachable, pool_unreadable,
-    action_failed), when a hold can next change (eligible_at), and every input: running count, floor, bounds, active schedule
-    windows, cooldowns, last scale times, warming and unreachable members, pause. controlled is false for a role without a
-    schedule, which the controller leaves alone.
+    action_failed, above_threshold, below_threshold, held_by_guard, missing_data), when a hold can next change (eligible_at),
+    and every input: running count, floor, min/max bounds, step, active schedule windows, cooldowns, warmup and boot timeout,
+    last scale times, warming and unreachable members, unreadable baseline hosts, pause, and for a role with a signal its
+    sample, its guards' samples, since when it has been above or below its band, and the band itself. controlled is false
+    for a role without a schedule or a signal, which the controller leaves alone.
   DESC
   input_schema properties: { role: { type: "string", description: "The scaled role" } }, required: [ "role" ], additionalProperties: false
 

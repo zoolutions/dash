@@ -2,7 +2,7 @@ require "securerandom"
 require "socket"
 
 # `dash autoscale run`: every `autoscale.interval` seconds, for each scaled role with a
-# `scale.schedule`, observe it, ask Dash::Autoscale::Policy, and carry the decision out
+# `scale.schedule` or `scale.signal`, observe it, ask Dash::Autoscale::Policy, and carry the decision out
 # through `dash scale set` (or replace an unreachable member) under the deploy lock -
 # never by building a join itself.
 #
@@ -28,11 +28,13 @@ class Dash::Autoscale::Controller
 
   # `cli` reconfigures DASH, runs `dash scale set`, replaces members and prints - see
   # Dash::Cli::Autoscale.
+  # `reader` reads the signals and guards, over connections the controller closes when it
+  # stops - see Dash::Autoscale::Reader.
   def initialize(cli:, clock: -> { Time.now.utc }, sleeper: ->(seconds) { sleep seconds }, dry_run: false, takeover: false,
-    interval: nil, mode: "loop", recorder: nil, metrics: Dash::Autoscale::Metrics.new)
+    interval: nil, mode: "loop", recorder: nil, metrics: Dash::Autoscale::Metrics.new, reader: Dash::Autoscale::Reader.new)
     @cli, @clock, @sleeper = cli, clock, sleeper
     @dry_run, @takeover, @interval, @mode = dry_run, takeover, interval, mode
-    @recorder, @metrics = recorder, metrics
+    @recorder, @metrics, @reader = recorder, metrics, reader
     @id = SecureRandom.hex(8)
     @stopping = false
   end
@@ -45,15 +47,15 @@ class Dash::Autoscale::Controller
     @interval || DASH.config.autoscale.interval
   end
 
-  # The roles the controller owns the count of: scaled, with a schedule, within --roles.
+  # The roles the controller owns the count of: scaled, with a schedule or a signal, within --roles.
   def roles
-    (DASH.specific_roles || DASH.config.roles).select { |role| role.scaled? && role.scale.schedule.any? }
+    (DASH.specific_roles || DASH.config.roles).select(&:controlled?)
   end
 
   # Claims the lease, unless another controller's is alive.
   def start
     cli.reconfigure!
-    raise ArgumentError, "No scaled role in scope has a scale/schedule, so there is nothing for the controller to do" if roles.empty?
+    raise ArgumentError, "No scaled role in scope has a scale/schedule or a scale/signal, so there is nothing for the controller to do" if roles.empty?
 
     @started_at = @clock.call
     return if dry_run?
@@ -112,9 +114,10 @@ class Dash::Autoscale::Controller
     decisions
   end
 
-  # Marks the heartbeat stopped, so the next controller does not wait out a stale lease -
-  # unless another controller holds it by now.
+  # Closes the signal connections and marks the heartbeat stopped, so the next controller
+  # does not wait out a stale lease - unless another controller holds it by now.
   def release
+    @reader.close
     return if dry_run? || @started_at.nil?
 
     with_store { |store| store.write_heartbeat_if_held(id, heartbeat(@last_tick_at || @started_at).merge(stopped_at: @clock.call)) }
@@ -152,7 +155,7 @@ class Dash::Autoscale::Controller
     def evaluate(role, now, state, pauses)
       entry = Entry.new(role: role, state: Dash::Autoscale::RoleState.from(state.dig("roles", role.name)))
       entry.evaluation = Dash::Autoscale::Evaluation.new(role: role, now: now, state: entry.state, pause: Dash::Autoscale::Pause.from(pauses[role.name]),
-        observation: quietly { Dash::Autoscale::Observation.take(role) })
+        observation: quietly { Dash::Autoscale::Observation.take(role) }, reader: @reader)
       entry.decision = entry.evaluation.decide
       entry
     rescue StandardError => e

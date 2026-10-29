@@ -77,6 +77,11 @@ class Dash::Configuration::Role
     !scale.nil?
   end
 
+  # Whether `dash autoscale run` owns the role's count (a scale schedule or signal).
+  def controlled?
+    scaled? && scale.controlled?
+  end
+
   # Every pool member of the role, whatever its state.
   def members
     scaled? ? config.pool.members_for(self) : []

@@ -4,7 +4,7 @@ class Dash::Mcp::Tools::ControllerStatusTool < Dash::Mcp::BaseTool
   description <<~DESC
     Whether the autoscale controller (dash autoscale run) is running: its heartbeat - controller id, host, pid, dash version,
     mode, interval, last tick and its age - read as running, stale (no tick for three intervals) or stopped; null when none ever ran.
-    Also the roles with a schedule it controls, and the pauses in force (role, until, by whom).
+    Also the roles with a schedule or signal it controls, and the pauses in force (role, until, by whom).
   DESC
   input_schema properties: {}, additionalProperties: false
 

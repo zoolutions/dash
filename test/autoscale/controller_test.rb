@@ -1,4 +1,5 @@
 require_relative "../diagnostics/diagnostics_test_case"
+require_relative "controller_fakes"
 
 # payments: replicas 1-3 on 1 to 3 hosts, a window from 22:00 on the 14th (Stockholm) for
 # 30h asking for 6, boot_timeout 240, warmup 300, cooldown down 600, step 3. reports:
@@ -7,84 +8,7 @@ class AutoscaleControllerTest < DiagnosticsTestCase
   BILLING = Time.utc(2026, 10, 14, 21, 0)   # 23:00 in Stockholm, a Wednesday: inside the payments window
   QUIET = Time.utc(2026, 10, 17, 12, 0)     # a Saturday afternoon: no window
 
-  # The in-memory stand-in for the files on the state host, JSON round-tripped like them.
-  class FakeStore
-    attr_accessor :files, :decisions, :writes, :trimmed, :count
-
-    def initialize
-      @files = { "heartbeat" => {}, "state" => {}, "pauses" => {} }
-      @decisions = []
-      @writes = []
-      @count = 0
-    end
-
-    def ensure_directory; end
-
-    def heartbeat = files["heartbeat"]
-    def state = files["state"]
-    def pauses = files["pauses"]
-    def decision_count = count
-
-    def write_heartbeat(value) = write("heartbeat", value)
-
-    def write_heartbeat_if_held(id, value)
-      return false unless heartbeat.empty? || heartbeat["controller_id"] == id
-
-      write("heartbeat", value)
-      true
-    end
-    def write_state(value) = write("state", value)
-
-    def append_decisions(decisions)
-      return if decisions.empty?
-
-      @writes << "decisions"
-      @decisions.concat(decisions.map { |decision| round_trip(decision.to_h) })
-    end
-
-    def trim_decisions(keep:)
-      @trimmed = keep
-    end
-
-    private
-      def write(file, value)
-        @writes << file
-        files[file] = round_trip(value)
-      end
-
-      def round_trip(value)
-        JSON.parse(JSON.generate(Dash::Autoscale::Decision.json_safe(value)))
-      end
-  end
-
-  # What Dash::Cli::Autoscale does for the controller, recorded.
-  class FakeCli
-    attr_reader :scale_sets, :replaced, :reports
-    attr_accessor :on_scale_set, :on_replace
-
-    def initialize(config_file)
-      @config_file = config_file
-      @scale_sets, @replaced, @reports = [], [], []
-    end
-
-    def reconfigure!
-      DASH.reconfigure(config_file: @config_file)
-    end
-
-    def invoke_scale_set(role, count)
-      @scale_sets << [ role.name, count ]
-      on_scale_set&.call(role, count)
-    end
-
-    def replace_member(role, member, count:)
-      @replaced << [ role.name, member.host, count ]
-      on_replace&.call(role, member)
-    end
-
-    def report(message, _color = nil)
-      @reports << message
-    end
-  end
+  include AutoscaleControllerFakes
 
   setup do
     configure :deploy_with_scale_schedule

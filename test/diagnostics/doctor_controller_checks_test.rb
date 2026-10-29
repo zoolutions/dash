@@ -30,7 +30,7 @@ class DiagnosticsDoctorControllerChecksTest < DiagnosticsTestCase
   test "no controller, a stale one, or a stopped one warns" do
     configure "deploy_with_scale_schedule"
 
-    assert_equal [ [ "1.1.1.1", :warn, "no controller has run; payments, reports have a schedule that only dash autoscale run carries out" ] ], results
+    assert_equal [ [ "1.1.1.1", :warn, "no controller has run; payments, reports have a schedule or signal that only dash autoscale run carries out" ] ], results
 
     stub_state "heartbeat.json", heartbeat(last_tick_at: (NOW - 120).iso8601).to_json
     assert_equal [ [ "1.1.1.1", :warn, "controller abc on ops-1 last ticked 120s ago (interval 10s), it looks stopped or stuck" ] ], results

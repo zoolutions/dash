@@ -1,4 +1,4 @@
-# `dash autoscale`: the controller that holds each scheduled role at its target
+# `dash autoscale`: the controller that holds each scheduled or signalled role at its target
 # (Dash::Autoscale::Controller), and the commands that read what it decided and why. The
 # controller's state lives on one host - `autoscale.controller`, or the primary host
 # without it - so every operator's checkout reads the same heartbeat, decisions and pauses.
@@ -9,7 +9,7 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
   # `run` is a Thor reserved word, so the method has another name.
   map "run" => :start_controller
 
-  desc "run", "Run the autoscale controller: every interval, scale each role with a scale/schedule to its target through dash scale set"
+  desc "run", "Run the autoscale controller: every interval, scale each role with a scale/schedule or scale/signal toward its target through dash scale set"
   option :once, type: :boolean, default: false, desc: "Run one tick and exit (for cron)"
   option :dry_run, type: :boolean, default: false, desc: "Decide and print, without acting or writing any state"
   option :interval, type: :numeric, desc: "Seconds between ticks (default autoscale/interval)"
@@ -209,7 +209,7 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
     def print_explain(explain)
       decision = explain[:decision]
       say "#{decision[:role]}: #{decision[:action]} #{decision[:from].inspect} -> #{decision[:to].inspect} (#{decision[:reasons].join(", ")})"
-      say "  not controlled: it has no scale/schedule, so dash autoscale run leaves it alone", :yellow unless explain[:controlled]
+      say "  not controlled: it has no scale/schedule or scale/signal, so dash autoscale run leaves it alone", :yellow unless explain[:controlled]
       say "  error: #{decision[:error]}", :red if decision[:error]
       say "  eligible at: #{decision[:eligible_at]}" if decision[:eligible_at]
       decision[:inputs].each { |name, value| say "  #{name}: #{value.to_json}" unless value.nil? || value == [] || value == {} }

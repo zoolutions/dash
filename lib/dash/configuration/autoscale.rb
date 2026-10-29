@@ -1,15 +1,25 @@
 require "active_support/values/time_zone"
 
-# The `autoscale:` block: which provider holds the pool members of scaled roles, and how
-# the controller (`dash autoscale run`) ticks. Only the shape is checked here; credentials
-# are secrets and are resolved on the first API call, like the registry password, so
-# loading deploy.yml never needs them.
+# The `autoscale:` block: which provider holds the pool members of scaled roles, how the
+# controller (`dash autoscale run`) ticks, and where its signals and guards read from
+# (`redis`, `postgres`, `prometheus`). Only the shape is checked here; credentials and URLs
+# are secrets and are resolved on first use, like the registry password, so loading
+# deploy.yml never needs them.
 class Dash::Configuration::Autoscale
   include Dash::Configuration::Validation
 
   DEFAULT_INTERVAL = 10
   DEFAULT_LOCK_WAIT_TIMEOUT = 60
   DEFAULT_TIMEZONE = "UTC"
+
+  # redis-client connects to the URL's host and verifies the certificate against that same
+  # name, so through a tunnel (127.0.0.1) a TLS certificate can never verify.
+  REDISS_VIA_MESSAGE = "rediss:// cannot be verified through via: redis-client checks the certificate against the address it " \
+    "connects to, which a tunnel makes 127.0.0.1. Reach Redis directly, or use redis:// over the tunnel"
+
+  def self.unverifiable_through_tunnel?(source, url)
+    source.to_s == "redis" && url.is_a?(String) && url.downcase.start_with?("rediss://")
+  end
 
   attr_reader :autoscale_config
 
@@ -53,15 +63,38 @@ class Dash::Configuration::Autoscale
   end
 
   def upcloud_username
-    lookup("username")
+    lookup(provider_config.dig("upcloud", "username"), "provider/upcloud/username")
   end
 
   def upcloud_password
-    lookup("password")
+    lookup(provider_config.dig("upcloud", "password"), "provider/upcloud/password")
   end
 
   def exec_script(action)
     provider_config.dig("exec", action.to_s)
+  end
+
+  # Whether `autoscale/<source>` (redis, postgres or prometheus) is set.
+  def source?(source)
+    !source_config(source).nil?
+  end
+
+  def source_url(source)
+    lookup(source_config(source)["url"], "#{source}/url").tap do |url|
+      if source_via(source) && self.class.unverifiable_through_tunnel?(source, url)
+        raise Dash::ConfigurationError, "autoscale/#{source}: #{REDISS_VIA_MESSAGE}"
+      end
+    end
+  end
+
+  # The host to tunnel the source's connection through over SSH, or nil to connect directly.
+  def source_via(source)
+    source_config(source)&.fetch("via", nil)
+  end
+
+  def prometheus_token
+    reference = source_config(:prometheus)&.fetch("token", nil)
+    lookup(reference, "prometheus/token") unless reference.nil?
   end
 
   private
@@ -71,16 +104,20 @@ class Dash::Configuration::Autoscale
       autoscale_config&.fetch("provider", nil)
     end
 
-    def lookup(key)
-      reference = provider_config.dig("upcloud", key)
+    def source_config(source)
+      autoscale_config&.fetch(source.to_s, nil)
+    end
+
+    # A one-element array names a secret; anything else is the value as written.
+    def lookup(reference, path)
       value = reference.is_a?(Array) ? secrets[reference.first] : reference
       return value if value.present?
 
       if reference.is_a?(Array)
-        raise Dash::ConfigurationError, "autoscale/provider/upcloud/#{key}: secret '#{reference.first}' resolved to an empty value — " \
+        raise Dash::ConfigurationError, "autoscale/#{path}: secret '#{reference.first}' resolved to an empty value — " \
           "if your secrets file forwards it from the environment (#{reference.first}=$#{reference.first}), export the variable before running dash"
       else
-        raise Dash::ConfigurationError, "autoscale/provider/upcloud/#{key}: is blank"
+        raise Dash::ConfigurationError, "autoscale/#{path}: is blank"
       end
     end
 end
