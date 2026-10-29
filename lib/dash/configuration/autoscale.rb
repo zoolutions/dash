@@ -18,7 +18,7 @@ class Dash::Configuration::Autoscale
     "connects to, which a tunnel makes 127.0.0.1. Reach Redis directly, or use redis:// over the tunnel"
 
   def self.unverifiable_through_tunnel?(source, url)
-    source.to_s == "redis" && url.is_a?(String) && url.start_with?("rediss://")
+    source.to_s == "redis" && url.is_a?(String) && url.downcase.start_with?("rediss://")
   end
 
   attr_reader :autoscale_config

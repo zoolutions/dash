@@ -12,8 +12,9 @@ class Dash::Autoscale::Signal::Sidekiq < Dash::Autoscale::Signal
     true
   end
 
-  # Jobs in progress in the containers whose hostnames are given, or nil when Sidekiq knows
-  # no process there. Sidekiq reports each process's `hostname` (the container's) in its
+  # Jobs in progress in the containers whose hostnames are given, or nil unless Sidekiq knows
+  # a process in every one of them: an idle process elsewhere does not speak for a container
+  # Sidekiq has no record of. Sidekiq reports each process's `hostname` (the container's) in its
   # `info`, and writes `busy` and `quiet` on every heartbeat (every few seconds) - so a busy
   # count from before the process went quiet may predate the drain signal and miss a job it
   # fetched since. Until a process reports quiet it counts as at least one job busy.
@@ -21,12 +22,13 @@ class Dash::Autoscale::Signal::Sidekiq < Dash::Autoscale::Signal
     connections.with(:redis) do |redis|
       counts = Array(redis.call("SMEMBERS", "processes")).filter_map do |identity|
         info, busy, quiet = redis.call("HMGET", identity, "info", "busy", "quiet")
-        next unless info && hostnames.include?(JSON.parse(info)["hostname"])
+        hostname = JSON.parse(info)["hostname"] if info
+        next unless hostnames.include?(hostname)
 
-        quiet == "true" ? busy.to_i : [ busy.to_i, 1 ].max
+        [ hostname, quiet == "true" ? busy.to_i : [ busy.to_i, 1 ].max ]
       end
 
-      counts.sum unless counts.empty?
+      counts.sum(&:last) if (hostnames - counts.map(&:first)).empty?
     end
   end
 

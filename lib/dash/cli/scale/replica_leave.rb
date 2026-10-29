@@ -88,8 +88,14 @@ class Dash::Cli::Scale::ReplicaLeave
       end
     end
 
+    # Nil unless every leaving container's hostname is read: one missing would drop out of
+    # what the busy count covers.
     def leaving_hostnames
-      leaving.map { |replica, version| capture_with_info(*app(replica).container_hostname(version: version)).strip }.reject(&:empty?)
+      hostnames = leaving.map { |replica, version| capture_with_info(*app(replica).container_hostname(version: version)).strip }
+      return hostnames if hostnames.none?(&:empty?)
+
+      info "Could not read the hostname of every #{role} replica #{leaving.keys.join(", ")} on #{host}, so the drain waits its full #{role.drain_wait}s"
+      nil
     rescue SSHKit::Command::Failed => e
       info "Could not read the hostnames of #{role} replicas #{leaving.keys.join(", ")} on #{host} (#{e.message}), so the drain waits its full #{role.drain_wait}s"
       nil

@@ -5,8 +5,9 @@ class AutoscaleSignalPrometheusTest < ActiveSupport::TestCase
   NOW = Time.utc(2026, 10, 15, 2, 0, 0)
   QUERY = %(max(job_queue_latency_seconds{queue="billing"}))
 
-  test "the query's value" do
+  test "the query's value, from exactly the query configured" do
     assert_equal 7.5, reader(QUERY => 7.5).sample(at: NOW).value
+    assert_equal [ QUERY ], @prometheus.queries
   end
 
   test "no series, NaN or Inf is a missing sample" do
@@ -27,6 +28,7 @@ class AutoscaleSignalPrometheusTest < ActiveSupport::TestCase
   private
     def reader(values)
       signal = Dash::Configuration::Role::Scale::Signal.new(signal_config: { "source" => "prometheus", "query" => QUERY }, context: "test")
-      Dash::Autoscale::Signal::Prometheus.new(signal, AutoscaleSignalFakes::Connections.new(prometheus: AutoscaleSignalFakes::Prometheus.new(values)))
+      @prometheus = AutoscaleSignalFakes::Prometheus.new(values)
+      Dash::Autoscale::Signal::Prometheus.new(signal, AutoscaleSignalFakes::Connections.new(prometheus: @prometheus))
     end
 end

@@ -37,10 +37,15 @@ module Dash::Autoscale::Connections::Builder
     PG::Connection.conninfo_parse(url).each_with_object({}) { |option, hash| hash[option[:keyword].to_sym] = option[:val] if option[:val] }
   end
 
+  # Only the gem itself missing means "add it"; an installed one that fails to load (a
+  # native library, a dependency) says why. Both are configuration errors: a LoadError is
+  # not a StandardError, and would end the controller.
   def self.load_gem(source)
     require GEMS.fetch(source)
-  rescue LoadError
+  rescue LoadError => e
     gem = GEMS.fetch(source)
+    raise Dash::ConfigurationError, "autoscale/#{source}: the #{gem} gem failed to load: #{e.message}" unless e.path == gem
+
     raise Dash::ConfigurationError, %(autoscale/#{source}: needs the #{gem} gem - add gem "#{gem}" to the Gemfile dash autoscale runs with)
   end
 end

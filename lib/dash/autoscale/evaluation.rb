@@ -20,20 +20,33 @@ class Dash::Autoscale::Evaluation
       state.keep_members(observation.member_hosts)
     end
 
-    signal, guards = read_signal
+    signal, guards, configuration_error = read_signal
 
-    Dash::Autoscale::Policy.new(role: role, now: now, time_zone: role.config.autoscale.time_zone, current: observation.current,
+    decision = Dash::Autoscale::Policy.new(role: role, now: now, time_zone: role.config.autoscale.time_zone, current: observation.current,
       history: state.history, paused_until: @pause&.ends_at, warming: state.joined, unreachable: state.unreachable,
       unreadable_baseline: observation.unreadable_baseline, pool_error: observation.pool_error,
       signal: signal, guards: guards, breach: state.breach).decide
+
+    # A signal that cannot be configured (a missing gem, an empty secret) fails the role's
+    # evaluation loudly - but only where the signal decides: a floor, a pause or an
+    # unreachable member goes on without it.
+    raise configuration_error if configuration_error && decision.reasons == [ "missing_data" ]
+
+    decision
   end
 
   private
     def read_signal
       return [ nil, [] ] unless role.scale.signal?
 
-      (@reader || Dash::Autoscale::Reader.new).read(role, at: now).tap do |signal, _|
-        state.observe_signal(signal, up_above: role.scale.up_above, down_below: role.scale.down_below)
+      signal, guards = begin
+        (@reader || Dash::Autoscale::Reader.new).read(role, at: now)
+      rescue Dash::ConfigurationError => e
+        error = e
+        [ Dash::Autoscale::Sample.new(value: nil, at: now, error: "#{e.class}: #{e.message}"), [] ]
       end
+
+      state.observe_signal(signal, up_above: role.scale.up_above, down_below: role.scale.down_below)
+      [ signal, guards, error ]
     end
 end

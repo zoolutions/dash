@@ -4,7 +4,7 @@ require "timeout"
 # The controller's clients for its signals and guards - Redis, Postgres, Prometheus - one per
 # source for the whole process, so they outlive `reconfigure!` and every tick reuses them.
 # Each is built on first use, through a Dash::Autoscale::Tunnel when the source has `via`,
-# and rebuilt after an error, when its URL or via changes, or when its tunnel died.
+# and rebuilt after an error, when its URL, via or Prometheus token changes, or when its tunnel died.
 #
 # One read at a time per source: neither redis-client nor pg connections are thread-safe,
 # and the drain's busy polls (inside SSHKit's `on` threads) share them with the tick.
@@ -56,22 +56,25 @@ class Dash::Autoscale::Connections
       @locks_lock.synchronize { @locks[source] }
     end
 
+    # A client is kept while what it was built from - the URL, via and, for Prometheus, the
+    # token it sends - stays the same.
     def entry_for(source)
       autoscale = @config.call.autoscale
       url, via = autoscale.source_url(source), autoscale.source_via(source)
+      key = [ url, via, (autoscale.prometheus_token if source == :prometheus) ]
       entry = @entries[source]
-      return entry if entry && entry.key == [ url, via ] && (entry.tunnel.nil? || entry.tunnel.alive?)
+      return entry if entry && entry.key == key && (entry.tunnel.nil? || entry.tunnel.alive?)
 
       discard(source)
-      @entries[source] = build(source, url, via)
+      @entries[source] = build(source, url, via, key)
     end
 
-    def build(source, url, via)
+    def build(source, url, via, key)
       uri = URI(url)
       raise Dash::ConfigurationError, "autoscale/#{source}: via needs a URL that names its host" if via && uri.host.blank?
 
       tunnel = @tunnel.call(via, uri.host, uri.port || DEFAULT_PORTS.fetch(source)) if via
-      Entry.new([ url, via ], @builder.call(source, url, tunnel, config: @config.call), tunnel)
+      Entry.new(key, @builder.call(source, url, tunnel, config: @config.call), tunnel)
     rescue StandardError
       tunnel&.close
       raise

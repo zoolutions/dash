@@ -8,8 +8,10 @@ class AutoscaleSignalTest < ActiveSupport::TestCase
       config = Dash::Configuration::Role::Scale::Signal.new(signal_config: signal, context: "test")
       role = stub(scale: stub(signal: config))
 
-      assert_instance_of reader, Dash::Autoscale::Signal.for(role, :connections)
-      assert_equal config, Dash::Autoscale::Signal.for(role, :connections).config
+      built = Dash::Autoscale::Signal.for(role, :connections)
+      assert_instance_of reader, built
+      assert_equal config, built.config
+      assert_equal :connections, built.connections
     end
   end
 end

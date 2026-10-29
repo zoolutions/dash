@@ -171,7 +171,7 @@ class Dash::Configuration::Role::Scale
 
       bound = band[bound_key]
       error "#{key}/#{bound_key}", "is required" if bound.nil?
-      error "#{key}/#{bound_key}", "should be a number" unless bound.is_a?(Numeric)
+      error "#{key}/#{bound_key}", "should be a finite number" unless bound.is_a?(Numeric) && bound.real? && bound.finite?
 
       [ bound, breach_duration(band.fetch("for", default_for), "#{key}/for") ]
     end

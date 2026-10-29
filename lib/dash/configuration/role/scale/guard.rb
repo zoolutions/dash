@@ -21,7 +21,7 @@ class Dash::Configuration::Role::Scale::Guard
     error "source", "must be #{SOURCES.join(" or ")}, not #{source}" unless SOURCES.include?(source)
     error "query", "is required" unless query.is_a?(String) && query.present?
     error "above", "is required" if above.nil?
-    error "above", "should be a number" unless above.is_a?(Numeric)
+    error "above", "should be a finite number" unless above.is_a?(Numeric) && above.real? && above.finite?
   end
 
   # The autoscale/<connection> block the guard reads through.

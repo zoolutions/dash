@@ -227,7 +227,7 @@ servers:
       # - `prometheus`: the value of one PromQL `query` (`autoscale/prometheus`), the
       #   largest when it returns several series. An empty result is a missing sample.
       #
-      # A role without a `signal` keeps returning to its floor a step at a time.
+      # A role with a `schedule` and no `signal` keeps returning to its floor a step at a time.
       signal:
         source: sidekiq
         queues:

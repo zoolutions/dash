@@ -17,7 +17,14 @@ class ConfigurationRoleScaleGuardTest < ActiveSupport::TestCase
 
   test "a bound is a number" do
     error = assert_raises(Dash::ConfigurationError) { guard("source" => "prometheus", "query" => "max(x)", "above" => "0") }
-    assert_match %r{servers/workers/scale/hold_when/0/above: should be a number}, error.message
+    assert_match %r{servers/workers/scale/hold_when/0/above: should be a finite number}, error.message
+  end
+
+  test "a bound that no reading can pass (NaN, infinity) is refused" do
+    [ Float::NAN, Float::INFINITY, -Float::INFINITY ].each do |above|
+      error = assert_raises(Dash::ConfigurationError, above.inspect) { guard("source" => "postgres", "query" => "SELECT 1", "above" => above) }
+      assert_match %r{hold_when/0/above: should be a finite number}, error.message
+    end
   end
 
   private

@@ -143,6 +143,7 @@ class ConfigurationAutoscaleTest < ActiveSupport::TestCase
       { "redis" => { "url" => "http://cache:6379" } } => %r{autoscale/redis/url: should start with redis:// or rediss://},
       { "postgres" => { "url" => "mysql://db/app" } } => %r{autoscale/postgres/url: should start with postgres:// or postgresql://},
       { "prometheus" => { "url" => "10.0.0.9:9090" } } => %r{autoscale/prometheus/url: should start with http:// or https://},
+      { "prometheus" => { "url" => "http:///api" } } => %r{autoscale/prometheus/url: should include a host},
       { "redis" => { "url" => "redis://cache:6379", "via" => "" } } => %r{autoscale/redis/via: should be a host name},
       { "postgres" => { "url" => "postgres:///app?host=db", "via" => "10.0.0.31" } } => %r{autoscale/postgres: via needs a URL that names its host},
       { "redis" => { "url" => "redis://cache host:6379", "via" => "10.0.0.31" } } => %r{autoscale/redis/url: is not a valid URL},
@@ -166,10 +167,12 @@ class ConfigurationAutoscaleTest < ActiveSupport::TestCase
   test "a secret rediss URL through via is refused when it is resolved" do
     @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } },
       "redis" => { "url" => [ "REDIS_URL" ], "via" => "10.0.0.31" } }
-    Dash::Secrets.any_instance.stubs(:[]).with("REDIS_URL").returns("rediss://cache.internal:6380")
+    [ "rediss://cache.internal:6380", "REDISS://cache.internal:6380" ].each do |url|
+      Dash::Secrets.any_instance.stubs(:[]).with("REDIS_URL").returns(url)
 
-    error = assert_raises(Dash::ConfigurationError) { config.autoscale.source_url(:redis) }
-    assert_match %r{autoscale/redis: rediss:// cannot be verified through via}, error.message
+      error = assert_raises(Dash::ConfigurationError, url) { config.autoscale.source_url(:redis) }
+      assert_match %r{autoscale/redis: rediss:// cannot be verified through via}, error.message
+    end
   end
 
   test "controller defaults: a tick every 10 seconds, 60 seconds for the lock, UTC" do

@@ -19,6 +19,7 @@ class AutoscaleConnectionsTest < ActiveSupport::TestCase
     @tunnels = []
     @urls = { redis: "redis://cache.internal:6379/0", postgres: "postgres://app@db.internal/app", prometheus: "http://10.0.0.9:9090" }
     @via = {}
+    @token = nil
   end
 
   test "builds a client once per source and hands it to every read" do
@@ -81,6 +82,16 @@ class AutoscaleConnectionsTest < ActiveSupport::TestCase
     assert old.closed
   end
 
+  test "a rotated Prometheus token builds a new client: the old one would keep sending the old token" do
+    @token = "old"
+    connections = build_connections
+    client = connections.with(:prometheus) { |prometheus| prometheus }
+    @token = "new"
+
+    assert_not_same client, connections.with(:prometheus) { |prometheus| prometheus }
+    assert client.closed
+  end
+
   test "via opens a tunnel to the URL's host and port (or the source's default port) first" do
     @via[:postgres] = "10.0.0.31"
     connections = build_connections
@@ -139,18 +150,32 @@ class AutoscaleConnectionsTest < ActiveSupport::TestCase
   end
 
   test "a driver gem that is not installed names the gem to add" do
-    Dash::Autoscale::Connections::Builder.stubs(:require).with("redis-client").raises(LoadError, "cannot load such file -- redis-client")
+    Dash::Autoscale::Connections::Builder.stubs(:require).with("redis-client").raises(load_error("cannot load such file -- redis-client", path: "redis-client"))
 
     error = assert_raises(Dash::ConfigurationError) { Dash::Autoscale::Connections::Builder.build(:redis, "redis://cache:6379", nil, config: nil) }
     assert_match %(autoscale/redis: needs the redis-client gem - add gem "redis-client" to the Gemfile dash autoscale runs with), error.message
   end
 
+  test "an installed driver that fails to load says why, not that the gem is missing" do
+    Dash::Autoscale::Connections::Builder.stubs(:require).with("pg").raises(load_error("libpq.5.dylib: image not found - pg_ext", path: "pg_ext"))
+
+    error = assert_raises(Dash::ConfigurationError) { Dash::Autoscale::Connections::Builder.build(:postgres, "postgres://db/app", nil, config: nil) }
+    assert_equal "autoscale/postgres: the pg gem failed to load: libpq.5.dylib: image not found - pg_ext", error.message
+  end
+
   private
+    # LoadError#path is set by `require`, not by LoadError.new.
+    def load_error(message, path:)
+      LoadError.new(message).tap { |error| error.define_singleton_method(:path) { path } }
+    end
+
     # A class named like a driver's connection error, as it would be with the gem loaded.
+    # The driver's own class, when its gem is loaded, is put back afterwards.
     def stub_const_error(name)
       namespace, error = name.split("::")
       created = !Object.const_defined?(namespace)
       Object.const_set(namespace, Module.new) if created
+      original = Object.const_get(namespace).send(:remove_const, error) if Object.const_get(namespace).const_defined?(error, false)
       Object.const_get(namespace).const_set(error, Class.new(StandardError))
       yield Object.const_get(name)
     ensure
@@ -158,14 +183,16 @@ class AutoscaleConnectionsTest < ActiveSupport::TestCase
         Object.send(:remove_const, namespace)
       else
         Object.const_get(namespace).send(:remove_const, error)
+        Object.const_get(namespace).const_set(error, original) if original
       end
     end
 
     def build_connections
-      urls, via = @urls, @via
+      urls, via, test = @urls, @via, self
       autoscale = Object.new
       autoscale.define_singleton_method(:source_url) { |source| urls.fetch(source.to_sym) }
       autoscale.define_singleton_method(:source_via) { |source| via[source.to_sym] }
+      autoscale.define_singleton_method(:prometheus_token) { test.instance_variable_get(:@token) }
       config = Struct.new(:autoscale).new(autoscale)
 
       Dash::Autoscale::Connections.new(config: -> { config }, builder: method(:fake_build), tunnel: method(:fake_tunnel))

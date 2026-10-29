@@ -114,6 +114,16 @@ class CliScaleReplicaLeaveTest < ActiveSupport::TestCase
     assert_empty busy.asked
   end
 
+  test "a hostname that reads blank falls back to the full drain.wait: the other containers do not speak for it" do
+    @backend = FakeBackend.new(hostnames: { "app-payments\\.2-123" => "", "app-payments\\.3-123" => "1.1.1.2-bbbbbbbbbbbb" })
+    busy = FakeBusy.new(0)
+    leave = leave(busy, leaving: { 2 => "123", 3 => "123" })
+    leave.expects(:sleep).with(600)
+
+    leave.send(:drain)
+    assert_empty busy.asked
+  end
+
   test "a role without a Sidekiq signal waits drain.wait, and never reads a hostname" do
     leave = Dash::Cli::Scale::ReplicaLeave.new("1.1.1.2", @role, { 2 => "123" }, @backend, running: [ 1, 2 ], busy_reader: nil)
     leave.expects(:sleep).with(600)

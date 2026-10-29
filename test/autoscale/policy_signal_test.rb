@@ -84,6 +84,10 @@ class AutoscalePolicySignalTest < ActiveSupport::TestCase
     assert_equal "hold_when/0 postgres: PG::ConnectionBad: timeout", decision.error
   end
 
+  test "at max a holding guard is not the reason: nothing could scale out anyway" do
+    assert_equal [ "hold", 8, 8, [ "at_max" ] ], tuple(decide(current: 8, value: 20, above_since: QUIET - 300, guards: [ guard(195) ]))
+  end
+
   test "a guard at its bound does not hold" do
     assert_equal "scale_out", decide(current: 2, value: 20, above_since: QUIET - 300, guards: [ guard(180) ]).action
   end

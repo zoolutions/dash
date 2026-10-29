@@ -103,10 +103,10 @@ class Dash::Autoscale::Policy
     def step_out
       last_out = @history[:last_scale_out_at]
 
-      if (guard = @guards.find(&:holding?))
-        hold("held_by_guard", error: (guard.describe if guard.sample.missing?), held_by: guard.describe)
-      elsif (target = step_out_target).nil?
+      if (target = step_out_target).nil?
         hold("at_max")
+      elsif (guard = @guards.find(&:holding?))
+        hold("held_by_guard", error: (guard.describe if guard.sample.missing?), held_by: guard.describe)
       elsif last_out && now < last_out + @scale.cooldown_up
         hold("cooldown", eligible_at: last_out + @scale.cooldown_up)
       else

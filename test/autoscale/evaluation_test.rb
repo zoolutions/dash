@@ -68,7 +68,36 @@ class AutoscaleEvaluationTest < DiagnosticsTestCase
     assert_equal [ "paused" ], evaluate(now: BILLING, pause: pause, observation: observation(current: 3)).reasons
   end
 
+  test "a signal that cannot be configured does not hold a scale-out to a schedule floor" do
+    decision = evaluate_signalled(now: BILLING + 7200, current: 1)
+
+    assert_equal [ "scale_out", 1, 6, [ "schedule_floor" ] ], [ decision.action, decision.from, decision.to, decision.reasons ]
+  end
+
+  test "a signal that cannot be configured still fails the evaluation wherever the signal decides" do
+    error = assert_raises(Dash::ConfigurationError) { evaluate_signalled(now: QUIET, current: 2) }
+
+    assert_match "needs the redis-client gem", error.message
+  end
+
   private
+    # payments with a Sidekiq signal and the window from 22:00 on the 14th (UTC) for 30h
+    # asking for 6, its reader failing as with redis-client not installed.
+    def evaluate_signalled(now:, current:)
+      role = Dash::Configuration.new({
+        service: "app", image: "dhh/app", registry: { "username" => "dhh", "password" => "secret" }, builder: { "arch" => "amd64" },
+        servers: { "web" => [ "1.1.1.1" ], "payments" => { "hosts" => [ "1.1.1.3" ], "cmd" => "bundle exec sidekiq", "healthcheck" => false,
+          "replicas" => { "min" => 1, "max" => 2 }, "scale" => { "min" => 1, "max" => 4, "schedule" => [ { "cron" => "0 22 14 * *", "for" => "30h", "min" => 6 } ],
+            "signal" => { "source" => "sidekiq", "queues" => [ "default" ] }, "up" => { "above" => 10 }, "down" => { "below" => 2 } } } },
+        autoscale: { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } }, "redis" => { "url" => "redis://cache:6379" } }
+      }).role(:payments)
+      reader = stub
+      reader.stubs(:read).raises(Dash::ConfigurationError, "autoscale/redis: needs the redis-client gem")
+
+      Dash::Autoscale::Evaluation.new(role: role, now: now, state: Dash::Autoscale::RoleState.from(nil), pause: nil, reader: reader,
+        observation: Dash::Autoscale::Observation.new(role: role, current: current, pool: [])).decide
+    end
+
     def payments
       DASH.config.role(:payments)
     end

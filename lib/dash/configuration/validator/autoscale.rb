@@ -61,6 +61,8 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
           if url.is_a?(String)
             error "should start with #{SOURCES[source].map { |scheme| "#{scheme}://" }.join(" or ")}" if SOURCES[source].none? { |scheme| url.start_with?("#{scheme}://") }
             valid_uri!(url)
+            # Postgres may name a socket instead (postgres:///app?host=/run/postgresql).
+            error "should include a host" if source == "prometheus" && URI(url).host.blank?
           end
         end
 

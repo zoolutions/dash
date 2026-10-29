@@ -75,6 +75,16 @@ class AutoscaleSignalSidekiqTest < ActiveSupport::TestCase
     assert_nil reader(processes("app-1:1:aa" => [ "10.0.0.31-aaaaaaaaaaaa", "0", "true" ])).busy([ "10.0.0.32-cccccccccccc" ])
   end
 
+  test "a container without a process is not a zero either, though the others are idle" do
+    redis = processes("app-1:1:aa" => [ "10.0.0.31-aaaaaaaaaaaa", "0", "true" ])
+
+    assert_nil reader(redis).busy([ "10.0.0.31-aaaaaaaaaaaa", "10.0.0.31-bbbbbbbbbbbb" ])
+  end
+
+  test "a process not quiet yet counts its busy jobs, at least one" do
+    assert_equal 3, reader(processes("app-1:1:aa" => [ "10.0.0.31-aaaaaaaaaaaa", "3", "false" ])).busy([ "10.0.0.31-aaaaaaaaaaaa" ])
+  end
+
   test "only reads" do
     redis = redis_with("default" => job(NOW.to_f - 1), "billing" => nil)
     redis.instance_variable_get(:@replies)[[ "SMEMBERS", "processes" ]] = []

@@ -27,6 +27,23 @@ class AutoscalePrometheusClientTest < ActiveSupport::TestCase
     assert client.query("x").nan?
   end
 
+  test "a negative infinite series is NaN too, and so is a NaN or infinite scalar" do
+    stub_response(200, vector("1", "-Inf"))
+    assert client.query("x").nan?
+
+    [ "NaN", "+Inf", "-Inf" ].each do |value|
+      stub_response(200, { status: "success", data: { resultType: "scalar", result: [ 1_700_000_000, value ] } })
+      assert_not client.query("scalar(x)").finite?, value
+    end
+  end
+
+  test "a matrix or a string is not one number" do
+    stub_response(200, { status: "success", data: { resultType: "matrix", result: [] } })
+
+    error = assert_raises(Dash::Autoscale::PrometheusClient::Error) { client.query("x[5m]") }
+    assert_match "Prometheus returned a matrix, not a vector or a scalar", error.message
+  end
+
   test "sends the bearer token, keeps a path prefix" do
     request = stub_response(200, vector("1"))
     Dash::Autoscale::PrometheusClient.new(url: "https://metrics.internal/prometheus/", token: "t0k3n").query("x")

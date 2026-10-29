@@ -19,7 +19,8 @@ module AutoscaleSignalFakes
   class Redis
     attr_reader :commands
 
-    # `replies` maps a command (an array) to its reply, or to an exception to raise.
+    # `replies` maps a command (an array) to its reply, or to an exception to raise; any
+    # other command raises.
     def initialize(replies = {})
       @replies = replies
       @commands = []
@@ -27,7 +28,7 @@ module AutoscaleSignalFakes
 
     def call(*command)
       @commands << command
-      reply = @replies.fetch(command) { nil }
+      reply = @replies.fetch(command) { raise KeyError, "unexpected command: #{command.inspect}" }
       raise reply if reply.is_a?(Exception)
 
       reply
