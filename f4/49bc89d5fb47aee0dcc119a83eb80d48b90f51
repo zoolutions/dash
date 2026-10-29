@@ -1,0 +1,22 @@
+lib/dash/configuration/validator/proxy.rb
+  s_0eefb210d53578::t_fa88f347d55681 648
+  s_0eefb210d53578::t_4ea7cb62a63c93 677-688
+test/configuration/proxy/run_flags_test.rb
+  s_0eefb210d53578::t_5ab49b04874946 151-162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f449bc89d5fb47aee0dcc119a83eb80d48b90f51",
+  "prompts": {},
+  "sessions": {
+    "s_0eefb210d53578": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "976c55fd-fb94-441d-88ab-391eaa8361a1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
