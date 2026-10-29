@@ -5,7 +5,7 @@ class McpServerTest < McpTestCase
     response = JSON.parse(server.handle_json({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }.to_json))
 
     assert_equal %w[ audit autoscale_decisions autoscale_explain config container_stats containers controller_status deploy_reports doctor drift host_stats lock_status logs
-      pool_members proxy_services scale_status ],
+      pool_members proxy_services scale_status signal_sample ],
       response.dig("result", "tools").map { |tool| tool["name"] }.sort
   end
 

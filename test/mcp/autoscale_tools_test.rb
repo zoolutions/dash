@@ -23,6 +23,16 @@ class McpAutoscaleToolsTest < McpTestCase
     assert_match "reports is outside this server's --roles", text
   end
 
+  test "signal_sample refuses a role outside --roles, and answers for a role without a signal that it has none" do
+    scoped = server(session(fixture: :deploy_with_scale_signal, roles: [ "web", "reports" ]))
+
+    text, error = call_tool("signal_sample", { role: "payments" }, on: scoped)
+    assert error
+    assert_match "payments is outside this server's --roles", text
+
+    assert_equal [ false, "reports has no scale/signal, so there is nothing to sample" ], call_json("signal_sample", { role: "reports" }, on: scoped).values_at("configured", "message")
+  end
+
   test "decisions keep to --roles, with or without a role, filtered before the tail" do
     reads = []
     SSHKit::Backend::Abstract.any_instance.stubs(:capture).with { |*args| reads << args.join(" ") if args.join(" ").include?("tail -n"); true }.returns("")

@@ -228,6 +228,15 @@ servers:
       #   largest when it returns several series. An empty result is a missing sample.
       #
       # A role with a `schedule` and no `signal` keeps returning to its floor a step at a time.
+      #
+      # Tuning: record a busy day with `dash autoscale run --record FILE`, then try a band,
+      # a step or a cooldown with `dash autoscale simulate --samples FILE` before deploying
+      # it. Judoscale's worker defaults make a sound start: a queue-latency band of 1-5
+      # seconds, up after one breach, down after 10 minutes. In an app whose roles share a
+      # database, give every signalled role a `hold_when` guard on it. `dash autoscale signal
+      # ROLE` reads the signal and guards live, as the controller does. Simulation replays
+      # what the queue did with the containers that really ran, not the simulated ones, so
+      # it is a guide, not a forecast.
       signal:
         source: sidekiq
         queues:

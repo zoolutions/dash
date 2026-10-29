@@ -23,6 +23,7 @@ module Dash::Mcp
     dash/mcp/tools/autoscale_explain_tool
     dash/mcp/tools/autoscale_decisions_tool
     dash/mcp/tools/controller_status_tool
+    dash/mcp/tools/signal_sample_tool
     dash/mcp/tools/container_stats_tool
     dash/mcp/tools/host_stats_tool
     dash/mcp/server

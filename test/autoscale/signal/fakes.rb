@@ -2,10 +2,14 @@
 # each was asked so a test can prove a reader stays read-only.
 module AutoscaleSignalFakes
   class Connections
-    attr_reader :clients
+    attr_reader :clients, :closed
 
     def initialize(**clients)
       @clients = clients
+    end
+
+    def close
+      @closed = true
     end
 
     def with(source)

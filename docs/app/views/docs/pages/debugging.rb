@@ -21,6 +21,8 @@ class Views::Docs::Pages::Debugging < DocsUI::Page
     [ "dash autoscale explain ROLE --json", "What the autoscale controller's next tick would decide for ROLE, with every input" ],
     [ "dash autoscale history [ROLE] --json", "The controller's decision log: actions, reason codes, errors and inputs" ],
     [ "dash autoscale status --json", "The controller's heartbeat (running, stale or stopped) and the paused roles" ],
+    [ "dash autoscale signal ROLE --json", "One live sample of ROLE's signal and each guard, with latencies, read from this machine" ],
+    [ "dash autoscale simulate --samples FILE --json", "A --record file replayed with deploy.yml's thresholds now: simulated actions and a summary per role" ],
     [ "dash app stats [--json]", "Each container's CPU, memory against its limit, network and block I/O, PIDs" ],
     [ "dash accessory stats NAME|all [--json]", "The same for an accessory's container on its hosts" ],
     [ "dash server stats [--json]", "Each host's load against its CPUs, memory, swap, disk for / and Docker's data root, uptime" ]
@@ -49,6 +51,7 @@ class Views::Docs::Pages::Debugging < DocsUI::Page
     [ "autoscale_explain", "dash autoscale explain ROLE --json (role)" ],
     [ "autoscale_decisions", "dash autoscale history --json (role, lines: up to 500)" ],
     [ "controller_status", "dash autoscale status --json" ],
+    [ "signal_sample", "dash autoscale signal ROLE --json (role)" ],
     [ "container_stats", "dash app stats --json and dash accessory stats all --json together" ],
     [ "host_stats", "dash server stats --json" ]
   ].freeze
