@@ -1,0 +1,30 @@
+lib/dash/cli/scale/replica_leave.rb
+  s_0eefb210d53578::t_29eb372379c0fc 4-5,8,11-19,22,28,55-56,58-59,66,69-72,75-107
+test/cli/scale_test.rb
+  s_0eefb210d53578::t_71f2e333b296b8 148
+test/commands/app_replicas_test.rb
+  s_0eefb210d53578::t_4ba5ad8f8f05fb 87-92
+test/cli/scale/replica_leave_test.rb
+  s_0eefb210d53578::t_4b4fb2e350cc84 117-119,132-133,135,137
+  s_0eefb210d53578::t_9d388840c62bce 52-54,127
+  s_0eefb210d53578::t_ef1166e6c71246 128-129
+  s_0eefb210d53578::t_4ba5ad8f8f05fb 1-51,55-116,120-126,130-131,134,136,138-139
+lib/dash/commands/app.rb
+  s_0eefb210d53578::t_29eb372379c0fc 126-131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "53e8e812ad197cb8eaa216cf96db9048c8eec49f",
+  "prompts": {},
+  "sessions": {
+    "s_0eefb210d53578": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "976c55fd-fb94-441d-88ab-391eaa8361a1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
