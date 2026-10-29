@@ -1,0 +1,21 @@
+lib/dash/configuration/validator/autoscale.rb
+  s_0eefb210d53578::t_b81243c3b2de9a 61-63,83-86
+test/configuration/autoscale_test.rb
+  s_0eefb210d53578::t_34cab13e00629a 148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "85a87681370568498aaa35a58bf56bbab76b0d50",
+  "prompts": {},
+  "sessions": {
+    "s_0eefb210d53578": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "976c55fd-fb94-441d-88ab-391eaa8361a1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
