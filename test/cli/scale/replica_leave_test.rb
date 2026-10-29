@@ -95,6 +95,15 @@ class CliScaleReplicaLeaveTest < ActiveSupport::TestCase
     assert(@backend.calls.any? { |kind, message| kind == :info && message.include?("Connection refused") })
   end
 
+  test "Sidekiq knowing no process in the leaving containers waits out the rest of drain.wait" do
+    leave = leave(FakeBusy.new(nil))
+    leave.stubs(:monotonic).returns(0, 0)
+    leave.expects(:sleep).with(600)
+
+    leave.send(:drain)
+    assert(@backend.calls.any? { |kind, message| kind == :info && message.include?("Sidekiq reports no process") })
+  end
+
   test "hostnames that cannot be read fall back to the full drain.wait" do
     @backend = FakeBackend.new(hostnames: { "app-payments\\.2-123" => SSHKit::Command::Failed.new("gone") })
     busy = FakeBusy.new(0)

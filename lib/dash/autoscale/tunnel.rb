@@ -17,7 +17,12 @@ class Dash::Autoscale::Tunnel
 
   def initialize(via, host, port, user:, ssh_options:, starter: ->(server, login, **options) { Net::SSH.start(server, login, options) })
     @session = starter.call(via, user, **ssh_options)
-    @port = @session.forward.local(ADDRESS, 0, host, port)
+    begin
+      @port = @session.forward.local(ADDRESS, 0, host, port)
+    rescue StandardError
+      @session.close
+      raise
+    end
     @closing = false
     @thread = Thread.new { @session.loop(LOOP_WAIT) { !@closing } }
     @thread.report_on_exception = false

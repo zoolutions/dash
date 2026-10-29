@@ -70,10 +70,12 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
 
         with_context("token") { validate_secret_or_string! block["token"] } if block.key?("token")
 
-        # Checked again when a secret URL is resolved (Dash::Configuration::Autoscale#source_url).
+        # Both checked again for a secret URL: rediss when it is resolved
+        # (Dash::Configuration::Autoscale#source_url), the host when the tunnel opens.
         if block["via"] && Dash::Configuration::Autoscale.unverifiable_through_tunnel?(source, block["url"])
           error Dash::Configuration::Autoscale::REDISS_VIA_MESSAGE
         end
+        error "via needs a URL that names its host" if block["via"] && block["url"].is_a?(String) && URI(block["url"]).host.blank?
       end
     end
 

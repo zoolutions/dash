@@ -100,8 +100,8 @@ servers:
     # How a replica of a role WITHOUT the proxy leaves when `dash scale set` removes it:
     # `signal` is sent first (e.g. TSTP, so Sidekiq stops taking new jobs), then dash
     # waits `wait` seconds before `docker stop`. A role with a `sidekiq` scale signal stops
-    # waiting as soon as Sidekiq reports nothing busy in the leaving containers, so `wait`
-    # is then the most it waits. Keep `wait` inside the stop budget described on the worker
+    # waiting as soon as Sidekiq reports the leaving containers' processes quiet with
+    # nothing busy (it reports both every few seconds), so `wait` is then the most it waits. Keep `wait` inside the stop budget described on the worker
     # roles page. A role behind dash-proxy has no drain: the proxy drains it, so setting one
     # there is an error.
     drain:
@@ -217,7 +217,8 @@ servers:
       # - `sidekiq`: the age in seconds of the oldest job across `queues`, read from Redis
       #   (`autoscale/redis`). Sidekiq 7's float seconds and Sidekiq 8's integer
       #   milliseconds are both read. Draining a Sidekiq container on scale-in ends as soon
-      #   as Sidekiq reports nothing busy in it, instead of always waiting `drain/wait`.
+      #   as Sidekiq reports it quiet with nothing busy, instead of always waiting
+      #   `drain/wait`.
       # - `pgbus`: the age in seconds of the oldest claimable message across `queues`,
       #   read from Postgres (`autoscale/postgres`): the pgmq table `pgmq.q_<prefix><queue>`,
       #   `prefix` defaulting to `pgbus_`. Scheduled messages do not count. pgbus has no

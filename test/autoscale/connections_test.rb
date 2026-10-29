@@ -1,4 +1,5 @@
 require "test_helper"
+require "net/http"
 
 class AutoscaleConnectionsTest < ActiveSupport::TestCase
   class FakeClient
@@ -29,15 +30,46 @@ class AutoscaleConnectionsTest < ActiveSupport::TestCase
     assert_equal [ [ :redis, "redis://cache.internal:6379/0", nil ] ], @built
   end
 
-  test "an error drops the client, and the next read builds a new one" do
+  test "a connection error drops the client, and the next read builds a new one" do
     connections = build_connections
     client = connections.with(:redis) { |redis| redis }
 
-    assert_raises(RuntimeError) { connections.with(:redis) { raise "Connection reset by peer" } }
+    assert_raises(Errno::ECONNRESET) { connections.with(:redis) { raise Errno::ECONNRESET } }
     assert client.closed
 
     assert_not_same client, connections.with(:redis) { |redis| redis }
     assert_equal 2, @built.size
+  end
+
+  test "an error that is not about the connection (a bad query, a malformed job) keeps the client" do
+    connections = build_connections
+    client = connections.with(:redis) { |redis| redis }
+
+    assert_raises(JSON::ParserError) { connections.with(:redis) { JSON.parse("{not json") } }
+    assert_raises(KeyError) { connections.with(:redis) { {}.fetch("enqueued_at") } }
+
+    assert_same client, connections.with(:redis) { |redis| redis }
+    assert_not client.closed
+  end
+
+  test "socket errors and the drivers' connection errors drop the client" do
+    stub_const_error("RedisClient::ConnectionError") do |error_class|
+      [ Errno::ECONNRESET.new, IOError.new("closed stream"), Net::ReadTimeout.new, error_class.new("Connection lost") ].each do |error|
+        connections = build_connections
+        client = connections.with(:redis) { |redis| redis }
+
+        assert_raises(error.class) { connections.with(:redis) { raise error } }
+        assert client.closed, error.class.name
+      end
+    end
+  end
+
+  test "via needs the URL to name its host" do
+    @via[:postgres] = "10.0.0.31"
+    @urls[:postgres] = "postgres:///app?host=db.internal"
+
+    error = assert_raises(Dash::ConfigurationError) { build_connections.with(:postgres) { } }
+    assert_match "autoscale/postgres: via needs a URL that names its host", error.message
   end
 
   test "a changed URL (a reconfigured deploy.yml) builds a new client and closes the old one" do
@@ -114,6 +146,21 @@ class AutoscaleConnectionsTest < ActiveSupport::TestCase
   end
 
   private
+    # A class named like a driver's connection error, as it would be with the gem loaded.
+    def stub_const_error(name)
+      namespace, error = name.split("::")
+      created = !Object.const_defined?(namespace)
+      Object.const_set(namespace, Module.new) if created
+      Object.const_get(namespace).const_set(error, Class.new(StandardError))
+      yield Object.const_get(name)
+    ensure
+      if created
+        Object.send(:remove_const, namespace)
+      else
+        Object.const_get(namespace).send(:remove_const, error)
+      end
+    end
+
     def build_connections
       urls, via = @urls, @via
       autoscale = Object.new

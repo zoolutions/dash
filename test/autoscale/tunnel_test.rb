@@ -58,6 +58,16 @@ class AutoscaleTunnelTest < ActiveSupport::TestCase
     assert_not tunnel.alive?
   end
 
+  test "a forward that fails closes the session it opened" do
+    session = FakeSession.new
+    session.forward.define_singleton_method(:local) { |*| raise Errno::EADDRINUSE }
+
+    assert_raises(Errno::EADDRINUSE) do
+      Dash::Autoscale::Tunnel.new("10.0.0.31", "cache.internal", 6379, user: "deploy", ssh_options: {}, starter: ->(*, **) { session })
+    end
+    assert session.closed
+  end
+
   test "open takes the SSH user and options from the configuration" do
     ssh = stub(user: "deploy", options: { user: "deploy", port: 2222, keepalive: true })
     Dash::Autoscale::Tunnel.expects(:new).with("10.0.0.31", "db.internal", 5432, user: "deploy", ssh_options: { port: 2222, keepalive: true }).returns(:tunnel)

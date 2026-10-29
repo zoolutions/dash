@@ -97,7 +97,9 @@ class Dash::Cli::Scale::ReplicaLeave
 
     # Like a signal sample, a failed read never fails the scale-in: it only loses the early end.
     def busy_count(hostnames)
-      @busy_reader.busy(hostnames)
+      @busy_reader.busy(hostnames).tap do |busy|
+        info "Sidekiq reports no process in #{role} replicas #{leaving.keys.join(", ")} on #{host}, so the drain waits out drain.wait" if busy.nil?
+      end
     rescue StandardError => e
       info "Could not read what #{role} replicas #{leaving.keys.join(", ")} on #{host} are working on (#{e.class}: #{e.message}), so the drain waits out drain.wait"
       nil

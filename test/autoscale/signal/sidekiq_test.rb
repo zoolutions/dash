@@ -53,18 +53,26 @@ class AutoscaleSignalSidekiqTest < ActiveSupport::TestCase
     assert_raises(Dash::ConfigurationError) { Dash::Autoscale::Signal::Sidekiq.new(signal, connections).sample(at: NOW) }
   end
 
-  test "busy sums the jobs in progress of the processes running in the given containers" do
-    redis = AutoscaleSignalFakes::Redis.new(
-      [ "SMEMBERS", "processes" ] => [ "app-1:1:aa", "app-2:1:bb", "gone:1:cc" ],
-      [ "HMGET", "app-1:1:aa", "info", "busy" ] => [ JSON.generate("hostname" => "10.0.0.31-aaaaaaaaaaaa"), "3" ],
-      [ "HMGET", "app-2:1:bb", "info", "busy" ] => [ JSON.generate("hostname" => "10.0.0.31-bbbbbbbbbbbb"), "5" ],
-      [ "HMGET", "gone:1:cc", "info", "busy" ] => [ nil, nil ])
+  test "busy sums the jobs in progress of the quiet processes running in the given containers" do
+    redis = processes("app-1:1:aa" => [ "10.0.0.31-aaaaaaaaaaaa", "3", "true" ], "app-2:1:bb" => [ "10.0.0.31-bbbbbbbbbbbb", "5", "true" ],
+      "app-3:1:dd" => [ "10.0.0.31-dddddddddddd", "0", "true" ], "gone:1:cc" => [ nil, nil, nil ])
     sidekiq = reader(redis)
 
     assert sidekiq.busy?
     assert_equal 3, sidekiq.busy([ "10.0.0.31-aaaaaaaaaaaa" ])
     assert_equal 8, sidekiq.busy([ "10.0.0.31-aaaaaaaaaaaa", "10.0.0.31-bbbbbbbbbbbb" ])
-    assert_equal 0, sidekiq.busy([ "10.0.0.32-cccccccccccc" ])
+    assert_equal 0, sidekiq.busy([ "10.0.0.31-dddddddddddd" ])
+  end
+
+  test "a process that has not reported quiet yet counts as busy: its busy count may predate the drain signal" do
+    redis = processes("app-1:1:aa" => [ "10.0.0.31-aaaaaaaaaaaa", "0", "false" ], "app-2:1:bb" => [ "10.0.0.31-bbbbbbbbbbbb", "0", nil ])
+
+    assert_equal 1, reader(redis).busy([ "10.0.0.31-aaaaaaaaaaaa" ])
+    assert_equal 1, reader(redis).busy([ "10.0.0.31-bbbbbbbbbbbb" ])
+  end
+
+  test "no process in the given containers is not a zero: nothing can be told" do
+    assert_nil reader(processes("app-1:1:aa" => [ "10.0.0.31-aaaaaaaaaaaa", "0", "true" ])).busy([ "10.0.0.32-cccccccccccc" ])
   end
 
   test "only reads" do
@@ -88,6 +96,15 @@ class AutoscaleSignalSidekiqTest < ActiveSupport::TestCase
 
     def redis_with(oldest)
       AutoscaleSignalFakes::Redis.new(oldest.to_h { |queue, job| [ [ "LINDEX", "queue:#{queue}", -1 ], job ] })
+    end
+
+    # { identity => [ hostname, busy, quiet ] }
+    def processes(processes)
+      replies = { [ "SMEMBERS", "processes" ] => processes.keys }
+      processes.each do |identity, (hostname, busy, quiet)|
+        replies[[ "HMGET", identity, "info", "busy", "quiet" ]] = [ (JSON.generate("hostname" => hostname) if hostname), busy, quiet ]
+      end
+      AutoscaleSignalFakes::Redis.new(replies)
     end
 
     def job(enqueued_at)

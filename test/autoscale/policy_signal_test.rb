@@ -53,6 +53,15 @@ class AutoscalePolicySignalTest < ActiveSupport::TestCase
     assert_equal [ "scale_out", 7, 8, [ "above_threshold" ] ], tuple(decide(current: 7, value: 50, above_since: QUIET - 300))
   end
 
+  test "above scale max × replicas max (max lowered under it) it steps down to max, whatever the signal" do
+    assert_equal [ "scale_in", 10, 8, [ "at_max" ] ], tuple(decide(current: 10, value: 5))
+    assert_equal [ "scale_in", 9, 8, [ "at_max" ] ], tuple(decide(current: 9, value: 50, above_since: QUIET - 300))
+    assert_equal [ "scale_in", 9, 8, [ "at_max" ] ], tuple(decide(current: 9, value: nil, error: "Redis down"))
+
+    cooling = decide(current: 9, value: 5, history: { last_scale_in_at: QUIET - 10 })
+    assert_equal [ "hold", [ "cooldown" ] ], [ cooling.action, cooling.reasons ]
+  end
+
   test "a step out lands on a count the hosts can split" do
     @scale.merge!("min" => 1, "max" => 4, "step" => 2)
     role = role_with(replicas: 3)

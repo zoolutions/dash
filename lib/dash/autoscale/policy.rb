@@ -73,18 +73,20 @@ class Dash::Autoscale::Policy
       end
     end
 
-    def scale_in(reasons = floor_reasons)
+    def scale_in(reasons = floor_reasons, bottom: floor)
       if warming_hosts.any?
         hold("warming_up", eligible_at: warming_hosts.map { |host| warmup_ends_at(host) }.max)
       elsif last_action_at && now < last_action_at + @scale.cooldown_down
         hold("cooldown", eligible_at: last_action_at + @scale.cooldown_down)
       else
-        decision("scale_in", to: step_target, reasons: reasons)
+        decision("scale_in", to: step_target(bottom), reasons: reasons)
       end
     end
 
-    # At or above the floor, a signalled role follows its band.
+    # At or above the floor, a signalled role follows its band - once it is within max: a
+    # role left above it (max lowered under its count) steps down to max first.
     def reactive
+      return scale_in([ "at_max" ], bottom: @scale.max_count) if current > @scale.max_count
       return hold("missing_data", error: "signal #{@scale.signal.source}: #{@signal&.error || "no value"}") if @signal.nil? || @signal.missing?
 
       if (since = @breach[:above_since])
@@ -123,13 +125,13 @@ class Dash::Autoscale::Policy
         target.downto(current + 1).find { |count| @scale.splittable?(count) }
     end
 
-    # A step down, never below the floor, landing on a count the hosts can split: the
-    # nearest one above, else the nearest one below.
-    def step_target
-      target = [ floor, current - @scale.step ].max
+    # A step down, never below `bottom` (the floor), landing on a count the hosts can split:
+    # the nearest one above, else the nearest one below.
+    def step_target(bottom = floor)
+      target = [ bottom, current - @scale.step ].max
 
       (target...current).find { |count| @scale.splittable?(count) } ||
-        target.downto(floor).find { |count| @scale.splittable?(count) } || floor
+        target.downto(bottom).find { |count| @scale.splittable?(count) } || bottom
     end
 
     def floor_reasons
