@@ -148,6 +148,18 @@ class ConfigurationProxyRunFlagsTest < ActiveSupport::TestCase
       proxy_error("min_tls" => "1.4")
   end
 
+  # boot refuses a running proxy below MINIMUM_VERSION and reboot would bring the pin back.
+  test "a version pinned below the minimum is rejected" do
+    assert_equal "proxy/run: version v1.0.0.0 is older than #{Dash::Configuration::Proxy::Run::MINIMUM_VERSION}, the oldest dash-proxy this dash runs - remove the pin or raise it",
+      proxy_error("version" => "v1.0.0.0")
+  end
+
+  test "a version at or above the minimum, or not a version number, is accepted" do
+    assert proxy_config("version" => Dash::Configuration::Proxy::Run::MINIMUM_VERSION)
+    assert proxy_config("version" => "v9.9.9")
+    assert proxy_config("version" => "edge")
+  end
+
   # The flag exists to narrow what the listener negotiates, never to widen it.
   test "min_tls 1.0 and 1.1 get their own message" do
     assert_equal "proxy/run: min_tls 1.0 cannot be enabled - the lowest accepted minimum is 1.2",
