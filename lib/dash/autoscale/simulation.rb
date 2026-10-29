@@ -10,7 +10,8 @@ require "json"
 # current thresholds (the recorded ones were measured against the old band), and a
 # simulated action changes the count at once. A scale-out onto more hosts warms them up for
 # `scale.warmup`, as joined members do. The world's own holds are replayed: a recorded
-# pause, an unreadable pool, unreadable baseline hosts.
+# pause, an unreadable pool, unreadable baseline hosts, unreachable members (a replacement
+# the policy then decides keeps the count, as it did live).
 #
 # Known limits, so a replay with the same thresholds can differ from what ran:
 # - the recorded signal is what the queue did with the containers that actually ran, not
@@ -73,10 +74,7 @@ class Dash::Autoscale::Simulation
     class Replay
       def initialize(role, ticks)
         @role, @scale, @ticks = role, role.scale, ticks.sort_by(&:first)
-        first = @ticks.map { |_, decision| decision["inputs"] }.find { |inputs| inputs.is_a?(Hash) }.to_h
-        @state = Dash::Autoscale::RoleState.new(last_scale_out_at: Dash::Autoscale::Timestamp.parse(first["last_scale_out_at"]),
-          last_scale_in_at: Dash::Autoscale::Timestamp.parse(first["last_scale_in_at"]))
-        @count = @ticks.map { |_, decision| decision["from"] }.find { |from| from.is_a?(Integer) }
+        @state = Dash::Autoscale::RoleState.new
         @actions, @counts, @not_replayable, @joins = [], [], 0, 0
       end
 
@@ -93,6 +91,7 @@ class Dash::Autoscale::Simulation
         def replay
           @ticks.each do |at, recorded|
             inputs = recorded["inputs"].is_a?(Hash) ? recorded["inputs"] : {}
+            seed(recorded, inputs) if @count.nil?
 
             if @count.nil? || (@scale.signal? && !inputs["signal"].is_a?(Hash))
               @not_replayable += 1
@@ -104,12 +103,22 @@ class Dash::Autoscale::Simulation
           end
         end
 
+        # The replay starts at the first tick that recorded a count: its count, and the last
+        # scale times it recorded, so cooldowns hold from there.
+        def seed(recorded, inputs)
+          return unless recorded["from"].is_a?(Integer)
+
+          @count = recorded["from"]
+          @state = Dash::Autoscale::RoleState.new(last_scale_out_at: Dash::Autoscale::Timestamp.parse(inputs["last_scale_out_at"]),
+            last_scale_in_at: Dash::Autoscale::Timestamp.parse(inputs["last_scale_in_at"]))
+        end
+
         def decide(at, recorded, inputs)
           signal = sample(inputs["signal"], at) if @scale.signal?
           @state.observe_signal(signal, up_above: @scale.up_above, down_below: @scale.down_below) if signal
 
           Dash::Autoscale::Policy.new(role: @role, now: at, time_zone: @role.config.autoscale.time_zone, current: @count,
-            history: @state.history, paused_until: paused_until(inputs["paused_until"]), warming: @state.joined,
+            history: @state.history, paused_until: paused_until(inputs["paused_until"]), warming: @state.joined, unreachable: unreachable(inputs["unreachable"]),
             unreadable_baseline: inputs["unreadable_baseline"].is_a?(Hash) ? inputs["unreadable_baseline"] : {},
             pool_error: (recorded["error"] if recorded["reasons"] == [ "pool_unreadable" ]),
             signal: signal, guards: (guards(inputs["guards"], at) if @scale.signal?).to_a, breach: @state.breach).decide
@@ -157,6 +166,13 @@ class Dash::Autoscale::Simulation
 
           missing = @scale.guards.each_with_index.count { |guard, index| recorded.none? { |inputs| recorded_reading(inputs["guards"], guard, index) } }
           missing if missing.positive?
+        end
+
+        # { member host => unreachable since }, as recorded.
+        def unreachable(recorded)
+          return {} unless recorded.is_a?(Hash)
+
+          recorded.filter_map { |host, since| [ host, Dash::Autoscale::Timestamp.parse(since) ] if Dash::Autoscale::Timestamp.parse(since) }.to_h
         end
 
         def paused_until(recorded)

@@ -149,7 +149,7 @@ class CliAutoscaleTest < CliTestCase
     stub_signal_sources
     output = run_command("signal", "payments", config: :with_scale_signal)
 
-    assert_match %r{payments: sidekiq 12\.\d+, above the band \(up above 10 for 30s, down below 2 for 600s\), read from laptop in [\d.]+ms}, output
+    assert_match %r{payments: sidekiq 12\.5, above the band \(up above 10 for 30s, down below 2 for 600s\), read from laptop in [\d.]+ms}, output
     assert_match %r{  hold_when/0 postgres 195\.0 > 180, holding a scale-out \([\d.]+ms\)}, output
   end
 
@@ -157,13 +157,14 @@ class CliAutoscaleTest < CliTestCase
     stub_signal_sources
     signal = JSON.parse(run_command("signal", "payments", "--json", config: :with_scale_signal))
 
-    assert_equal [ "payments", "sidekiq" ], [ signal["role"], signal.dig("signal", "source") ]
-    assert_in_delta 12.5, signal.dig("signal", "value"), 1
+    assert_equal [ "payments", "sidekiq", 12.5 ], [ signal["role"], signal.dig("signal", "source"), signal.dig("signal", "value") ]
   end
 
   test "signal runs the pre-connect hook first, as a via: tunnel opens SSH" do
     stub_signal_sources
-    Dash::Cli::Autoscale.any_instance.expects(:pre_connect_if_required)
+    order = sequence("pre-connect, then read")
+    Dash::Cli::Autoscale.any_instance.expects(:pre_connect_if_required).in_sequence(order)
+    Dash::Autoscale::Signal::Sidekiq.any_instance.expects(:sample).in_sequence(order).returns(Dash::Autoscale::Sample.new(value: 1, at: Time.now.utc))
 
     run_command("signal", "payments", config: :with_scale_signal)
   end
@@ -340,7 +341,9 @@ class CliAutoscaleTest < CliTestCase
       path
     end
 
+    # The clock stands still, so the job is exactly 12.5 seconds old when it is read.
     def stub_signal_sources
+      travel_to Time.utc(2026, 10, 15, 2, 0, 0)
       redis = AutoscaleSignalFakes::Redis.new([ "LINDEX", "queue:payments", -1 ] => JSON.generate("enqueued_at" => Time.now.to_f - 12.5))
       postgres = AutoscaleSignalFakes::Postgres.new("SELECT count(*) FROM pg_stat_activity" => "195")
       Dash::Autoscale::Connections.stubs(:new).returns(AutoscaleSignalFakes::Connections.new(redis: redis, postgres: postgres))

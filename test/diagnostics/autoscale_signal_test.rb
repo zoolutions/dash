@@ -32,6 +32,13 @@ class DiagnosticsAutoscaleSignalTest < DiagnosticsTestCase
     @redis = AutoscaleSignalFakes::Redis.new([ "LINDEX", "queue:payments", -1 ] => JSON.generate("enqueued_at" => NOW.to_f - 1))
     @connections = AutoscaleSignalFakes::Connections.new(redis: @redis, postgres: @postgres)
     assert_equal "below", sample(:payments)[:position]
+
+    @redis = AutoscaleSignalFakes::Redis.new([ "LINDEX", "queue:payments", -1 ] => JSON.generate("enqueued_at" => NOW.to_f - 5))
+    @postgres = AutoscaleSignalFakes::Postgres.new(GUARD => "180")
+    @connections = AutoscaleSignalFakes::Connections.new(redis: @redis, postgres: @postgres)
+    signal = sample(:payments)
+    assert_equal "inside", signal[:position]
+    assert_equal false, signal[:guards].first[:holding], "a guard at its bound does not hold"
   end
 
   test "a source that cannot be read is the sample's error, the guards are still read" do

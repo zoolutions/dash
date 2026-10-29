@@ -5,13 +5,22 @@
 # not answer fails; one that answers without a number, and a guard holding a scale-out, warn.
 class Dash::Diagnostics::Doctor::SignalChecks
   # Within the run's --roles, like the other checks. No signalled role: no result.
+  # One set of connections (and `via:` tunnels) for every role: the sources are the app's.
   def run
-    Dash::Diagnostics::Doctor.scoped_roles.select { |role| role.scaled? && role.scale.signal? }.flat_map { |role| role_results(role) }
+    roles = Dash::Diagnostics::Doctor.scoped_roles.select { |role| role.scaled? && role.scale.signal? }
+    return [] if roles.empty?
+
+    connections = Dash::Autoscale::Connections.new
+    begin
+      roles.flat_map { |role| role_results(role, connections) }
+    ensure
+      connections.close
+    end
   end
 
   private
-    def role_results(role)
-      sample = Dash::Diagnostics::AutoscaleSignal.new(role: role).to_h
+    def role_results(role, connections)
+      sample = Dash::Diagnostics::AutoscaleSignal.new(role: role, connections: connections).to_h
       from = "from this machine (#{sample[:from]})"
 
       [ source_result(role.name, sample[:signal], from),

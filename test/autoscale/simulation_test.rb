@@ -69,6 +69,21 @@ class AutoscaleSimulationTest < ActiveSupport::TestCase
     assert_equal({ scale_outs: 0, scale_ins: 0, peak: 2, minimum: 2, container_seconds: 2800 }, payments(result)[:simulated])
   end
 
+  test "a recorded unreachable member holds the simulation too" do
+    lines = ramp.map { |line| JSON.generate(JSON.parse(line).tap { |tick| tick["decisions"].first["inputs"]["unreachable"] = { "10.0.0.22" => tick["at"] } }) }
+
+    assert_empty actions(simulate(lines))
+  end
+
+  test "the count and the last scale times come from the first tick that has them, never a later one" do
+    lines = ramp.map { |line| JSON.generate(JSON.parse(line).tap { |tick| tick["decisions"].first["inputs"]["last_scale_out_at"] = (T + 5).iso8601 }) }
+    lines[0] = JSON.generate(at: T.iso8601, decisions: [ { role: "payments", action: "hold", reasons: [ "action_failed" ], inputs: {}, error: "boom" } ])
+    result = simulate(lines)
+
+    assert_equal [ 70, "scale_out", 2, 4 ], actions(result).first, "cooldown.up from the scale-out recorded at T+5"
+    assert_equal [ 141, 140, 1 ], payments(result).values_at(:ticks, :replayed, :not_replayable)
+  end
+
   test "a scale-out onto new hosts warms them up, which holds a scale-in" do
     @scale["warmup"] = 1000
 
