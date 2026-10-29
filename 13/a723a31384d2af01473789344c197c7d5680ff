@@ -1,0 +1,41 @@
+test/autoscale/signal/fakes.rb
+  s_0eefb210d53578::t_047161dd0d89fc 1-83
+test/autoscale/guard_test.rb
+  s_0eefb210d53578::t_f3f71a5202277e 1-40
+lib/dash/autoscale/guard.rb
+  s_0eefb210d53578::t_c1c95034010cf6 5-29
+test/autoscale/signal/prometheus_test.rb
+  s_0eefb210d53578::t_f3f71a5202277e 1-32
+lib/dash/autoscale/read_only_query.rb
+  s_0eefb210d53578::t_c1c95034010cf6 1-22
+lib/dash/autoscale/signal/prometheus.rb
+  s_0eefb210d53578::t_c1c95034010cf6 1-8
+lib/dash/autoscale/signal.rb
+  s_0eefb210d53578::t_c1c95034010cf6 1-31
+test/autoscale/signal/pgbus_test.rb
+  s_0eefb210d53578::t_f3f71a5202277e 1-48
+lib/dash/autoscale/signal/sidekiq.rb
+  s_0eefb210d53578::t_c1c95034010cf6 1-40
+test/autoscale/signal/sidekiq_test.rb
+  s_0eefb210d53578::t_047161dd0d89fc 1-96
+lib/dash/autoscale/signal/pgbus.rb
+  s_0eefb210d53578::t_c1c95034010cf6 1-19
+test/autoscale/signal_test.rb
+  s_0eefb210d53578::t_bd9cafe165f603 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "13a723a31384d2af01473789344c197c7d5680ff",
+  "prompts": {},
+  "sessions": {
+    "s_0eefb210d53578": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "976c55fd-fb94-441d-88ab-391eaa8361a1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
