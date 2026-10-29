@@ -1,0 +1,9 @@
+test/autoscale/simulation_test.rb
+  ai_agent 65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "aa931c43cc32f7ee210a1908beb23a9a1b177677",
+  "prompts": {}
+}
