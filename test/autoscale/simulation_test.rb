@@ -62,7 +62,7 @@ class AutoscaleSimulationTest < ActiveSupport::TestCase
     assert_equal [ [ 0, "scale_out", 2, 6 ], [ 600, "scale_in", 6, 4 ], [ 1200, "scale_in", 4, 2 ] ], actions(simulate(ramp))
   end
 
-  test "a role with no replayable tick has no counts to sum" do
+  test "a role with no replayable tick holds its recorded count throughout" do
     result = simulate(ramp.map { |line| without_signal(line) })
 
     assert_equal [ 0, 141 ], payments(result).values_at(:replayed, :not_replayable)
