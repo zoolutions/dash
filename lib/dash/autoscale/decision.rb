@@ -5,6 +5,7 @@
 # On a scale_out or scale_in the reasons name what set the target the role moves toward:
 # `schedule_floor` (a window), `at_min` (scale min × replicas min), plus `at_max` when the
 # target was capped. A scale_in step that stops short of the target still names the target.
+# A signal-driven step names its signal instead: `above_threshold` or `below_threshold`.
 Dash::Autoscale::Decision = Struct.new(:role, :action, :from, :to, :reasons, :inputs, :eligible_at, :at, :error, keyword_init: true) do
   def initialize(reasons: [], inputs: {}, **attributes)
     super
@@ -48,6 +49,21 @@ Dash::Autoscale::Decision = Struct.new(:role, :action, :from, :to, :reasons, :in
   end
 
   private
+    # `above_threshold: 12.4 > 10 for 45s`, or `... until <time>` while it has not been long enough.
+    def threshold(reason)
+      above = reason == "above_threshold"
+      since = inputs[above ? :above_since : :below_since]
+      text = "#{reason}: #{inputs.dig(:signal, :value)} #{above ? ">" : "<"} #{inputs[above ? :up_above : :down_below]}"
+
+      if hold? && eligible_at
+        "#{text} until #{eligible_at.utc.iso8601}"
+      elsif since
+        "#{text} for #{(at - since).round}s"
+      else
+        text
+      end
+    end
+
     def note(reason)
       case reason
       when "schedule_floor"
@@ -55,6 +71,10 @@ Dash::Autoscale::Decision = Struct.new(:role, :action, :from, :to, :reasons, :in
         window ? %(#{reason}: window "#{window[:cron]}" min #{window[:min]}) : reason
       when "cooldown", "warming_up", "member_unreachable", "paused"
         eligible_at ? "#{reason} until #{eligible_at.utc.iso8601}" : reason
+      when "above_threshold", "below_threshold"
+        threshold(reason)
+      when "held_by_guard"
+        "#{reason}: #{inputs[:held_by]}"
       else
         error ? "#{reason}: #{error}" : reason
       end
@@ -65,4 +85,5 @@ Dash::Autoscale::Decision::ACTIONS = %w[ scale_out scale_in replace_member hold 
 Dash::Autoscale::Decision::REASONS = %w[
   schedule_floor at_min at_max at_target cooldown warming_up paused lock_busy
   member_unreachable host_unreachable pool_unreadable action_failed
+  above_threshold below_threshold held_by_guard missing_data
 ].freeze

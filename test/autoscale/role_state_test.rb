@@ -87,4 +87,51 @@ class AutoscaleRoleStateTest < ActiveSupport::TestCase
 
     assert_equal json, Dash::Autoscale::RoleState.from(json).to_h
   end
+
+  test "a sample above the band starts the above window, and keeps its start while it lasts" do
+    state = Dash::Autoscale::RoleState.from(nil)
+
+    state.observe_signal(sample(12, NOW), up_above: 10, down_below: 2)
+    state.observe_signal(sample(15, NOW + 10), up_above: 10, down_below: 2)
+
+    assert_equal({ above_since: NOW, below_since: nil }, state.breach)
+  end
+
+  test "crossing the band, entering it, or a missing sample ends a window" do
+    state = Dash::Autoscale::RoleState.from("above_since" => "2026-10-14T21:00:00Z")
+
+    state.observe_signal(sample(1, NOW), up_above: 10, down_below: 2)
+    assert_equal({ above_since: nil, below_since: NOW }, state.breach)
+
+    state.observe_signal(sample(10, NOW + 10), up_above: 10, down_below: 2)
+    assert_equal({ above_since: nil, below_since: nil }, state.breach, "at a bound is inside the band")
+
+    state.observe_signal(sample(20, NOW + 20), up_above: 10, down_below: 2)
+    state.observe_signal(sample(nil, NOW + 30, error: "timeout"), up_above: 10, down_below: 2)
+    assert_equal({ above_since: nil, below_since: nil }, state.breach)
+
+    state.observe_signal(nil, up_above: 10, down_below: 2)
+    assert_equal({ above_since: nil, below_since: nil }, state.breach)
+  end
+
+  test "the breach times round-trip through the file, and are left out when unset" do
+    json = { "last_scale_out_at" => nil, "last_scale_in_at" => nil, "unreachable" => {}, "joined" => {}, "last_decision" => nil,
+      "above_since" => "2026-10-14T21:00:00Z" }
+
+    assert_equal json, Dash::Autoscale::RoleState.from(json).to_h
+    assert_equal Time.utc(2026, 10, 14, 21, 0), Dash::Autoscale::RoleState.from(json).breach[:above_since]
+  end
+
+  test "a missing, failed or non-finite sample is missing" do
+    assert sample(nil, NOW).missing?
+    assert sample(5, NOW, error: "boom").missing?
+    assert sample(Float::NAN, NOW).missing?
+    assert sample(Float::INFINITY, NOW).missing?
+    assert_not sample(0, NOW).missing?
+  end
+
+  private
+    def sample(value, at, error: nil)
+      Dash::Autoscale::Sample.new(value: value, at: at, error: error)
+    end
 end

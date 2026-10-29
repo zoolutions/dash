@@ -3,10 +3,16 @@
 # warming up or unreachable - and `decide` returns one Dash::Autoscale::Decision. No SSH, no
 # provider call, no clock of its own.
 #
-# The target is the floor: scale min × replicas min, raised by any active schedule window,
-# never above scale max × replicas max. Below it the role scales out straight to it; above
-# it the role scales in by `scale.step` at most, once per `cooldown.down`, never while a
-# member warms up. Counts are containers; Dash::Cli::Scale::HostPlan turns them into hosts.
+# The floor is scale min × replicas min, raised by any active schedule window, never above
+# scale max × replicas max. Below it the role scales out straight to it, whatever else holds.
+#
+# A role without a signal returns to its floor: above it, it scales in by `scale.step` at
+# most, once per `cooldown.down`, never while a member warms up. A role with a signal holds
+# it inside its band instead: `up.for` above `up.above` scales out by a step (unless a guard
+# holds, at max, or within `cooldown.up` of the last scale-out); `down.for` below
+# `down.below` scales in by a step, by the same rules as a return to the floor; inside the
+# band, or without a sample, it holds. Counts are containers; Dash::Cli::Scale::HostPlan
+# turns them into hosts.
 class Dash::Autoscale::Policy
   attr_reader :role, :now, :current
 
@@ -16,11 +22,16 @@ class Dash::Autoscale::Policy
   # unreachable:         { member host => unreachable since }
   # unreadable_baseline: { baseline host => error (an exception or its message) }
   # pool_error:          the provider's error (an exception or its message) when the pool could not be read
-  def initialize(role:, now:, time_zone:, current:, history: {}, paused_until: nil, warming: {}, unreachable: {}, unreadable_baseline: {}, pool_error: nil)
+  # signal:              this tick's Dash::Autoscale::Sample of the role's signal (a role with one)
+  # guards:              this tick's Dash::Autoscale::Guard::Readings
+  # breach:              { above_since:, below_since: } from Dash::Autoscale::RoleState#breach
+  def initialize(role:, now:, time_zone:, current:, history: {}, paused_until: nil, warming: {}, unreachable: {}, unreadable_baseline: {}, pool_error: nil,
+    signal: nil, guards: [], breach: {})
     @role, @scale = role, role.scale
     @now, @time_zone, @current = now, time_zone, current
     @history, @paused_until, @warming, @unreachable = history, paused_until, warming, unreachable
     @unreadable_baseline, @pool_error = unreadable_baseline, pool_error
+    @signal, @guards, @breach = signal, guards, breach
   end
 
   def decide
@@ -31,6 +42,8 @@ class Dash::Autoscale::Policy
 
     if current < floor
       decision("scale_out", to: floor, reasons: floor_reasons)
+    elsif @scale.signal?
+      reactive
     elsif current > floor
       scale_in
     else
@@ -60,14 +73,54 @@ class Dash::Autoscale::Policy
       end
     end
 
-    def scale_in
+    def scale_in(reasons = floor_reasons)
       if warming_hosts.any?
         hold("warming_up", eligible_at: warming_hosts.map { |host| warmup_ends_at(host) }.max)
       elsif last_action_at && now < last_action_at + @scale.cooldown_down
         hold("cooldown", eligible_at: last_action_at + @scale.cooldown_down)
       else
-        decision("scale_in", to: step_target, reasons: floor_reasons)
+        decision("scale_in", to: step_target, reasons: reasons)
       end
+    end
+
+    # At or above the floor, a signalled role follows its band.
+    def reactive
+      return hold("missing_data", error: "signal #{@scale.signal.source}: #{@signal&.error || "no value"}") if @signal.nil? || @signal.missing?
+
+      if (since = @breach[:above_since])
+        eligible_at = since + @scale.up_for
+        now >= eligible_at ? step_out : hold("above_threshold", eligible_at: eligible_at)
+      elsif (since = @breach[:below_since]) && current > floor
+        eligible_at = since + @scale.down_for
+        now >= eligible_at ? scale_in([ "below_threshold" ]) : hold("below_threshold", eligible_at: eligible_at)
+      else
+        hold("at_target")
+      end
+    end
+
+    def step_out
+      last_out = @history[:last_scale_out_at]
+
+      if (guard = @guards.find(&:holding?))
+        hold("held_by_guard", error: (guard.describe if guard.sample.missing?), held_by: guard.describe)
+      elsif (target = step_out_target).nil?
+        hold("at_max")
+      elsif last_out && now < last_out + @scale.cooldown_up
+        hold("cooldown", eligible_at: last_out + @scale.cooldown_up)
+      else
+        decision("scale_out", to: target, reasons: [ "above_threshold" ])
+      end
+    end
+
+    # A step up, never above max, landing on a count the hosts can split: the nearest one
+    # above, else the nearest one below that still adds a container. Nil at max.
+    def step_out_target
+      return if current >= @scale.max_count
+
+      target = [ current + @scale.step, @scale.max_count ].min
+
+      (target..@scale.max_count).find { |count| @scale.splittable?(count) } ||
+        target.downto(current + 1).find { |count| @scale.splittable?(count) }
     end
 
     # A step down, never below the floor, landing on a count the hosts can split: the
@@ -114,8 +167,8 @@ class Dash::Autoscale::Policy
       error.respond_to?(:message) ? error.message : error.to_s
     end
 
-    def hold(reason, eligible_at: nil, error: nil)
-      decision("hold", to: current, reasons: [ reason ], eligible_at: eligible_at, error: error)
+    def hold(reason, eligible_at: nil, error: nil, **extra)
+      decision("hold", to: current, reasons: [ reason ], eligible_at: eligible_at, error: error, **extra)
     end
 
     def decision(action, to:, reasons:, eligible_at: nil, error: nil, **extra)
@@ -129,6 +182,15 @@ class Dash::Autoscale::Policy
         cooldown_up: @scale.cooldown_up, cooldown_down: @scale.cooldown_down, warmup: @scale.warmup, boot_timeout: @scale.boot_timeout,
         windows: active_windows, last_scale_out_at: @history[:last_scale_out_at], last_scale_in_at: @history[:last_scale_in_at],
         warming: warming_hosts, unreachable: @unreachable, unreadable_baseline: @unreadable_baseline, paused_until: @paused_until
-      }
+      }.merge(signal_inputs)
+    end
+
+    # Everything Dash::Autoscale::Simulation needs to replay the tick, for a role with a signal.
+    def signal_inputs
+      return {} unless @scale.signal?
+
+      { signal: { source: @scale.signal.source, value: nil, at: nil, error: nil }.merge(@signal&.to_h || {}), guards: @guards.map(&:to_h),
+        above_since: @breach[:above_since], below_since: @breach[:below_since],
+        up_above: @scale.up_above, up_for: @scale.up_for, down_below: @scale.down_below, down_for: @scale.down_for }
     end
 end
