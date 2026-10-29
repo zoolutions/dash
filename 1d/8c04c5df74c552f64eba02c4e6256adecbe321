@@ -1,0 +1,32 @@
+test/autoscale/simulation_test.rb
+  s_0eefb210d53578::t_200b0c5f91e95e 51-71
+  s_0eefb210d53578::t_82f538b6ba8b03 159
+test/cli/autoscale_test.rb
+  s_0eefb210d53578::t_200b0c5f91e95e 164-170,210-221
+test/diagnostics/doctor_signal_checks_test.rb
+  s_0eefb210d53578::t_200b0c5f91e95e 51-57
+lib/dash/configuration/docs/role.yml
+  s_0eefb210d53578::t_82f538b6ba8b03 238-240
+lib/dash/autoscale/simulation.rb
+  s_0eefb210d53578::t_82f538b6ba8b03 15-22,137-138,141,147-151,153-158
+lib/dash/cli/autoscale.rb
+  s_0eefb210d53578::t_82f538b6ba8b03 50-56,281-282
+lib/dash/diagnostics/doctor/signal_checks.rb
+  s_0eefb210d53578::t_82f538b6ba8b03 32-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1d8c04c5df74c552f64eba02c4e6256adecbe321",
+  "prompts": {},
+  "sessions": {
+    "s_0eefb210d53578": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "976c55fd-fb94-441d-88ab-391eaa8361a1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
