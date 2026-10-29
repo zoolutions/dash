@@ -41,6 +41,31 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
     end
   end
 
+  desc "signal ROLE", "Read one live sample of ROLE's scale/signal and of each scale/hold_when guard, from this machine"
+  option :json, type: :boolean, default: false, desc: "Print the sample as JSON"
+  def signal(role_name)
+    role = scaled_role(role_name)
+    sample = -> { Dash::Diagnostics::AutoscaleSignal.new(role: role).to_h }
+
+    if options[:json]
+      puts_json(&sample)
+    else
+      # A source with `via:` is reached through an SSH tunnel.
+      pre_connect_if_required
+      print_signal(sample.call)
+    end
+  end
+
+  desc "simulate", "Replay a dash autoscale run --record file with deploy.yml's thresholds now: every simulated action, and a summary per role"
+  option :samples, required: true, desc: "The --record file (JSONL, one tick per line) to replay"
+  option :json, type: :boolean, default: false, desc: "Print the simulation as JSON"
+  def simulate
+    raise ArgumentError, "No such file: #{options[:samples]}" unless File.file?(options[:samples])
+
+    simulation = Dash::Autoscale::Simulation.new(path: options[:samples], config: DASH.config, roles: DASH.specific_roles&.map(&:name)).run
+    options[:json] ? puts(JSON.pretty_generate(simulation)) : print_simulation(simulation)
+  end
+
   desc "history [ROLE]", "Show the controller's last decisions (of ROLE, or of every role)"
   option :lines, type: :numeric, default: Dash::Diagnostics::AutoscaleDecisions::DEFAULT_LINES, desc: "How many decisions"
   option :json, type: :boolean, default: false, desc: "Print the decisions as JSON"
@@ -214,6 +239,49 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
       say "  eligible at: #{decision[:eligible_at]}" if decision[:eligible_at]
       decision[:inputs].each { |name, value| say "  #{name}: #{value.to_json}" unless value.nil? || value == [] || value == {} }
       say "  state on #{explain[:state_host]} could not be read (#{explain[:state_error]}), evaluated without it", :yellow if explain[:state_error]
+    end
+
+    def print_signal(sample)
+      return say(sample[:message], :yellow) unless sample[:configured]
+
+      signal, band = sample[:signal], sample[:band]
+      if signal[:error] || signal[:value].nil?
+        say "#{sample[:role]}: #{signal[:source]} could not be read from #{sample[:from]}: #{signal[:error] || "no value"}", :red
+      else
+        position = sample[:position] == "inside" ? "inside the band" : "#{sample[:position]} the band"
+        say "#{sample[:role]}: #{signal[:source]} #{signal[:value]}, #{position} (up above #{band[:up_above]} for #{band[:up_for]}s, " \
+          "down below #{band[:down_below]} for #{band[:down_for]}s), read from #{sample[:from]} in #{signal[:latency_ms]}ms"
+      end
+
+      sample[:guards].each do |guard|
+        name = "hold_when/#{guard[:index]} #{guard[:source]}"
+        reading = guard[:value].nil? ? "#{name}: #{guard[:error] || "no value"}" : "#{name} #{guard[:value]}#{" > #{guard[:above]}" if guard[:holding]}"
+        say "  #{reading}#{", holding a scale-out" if guard[:holding]} (#{guard[:latency_ms]}ms)", (:yellow if guard[:holding])
+      end
+    end
+
+    def print_simulation(simulation)
+      simulation[:roles].each do |role|
+        say "#{role[:role]}: #{role[:ticks]} #{"tick".pluralize(role[:ticks])}, #{role[:replayed]} replayed"
+        role[:actions].each { |action| say "  #{action[:at]} #{action[:summary]}" }
+        say "  simulated: #{simulation_summary(role[:simulated])}"
+        say "  recorded:  #{simulation_summary(role[:recorded])}"
+        if role[:not_replayable].positive?
+          say "  #{role[:not_replayable]} #{"tick".pluralize(role[:not_replayable])} not replayable: recorded without a signal (before Phase 3), or not evaluated", :yellow
+        end
+        say "  #{role[:unrecorded_guards]} hold_when #{"guard".pluralize(role[:unrecorded_guards])} not in the recording, left out", :yellow if role[:unrecorded_guards]
+      end
+
+      say "No role in #{simulation[:file]} to replay", :yellow if simulation[:roles].empty?
+      simulation[:skipped].each { |skipped| say "#{skipped[:role]}: skipped, #{skipped[:reason]}", :yellow }
+      simulation[:errors].each { |error| say "line #{error[:line]}: #{error[:error]}", :red }
+    end
+
+    def simulation_summary(summary)
+      return "no tick replayed" if summary[:peak].nil?
+
+      "#{summary[:scale_outs]} #{"scale-out".pluralize(summary[:scale_outs])}, #{summary[:scale_ins]} #{"scale-in".pluralize(summary[:scale_ins])}, " \
+        "peak #{summary[:peak]}, minimum #{summary[:minimum]}, #{summary[:container_seconds]} container-seconds"
     end
 
     def print_history(history)

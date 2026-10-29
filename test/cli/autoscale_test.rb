@@ -1,4 +1,6 @@
 require_relative "cli_test_case"
+require_relative "../autoscale/signal/fakes"
+require "tmpdir"
 
 # payments (scale 1-3 hosts, replicas 1-3) has a schedule; the state lives on 1.1.1.1, the
 # primary role's first baseline host; the autoscale/controller fixture overrides it with 10.0.0.50.
@@ -143,6 +145,87 @@ class CliAutoscaleTest < CliTestCase
     assert_match "web has no scale", assert_raises(ArgumentError) { run_command("explain", "web") }.message
   end
 
+  test "signal prints one live sample of the signal and of each guard, and where it was read from" do
+    stub_signal_sources
+    output = run_command("signal", "payments", config: :with_scale_signal)
+
+    assert_match %r{payments: sidekiq 12\.5, above the band \(up above 10 for 30s, down below 2 for 600s\), read from laptop in [\d.]+ms}, output
+    assert_match %r{  hold_when/0 postgres 195\.0 > 180, holding a scale-out \([\d.]+ms\)}, output
+  end
+
+  test "signal --json is the diagnostic" do
+    stub_signal_sources
+    signal = JSON.parse(run_command("signal", "payments", "--json", config: :with_scale_signal))
+
+    assert_equal [ "payments", "sidekiq", 12.5 ], [ signal["role"], signal.dig("signal", "source"), signal.dig("signal", "value") ]
+  end
+
+  test "signal runs the pre-connect hook first, as a via: tunnel opens SSH" do
+    stub_signal_sources
+    order = sequence("pre-connect, then read")
+    Dash::Cli::Autoscale.any_instance.expects(:pre_connect_if_required).in_sequence(order)
+    Dash::Autoscale::Signal::Sidekiq.any_instance.expects(:sample).in_sequence(order).returns(Dash::Autoscale::Sample.new(value: 1, at: Time.now.utc))
+
+    run_command("signal", "payments", config: :with_scale_signal)
+  end
+
+  test "signal on a role without one says so" do
+    assert_match "reports has no scale/signal, so there is nothing to sample", run_command("signal", "reports", config: :with_scale_signal)
+  end
+
+  test "signal shows a source that cannot be read" do
+    Dash::Autoscale::Connections.stubs(:new).returns(AutoscaleSignalFakes::Connections.new(redis: Errno::ECONNREFUSED.new("cache.internal:6379"),
+      postgres: AutoscaleSignalFakes::Postgres.new("SELECT count(*) FROM pg_stat_activity" => "4")))
+    Socket.stubs(:gethostname).returns("laptop")
+
+    output = run_command("signal", "payments", config: :with_scale_signal)
+    assert_match "payments: sidekiq could not be read from laptop: Errno::ECONNREFUSED: Connection refused - cache.internal:6379", output
+    assert_match %r{  hold_when/0 postgres 4\.0 \(}, output
+  end
+
+  test "simulate replays a recorded file with deploy.yml's thresholds: every simulated action, then a summary per role" do
+    output = run_command("simulate", "--samples", record_file, config: :with_scale_signal)
+
+    assert_match "2026-10-15T02:00:30Z payments: scale_out 1 -> 3 (above_threshold: 20 > 10 for 30s)", output
+    assert_match "payments: 13 ticks, 13 replayed", output
+    assert_match "2026-10-15T02:01:30Z payments: scale_out 3 -> 5 (above_threshold: 20 > 10 for 90s)", output
+    assert_match "  simulated: 2 scale-outs, 0 scale-ins, peak 5, minimum 1, 360 container-seconds", output
+    assert_match "  recorded:  0 scale-outs, 0 scale-ins, peak 1, minimum 1, 120 container-seconds", output
+  end
+
+  test "simulate --json is the simulation" do
+    simulation = JSON.parse(run_command("simulate", "--samples", record_file, "--json", config: :with_scale_signal))
+
+    assert_equal [ "payments" ], simulation["roles"].map { |role| role["role"] }
+    assert_equal [ "scale_out", "scale_out" ], simulation.dig("roles", 0, "actions").map { |action| action["action"] }
+  end
+
+  test "simulate says what it could not replay" do
+    path = record_file(extra: [ "{oops", JSON.generate(at: "2026-10-15T02:03:00Z", decisions: [ { role: "payments", action: "hold", from: 3, to: 3, reasons: [ "at_target" ], inputs: { current: 3 } } ]) ])
+    output = run_command("simulate", "--samples", path, config: :with_scale_signal)
+
+    assert_match "  1 tick not replayable: recorded without a signal (before Phase 3), or not evaluated", output
+    assert_match %r{line 14: }, output
+  end
+
+  test "simulate keeps to --roles" do
+    output = run_command("simulate", "--samples", record_file, "--roles", "web", config: :with_scale_signal)
+
+    assert_no_match "payments", output
+    assert_match "No role in ", output
+  end
+
+  test "simulate says when a role had no tick it could replay" do
+    path = File.join(Dir.mktmpdir, "record.jsonl")
+    File.write(path, JSON.generate(at: "2026-10-15T02:00:00Z", decisions: [ { role: "payments", action: "hold", reasons: [ "action_failed" ], inputs: {} } ]) + "\n")
+
+    assert_match "  simulated: no tick replayed", run_command("simulate", "--samples", path, config: :with_scale_signal)
+  end
+
+  test "simulate needs a file that exists" do
+    assert_match "No such file: missing.jsonl", assert_raises(ArgumentError) { run_command("simulate", "--samples", "missing.jsonl") }.message
+  end
+
   test "history prints the decisions, oldest first" do
     stub_state "tail -n 50", [ { "at" => "2026-10-14T20:00:00Z", "role" => "payments", "action" => "scale_out", "from" => 1, "to" => 6, "reasons" => [ "schedule_floor" ] },
       { "at" => "2026-10-14T20:00:10Z", "role" => "payments", "action" => "hold", "from" => 6, "to" => 6, "reasons" => [ "lock_busy" ], "error" => "Timed out" } ].map(&:to_json).join("\n")
@@ -244,6 +327,27 @@ class CliAutoscaleTest < CliTestCase
       stub_readiness_wait "no-healthcheck:running"
       stub_readiness_confirm "no-healthcheck:running"
       stub_run_capture
+    end
+
+    # payments at 1 container, its oldest job 20s old, a tick every 10 seconds for 2 minutes.
+    def record_file(extra: [])
+      path = File.join(Dir.mktmpdir, "record.jsonl")
+      lines = (0..120).step(10).map do |offset|
+        at = (Time.utc(2026, 10, 15, 2, 0, 0) + offset).iso8601
+        inputs = { current: 1, signal: { source: "sidekiq", value: 20, at: at, error: nil }, guards: [ { index: 0, source: "postgres", above: 180, value: 4, at: at, error: nil } ] }
+        JSON.generate(at: at, decisions: [ { role: "payments", action: "hold", from: 1, to: 1, reasons: [ "at_target" ], inputs: inputs } ])
+      end
+      File.write(path, (lines + extra).join("\n") + "\n")
+      path
+    end
+
+    # The clock stands still, so the job is exactly 12.5 seconds old when it is read.
+    def stub_signal_sources
+      travel_to Time.utc(2026, 10, 15, 2, 0, 0)
+      redis = AutoscaleSignalFakes::Redis.new([ "LINDEX", "queue:payments", -1 ] => JSON.generate("enqueued_at" => Time.now.to_f - 12.5))
+      postgres = AutoscaleSignalFakes::Postgres.new("SELECT count(*) FROM pg_stat_activity" => "195")
+      Dash::Autoscale::Connections.stubs(:new).returns(AutoscaleSignalFakes::Connections.new(redis: redis, postgres: postgres))
+      Socket.stubs(:gethostname).returns("laptop")
     end
 
     def stub_state(fragment, output)

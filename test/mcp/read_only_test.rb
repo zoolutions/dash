@@ -1,4 +1,5 @@
 require_relative "mcp_test_case"
+require_relative "../autoscale/signal/fakes"
 
 # The read-only contract as a test, not a comment: every command any tool sends to a host
 # must match a known read-only shape. A new tool, or a diagnostic that grows a new
@@ -48,6 +49,22 @@ class McpReadOnlyTest < McpTestCase
       assert @captures.any? { |command| command.include?("/autoscale/") }, "#{name} did not read the controller's state"
       @captures.each { |command| assert READ_ONLY_CAPTURES.any? { |shape| shape.match?(command) }, "#{name} captured a command that is not a known read: #{command}" }
     end
+    assert_empty @executes
+  end
+
+  test "signal_sample only reads its sources: LINDEX, SMEMBERS and HMGET, and Postgres inside a read-only transaction" do
+    redis = AutoscaleSignalFakes::Redis.new([ "LINDEX", "queue:payments", -1 ] => nil)
+    postgres = AutoscaleSignalFakes::Postgres.new("SELECT count(*) FROM pg_stat_activity" => "4")
+    connections = AutoscaleSignalFakes::Connections.new(redis: redis, postgres: postgres)
+    Dash::Autoscale::Connections.stubs(:new).returns(connections)
+
+    sample = call_json("signal_sample", { role: "payments" }, on: server(session(fixture: :deploy_with_scale_signal)))
+
+    assert_equal [ "sidekiq", 0 ], [ sample.dig("signal", "source"), sample.dig("signal", "value") ]
+    assert_equal [ [ "LINDEX", "queue:payments", -1 ] ], redis.commands
+    assert_equal [ "BEGIN READ ONLY", "SET LOCAL statement_timeout = 5000", "SELECT count(*) FROM pg_stat_activity", "ROLLBACK" ], postgres.statements
+    assert connections.closed
+    assert_empty @captures
     assert_empty @executes
   end
 

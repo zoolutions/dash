@@ -82,8 +82,10 @@ class Views::Docs::Pages::Commands < DocsUI::Page
   ].freeze
 
   AUTOSCALE = [
-    [ "run", "Run the controller: every interval, scale each role with a scale/schedule to its target; --once, --dry-run, --metrics-port, --takeover" ],
+    [ "run", "Run the controller: every interval, scale each role with a scale/schedule or scale/signal toward its target; --once, --dry-run, --metrics-port, --record, --takeover" ],
     [ "explain ROLE", "Evaluate ROLE as the next tick would, with every input, without acting; --json" ],
+    [ "signal ROLE", "Read one live sample of ROLE's signal and each guard, with latencies, from this machine; --json" ],
+    [ "simulate --samples FILE", "Replay a --record file with deploy.yml's thresholds now: every simulated action, a summary per role; --roles, --json" ],
     [ "history [ROLE]", "Show the controller's last decisions; --lines, --json" ],
     [ "status", "Show which controller runs, when it last ticked, and the paused roles; --json" ],
     [ "pause ROLE", "Keep the controller off ROLE, for good or --for a while (30m, 2h, 1d)" ],
@@ -177,7 +179,7 @@ class Views::Docs::Pages::Commands < DocsUI::Page
   end
 
   def autoscale_commands
-    DocsUI::Section("dash autoscale", description: "Hold each scheduled role at its target, and read what the controller decided.") do
+    DocsUI::Section("dash autoscale", description: "Hold each scheduled or signalled role at its target, and read what the controller decided.") do
       subcommand_table AUTOSCALE
       md <<~'MD'
         The controller scales through `dash scale set`, under the deploy lock,
