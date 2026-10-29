@@ -1,5 +1,5 @@
 # Whether the autoscale controller is running, for apps that need one: a role with a
-# `scale.schedule` changes capacity only while `dash autoscale run` ticks. A missing,
+# `scale.schedule` or `scale.signal` changes capacity only while `dash autoscale run` ticks. A missing,
 # stale or stopped heartbeat warns, and so does every pause still in force. A state host
 # that does not answer is a warning, never an exception.
 class Dash::Diagnostics::Doctor::ControllerChecks
@@ -10,7 +10,7 @@ class Dash::Diagnostics::Doctor::ControllerChecks
   # Within the run's --roles, like the other checks.
   def run
     roles = Dash::Diagnostics::Doctor.scoped_roles
-    return [] if roles.none? { |role| role.scaled? && role.scale.schedule.any? }
+    return [] if roles.none?(&:controlled?)
 
     status = Dash::Diagnostics::ControllerStatus.new(now: @now, roles: roles).to_h
     return [ result(status[:state_host], :warn, "could not read the controller heartbeat (#{status[:error]})") ] if status[:error]
@@ -25,7 +25,7 @@ class Dash::Diagnostics::Doctor::ControllerChecks
 
     def controller_result(status)
       host, controller = status[:state_host], status[:controller]
-      return result(host, :warn, "no controller has run; #{status[:roles].join(", ")} have a schedule that only dash autoscale run carries out") unless controller
+      return result(host, :warn, "no controller has run; #{status[:roles].join(", ")} have a schedule or signal that only dash autoscale run carries out") unless controller
 
       name = "controller #{controller[:controller_id]} on #{controller[:hostname]}"
 

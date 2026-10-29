@@ -2,7 +2,7 @@ require "securerandom"
 require "socket"
 
 # `dash autoscale run`: every `autoscale.interval` seconds, for each scaled role with a
-# `scale.schedule`, observe it, ask Dash::Autoscale::Policy, and carry the decision out
+# `scale.schedule` or `scale.signal`, observe it, ask Dash::Autoscale::Policy, and carry the decision out
 # through `dash scale set` (or replace an unreachable member) under the deploy lock -
 # never by building a join itself.
 #
@@ -45,15 +45,15 @@ class Dash::Autoscale::Controller
     @interval || DASH.config.autoscale.interval
   end
 
-  # The roles the controller owns the count of: scaled, with a schedule, within --roles.
+  # The roles the controller owns the count of: scaled, with a schedule or a signal, within --roles.
   def roles
-    (DASH.specific_roles || DASH.config.roles).select { |role| role.scaled? && role.scale.schedule.any? }
+    (DASH.specific_roles || DASH.config.roles).select(&:controlled?)
   end
 
   # Claims the lease, unless another controller's is alive.
   def start
     cli.reconfigure!
-    raise ArgumentError, "No scaled role in scope has a scale/schedule, so there is nothing for the controller to do" if roles.empty?
+    raise ArgumentError, "No scaled role in scope has a scale/schedule or a scale/signal, so there is nothing for the controller to do" if roles.empty?
 
     @started_at = @clock.call
     return if dry_run?

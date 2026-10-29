@@ -7,7 +7,7 @@ class Dash::Mcp::Tools::AutoscaleExplainTool < Dash::Mcp::BaseTool
     at_min, at_max, at_target, cooldown, warming_up, paused, lock_busy, member_unreachable, host_unreachable, pool_unreadable,
     action_failed), when a hold can next change (eligible_at), and every input: running count, floor, bounds, active schedule
     windows, cooldowns, last scale times, warming and unreachable members, pause. controlled is false for a role without a
-    schedule, which the controller leaves alone.
+    schedule or a signal, which the controller leaves alone.
   DESC
   input_schema properties: { role: { type: "string", description: "The scaled role" } }, required: [ "role" ], additionalProperties: false
 

@@ -4,15 +4,20 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
   SCRIPTS = %w[ members start stop create destroy ]
   REQUIRED_SCRIPTS = %w[ members start stop ]
 
-  # Root keys of the reactive autoscaling rules (zoolutions/dash#180, phase 3).
-  CONTROLLER_KEYS = %w[ redis postgres prometheus ]
   MINIMUM_INTERVAL = 5
+
+  # What a signal or guard reads through, and the URL schemes each one takes.
+  SOURCES = {
+    "redis" => %w[ redis rediss ],
+    "postgres" => %w[ postgres postgresql ],
+    "prometheus" => %w[ http https ]
+  }.freeze
 
   def validate!
     validate_type! config, Hash
-    validate_no_controller_keys!
     check_unknown_keys! config, example
     validate_controller!
+    SOURCES.each_key { |source| validate_source!(source, config[source]) if config.key?(source) }
 
     with_context("provider") do
       provider = config["provider"]
@@ -28,12 +33,6 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
   end
 
   private
-    def validate_no_controller_keys!
-      if (key = (config.keys.map(&:to_s) & CONTROLLER_KEYS).first)
-        error "#{key} belongs to the reactive autoscaling rules, which are not part of dash yet (zoolutions/dash#180, Phase 3)"
-      end
-    end
-
     def validate_controller!
       with_context("controller") do
         host = config["controller"]
@@ -51,6 +50,41 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
       end
     end
 
+    def validate_source!(source, block)
+      with_context(source) do
+        validate_type! block, Hash
+        check_unknown_keys! block, (source == "prometheus" ? %w[ url via token ] : %w[ url via ]).index_with(nil)
+
+        with_context("url") do
+          validate_secret_or_string! block["url"]
+          url = block["url"]
+          if url.is_a?(String) && SOURCES[source].none? { |scheme| url.start_with?("#{scheme}://") }
+            error "should start with #{SOURCES[source].map { |scheme| "#{scheme}://" }.join(" or ")}"
+          end
+        end
+
+        with_context("via") do
+          via = block["via"]
+          error "should be a host name" unless via.nil? || (via.is_a?(String) && via.present? && via == via.strip)
+        end
+
+        with_context("token") { validate_secret_or_string! block["token"] } if block.key?("token")
+
+        # Checked again when a secret URL is resolved (Dash::Configuration::Autoscale#source_url).
+        if block["via"] && Dash::Configuration::Autoscale.unverifiable_through_tunnel?(source, block["url"])
+          error Dash::Configuration::Autoscale::REDISS_VIA_MESSAGE
+        end
+      end
+    end
+
+    def validate_secret_or_string!(value)
+      error "is required" if value.blank? || (value.is_a?(Array) && value.first.blank?)
+
+      unless value.is_a?(String) || (value.is_a?(Array) && value.size == 1 && value.first.is_a?(String))
+        error "should be a string or an array with one string (for secret lookup)"
+      end
+    end
+
     def validate_at_least!(value, minimum, unit = nil)
       return if value.nil?
 
@@ -64,14 +98,7 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
         check_unknown_keys! upcloud, CREDENTIALS.index_with(nil)
 
         CREDENTIALS.each do |key|
-          with_context(key) do
-            value = upcloud[key]
-            error "is required" if value.blank? || (value.is_a?(Array) && value.first.blank?)
-
-            unless value.is_a?(String) || (value.is_a?(Array) && value.size == 1 && value.first.is_a?(String))
-              error "should be a string or an array with one string (for secret lookup)"
-            end
-          end
+          with_context(key) { validate_secret_or_string! upcloud[key] }
         end
       end
     end

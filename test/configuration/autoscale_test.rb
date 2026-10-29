@@ -98,12 +98,76 @@ class ConfigurationAutoscaleTest < ActiveSupport::TestCase
     assert_raises_message(%r{autoscale/provider: unknown key: hetzner}) { config }
   end
 
-  test "the reactive rules' keys are not accepted yet" do
-    %w[ redis postgres prometheus ].each do |key|
-      @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } }, key => {} }
+  test "redis, postgres and prometheus read their URLs from secrets, only when asked" do
+    @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } },
+      "redis" => { "url" => [ "REDIS_URL" ], "via" => "10.0.0.31" }, "postgres" => { "url" => [ "DATABASE_URL" ] },
+      "prometheus" => { "url" => "http://10.0.0.9:9090", "token" => [ "PROMETHEUS_TOKEN" ] } }
+    Dash::Secrets.any_instance.expects(:[]).never
+    autoscale = config.autoscale
 
-      assert_raises_message(%r{autoscale: #{key} belongs to the reactive autoscaling rules, which are not part of dash yet \(zoolutions/dash#180, Phase 3\)}) { config }
+    assert autoscale.source?(:redis)
+    assert autoscale.source?("postgres")
+    assert_equal "10.0.0.31", autoscale.source_via(:redis)
+    assert_nil autoscale.source_via(:postgres)
+
+    Dash::Secrets.any_instance.unstub(:[])
+    Dash::Secrets.any_instance.stubs(:[]).with("REDIS_URL").returns("redis://cache.internal:6379/0")
+    Dash::Secrets.any_instance.stubs(:[]).with("DATABASE_URL").returns("postgres://app@db.internal/app")
+    Dash::Secrets.any_instance.stubs(:[]).with("PROMETHEUS_TOKEN").returns("t0k3n")
+
+    assert_equal "redis://cache.internal:6379/0", autoscale.source_url(:redis)
+    assert_equal "postgres://app@db.internal/app", autoscale.source_url(:postgres)
+    assert_equal "http://10.0.0.9:9090", autoscale.source_url(:prometheus)
+    assert_equal "t0k3n", autoscale.prometheus_token
+  end
+
+  test "no source blocks, no sources" do
+    @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } } }
+
+    assert_not config.autoscale.source?(:redis)
+    assert_nil config.autoscale.prometheus_token
+  end
+
+  test "a source URL that resolves to nothing fails naming the secret" do
+    @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } }, "redis" => { "url" => [ "REDIS_URL" ] } }
+    Dash::Secrets.any_instance.stubs(:[]).returns("")
+
+    error = assert_raises(Dash::ConfigurationError) { config.autoscale.source_url(:redis) }
+    assert_match %r{autoscale/redis/url: secret 'REDIS_URL' resolved to an empty value}, error.message
+  end
+
+  test "source blocks: a URL of the source's scheme, a via host, a token only for prometheus" do
+    { { "redis" => {} } => %r{autoscale/redis/url: is required},
+      { "redis" => { "url" => [ "" ] } } => %r{autoscale/redis/url: is required},
+      { "redis" => { "url" => 6379 } } => %r{autoscale/redis/url: should be a string or an array with one string},
+      { "redis" => { "url" => "http://cache:6379" } } => %r{autoscale/redis/url: should start with redis:// or rediss://},
+      { "postgres" => { "url" => "mysql://db/app" } } => %r{autoscale/postgres/url: should start with postgres:// or postgresql://},
+      { "prometheus" => { "url" => "10.0.0.9:9090" } } => %r{autoscale/prometheus/url: should start with http:// or https://},
+      { "redis" => { "url" => "redis://cache:6379", "via" => "" } } => %r{autoscale/redis/via: should be a host name},
+      { "redis" => { "url" => "redis://cache:6379", "token" => "t" } } => %r{autoscale/redis: unknown key: token},
+      { "postgres" => { "url" => "postgres://db/app", "port" => 5432 } } => %r{autoscale/postgres: unknown key: port},
+      { "prometheus" => { "url" => "http://p:9090", "token" => 1 } } => %r{autoscale/prometheus/token: should be a string or an array with one string},
+      { "redis" => "redis://cache:6379" } => %r{autoscale/redis: should be a hash} }.each do |keys, pattern|
+      @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } } }.merge(keys)
+
+      assert_raises_message(pattern) { config }
     end
+  end
+
+  test "rediss through a via tunnel is refused: redis-client verifies the certificate against the address it connects to" do
+    @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } },
+      "redis" => { "url" => "rediss://cache.internal:6380", "via" => "10.0.0.31" } }
+
+    assert_raises_message(%r{autoscale/redis: rediss:// cannot be verified through via}) { config }
+  end
+
+  test "a secret rediss URL through via is refused when it is resolved" do
+    @deploy[:autoscale] = { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } },
+      "redis" => { "url" => [ "REDIS_URL" ], "via" => "10.0.0.31" } }
+    Dash::Secrets.any_instance.stubs(:[]).with("REDIS_URL").returns("rediss://cache.internal:6380")
+
+    error = assert_raises(Dash::ConfigurationError) { config.autoscale.source_url(:redis) }
+    assert_match %r{autoscale/redis: rediss:// cannot be verified through via}, error.message
   end
 
   test "controller defaults: a tick every 10 seconds, 60 seconds for the lock, UTC" do
