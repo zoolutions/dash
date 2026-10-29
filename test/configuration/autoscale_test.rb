@@ -145,6 +145,7 @@ class ConfigurationAutoscaleTest < ActiveSupport::TestCase
       { "prometheus" => { "url" => "10.0.0.9:9090" } } => %r{autoscale/prometheus/url: should start with http:// or https://},
       { "redis" => { "url" => "redis://cache:6379", "via" => "" } } => %r{autoscale/redis/via: should be a host name},
       { "postgres" => { "url" => "postgres:///app?host=db", "via" => "10.0.0.31" } } => %r{autoscale/postgres: via needs a URL that names its host},
+      { "redis" => { "url" => "redis://cache host:6379", "via" => "10.0.0.31" } } => %r{autoscale/redis/url: is not a valid URL},
       { "redis" => { "url" => "redis://cache:6379", "token" => "t" } } => %r{autoscale/redis: unknown key: token},
       { "postgres" => { "url" => "postgres://db/app", "port" => 5432 } } => %r{autoscale/postgres: unknown key: port},
       { "prometheus" => { "url" => "http://p:9090", "token" => 1 } } => %r{autoscale/prometheus/token: should be a string or an array with one string},

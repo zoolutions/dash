@@ -58,8 +58,9 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
         with_context("url") do
           validate_secret_or_string! block["url"]
           url = block["url"]
-          if url.is_a?(String) && SOURCES[source].none? { |scheme| url.start_with?("#{scheme}://") }
-            error "should start with #{SOURCES[source].map { |scheme| "#{scheme}://" }.join(" or ")}"
+          if url.is_a?(String)
+            error "should start with #{SOURCES[source].map { |scheme| "#{scheme}://" }.join(" or ")}" if SOURCES[source].none? { |scheme| url.start_with?("#{scheme}://") }
+            valid_uri!(url)
           end
         end
 
@@ -77,6 +78,12 @@ class Dash::Configuration::Validator::Autoscale < Dash::Configuration::Validator
         end
         error "via needs a URL that names its host" if block["via"] && block["url"].is_a?(String) && URI(block["url"]).host.blank?
       end
+    end
+
+    def valid_uri!(url)
+      URI(url)
+    rescue URI::InvalidURIError
+      error "is not a valid URL"
     end
 
     def validate_secret_or_string!(value)
