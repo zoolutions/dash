@@ -1,0 +1,64 @@
+test/autoscale/simulation_test.rb
+  s_0eefb210d53578::t_6fa519c26fa3ca 75
+  s_0eefb210d53578::t_87e217537c2fbd 1-74,76-141
+docs/app/views/docs/pages/commands.rb
+  s_0eefb210d53578::t_b7859a7bb2d08e 85,87-88,182
+lib/dash/cli/autoscale.rb
+  s_0eefb210d53578::t_3134e79d408020 252
+  s_0eefb210d53578::t_eb01c0585dff1e 53-62,254-259,261-266,268-276
+  s_0eefb210d53578::t_37753d0e278c28 44-52,238-251,253,267
+  s_0eefb210d53578::t_497770ec27980b 260
+lib/dash/mcp/server.rb
+  s_0eefb210d53578::t_84a07c26e04378 21,29-30
+lib/dash/mcp/tools/signal_sample_tool.rb
+  s_0eefb210d53578::t_9ff138be6c8caf 1-19
+lib/dash/diagnostics/autoscale_signal.rb
+  s_0eefb210d53578::t_17555fb5fe138a 1-82
+docs/app/views/docs/pages/debugging.rb
+  s_0eefb210d53578::t_b7859a7bb2d08e 24-25,54
+test/cli/autoscale_test.rb
+  s_0eefb210d53578::t_4577c198c2e60a 3,183-184,192
+  s_0eefb210d53578::t_ed43ba679c9ae2 2,148-151,153-159,162-177,320-326
+  s_0eefb210d53578::t_1d80d27a45a0c5 178-182,185-191,193-206,310-319
+  s_0eefb210d53578::t_7f87cef7ac8f5a 152,160-161
+lib/dash/autoscale/simulation.rb
+  s_0eefb210d53578::t_1d80d27a45a0c5 70
+  s_0eefb210d53578::t_958fd68d77ae7c 1-69,71-80,82-170
+  s_0eefb210d53578::t_497770ec27980b 81
+test/mcp/server_test.rb
+  s_0eefb210d53578::t_1428addcbe0a35 8
+test/diagnostics/autoscale_signal_test.rb
+  s_0eefb210d53578::t_3185e067fe97aa 1-82
+lib/dash/mcp.rb
+  s_0eefb210d53578::t_84a07c26e04378 26
+test/diagnostics/doctor_signal_checks_test.rb
+  s_0eefb210d53578::t_f9b97bdc82fe58 1-81
+test/mcp/autoscale_tools_test.rb
+  s_0eefb210d53578::t_c84206ad8a409c 26-35
+test/autoscale/signal/fakes.rb
+  s_0eefb210d53578::t_862feb1e9fc469 5,11-12
+lib/dash/diagnostics/doctor.rb
+  s_0eefb210d53578::t_4bc68258d294eb 26-27,73,153-156
+lib/dash/configuration/docs/role.yml
+  s_0eefb210d53578::t_d905b4e6ac4fa4 231-239
+lib/dash/diagnostics/doctor/signal_checks.rb
+  s_0eefb210d53578::t_b0dc634632e5df 1-44
+test/mcp/read_only_test.rb
+  s_0eefb210d53578::t_1428addcbe0a35 2,55-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "69086328cd1194d51abc887dfd913337ad9b4fd6",
+  "prompts": {},
+  "sessions": {
+    "s_0eefb210d53578": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "976c55fd-fb94-441d-88ab-391eaa8361a1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
