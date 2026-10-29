@@ -1,0 +1,23 @@
+test/fixtures/kamal_proxy_flags.yml
+  s_0eefb210d53578::t_058fd37db414f3 5
+lib/dash/configuration/docs/proxy.yml
+  s_0eefb210d53578::t_058fd37db414f3 840
+lib/dash/configuration/proxy/run.rb
+  s_0eefb210d53578::t_058fd37db414f3 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "fb8b5ca1f79f374c816234cd44ccf71bd7fc514e",
+  "prompts": {},
+  "sessions": {
+    "s_0eefb210d53578": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "976c55fd-fb94-441d-88ab-391eaa8361a1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
