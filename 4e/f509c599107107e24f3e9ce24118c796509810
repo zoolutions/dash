@@ -1,0 +1,46 @@
+lib/dash/autoscale/tunnel.rb
+  s_0eefb210d53578::t_d907841bf0c7fd 20-25
+test/configuration/autoscale_test.rb
+  s_0eefb210d53578::t_b8731b086cc9b4 147
+lib/dash/autoscale/signal/sidekiq.rb
+  s_0eefb210d53578::t_d907841bf0c7fd 15-19,22-26,28-29
+lib/dash/autoscale/policy.rb
+  s_0eefb210d53578::t_d907841bf0c7fd 76,82,86-87,89,128-131,134
+test/autoscale/signal/sidekiq_test.rb
+  s_0eefb210d53578::t_b8731b086cc9b4 56-58,64-75,101-107
+lib/dash/configuration/docs/role.yml
+  s_0eefb210d53578::t_14bfb131d69ecd 103-104,220-221
+test/cli/scale/replica_leave_test.rb
+  s_0eefb210d53578::t_b8731b086cc9b4 98-106
+test/autoscale/policy_signal_test.rb
+  s_0eefb210d53578::t_b8731b086cc9b4 56,58,63-64
+  s_0eefb210d53578::t_d907841bf0c7fd 57,59-62
+test/autoscale/connections_test.rb
+  s_0eefb210d53578::t_e7481444b2f2d9 33,37
+  s_0eefb210d53578::t_b8731b086cc9b4 2,44-74,149-163
+lib/dash/autoscale/connections.rb
+  s_0eefb210d53578::t_e7481444b2f2d9 1-3
+  s_0eefb210d53578::t_d907841bf0c7fd 14-19,43-44,71-72,80-81
+lib/dash/cli/scale/replica_leave.rb
+  s_0eefb210d53578::t_d907841bf0c7fd 100-102
+lib/dash/configuration/validator/autoscale.rb
+  s_0eefb210d53578::t_d907841bf0c7fd 73-74,78
+test/autoscale/tunnel_test.rb
+  s_0eefb210d53578::t_b8731b086cc9b4 61-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "4ef509c599107107e24f3e9ce24118c796509810",
+  "prompts": {},
+  "sessions": {
+    "s_0eefb210d53578": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "976c55fd-fb94-441d-88ab-391eaa8361a1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
