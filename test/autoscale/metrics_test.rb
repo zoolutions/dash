@@ -24,6 +24,10 @@ class AutoscaleMetricsTest < ActiveSupport::TestCase
       # HELP dash_autoscale_members Pool members of a scaled role, per provider state.
       # TYPE dash_autoscale_members gauge
       dash_autoscale_members{role="payments",state="started"} 1
+      # HELP dash_autoscale_signal The last sample of a scaled role's signal; absent while it cannot be read.
+      # TYPE dash_autoscale_signal gauge
+      # HELP dash_autoscale_guard The last sample of each of a scaled role's guards, by its index in hold_when.
+      # TYPE dash_autoscale_guard gauge
       # HELP dash_autoscale_last_tick_timestamp_seconds When the last tick finished, in Unix seconds.
       # TYPE dash_autoscale_last_tick_timestamp_seconds gauge
       dash_autoscale_last_tick_timestamp_seconds #{(NOW + 10).to_i}
@@ -31,6 +35,19 @@ class AutoscaleMetricsTest < ActiveSupport::TestCase
       # TYPE dash_autoscale_tick_duration_seconds gauge
       dash_autoscale_tick_duration_seconds 0.5
     TEXT
+  end
+
+  test "a signal and its guards, as of the last tick; a sample that could not be read is absent" do
+    metrics = Dash::Autoscale::Metrics.new
+    inputs = { signal: { source: "sidekiq", value: 12.5 }, guards: [ { index: 0, source: "postgres", value: 195.0 }, { index: 1, source: "prometheus", value: nil } ] }
+    metrics.record_tick(decisions: [ decision("payments", "hold", 2, 2, [ "held_by_guard" ], inputs) ], members: {}, at: NOW, duration: 0.1)
+
+    assert_match %(dash_autoscale_signal{role="payments",source="sidekiq"} 12.5\n), metrics.render
+    assert_match %(dash_autoscale_guard{role="payments",guard="0",source="postgres"} 195.0\n), metrics.render
+    assert_no_match(/guard="1"/, metrics.render)
+
+    metrics.record_tick(decisions: [ decision("payments", "hold", 2, 2, [ "missing_data" ], inputs.merge(signal: { source: "sidekiq", value: nil })) ], members: {}, at: NOW, duration: 0.1)
+    assert_no_match(/dash_autoscale_signal\{/, metrics.render)
   end
 
   test "a role whose count is unknown has no running gauge" do
@@ -53,7 +70,7 @@ class AutoscaleMetricsTest < ActiveSupport::TestCase
   end
 
   private
-    def decision(role, action, from, to, reasons)
-      Dash::Autoscale::Decision.new(role: role, action: action, from: from, to: to, reasons: reasons, inputs: { floor: to }, at: NOW)
+    def decision(role, action, from, to, reasons, inputs = {})
+      Dash::Autoscale::Decision.new(role: role, action: action, from: from, to: to, reasons: reasons, inputs: { floor: to }.merge(inputs), at: NOW)
     end
 end

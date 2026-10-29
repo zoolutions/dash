@@ -11,14 +11,9 @@ class Dash::Autoscale::Connections
   Entry = Struct.new(:key, :client, :tunnel)
 
   # The process's connections: the controller's, and the drain's when `dash scale set` runs
-  # inside it. Closed by the controller when it stops.
+  # inside it. Closed by the controller when it stops; a later read opens them again.
   def self.shared
     @shared ||= new
-  end
-
-  def self.close_shared
-    @shared&.close
-    @shared = nil
   end
 
   def initialize(config: -> { DASH.config }, builder: Builder.method(:build), tunnel: Dash::Autoscale::Tunnel.method(:open))

@@ -1,7 +1,7 @@
 # What `dash autoscale run --metrics-port` serves, in the Prometheus text format: per role
-# its running and target containers and its members per provider state as of the last
-# tick, decision counts since the controller started, and when the last tick ran and how
-# long it took. Ticks write, the metrics server thread reads, so both go through the lock.
+# its running and target containers, its members per provider state, and its signal's and
+# guards' last samples as of the last tick, decision counts since the controller started,
+# and when the last tick ran and how long it took. Ticks write, the metrics server thread reads, so both go through the lock.
 class Dash::Autoscale::Metrics
   CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8"
 
@@ -10,6 +10,8 @@ class Dash::Autoscale::Metrics
     @containers = {}
     @decisions = Hash.new(0)
     @members = {}
+    @signals = {}
+    @guards = {}
     @last_tick_at = @tick_duration = nil
   end
 
@@ -19,6 +21,8 @@ class Dash::Autoscale::Metrics
       decisions.each do |decision|
         @containers[decision.role] = { "running" => decision.from, "target" => decision.inputs[:floor] }.compact
         decision.reasons.each { |reason| @decisions[[ decision.role, decision.action, reason ]] += 1 }
+        @signals[decision.role] = decision.inputs[:signal]
+        @guards[decision.role] = decision.inputs[:guards].to_a
       end
 
       members.each { |role, states| @members[role] = states.tally }
@@ -35,6 +39,10 @@ class Dash::Autoscale::Metrics
           @decisions.sort.map { |(role, action, reason), count| [ { role: role, action: action, reason: reason }, count ] }),
         family("dash_autoscale_members", "gauge", "Pool members of a scaled role, per provider state.",
           @members.sort.flat_map { |role, states| states.sort.map { |state, count| [ { role: role, state: state }, count ] } }),
+        family("dash_autoscale_signal", "gauge", "The last sample of a scaled role's signal; absent while it cannot be read.",
+          @signals.sort.filter_map { |role, signal| [ { role: role, source: signal[:source] }, signal[:value] ] if signal&.dig(:value) }),
+        family("dash_autoscale_guard", "gauge", "The last sample of each of a scaled role's guards, by its index in hold_when.",
+          @guards.sort.flat_map { |role, guards| guards.filter_map { |guard| [ { role: role, guard: guard[:index], source: guard[:source] }, guard[:value] ] unless guard[:value].nil? } }),
         family("dash_autoscale_last_tick_timestamp_seconds", "gauge", "When the last tick finished, in Unix seconds.",
           @last_tick_at ? [ [ {}, @last_tick_at.to_i ] ] : []),
         family("dash_autoscale_tick_duration_seconds", "gauge", "How long the last tick took.",
