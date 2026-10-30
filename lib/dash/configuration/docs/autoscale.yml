@@ -61,7 +61,8 @@ autoscale:
 # `rediss://` cannot go through `via` (the certificate cannot be verified through a
 # tunnel). Postgres reads run in a read-only transaction. `token` is an optional bearer
 # token for Prometheus. The controller's Gemfile needs `redis-client` for Redis and `pg` for
-# Postgres; dash does not depend on either.
+# Postgres; dash does not depend on either. A `proxy` signal needs none of these: it reads
+# the role's own dash-proxies over SSH.
 autoscale:
   provider:
     ...

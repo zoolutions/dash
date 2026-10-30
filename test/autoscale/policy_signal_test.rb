@@ -155,6 +155,14 @@ class AutoscalePolicySignalTest < ActiveSupport::TestCase
     assert_equal [ (QUIET - 45).iso8601, nil, 10, 30, 2, 600 ], inputs.values_at(:above_since, :below_since, :up_above, :up_for, :down_below, :down_for)
   end
 
+  test "a sample's detail rides in the decision's signal, JSON-safe, so the log and --record carry it" do
+    signal = Dash::Autoscale::Sample.new(value: 48.8, at: QUIET, detail: { unit: "ms", hosts: [ { host: "1.1.1.1", requests: 30 } ] })
+    inputs = Dash::Autoscale::Policy.new(role: role_with, now: QUIET, time_zone: utc, current: 2, signal: signal, guards: [], breach: {}).decide.to_h[:inputs]
+
+    assert_equal({ unit: "ms", hosts: [ { host: "1.1.1.1", requests: 30 } ] }, inputs[:signal][:detail])
+    assert_equal "ms", JSON.parse(JSON.generate(inputs)).dig("signal", "detail", "unit")
+  end
+
   test "a role without a signal records none of it" do
     @scale = @scale.except("signal", "up", "down", "hold_when")
     inputs = Dash::Autoscale::Policy.new(role: role_with, now: QUIET, time_zone: utc, current: 1).decide.inputs

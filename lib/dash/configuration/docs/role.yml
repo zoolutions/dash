@@ -226,6 +226,41 @@ servers:
       #   least pgbus's `drain_timeout`.
       # - `prometheus`: the value of one PromQL `query` (`autoscale/prometheus`), the
       #   largest when it returns several series. An empty result is a missing sample.
+      # - `proxy`: web request queue time in **milliseconds**, how long a request waited
+      #   before the app started on it. The 95th percentile over the last 60 seconds across
+      #   every container of the role on every host, read from each host's dash-proxy over
+      #   SSH (`dash-proxy list --json`), so it needs no `autoscale/` block, only a role that
+      #   runs the proxy. No requests in the window reads as 0, so an idle role scales in. A
+      #   host that cannot be read is left out and named; none answering is a missing
+      #   sample. Judoscale's web defaults make a sound start: `up/above: 50`,
+      #   `down/below: 25`.
+      #
+      #   dash-proxy takes the queue time from the app's `Server-Timing: queue;dur=<ms>`
+      #   response header when the app sends one, and stamps every request with
+      #   `X-Dash-Request-Start: t=<unix ms>` from the app host's own clock to compute it
+      #   from. In a Rails app:
+      #
+      #     # config/initializers/queue_time.rb
+      #     class QueueTime
+      #       def initialize(app) = @app = app
+      #
+      #       def call(env)
+      #         started = env["HTTP_X_DASH_REQUEST_START"].to_s[/t=(\d+)/, 1]
+      #         queue = [ (Time.now.to_f * 1000).round - started.to_i, 0 ].max if started
+      #         status, headers, body = @app.call(env)
+      #         headers["server-timing"] = [ headers["server-timing"], "queue;dur=#{queue}" ].compact.join(", ") if queue
+      #         [ status, headers, body ]
+      #       end
+      #     end
+      #     Rails.application.config.middleware.insert_before 0, QueueTime
+      #
+      #   Without that header dash-proxy times its own wait for a connection to the
+      #   container, which is a queue time only when `proxy/target/max_conns` caps the
+      #   connections at the app's thread count; otherwise it stays near 0 whatever the
+      #   backlog, and `dash doctor` warns. A deploy starts every container's window empty,
+      #   so the first minute after one reads low, and a container that stops answering
+      #   records nothing (its in-flight count in `dash-proxy list --json` and the
+      #   `kamal_proxy_target_in_flight` metric shows it).
       #
       # A role with a `schedule` and no `signal` keeps returning to its floor a step at a time.
       #

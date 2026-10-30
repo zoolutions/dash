@@ -719,6 +719,13 @@ proxy:
   # This is a per-service deploy setting even though it reads like metrics
   # configuration — where the metrics are served and who may read them are
   # proxy-wide and live under `run/metrics_port` and `run/metrics_allow_ips`.
+  #
+  # Excluded paths also stay out of the per-container queue time window the
+  # `proxy` autoscale signal reads (see `scale/signal` in dash docs role), so a
+  # load balancer probing `/up` every second does not drag its p95 down. Per
+  # container, the metrics carry `kamal_proxy_target_queue_seconds` and
+  # `kamal_proxy_target_upstream_ttfb_seconds` (histograms) and
+  # `kamal_proxy_target_in_flight`, labelled `service` and `target`.
   exclude_metrics_paths:
     - /up
 
@@ -837,7 +844,7 @@ proxy:
                                    # below already embeds its ghcr.io host
     repository: ghcr.io/zoolutions/dash-proxy # Container repository for the
                                    # dash-proxy image (this is the default)
-    version: v1.1.0.4              # Version tag of the dash-proxy image to use.
+    version: v1.1.0.5              # Version tag of the dash-proxy image to use.
                                    # Defaults to the minimum version this gem
                                    # requires - only pin it to roll forward early,
                                    # never below the default

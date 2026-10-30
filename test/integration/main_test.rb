@@ -31,6 +31,7 @@ class MainTest < IntegrationTest
 
     deploy_output = kamal :deploy, capture: true
     assert_app_is_up version: first_version
+    assert_proxy_queue_window
     assert_hooks_ran "pre-connect", "pre-build", "pre-deploy", "pre-app-boot", "pre-proxy-deploy", "post-proxy-deploy", "post-app-boot", "post-deploy"
     assert_hook_output deploy_output
     assert_match %r{Logs written to /tmp/kamal-deploy-logs/.*_deploy\.log}, deploy_output
@@ -312,6 +313,19 @@ class MainTest < IntegrationTest
     def record_attr(record, key)
       value = record["attributes"]&.find { |a| a["key"] == key }&.dig("value")
       value&.values&.first
+    end
+
+    # The proxy signal reads each host's `dash-proxy list --json`: the published image must
+    # answer with the queue window Dash::Diagnostics::ProxyQueue parses, and count the
+    # request assert_app_is_up just sent through one of the two proxies.
+    def assert_proxy_queue_window
+      targets = %w[ vm1 vm2 ].flat_map do |host|
+        Dash::Diagnostics::ProxyQueue.targets(docker_compose("exec #{host} docker exec #{Dash::Configuration::Proxy::CONTAINER_NAME} dash-proxy list --json", capture: true), service: "app-web", host: host)
+      end
+
+      assert_equal [ 60 ], targets.map { |target| target[:window_seconds] }.uniq
+      assert_operator targets.sum { |target| target[:requests] }, :>=, 1
+      assert_operator Dash::Autoscale::Histogram.merge(targets.map { |target| Dash::Autoscale::Histogram.new(buckets: target[:buckets], count: target[:requests]) }).count, :>=, 1
     end
 
     def assert_envs(version:)

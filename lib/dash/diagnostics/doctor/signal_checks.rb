@@ -23,8 +23,32 @@ class Dash::Diagnostics::Doctor::SignalChecks
       sample = Dash::Diagnostics::AutoscaleSignal.new(role: role, connections: connections).to_h
       from = "from this machine (#{sample[:from]})"
 
-      [ source_result(role.name, sample[:signal], from),
+      [ sample[:signal][:detail] && !sample[:signal][:error] ? proxy_result(role, sample[:signal], from) : source_result(role.name, sample[:signal], from),
         *sample[:guards].map { |guard| guard_result("#{role.name} hold_when/#{guard[:index]}", guard, from) } ]
+    end
+
+    # A proxy signal answers with how it got its number: how much traffic, from which hosts,
+    # and whether the app or dash-proxy timed it. A host that did not answer warns; so does
+    # a queue time that is only dash-proxy's wait for a connection with nothing capping the
+    # connections, since that wait stays near 0 whatever the app's backlog.
+    def proxy_result(role, read, from)
+      detail = read[:detail]
+      answered, failed = detail[:hosts].partition { |host| host[:error].nil? }
+      window = " in the last #{detail[:window_seconds]}s" if detail[:window_seconds]
+      traffic = if detail[:requests].zero?
+        "no requests#{window}"
+      else
+        "p95 of #{detail[:requests]} requests#{window} on #{answered.size} #{"host".pluralize(answered.size)}"
+      end
+
+      warnings = failed.map { |host| "#{host[:host]} did not answer: #{host[:error]}" }
+      if detail[:requests].positive? && detail.dig(:measured_by, :app).zero? && role.proxy.target_max_conns.nil?
+        warnings << "every request was timed by dash-proxy's wait for a connection, which stays near 0 without proxy/target/max_conns: " \
+          "send Server-Timing: queue;dur=<ms> from the app or set max_conns to its thread count (dash docs role)"
+      end
+
+      result role.name, warnings.empty? ? :ok : :warn,
+        [ "#{read[:source]} answered #{read[:value]}#{detail[:unit]} (#{traffic}) in #{read[:latency_ms]}ms, #{from}", *warnings ].join("; ")
     end
 
     def source_result(target, read, from)

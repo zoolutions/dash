@@ -408,6 +408,21 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     assert_includes config.proxy.deploy_options.keys, :"target-max-conns"
   end
 
+  test "target_max_conns is the target pool's cap, or nil" do
+    assert_nil config.proxy.target_max_conns
+
+    @deploy[:proxy] = { "target" => { "max_conns" => 16 } }
+    assert_equal 16, config.proxy.target_max_conns
+    assert_equal 16, config.role(:web).proxy.target_max_conns, "a role inherits the top-level cap"
+
+    @deploy[:servers] = { "web" => { "hosts" => [ "1.1.1.1" ], "proxy" => { "target" => { "max_conns" => 8 } } } }
+    assert_equal 8, config.role(:web).proxy.target_max_conns, "a role's own cap wins"
+
+    @deploy[:servers] = [ "1.1.1.1" ]
+    @deploy[:proxy] = { "target" => { "max_conns" => 0 } }
+    assert_nil config.proxy.target_max_conns, "0 is dash-proxy's unlimited, not a cap"
+  end
+
   test "ssl_domains without source" do
     @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "interval" => 300 } }
     assert_raises(Dash::ConfigurationError) { config.proxy }

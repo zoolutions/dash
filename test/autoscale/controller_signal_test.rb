@@ -26,6 +26,18 @@ class AutoscaleControllerSignalTest < DiagnosticsTestCase
     assert_equal [ "payments", "reports" ], start.roles.map(&:name)
   end
 
+  # A proxy signal reads every host over SSH each tick, as the observation does.
+  test "the signal is read quietly, as the observation is: only --verbose prints it" do
+    controller = start
+    @reader.value = 5
+
+    tick(controller, QUIET)
+    DASH.with_verbosity(:debug) { tick(controller, QUIET + 10) }
+
+    assert_equal [ :error, :debug ], @reader.verbosities.uniq
+    assert_equal :info, DASH.verbosity
+  end
+
   test "sustained load scales out by a step once up.for has passed" do
     controller = start
     @reader.value = 20

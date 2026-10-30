@@ -129,6 +129,23 @@ class ConfigurationRoleScaleTest < ActiveSupport::TestCase
     assert_empty scale.guards
   end
 
+  test "a proxy signal reads each host's dash-proxy, so it needs no autoscale block" do
+    @deploy[:servers]["web"] = { "hosts" => [ "1.1.1.1" ], "scale" => { "max" => 4, "signal" => { "source" => "proxy" },
+      "up" => { "above" => 50 }, "down" => { "below" => 25 } } }
+    signal = role(:web).scale.signal
+
+    assert_equal({ source: "proxy" }, signal.to_h)
+    assert_nil signal.connection
+    assert_not signal.queues?
+    assert_nil @deploy[:autoscale]["prometheus"]
+  end
+
+  test "a proxy signal on a role that does not run dash-proxy" do
+    @deploy[:servers]["payments"]["scale"] = { "max" => 4, "signal" => { "source" => "proxy" }, "up" => { "above" => 50 }, "down" => { "below" => 25 } }
+
+    assert_raises_message(%r{servers/payments/scale/signal: proxy reads the role's dash-proxy, which payments does not run \(proxy: true on the role\)}) { config }
+  end
+
   test "without a signal or a schedule a scaled role is not controlled" do
     @deploy[:servers]["payments"]["scale"] = { "max" => 4 }
 
@@ -142,8 +159,10 @@ class ConfigurationRoleScaleTest < ActiveSupport::TestCase
     band = { "up" => { "above" => 10 }, "down" => { "below" => 2 } }
     sidekiq = { "source" => "sidekiq", "queues" => [ "default" ] }
 
-    { { "signal" => { "source" => "proxy" } }.merge(band) => %r{scale/signal/source: proxy \(web queue time\) comes with Phase 4 \(zoolutions/dash#180\), use sidekiq, pgbus or prometheus},
-      { "signal" => { "source" => "kafka" } }.merge(band) => %r{scale/signal/source: must be sidekiq, pgbus or prometheus, not kafka},
+    { { "signal" => { "source" => "proxy", "queues" => [ "default" ] } }.merge(band) => %r{scale/signal/queues: is only used with sidekiq and pgbus},
+      { "signal" => { "source" => "proxy", "query" => "max(x)" } }.merge(band) => %r{scale/signal/query: is only used with prometheus},
+      { "signal" => { "source" => "proxy", "prefix" => "p_" } }.merge(band) => %r{scale/signal/prefix: is only used with pgbus},
+      { "signal" => { "source" => "kafka" } }.merge(band) => %r{scale/signal/source: must be sidekiq, pgbus, prometheus or proxy, not kafka},
       { "signal" => { "source" => "sidekiq" } }.merge(band) => %r{scale/signal/queues: is required for sidekiq},
       { "signal" => { "source" => "pgbus", "queues" => [] } }.merge(band) => %r{scale/signal/queues: is required for pgbus},
       { "signal" => { "source" => "sidekiq", "queues" => [ "bad queue" ] } }.merge(band) => %r{scale/signal/queues/0: "bad queue" should be letters, digits},

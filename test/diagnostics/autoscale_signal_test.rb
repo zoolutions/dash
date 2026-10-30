@@ -61,6 +61,19 @@ class DiagnosticsAutoscaleSignalTest < DiagnosticsTestCase
     assert signal[:guards].first[:holding], "a guard that cannot be read holds, as in the controller"
   end
 
+  test "a proxy signal's sample carries its detail: the unit, the traffic, each host" do
+    configure :deploy_with_scale_proxy_signal
+    Dash::Autoscale::Pool.any_instance.stubs(:members_for).returns([])
+    Dash::Diagnostics::ProxyQueue.any_instance.stubs(:to_h).returns(role: "web", hosts: [
+      { host: "1.1.1.1", targets: [ { window_seconds: 60, requests: 4, app: 4, proxy: 0, buckets: [ [ 10.0, 4 ], [ 25.0, 4 ] ] } ] } ])
+
+    signal = Dash::Diagnostics::AutoscaleSignal.new(role: DASH.config.role(:web), now: NOW).to_h
+
+    assert_equal [ "proxy", 9.5, "below" ], [ signal.dig(:signal, :source), signal.dig(:signal, :value), signal[:position] ]
+    assert_equal({ unit: "ms", window_seconds: 60, requests: 4, measured_by: { app: 4, proxy: 0 }, hosts: [ { host: "1.1.1.1", targets: 1, requests: 4, p95_ms: 9.5 } ] },
+      signal.dig(:signal, :detail))
+  end
+
   test "a role without a signal answers that it has none" do
     assert_equal({ role: "reports", configured: false, message: "reports has no scale/signal, so there is nothing to sample" }, sample(:reports).except(:generated_at))
   end

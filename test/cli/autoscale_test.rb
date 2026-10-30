@@ -169,6 +169,37 @@ class CliAutoscaleTest < CliTestCase
     run_command("signal", "payments", config: :with_scale_signal)
   end
 
+  test "signal on a proxy role prints the unit, the traffic, and each host's share" do
+    Dash::Autoscale::Pool.any_instance.stubs(:members_for).returns([])
+    Socket.stubs(:gethostname).returns("laptop")
+    buckets = [ 10.0, 25.0, 50.0, 100.0 ].zip([ 0, 0, 30, 30 ])
+    Dash::Diagnostics::ProxyQueue.any_instance.stubs(:to_h).returns(role: "web", hosts: [
+      { host: "1.1.1.1", targets: [ { address: "a:80", window_seconds: 60, requests: 30, app: 30, proxy: 0, buckets: buckets } ] },
+      { host: "1.1.1.2", error: "Errno::ECONNREFUSED: Connection refused" } ])
+
+    output = run_command("signal", "web", config: :with_scale_proxy_signal)
+
+    assert_match %r{web: proxy 48\.8ms, inside the band \(up above 50 for 30s, down below 25 for 600s\), read from laptop in [\d.]+ms}, output
+    assert_match "  30 requests in the last 60s, queue time from the app 30, from dash-proxy's connection wait 0", output
+    assert_match "  1.1.1.1: 30 requests, p95 48.8ms", output
+    assert_match "  1.1.1.2: did not answer: Errno::ECONNREFUSED: Connection refused", output
+
+    signal = JSON.parse(run_command("signal", "web", "--json", config: :with_scale_proxy_signal))["signal"]
+    assert_equal [ "proxy", 48.8, "ms" ], [ signal["source"], signal["value"], signal.dig("detail", "unit") ]
+  end
+
+  test "signal on a proxy role no host answers names each host and no traffic" do
+    Dash::Autoscale::Pool.any_instance.stubs(:members_for).returns([])
+    Socket.stubs(:gethostname).returns("laptop")
+    Dash::Diagnostics::ProxyQueue.any_instance.stubs(:to_h).returns(role: "web", hosts: [ { host: "1.1.1.1", error: "no answer" }, { host: "1.1.1.2", error: "no answer" } ])
+
+    output = run_command("signal", "web", config: :with_scale_proxy_signal)
+
+    assert_match "web: proxy could not be read from laptop: RuntimeError: no dash-proxy of web answered: 1.1.1.1 (no answer), 1.1.1.2 (no answer)", output
+    assert_match "  1.1.1.2: did not answer: no answer", output
+    assert_no_match "requests in the last", output
+  end
+
   test "signal on a role without one says so" do
     assert_match "reports has no scale/signal, so there is nothing to sample", run_command("signal", "reports", config: :with_scale_signal)
   end
