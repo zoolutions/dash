@@ -262,10 +262,12 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
       end
     end
 
-    # A proxy signal's traffic and each host's share of it.
+    # A proxy signal's traffic, when a host answered, and each host's share of it or error.
     def print_signal_detail(detail)
-      say "  #{detail[:requests]} requests in the last #{detail[:window_seconds]}s, queue time from the app #{detail.dig(:measured_by, :app)}, " \
-        "from dash-proxy's connection wait #{detail.dig(:measured_by, :proxy)}"
+      if detail[:hosts].any? { |host| host[:error].nil? }
+        say "  #{detail[:requests]} requests#{" in the last #{detail[:window_seconds]}s" if detail[:window_seconds]}, queue time from the app " \
+          "#{detail.dig(:measured_by, :app)}, from dash-proxy's connection wait #{detail.dig(:measured_by, :proxy)}"
+      end
 
       detail[:hosts].each do |host|
         if host[:error]

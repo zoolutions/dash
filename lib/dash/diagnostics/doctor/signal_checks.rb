@@ -34,10 +34,11 @@ class Dash::Diagnostics::Doctor::SignalChecks
     def proxy_result(role, read, from)
       detail = read[:detail]
       answered, failed = detail[:hosts].partition { |host| host[:error].nil? }
+      window = " in the last #{detail[:window_seconds]}s" if detail[:window_seconds]
       traffic = if detail[:requests].zero?
-        "no requests in the last #{detail[:window_seconds]}s"
+        "no requests#{window}"
       else
-        "p95 of #{detail[:requests]} requests over #{detail[:window_seconds]}s on #{answered.size} #{"host".pluralize(answered.size)}"
+        "p95 of #{detail[:requests]} requests#{window} on #{answered.size} #{"host".pluralize(answered.size)}"
       end
 
       warnings = failed.map { |host| "#{host[:host]} did not answer: #{host[:error]}" }

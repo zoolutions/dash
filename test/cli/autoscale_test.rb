@@ -188,6 +188,18 @@ class CliAutoscaleTest < CliTestCase
     assert_equal [ "proxy", 48.8, "ms" ], [ signal["source"], signal["value"], signal.dig("detail", "unit") ]
   end
 
+  test "signal on a proxy role no host answers names each host and no traffic" do
+    Dash::Autoscale::Pool.any_instance.stubs(:members_for).returns([])
+    Socket.stubs(:gethostname).returns("laptop")
+    Dash::Diagnostics::ProxyQueue.any_instance.stubs(:to_h).returns(role: "web", hosts: [ { host: "1.1.1.1", error: "no answer" }, { host: "1.1.1.2", error: "no answer" } ])
+
+    output = run_command("signal", "web", config: :with_scale_proxy_signal)
+
+    assert_match "web: proxy could not be read from laptop: RuntimeError: no dash-proxy of web answered: 1.1.1.1 (no answer), 1.1.1.2 (no answer)", output
+    assert_match "  1.1.1.2: did not answer: no answer", output
+    assert_no_match "requests in the last", output
+  end
+
   test "signal on a role without one says so" do
     assert_match "reports has no scale/signal, so there is nothing to sample", run_command("signal", "reports", config: :with_scale_signal)
   end

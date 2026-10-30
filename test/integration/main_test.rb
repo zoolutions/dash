@@ -320,7 +320,7 @@ class MainTest < IntegrationTest
     # request assert_app_is_up just sent through one of the two proxies.
     def assert_proxy_queue_window
       targets = %w[ vm1 vm2 ].flat_map do |host|
-        Dash::Diagnostics::ProxyQueue.targets(docker_compose("exec #{host} docker exec dash-proxy dash-proxy list --json", capture: true), service: "app-web", host: host)
+        Dash::Diagnostics::ProxyQueue.targets(docker_compose("exec #{host} docker exec #{Dash::Configuration::Proxy::CONTAINER_NAME} dash-proxy list --json", capture: true), service: "app-web", host: host)
       end
 
       assert_equal [ 60 ], targets.map { |target| target[:window_seconds] }.uniq

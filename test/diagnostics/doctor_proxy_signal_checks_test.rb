@@ -14,7 +14,7 @@ class DiagnosticsDoctorProxySignalChecksTest < DiagnosticsTestCase
     queue host("1.1.1.1", requests: 30, app: 30), host("1.1.1.2", requests: 10, app: 10)
 
     assert_equal :ok, check.status
-    assert_match %r{\Aproxy answered 9\.5ms \(p95 of 40 requests over 60s on 2 hosts\) in [\d.]+ms, from this machine \(laptop\)\z}, check.detail
+    assert_match %r{\Aproxy answered 9\.5ms \(p95 of 40 requests in the last 60s on 2 hosts\) in [\d.]+ms, from this machine \(laptop\)\z}, check.detail
   end
 
   test "no requests in the window is a queue time of zero" do
@@ -24,11 +24,18 @@ class DiagnosticsDoctorProxySignalChecksTest < DiagnosticsTestCase
     assert_match %r{\Aproxy answered 0\.0ms \(no requests in the last 60s\) in [\d.]+ms, from this machine \(laptop\)\z}, check.detail
   end
 
+  test "a proxy that routes the role with no targets yet answers no requests, with no window to name" do
+    queue({ host: "1.1.1.1", targets: [] }, { host: "1.1.1.2", targets: [] })
+
+    assert_equal :ok, check.status
+    assert_match %r{\Aproxy answered 0\.0ms \(no requests\) in [\d.]+ms, from this machine \(laptop\)\z}, check.detail
+  end
+
   test "a host whose dash-proxy cannot be read warns, naming it" do
     queue host("1.1.1.1", requests: 5, app: 5), { host: "1.1.1.2", error: "Errno::ECONNREFUSED: Connection refused" }
 
     assert_equal :warn, check.status
-    assert_match %r{\(p95 of 5 requests over 60s on 1 host\) .*; 1\.1\.1\.2 did not answer: Errno::ECONNREFUSED: Connection refused\z}, check.detail
+    assert_match %r{\(p95 of 5 requests in the last 60s on 1 host\) .*; 1\.1\.1\.2 did not answer: Errno::ECONNREFUSED: Connection refused\z}, check.detail
   end
 
   test "queue time measured only as the proxy's connection wait, with no max_conns, warns: it reads near zero whatever the backlog" do
