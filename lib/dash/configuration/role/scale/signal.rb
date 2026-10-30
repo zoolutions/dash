@@ -1,13 +1,16 @@
 # The `scale.signal` entry: the one number the controller scales a role on. `sidekiq` and
 # `pgbus` are the age in seconds of the oldest job waiting across `queues`; `prometheus` is
-# whatever its `query` returns (the largest value of a vector). See Dash::Autoscale::Signal.
+# whatever its `query` returns (the largest value of a vector); `proxy` is the fleet p95 of
+# web request queue time in milliseconds, read from each host's dash-proxy. See
+# Dash::Autoscale::Signal.
 class Dash::Configuration::Role::Scale::Signal
-  SOURCES = %w[ sidekiq pgbus prometheus ]
+  SOURCES = %w[ sidekiq pgbus prometheus proxy ]
   KEYS = %w[ source queues prefix query ]
   NAME = /\A[A-Za-z0-9_.:-]+\z/
   DEFAULT_PGBUS_PREFIX = "pgbus_"
 
-  # The autoscale/<connection> block each source reads through.
+  # The autoscale/<connection> block each source reads through. `proxy` has none: it reads
+  # each host's dash-proxy over SSH, as `dash doctor` does.
   CONNECTIONS = { "sidekiq" => "redis", "pgbus" => "postgres", "prometheus" => "prometheus" }.freeze
 
   attr_reader :source, :queues, :prefix, :query
@@ -27,11 +30,11 @@ class Dash::Configuration::Role::Scale::Signal
   end
 
   def queues?
-    source != "prometheus"
+    %w[ sidekiq pgbus ].include?(source)
   end
 
   def connection
-    CONNECTIONS.fetch(source)
+    CONNECTIONS[source]
   end
 
   def to_h
@@ -40,9 +43,6 @@ class Dash::Configuration::Role::Scale::Signal
 
   private
     def validate_source!
-      if source == "proxy"
-        error "source", "proxy (web queue time) comes with Phase 4 (zoolutions/dash#180), use #{SOURCES.to_sentence(last_word_connector: " or ")}"
-      end
       error "source", "must be #{SOURCES.to_sentence(last_word_connector: " or ")}, not #{source}" unless SOURCES.include?(source)
     end
 
@@ -70,7 +70,7 @@ class Dash::Configuration::Role::Scale::Signal
     end
 
     def parse_query(query)
-      if queues?
+      unless source == "prometheus"
         error "query", "is only used with prometheus" unless query.nil?
         return
       end

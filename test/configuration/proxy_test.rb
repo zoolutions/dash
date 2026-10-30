@@ -408,6 +408,13 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
     assert_includes config.proxy.deploy_options.keys, :"target-max-conns"
   end
 
+  test "target_max_conns is the target pool's cap, or nil" do
+    assert_nil config.proxy.target_max_conns
+
+    @deploy[:proxy] = { "target" => { "max_conns" => 16 } }
+    assert_equal 16, config.proxy.target_max_conns
+  end
+
   test "ssl_domains without source" do
     @deploy[:proxy] = { "ssl" => true, "host" => "example.com", "ssl_domains" => { "interval" => 300 } }
     assert_raises(Dash::ConfigurationError) { config.proxy }

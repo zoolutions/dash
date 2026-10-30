@@ -249,14 +249,30 @@ class Dash::Cli::Autoscale < Dash::Cli::Base
         say "#{sample[:role]}: #{signal[:source]} could not be read from #{sample[:from]}: #{signal[:error] || "no value"}", :red
       else
         position = sample[:position] == "inside" ? "inside the band" : "#{sample[:position]} the band"
-        say "#{sample[:role]}: #{signal[:source]} #{signal[:value]}, #{position} (up above #{band[:up_above]} for #{band[:up_for]}s, " \
+        say "#{sample[:role]}: #{signal[:source]} #{signal[:value]}#{signal.dig(:detail, :unit)}, #{position} (up above #{band[:up_above]} for #{band[:up_for]}s, " \
           "down below #{band[:down_below]} for #{band[:down_for]}s), read from #{sample[:from]} in #{signal[:latency_ms]}ms"
       end
+
+      print_signal_detail(signal[:detail]) if signal[:detail]
 
       sample[:guards].each do |guard|
         name = "hold_when/#{guard[:index]} #{guard[:source]}"
         reading = guard[:value].nil? ? "#{name}: #{guard[:error] || "no value"}" : "#{name} #{guard[:value]}#{" > #{guard[:above]}" if guard[:holding]}"
         say "  #{reading}#{", holding a scale-out" if guard[:holding]} (#{guard[:latency_ms]}ms)", (:yellow if guard[:holding])
+      end
+    end
+
+    # A proxy signal's traffic and each host's share of it.
+    def print_signal_detail(detail)
+      say "  #{detail[:requests]} requests in the last #{detail[:window_seconds]}s, queue time from the app #{detail.dig(:measured_by, :app)}, " \
+        "from dash-proxy's connection wait #{detail.dig(:measured_by, :proxy)}"
+
+      detail[:hosts].each do |host|
+        if host[:error]
+          say "  #{host[:host]}: did not answer: #{host[:error]}", :yellow
+        else
+          say "  #{host[:host]}: #{host[:requests]} requests, p95 #{host[:p95_ms]}#{detail[:unit]}"
+        end
       end
     end
 

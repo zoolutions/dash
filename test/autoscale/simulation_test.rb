@@ -27,6 +27,23 @@ class AutoscaleSimulationTest < ActiveSupport::TestCase
     assert_equal [ 141, 141, 0 ], payments(result).values_at(:ticks, :replayed, :not_replayable)
   end
 
+  test "a recorded proxy signal replays in milliseconds, its detail left aside" do
+    @web_scale = { "min" => 1, "max" => 3, "warmup" => 0, "cooldown" => { "up" => 60, "down" => 600 },
+      "signal" => { "source" => "proxy" }, "up" => { "above" => 50, "for" => 30 }, "down" => { "below" => 25, "for" => 600 } }
+    lines = (0..200).step(10).map do |offset|
+      at = T + offset
+      signal = { source: "proxy", value: offset <= 100 ? 80.0 : 5.0, at: at.iso8601, error: nil,
+        detail: { unit: "ms", window_seconds: 60, requests: 40, measured_by: { app: 40, proxy: 0 }, hosts: [ { host: "1.1.1.1", targets: 1, requests: 40, p95_ms: 80.0 } ] } }
+
+      JSON.generate(at: at.iso8601, decisions: [ { role: "web", action: "hold", from: 1, to: 1, reasons: [ "at_target" ], inputs: { current: 1, signal: signal, guards: [] }, at: at.iso8601 } ])
+    end
+
+    web = simulate(lines)[:roles].find { |role| role[:role] == "web" }
+
+    assert_equal [ 21, 0 ], web.values_at(:replayed, :not_replayable)
+    assert_equal [ [ 30.0, "scale_out", 1, 2 ], [ 90.0, "scale_out", 2, 3 ] ], web[:actions].map { |decision| [ Time.iso8601(decision[:at]) - T, decision[:action], decision[:from], decision[:to] ] }
+  end
+
   test "the current thresholds decide, not the recorded ones" do
     @scale["up"] = { "above" => 30, "for" => 30 }
 
@@ -168,7 +185,7 @@ class AutoscaleSimulationTest < ActiveSupport::TestCase
     def config
       Dash::Configuration.new({
         service: "app", image: "dhh/app", registry: { "username" => "dhh", "password" => "secret" }, builder: { "arch" => "amd64" },
-        servers: { "web" => [ "1.1.1.1" ],
+        servers: { "web" => (@web_scale ? { "hosts" => [ "1.1.1.1" ], "scale" => @web_scale } : [ "1.1.1.1" ]),
           "payments" => { "hosts" => [ "1.1.1.3" ], "cmd" => "bundle exec sidekiq", "healthcheck" => false, "replicas" => { "min" => 1, "max" => 2 }, "scale" => @scale } },
         autoscale: { "provider" => { "upcloud" => { "username" => "u", "password" => "p" } },
           "redis" => { "url" => "redis://cache:6379" }, "postgres" => { "url" => "postgres://db/app" }, "prometheus" => { "url" => "http://10.0.0.9:9090" } }

@@ -585,13 +585,18 @@ class Dash::Configuration
     end
 
     # A signal or guard reads through its autoscale/<connection> block; without one the
-    # controller would hold the role with missing_data forever instead of failing here.
+    # controller would hold the role with missing_data forever instead of failing here. A
+    # proxy signal reads the role's own dash-proxy instead, so the role has to run one.
     def ensure_signal_sources_are_configured
       scaled_roles.select { |role| role.scale.signal? }.each do |role|
+        if role.scale.signal.source == "proxy" && !role.running_proxy?
+          raise Dash::ConfigurationError, "servers/#{role.name}/scale/signal: proxy reads the role's dash-proxy, which #{role.name} does not run (proxy: true on the role)"
+        end
+
         readers = [ [ "signal", role.scale.signal ] ] + role.scale.guards.each_with_index.map { |guard, index| [ "hold_when/#{index}", guard ] }
 
         readers.each do |key, reader|
-          next if autoscale.source?(reader.connection)
+          next if reader.connection.nil? || autoscale.source?(reader.connection)
 
           raise Dash::ConfigurationError, "servers/#{role.name}/scale/#{key}: #{reader.source} reads #{reader.connection.capitalize}, " \
             "set autoscale/#{reader.connection} (see dash docs autoscale)"

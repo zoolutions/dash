@@ -68,6 +68,20 @@ class McpReadOnlyTest < McpTestCase
     assert_empty @executes
   end
 
+  test "signal_sample on a proxy signal only reads each host's dash-proxy routes, and executes nothing" do
+    Dash::Autoscale::Pool.any_instance.stubs(:members_for).returns([])
+    connections = AutoscaleSignalFakes::Connections.new
+    Dash::Autoscale::Connections.stubs(:new).returns(connections)
+
+    sample = call_json("signal_sample", { role: "web" }, on: server(session(fixture: :deploy_with_scale_proxy_signal)))
+
+    assert_equal "proxy", sample.dig("signal", "source")
+    assert_equal 2, @captures.size, "one list per host of the role"
+    @captures.each { |command| assert_match(/\Adocker exec \S+ dash-proxy list --json\z/, command) }
+    assert_empty @executes
+    assert_empty connections.clients
+  end
+
   test "every tool only reads" do
     server = self.server(session(fixture: :deploy_with_accessories, allow_logs: true))
     arguments = { "logs" => { since: "15m", grep: "x" }, "audit" => { lines: 10 } }
