@@ -413,6 +413,10 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
 
     @deploy[:proxy] = { "target" => { "max_conns" => 16 } }
     assert_equal 16, config.proxy.target_max_conns
+    assert_equal 16, config.role(:web).proxy.target_max_conns, "a role inherits the top-level cap"
+
+    @deploy[:servers] = { "web" => { "hosts" => [ "1.1.1.1" ], "proxy" => { "target" => { "max_conns" => 8 } } } }
+    assert_equal 8, config.role(:web).proxy.target_max_conns, "a role's own cap wins"
   end
 
   test "ssl_domains without source" do

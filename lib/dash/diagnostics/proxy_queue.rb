@@ -8,9 +8,16 @@
 class Dash::Diagnostics::ProxyQueue < Dash::Diagnostics::Base
   # The role's targets in one `dash-proxy list --json` output, active and rollout slots
   # alike (both serve requests). Buckets are [ [ upper bound ms, cumulative count ], ... ].
+  #
+  # dash-proxy omits empty lists, so a service with no targets has neither `targets` nor
+  # `target_details`; only targets without details is a proxy older than the window.
   def self.targets(output, service:, host:)
     routed = Dash::Commands::Proxy::Services.parse(output)[service] or raise "dash-proxy on #{host} routes no #{service}"
-    details = routed["target_details"] or raise "dash-proxy on #{host} reports no queue window (it predates v1.1.0.5), run dash proxy reboot"
+    details = routed.fetch("target_details") do
+      raise "dash-proxy on #{host} reports no queue window (it predates v1.1.0.5), run dash proxy reboot" if Array(routed["targets"]).any?
+
+      []
+    end
 
     details.map do |target|
       queue = target.fetch("queue")

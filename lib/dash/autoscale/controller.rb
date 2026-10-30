@@ -156,7 +156,7 @@ class Dash::Autoscale::Controller
       entry = Entry.new(role: role, state: Dash::Autoscale::RoleState.from(state.dig("roles", role.name)))
       entry.evaluation = Dash::Autoscale::Evaluation.new(role: role, now: now, state: entry.state, pause: Dash::Autoscale::Pause.from(pauses[role.name]),
         observation: quietly { Dash::Autoscale::Observation.take(role) }, reader: @reader)
-      entry.decision = entry.evaluation.decide
+      entry.decision = quietly { entry.evaluation.decide }
       entry
     rescue StandardError => e
       entry.evaluation = nil

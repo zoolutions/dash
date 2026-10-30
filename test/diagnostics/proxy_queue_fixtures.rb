@@ -6,7 +6,8 @@ module ProxyQueueFixtures
 
   private
     def list(services)
-      { services: services.transform_values { |targets| { targets: targets.map { |target| target[:address] }, target_details: targets } } }.to_json
+      # Both lists are omitempty in dash-proxy: a service with no targets has neither key.
+      { services: services.transform_values { |targets| targets.empty? ? {} : { targets: targets.map { |target| target[:address] }, target_details: targets } } }.to_json
     end
 
     def target(address, requests:, cumulative:, app: 0, proxy: 0, slot: "active", p95_ms: 9.5, max_ms: 20.0)

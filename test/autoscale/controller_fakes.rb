@@ -83,15 +83,17 @@ module AutoscaleControllerFakes
   # Every role's signal reads `value` (or fails with `error`), its one guard `guard_value`.
   class FakeReader
     attr_accessor :value, :error, :guard_value, :raises
-    attr_reader :closed, :reads
+    attr_reader :closed, :reads, :verbosities
 
     def initialize
       @guard_value = 0
       @reads = 0
+      @verbosities = []
     end
 
     def read(_role, at:)
       @reads += 1
+      @verbosities << DASH.verbosity
       raise raises if raises
 
       [ Dash::Autoscale::Sample.new(value: value, at: at, error: error),

@@ -44,6 +44,13 @@ class DiagnosticsProxyQueueTest < DiagnosticsTestCase
     assert_equal [], hosts.last[:targets]
   end
 
+  test "a current proxy routing the role with no targets omits both lists: no targets, not an old proxy" do
+    stub_capture "1.1.1.1", "dash-proxy list --json", list("app-web" => [])
+    stub_capture "1.1.1.2", "dash-proxy list --json", { services: { "app-web" => { host: "app.example.com" } } }.to_json
+
+    assert_equal [ [], [] ], queue[:hosts].map { |host| host[:targets] }
+  end
+
   test "parses a real `list --json` for one service, as the integration test feeds it" do
     output = list("app-web" => [ target("aaa:80", requests: 3, cumulative: [ 3, 3, 3, 3 ]) ])
 
