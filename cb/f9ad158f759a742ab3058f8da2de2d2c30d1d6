@@ -1,0 +1,83 @@
+lib/dash/autoscale/sample.rb
+  s_0eefb210d53578::t_e2939014f8f086 4-8
+  s_0eefb210d53578::t_436be74a83bfa9 15-16
+test/configuration/role/scale_test.rb
+  s_0eefb210d53578::t_120de8a8bdb5e4 132-139,141-148
+  s_0eefb210d53578::t_413a34b5db8f67 140
+  s_0eefb210d53578::t_1a9c9f1f950a8b 162-165
+test/autoscale/simulation_test.rb
+  s_0eefb210d53578::t_9b3f9901326622 30-46,188
+lib/dash/autoscale/signal.rb
+  s_0eefb210d53578::t_1820066a8b0981 4-6
+  s_0eefb210d53578::t_4c5af4053ecd6c 8,11-12,16-17
+  s_0eefb210d53578::t_644c9b6ed57f17 3
+lib/dash/cli/autoscale.rb
+  s_0eefb210d53578::t_c6b7ebab8464d3 265-278
+  s_0eefb210d53578::t_b44cb23166dff6 252,256
+lib/dash/configuration/docs/proxy.yml
+  s_0eefb210d53578::t_e7e4a14d665218 722-728
+lib/dash/configuration/docs/autoscale.yml
+  s_0eefb210d53578::t_738a3024aa037d 64-65
+test/fixtures/deploy_with_scale_proxy_signal.yml
+  s_0eefb210d53578::t_3afd1d89314330 1-38
+test/diagnostics/proxy_queue_fixtures.rb
+  s_0eefb210d53578::t_0021381eeaff26 1-17
+test/diagnostics/proxy_queue_test.rb
+  s_0eefb210d53578::t_f5bb78036fb2b1 1-21,23-57
+  s_0eefb210d53578::t_d207a9d403a4e8 22
+lib/dash/diagnostics/doctor/signal_checks.rb
+  s_0eefb210d53578::t_e6deaee2f3c8fb 26,30-50
+lib/dash/configuration/proxy.rb
+  s_0eefb210d53578::t_a90720a96c4e8b 433-437
+lib/dash/autoscale/histogram.rb
+  s_0eefb210d53578::t_03dce558636326 1-48
+test/autoscale/signal/proxy_test.rb
+  s_0eefb210d53578::t_f50c24f936fd80 15
+  s_0eefb210d53578::t_8f770ff22ee6dc 1-14,16-77
+test/mcp/read_only_test.rb
+  s_0eefb210d53578::t_a785c741449306 71-84
+test/configuration/proxy_test.rb
+  s_0eefb210d53578::t_06b2996c80d9d3 411-417
+test/autoscale/policy_signal_test.rb
+  s_0eefb210d53578::t_39ee6245538e87 158-165
+lib/dash/configuration/docs/role.yml
+  s_0eefb210d53578::t_917b1278789ee1 246,248-249,251
+  s_0eefb210d53578::t_a35655a3cb51cc 262-263
+  s_0eefb210d53578::t_6dd40b8e17e154 229-245,247,250,252-261
+test/diagnostics/doctor_proxy_signal_checks_test.rb
+  s_0eefb210d53578::t_f1d4dbcaeb39cf 1-77
+test/autoscale/histogram_test.rb
+  s_0eefb210d53578::t_0b19f09d4d30f7 33
+  s_0eefb210d53578::t_c4dc9dcaa5edf4 1-32,34-55
+lib/dash/configuration.rb
+  s_0eefb210d53578::t_3c5ab59ae26edd 588-589,592-595,599
+test/integration/main_test.rb
+  s_0eefb210d53578::t_42bab01ec192b7 34,318-328
+lib/dash/diagnostics/proxy_queue.rb
+  s_0eefb210d53578::t_ceed6257e9036e 1-18,20-33
+  s_0eefb210d53578::t_d207a9d403a4e8 19
+test/cli/autoscale_test.rb
+  s_0eefb210d53578::t_0f57630754fe95 172-190
+lib/dash/autoscale/signal/proxy.rb
+  s_0eefb210d53578::t_a22e818fc9bca3 1-49
+lib/dash/configuration/role/scale/signal.rb
+  s_0eefb210d53578::t_26224dc920bf4c 3-5,7,12-13,33,37,73
+lib/dash/mcp/tools/signal_sample_tool.rb
+  s_0eefb210d53578::t_c6d370ceac62f9 5-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "cbf9ad158f759a742ab3058f8da2de2d2c30d1d6",
+  "prompts": {},
+  "sessions": {
+    "s_0eefb210d53578": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "976c55fd-fb94-441d-88ab-391eaa8361a1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
