@@ -1,0 +1,31 @@
+lib/dash/autoscale/controller.rb
+  s_0eefb210d53578::t_5dbbfbf5f31ad0 159
+test/autoscale/controller_signal_test.rb
+  s_0eefb210d53578::t_7b831e6b9ec334 29-40
+test/diagnostics/proxy_queue_fixtures.rb
+  s_0eefb210d53578::t_e6db2f02281f47 9-10
+test/autoscale/controller_fakes.rb
+  s_0eefb210d53578::t_7b831e6b9ec334 86,91,96
+test/diagnostics/proxy_queue_test.rb
+  s_0eefb210d53578::t_4a69e1828a29a2 47-53
+lib/dash/diagnostics/proxy_queue.rb
+  s_0eefb210d53578::t_a616932c897060 11-13,16-20
+test/configuration/proxy_test.rb
+  s_0eefb210d53578::t_c2e38fb210bf7b 416-419
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "cfc2d355cf3fc12262f540432dd5a4e070fef472",
+  "prompts": {},
+  "sessions": {
+    "s_0eefb210d53578": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "976c55fd-fb94-441d-88ab-391eaa8361a1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "mhenrixon <mikael@mhenrixon.com>"
+    }
+  }
+}
