@@ -645,6 +645,7 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
         end
 
         validate_min_tls! run_config["min_tls"]
+        validate_run_version! run_config["version"]
 
         RUN_TIMEOUTS.each do |key|
           error "#{key} cannot be negative" if run_config[key].to_f.negative?
@@ -670,6 +671,18 @@ class Dash::Configuration::Validator::Proxy < Dash::Configuration::Validator
         error "min_tls #{normalized} cannot be enabled - the lowest accepted minimum is #{MIN_TLS_VERSIONS.first}"
       elsif !MIN_TLS_VERSIONS.include?(normalized)
         error "min_tls '#{value}' is not a TLS version - use #{MIN_TLS_VERSIONS.join(" or ")}"
+      end
+    end
+
+    # `dash proxy boot` refuses a running proxy older than MINIMUM_VERSION, and a
+    # reboot would start the pinned tag again. A tag that is not a version number
+    # (a branch build) cannot be compared and is left to the operator.
+    def validate_run_version!(value)
+      minimum = Dash::Configuration::Proxy::Run::MINIMUM_VERSION
+      return unless value.present? && Gem::Version.correct?(value.to_s.delete_prefix("v"))
+
+      if Dash::Utils.older_version?(value.to_s, minimum)
+        error "version #{value} is older than #{minimum}, the oldest dash-proxy this dash runs - remove the pin or raise it"
       end
     end
 
