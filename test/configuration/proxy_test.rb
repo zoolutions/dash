@@ -417,6 +417,10 @@ class ConfigurationProxyTest < ActiveSupport::TestCase
 
     @deploy[:servers] = { "web" => { "hosts" => [ "1.1.1.1" ], "proxy" => { "target" => { "max_conns" => 8 } } } }
     assert_equal 8, config.role(:web).proxy.target_max_conns, "a role's own cap wins"
+
+    @deploy[:servers] = [ "1.1.1.1" ]
+    @deploy[:proxy] = { "target" => { "max_conns" => 0 } }
+    assert_nil config.proxy.target_max_conns, "0 is dash-proxy's unlimited, not a cap"
   end
 
   test "ssl_domains without source" do

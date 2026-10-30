@@ -430,9 +430,11 @@ class Dash::Configuration::Proxy
     self.class.new config: config, proxy_config: other.proxy_config.deep_merge(proxy_config), role_name: role_name, secrets: secrets, load_balanced: load_balanced?
   end
 
-  # `target/max_conns`, which makes dash-proxy's wait for a connection a queue time.
+  # `target/max_conns`, which makes dash-proxy's wait for a connection a queue time. 0 is
+  # dash-proxy's unlimited, so it is no cap.
   def target_max_conns
-    proxy_config.dig("target", "max_conns")
+    max_conns = proxy_config.dig("target", "max_conns")
+    max_conns unless max_conns.to_i.zero?
   end
 
   private

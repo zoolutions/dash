@@ -52,6 +52,13 @@ class DiagnosticsDoctorProxySignalChecksTest < DiagnosticsTestCase
     assert_equal :ok, check.status
   end
 
+  test "max_conns 0 is unlimited, so the connection wait still warns" do
+    queue host("1.1.1.1", requests: 5, proxy: 5)
+    DASH.config.role(:web).proxy.proxy_config["target"] = { "max_conns" => 0 }
+
+    assert_equal :warn, check.status
+  end
+
   test "no host answering fails" do
     queue({ host: "1.1.1.1", error: "no answer" }, { host: "1.1.1.2", error: "no answer" })
 
