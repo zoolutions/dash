@@ -6,11 +6,14 @@
 mkdir -p /etc/docker
 # Point this inner daemon at the hub-cache pull-through cache so Docker Hub base
 # images are fetched at most once per run instead of on every test.
+# Loopback is listed explicitly: on Engine 29.10 (29.6 still added them) an explicit insecure-registries
+# list replaces the 127.0.0.0/8 and ::1/128 defaults,
+# and the local-registry tests push to and pull from localhost:5000 over plain HTTP.
 cat > /etc/docker/daemon.json <<'EOF'
 {
   "storage-driver": "fuse-overlayfs",
   "registry-mirrors": [ "http://hub-cache:5000" ],
-  "insecure-registries": [ "hub-cache:5000" ]
+  "insecure-registries": [ "hub-cache:5000", "127.0.0.0/8", "::1/128" ]
 }
 EOF
 
