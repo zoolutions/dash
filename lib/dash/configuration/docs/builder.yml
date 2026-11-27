@@ -42,6 +42,9 @@ builder:
   #
   # CLI flags override this setting: `-v` always streams, `-q` never does.
   #
+  # A quiet build prints nothing while it runs, so a CI job with a no-output timeout
+  # needs that timeout to cover the longest build.
+  #
   # A failed build always prints its output, in the error that ends the command,
   # and configured output loggers record every build line whatever this says.
   #

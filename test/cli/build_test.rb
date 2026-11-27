@@ -191,9 +191,12 @@ class CliBuildTest < CliTestCase
     [ nil,      [],       :debug ],
     [ :verbose, [],       :debug ],
     [ :quiet,   [],       :info ],
+    [ nil,      [ "-v" ], :debug ],
+    [ :verbose, [ "-v" ], :debug ],
     [ :quiet,   [ "-v" ], :debug ],
+    [ nil,      [ "-q" ], :error ],
     [ :verbose, [ "-q" ], :error ],
-    [ nil,      [ "-q" ], :error ]
+    [ :quiet,   [ "-q" ], :error ]
   ].each do |output, flags, level|
     test "push with builder.output #{output.inspect} and #{flags.presence&.join(" ") || "no flag"} builds at #{level}" do
       Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(false)
@@ -735,7 +738,9 @@ class CliBuildTest < CliTestCase
       SSHKit.config.output = Dash::Output::Formatter.new(io, log)
       SSHKit.config.output_verbosity = DASH.verbosity
 
-      handler = ->(data, *) { lines << data }
+      # SSHKit writes a Proc handler's non-nil return to the command's stdin, so this one
+      # must return nil or the write races the shell's exit (EPIPE).
+      handler = ->(data, *) { lines << data; nil }
       cli = Dash::Cli::Build.new
       error = assert_raises(SSHKit::Command::Failed) do
         SSHKit::Backend::Local.new do
