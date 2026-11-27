@@ -65,6 +65,12 @@ class Dash::Configuration::Builder
     !!builder_config["pack"]
   end
 
+  # How much of the build's own output (BuildKit's progress lines) is printed. nil means
+  # the default, which streams it; see Dash::Cli::Build#with_build_output.
+  def output
+    builder_config["output"]&.to_sym
+  end
+
   def args
     builder_config["args"] || {}
   end

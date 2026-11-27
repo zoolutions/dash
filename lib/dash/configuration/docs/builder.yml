@@ -31,6 +31,23 @@ builder:
   # Defaults to true:
   local: true
 
+  # Build output
+  #
+  # How much of the build's own output (BuildKit's progress lines) dash prints.
+  # Not to be confused with `dash build push --output`, which picks where the image
+  # goes, or the top-level `output` key, which configures log destinations.
+  #
+  # - `verbose` - every build line is streamed (the default)
+  # - `quiet` - build lines are not printed; the build report still is
+  #
+  # CLI flags override this setting: `-v` always streams, `-q` never does.
+  #
+  # A failed build always prints its output, in the error that ends the command,
+  # and configured output loggers record every build line whatever this says.
+  #
+  # Defaults to `verbose`:
+  output: quiet
+
   # Buildpack configuration
   #
   # The build configuration for using pack to build a Cloud Native Buildpack image.

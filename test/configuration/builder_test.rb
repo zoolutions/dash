@@ -188,6 +188,47 @@ class ConfigurationBuilderTest < ActiveSupport::TestCase
     assert_equal [ "amd64", "arm64" ], config.builder.remote_arches
   end
 
+  test "output" do
+    assert_nil config.builder.output
+  end
+
+  test "setting output" do
+    @deploy[:builder]["output"] = "quiet"
+    assert_equal :quiet, config.builder.output
+
+    @deploy[:builder]["output"] = "verbose"
+    assert_equal :verbose, config.builder.output
+  end
+
+  # The hooks_output docs teach the symbol form, and YAML loads `:quiet` as a Symbol.
+  test "setting output as a symbol" do
+    @deploy[:builder]["output"] = :quiet
+
+    assert_equal :quiet, config.builder.output
+  end
+
+  test "invalid output level" do
+    @deploy[:builder]["output"] = "loud"
+
+    error = assert_raises(Dash::ConfigurationError) { config.builder }
+    assert_equal "builder/output: Invalid output 'loud', must be one of: quiet, verbose", error.message
+  end
+
+  # The type check treats a boolean as a string, so the level check has to reject it.
+  test "output that is not a level name" do
+    @deploy[:builder]["output"] = true
+
+    error = assert_raises(Dash::ConfigurationError) { config.builder }
+    assert_equal "builder/output: Invalid output 'true', must be one of: quiet, verbose", error.message
+  end
+
+  test "output that is not a scalar" do
+    @deploy[:builder]["output"] = { "level" => "quiet" }
+
+    error = assert_raises(Dash::ConfigurationError) { config.builder }
+    assert_equal "builder/output: should be a string", error.message
+  end
+
   private
     def config
       Dash::Configuration.new(@deploy)

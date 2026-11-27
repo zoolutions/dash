@@ -470,6 +470,22 @@ class ConfigurationTest < ActiveSupport::TestCase
     assert_match /Invalid hooks_output 'invalid'/, error.message
   end
 
+  # The type check treats a boolean or a number as a string, so the level check is the
+  # only thing that can reject one; it used to skip a global one and crash on a per-hook one.
+  test "hooks_output that is not a level name raises error" do
+    error = assert_raises(Dash::ConfigurationError) do
+      Dash::Configuration.new(@deploy.merge(hooks_output: true))
+    end
+    assert_equal "Invalid hooks_output 'true', must be one of: quiet, verbose", error.message
+  end
+
+  test "hooks_output per-hook that is not a level name raises error" do
+    error = assert_raises(Dash::ConfigurationError) do
+      Dash::Configuration.new(@deploy.merge(hooks_output: { "pre-deploy" => 1 }))
+    end
+    assert_equal "Invalid hooks_output '1' for hook 'pre-deploy', must be one of: quiet, verbose", error.message
+  end
+
   test "hooks_output invalid per-hook raises error" do
     error = assert_raises(Dash::ConfigurationError) do
       Dash::Configuration.new(@deploy.merge(hooks_output: { "pre-deploy" => :invalid }))
