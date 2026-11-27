@@ -62,7 +62,7 @@ class Dash::Cli::Build < Dash::Cli::Base
           # Get the command here to ensure the Dir.chdir doesn't interfere with it
           push = DASH.builder.push(cli.options[:output], no_cache: cli.options[:no_cache])
 
-          DASH.with_verbosity(:debug) do
+          cli.send(:with_build_output) do
             Dir.chdir(DASH.config.builder.build_directory) { execute *push, env: DASH.builder.push_env, **handler }
           end
         end
@@ -156,7 +156,7 @@ class Dash::Cli::Build < Dash::Cli::Base
     with_env(DASH.config.builder.secrets) do
       run_locally do
         build = DASH.builder.push(cli.options[:output], tag_as_dirty: true, no_cache: cli.options[:no_cache])
-        DASH.with_verbosity(:debug) do
+        cli.send(:with_build_output) do
           execute(*build, **handler)
         end
       end
@@ -168,6 +168,30 @@ class Dash::Cli::Build < Dash::Cli::Base
   end
 
   private
+    # BuildKit's lines are SSHKit command data, which prints at debug. They stream when the
+    # operator asked for -v, or at the default verbosity unless `builder.output: quiet`; -q
+    # and quiet run the build at the caller's level instead. Nothing is lost either way:
+    # SSHKit hands every line to the interaction handler and keeps it on the command before
+    # the formatter decides what to print, so the progress parser still reads it all, and a
+    # failed build raises SSHKit::Command::Failed carrying its stdout and stderr, which
+    # bin/dash prints. Printing it here as well would show a failed build's log twice.
+    def with_build_output(&block)
+      if stream_build_output?
+        DASH.with_verbosity(:debug, &block)
+      else
+        yield
+      end
+    end
+
+    # The config applies only at the default verbosity; -v and -q win, as over hooks_output.
+    def stream_build_output?
+      case DASH.verbosity
+      when :debug then true
+      when :info  then DASH.config.builder.output != :quiet
+      else false
+      end
+    end
+
     # Buildpacks print a total and nothing else, so there is nothing for the parser to
     # read and no reason to attach it.
     def build_progress_parser

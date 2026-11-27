@@ -185,6 +185,68 @@ class CliBuildTest < CliTestCase
     assert_equal "[4/5] RUN bundle install --frozen && exit 7", DASH.report.build.failed_steps.sole.label
   end
 
+  # builder.output decides whether BuildKit's lines stream, and only at the default
+  # verbosity: -v and -q win, exactly as they do over hooks_output.
+  [
+    [ nil,      [],       :debug ],
+    [ :verbose, [],       :debug ],
+    [ :quiet,   [],       :info ],
+    [ nil,      [ "-v" ], :debug ],
+    [ :verbose, [ "-v" ], :debug ],
+    [ :quiet,   [ "-v" ], :debug ],
+    [ nil,      [ "-q" ], :error ],
+    [ :verbose, [ "-q" ], :error ],
+    [ :quiet,   [ "-q" ], :error ]
+  ].each do |output, flags, level|
+    test "push with builder.output #{output.inspect} and #{flags.presence&.join(" ") || "no flag"} builds at #{level}" do
+      Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(false)
+      Dash::Configuration::Builder.any_instance.stubs(:output).returns(output)
+
+      assert_equal [ level ], build_verbosities { run_command("push", *flags, fixture: :without_clone) }
+    end
+
+    test "dev with builder.output #{output.inspect} and #{flags.presence&.join(" ") || "no flag"} builds at #{level}" do
+      Dash::Configuration::Builder.any_instance.stubs(:output).returns(output)
+
+      assert_equal [ level ], build_verbosities { run_command("dev", *flags) }
+    end
+  end
+
+  test "a quiet push still prints the build report" do
+    Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(false)
+    Dash::Configuration::Builder.any_instance.stubs(:output).returns(:quiet)
+    Dash::Git.stubs(:uncommitted_changes).returns("")
+    stub_build_stream "progress_plain_success"
+
+    run_command("push", fixture: :without_clone).tap do |output|
+      assert_match(/^  Build$/, output)
+      assert_match(/^    cached steps\s+0 of 10$/, output)
+    end
+  end
+
+  # The Printer backend never runs a command, so these go through SSHKit's local backend
+  # with a real failing shell: what reaches the formatter, the interaction handler and the
+  # raised error is SSHKit's own behaviour, not a stub's.
+  test "a quiet build prints none of its lines, still feeds the handler and the output log, and a failure carries them" do
+    with_local_build(output: :quiet) do |io, log, lines, error|
+      assert_no_match(/DEBUG/, io.string)
+      assert_no_match(/\tstep one/, io.string)
+      assert_match(/Running .*sh/, io.string)
+      assert_match(/DEBUG .*step one/, log.string)
+      assert_equal [ "step one\n", "ERROR: step two failed\n" ], lines
+      assert_match(/stderr: step one\nERROR: step two failed/, error.message)
+    end
+  end
+
+  test "a verbose build streams its lines at debug, as before" do
+    with_local_build(output: :verbose) do |io, log, lines, error|
+      assert_match(/DEBUG .*step one/, io.string)
+      assert_match(/DEBUG .*ERROR: step two failed/, io.string)
+      assert_equal [ "step one\n", "ERROR: step two failed\n" ], lines
+      assert_match(/stderr: step one\nERROR: step two failed/, error.message)
+    end
+  end
+
   test "the pack builder streams no buildx progress, so it gets no parser" do
     Dash::Commands::Hook.any_instance.stubs(:hook_exists?).returns(false)
 
@@ -650,6 +712,48 @@ class CliBuildTest < CliTestCase
         replayed[command.object_id] = true
       end
       build.raises(SSHKit::Command::Failed.new("exit status: 1")) if failing
+    end
+
+    # The verbosity each buildx build ran at. Mocha may run a matcher more than once per
+    # call, so repeats of one build collapse to one entry.
+    def build_verbosities
+      levels = {}
+      SSHKit::Backend::Printer.any_instance.stubs(:execute_command)
+      SSHKit::Backend::Printer.any_instance.stubs(:execute_command).with do |command|
+        levels[command.object_id] = DASH.verbosity if command.to_command.include?("buildx build")
+        true
+      end
+
+      yield
+
+      levels.values
+    end
+
+    def with_local_build(output:)
+      DASH.configure config_file: Pathname.new(File.expand_path("test/fixtures/deploy_without_clone.yml"))
+      Dash::Configuration::Builder.any_instance.stubs(:output).returns(output)
+
+      io, log, lines = StringIO.new, StringIO.new, []
+      previous_output, previous_verbosity = SSHKit.config.output, SSHKit.config.output_verbosity
+      SSHKit.config.output = Dash::Output::Formatter.new(io, log)
+      SSHKit.config.output_verbosity = DASH.verbosity
+
+      # SSHKit writes a Proc handler's non-nil return to the command's stdin, so this one
+      # must return nil or the write races the shell's exit (EPIPE).
+      handler = ->(data, *) { lines << data; nil }
+      cli = Dash::Cli::Build.new
+      error = assert_raises(SSHKit::Command::Failed) do
+        SSHKit::Backend::Local.new do
+          cli.send(:with_build_output) do
+            execute :sh, "-c", "'echo step one >&2; echo \"ERROR: step two failed\" >&2; exit 1'", interaction_handler: handler
+          end
+        end.run
+      end
+
+      yield io, log, lines, error
+    ensure
+      SSHKit.config.output = previous_output
+      SSHKit.config.output_verbosity = previous_verbosity
     end
 
     # Deliberately not `stdouted`: it strips, which eats the leading indent of a report

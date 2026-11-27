@@ -771,17 +771,20 @@ class Dash::Configuration
       raw_config.servers.is_a?(Array) ? [ "web" ] : raw_config.servers.keys.sort
     end
 
+    # The validator's type check lets a boolean or a number through as a string, so this
+    # is what rejects one.
     def ensure_valid_hooks_output!
       case raw_config.hooks_output
-      when Symbol, String
-        validate_hooks_output_level!(raw_config.hooks_output.to_sym)
+      when nil
       when Hash
-        raw_config.hooks_output.each { |hook, level| validate_hooks_output_level!(level.to_sym, hook) }
+        raw_config.hooks_output.each { |hook, level| validate_hooks_output_level!(level, hook) }
+      else
+        validate_hooks_output_level!(raw_config.hooks_output)
       end
     end
 
     def validate_hooks_output_level!(level, hook = nil)
-      return if HOOKS_OUTPUT_LEVELS.include?(level)
+      return if HOOKS_OUTPUT_LEVELS.include?(level.to_s.to_sym)
       context = hook ? " for hook '#{hook}'" : ""
       raise Dash::ConfigurationError, "Invalid hooks_output '#{level}'#{context}, must be one of: #{HOOKS_OUTPUT_LEVELS.join(', ')}"
     end
